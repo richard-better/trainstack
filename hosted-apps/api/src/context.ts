@@ -1,4 +1,3 @@
-import type { Context as ApiContext } from "@trainstack/hosted-contract/context";
 import type { Context as HonoContext } from "hono";
 
 import { createAuth, getDb } from "./services";
@@ -7,7 +6,7 @@ export type CreateContextOptions = {
   context: HonoContext;
 };
 
-export async function createContext({ context }: CreateContextOptions): Promise<ApiContext> {
+export async function createContext({ context }: CreateContextOptions) {
   const db = getDb();
   const session = await (
     await createAuth(db)

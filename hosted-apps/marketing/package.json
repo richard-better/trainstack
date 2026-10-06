@@ -4,14 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check-types": "tsc -b ../../packages/hosted-contract && astro check",
+    "check-types": "astro check",
     "astro": "astro",
     "dev:bare": "astro dev",
     "env:generate": "varlock codegen"
   },
   "dependencies": {
-    "@orpc/client": "catalog:",
-    "@trainstack/hosted-contract": "workspace:*",
     "astro": "^7.3.1",
     "better-auth": "catalog:",
     "evlog": "catalog:",
