@@ -4,6 +4,7 @@ import SwiftUI
 public struct RootView: View {
   @State private var destination = Destination.today
   @State private var discovery = BluetoothDiscovery()
+  @State private var library = RideLibrary.launchLibrary()
   @Environment(\.scenePhase) private var scenePhase
 
   public init() {}
@@ -15,6 +16,9 @@ public struct RootView: View {
         NavigationStack {
           TodayView { destination = .devices }
         }
+      }
+      Tab("History", systemImage: "clock", value: .history) {
+        HistoryView(library: library)
       }
       Tab("Devices", systemImage: "antenna.radiowaves.left.and.right", value: .devices) {
         NavigationStack {
@@ -36,7 +40,7 @@ public struct RootView: View {
 }
 
 private enum Destination: Hashable {
-  case today, devices
+  case today, history, devices
 }
 
 private struct TodayView: View {
@@ -57,4 +61,14 @@ private struct TodayView: View {
 
 #Preview {
   RootView()
+}
+
+extension RideLibrary {
+  /// Empty, except that debug builds started with `-sample-rides` begin with the sample ride.
+  fileprivate static func launchLibrary() -> RideLibrary {
+    #if DEBUG
+      if CommandLine.arguments.contains("-sample-rides") { return .sample() }
+    #endif
+    return RideLibrary()
+  }
 }
