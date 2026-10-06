@@ -30,6 +30,9 @@ xcodebuild build -project apps/ride/Ride.xcodeproj -scheme Ride \
   -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO
 ```
 
+Format with `swift format --in-place --recursive apps/ride/Ride apps/ride/RideKit`.
+CI runs `swift format lint --strict`.
+
 ## Conventions
 
 - Swift 6 language mode with strict concurrency.
@@ -37,4 +40,3 @@ xcodebuild build -project apps/ride/Ride.xcodeproj -scheme Ride \
 - Tests use Swift Testing and live in the package, so they run with `swift test`.
 - Bluetooth: the macOS sandbox grants it with `ENABLE_RESOURCE_ACCESS_BLUETOOTH`, and
   `NSBluetoothAlwaysUsageDescription` is set through `INFOPLIST_KEY_` build settings.
-- 2-space indentation.
