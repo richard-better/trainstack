@@ -14,6 +14,7 @@
       "varlock": "1.18.0",
       "@cloudflare/workers-types": "^5.20260906.1",
       "@orpc/server": "^1.15.0",
+      "@orpc/contract": "^1.15.0",
       "@orpc/openapi": "^1.15.0",
       "@orpc/zod": "^1.15.0",
       "better-auth": "1.7.7",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
+    "@orpc/client": "catalog:",
     "@trainstack/config": "workspace:*",
     "@types/node": "catalog:",
     "miniflare": "4.20260730.0",

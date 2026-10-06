@@ -1,6 +1,6 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import type { AppRouterClient } from "@trainstack/hosted-contract/routers/index";
+import type { AppContractClient } from "@trainstack/hosted-contract";
 
 import { ENV } from "../env.public";
 
@@ -14,4 +14,4 @@ export const link = new RPCLink({
   },
 });
 
-export const orpc: AppRouterClient = createORPCClient(link);
+export const orpc: AppContractClient = createORPCClient(link);

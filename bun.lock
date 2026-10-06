@@ -9,6 +9,7 @@
       },
       "devDependencies": {
         "@cloudflare/workers-types": "catalog:",
+        "@orpc/client": "catalog:",
         "@trainstack/config": "workspace:*",
         "@types/node": "catalog:",
         "miniflare": "4.20260730.0",
@@ -90,10 +91,7 @@
     "packages/hosted-contract": {
       "name": "@trainstack/hosted-contract",
       "dependencies": {
-        "@orpc/client": "catalog:",
-        "@orpc/openapi": "catalog:",
-        "@orpc/server": "catalog:",
-        "@orpc/zod": "catalog:",
+        "@orpc/contract": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -108,6 +106,7 @@
   "catalog": {
     "@cloudflare/workers-types": "^5.20260906.1",
     "@orpc/client": "^1.15.0",
+    "@orpc/contract": "^1.15.0",
     "@orpc/openapi": "^1.15.0",
     "@orpc/server": "^1.15.0",
     "@orpc/zod": "^1.15.0",

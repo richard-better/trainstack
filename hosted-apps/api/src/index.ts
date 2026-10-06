@@ -3,7 +3,6 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { appRouter } from "@trainstack/hosted-contract/routers/index";
 import { initLogger } from "evlog";
 import { createAxiomDrain } from "evlog/axiom";
 import { createAuthMiddleware, type BetterAuthInstance } from "evlog/better-auth";
@@ -13,6 +12,7 @@ import { cors } from "hono/cors";
 
 import { createContext } from "./context";
 import { ENV } from "./env.server";
+import { appRouter } from "./router";
 import { createAuth } from "./services";
 
 initLogger({

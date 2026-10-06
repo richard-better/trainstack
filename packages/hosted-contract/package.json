@@ -2,18 +2,14 @@
   "name": "@trainstack/hosted-contract",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./*": "./src/*.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "build": "tsc -b",
     "check-types": "tsc -b"
   },
   "dependencies": {
-    "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
-    "@orpc/server": "catalog:",
-    "@orpc/zod": "catalog:",
+    "@orpc/contract": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

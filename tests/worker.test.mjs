@@ -3,6 +3,8 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
 import { Miniflare } from "miniflare";
 import { rolldown } from "rolldown";
 
@@ -10,6 +12,24 @@ let runtime;
 let directory;
 const origin = "https://trainstackhq.com";
 const api = "https://api.trainstackhq.com";
+
+function rpcClient(cookie) {
+  return createORPCClient(
+    new RPCLink({
+      url: `${api}/rpc`,
+      fetch: async (request, options) => {
+        const outgoing = new Request(request, options);
+        outgoing.headers.set("Origin", origin);
+        if (cookie) outgoing.headers.set("Cookie", cookie);
+        return runtime.dispatchFetch(outgoing.url, {
+          method: outgoing.method,
+          headers: Object.fromEntries(outgoing.headers),
+          body: outgoing.body ? await outgoing.arrayBuffer() : undefined,
+        });
+      },
+    }),
+  );
+}
 
 before(
   async () => {
@@ -84,6 +104,10 @@ test("committed migrations support health and authentication on D1 without Axiom
   assert.equal(health.headers.get("access-control-allow-credentials"), "true");
   assert.deepEqual(await health.json(), { status: "ok" });
 
+  const anonymous = rpcClient();
+  assert.equal(await anonymous.healthCheck(), "OK");
+  await assert.rejects(anonymous.privateData(), { code: "UNAUTHORIZED", status: 401 });
+
   const signup = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: origin },
@@ -101,7 +125,37 @@ test("committed migrations support health and authentication on D1 without Axiom
     headers: { Cookie: cookie },
   });
   assert.equal(session.status, 200);
-  assert.equal((await session.json()).user.email, "ci@example.com");
+  const sessionUser = (await session.json()).user;
+  assert.equal(sessionUser.email, "ci@example.com");
+
+  const privateData = await rpcClient(cookie).privateData();
+  assert.equal(privateData.message, "This is private");
+  assert.deepEqual(JSON.parse(JSON.stringify(privateData.user)), sessionUser);
+  assert.ok(privateData.user.createdAt instanceof Date);
+  assert.ok(privateData.user.updatedAt instanceof Date);
+
+  const publicApi = await runtime.dispatchFetch(`${api}/api-reference/healthCheck`, {
+    method: "POST",
+  });
+  assert.equal(publicApi.status, 200);
+  assert.equal(await publicApi.json(), "OK");
+  const anonymousApi = await runtime.dispatchFetch(`${api}/api-reference/privateData`, {
+    method: "POST",
+  });
+  assert.equal(anonymousApi.status, 401);
+  assert.equal((await anonymousApi.json()).code, "UNAUTHORIZED");
+  const authenticatedApi = await runtime.dispatchFetch(`${api}/api-reference/privateData`, {
+    method: "POST",
+    headers: { Cookie: cookie },
+  });
+  assert.equal(authenticatedApi.status, 200);
+  assert.deepEqual(await authenticatedApi.json(), {
+    message: "This is private",
+    user: sessionUser,
+  });
+
+  const invalidSession = rpcClient("better-auth.session_token=invalid");
+  await assert.rejects(invalidSession.privateData(), { code: "UNAUTHORIZED", status: 401 });
 
   const untrusted = await runtime.dispatchFetch(`${api}/health`, {
     headers: { Origin: "https://untrusted.example" },
@@ -110,4 +164,19 @@ test("committed migrations support health and authentication on D1 without Axiom
     untrusted.headers.get("access-control-allow-origin"),
     "https://untrusted.example",
   );
+});
+
+test("OpenAPI reference describes contract outputs and authentication errors", async () => {
+  const response = await runtime.dispatchFetch(`${api}/api-reference/spec.json`);
+  assert.equal(response.status, 200);
+  const spec = await response.json();
+  assert.equal(
+    spec.paths["/healthCheck"].post.responses[200].content["application/json"].schema.const,
+    "OK",
+  );
+  const privateData = spec.paths["/privateData"].post.responses;
+  assert.ok(privateData[401]);
+  const schema = privateData[200].content["application/json"].schema;
+  assert.deepEqual(schema.required, ["message", "user"]);
+  assert.equal(schema.properties.user.properties.email.type, "string");
 });
