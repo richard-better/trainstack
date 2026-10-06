@@ -39,3 +39,8 @@ restricts third-party dependencies to licenses compatible with all three.
 
 None of these licenses grant rights to the TrainStack name or logo. See
 [TRADEMARKS.md](TRADEMARKS.md).
+
+## Contributing
+
+Contributions require signing the [Contributor License Agreement](CLA.md). See
+[CONTRIBUTING.md](CONTRIBUTING.md).
