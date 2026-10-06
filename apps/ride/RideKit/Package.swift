@@ -8,9 +8,12 @@ let package = Package(
     .library(name: "RideUI", targets: ["RideUI"])
   ],
   targets: [
+    .target(name: "RideBluetooth"),
     .target(
       name: "RideUI",
+      dependencies: ["RideBluetooth"],
       swiftSettings: [.defaultIsolation(MainActor.self)]
-    )
+    ),
+    .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
   ]
 )
