@@ -99,8 +99,9 @@ trainstack/
 The hosted API uses [oRPC contract-first](https://v1.orpc.dev/docs/contract-first/define-contract).
 `packages/hosted-contract/src/index.ts` defines the shared output schemas, errors, and client type.
 `hosted-apps/api/src/router.ts` implements that contract and owns authentication middleware;
-its request context comes from the API's Better Auth implementation. Marketing imports only the
-contract's client type. Add API endpoints to the contract first, then implement them in the API router.
+its request context comes from the API's Better Auth implementation. Marketing uses Better Auth
+for authentication and has no oRPC dependency. API consumers can import the contract's client type.
+Add API endpoints to the contract first, then implement them in the API router.
 
 ## Available Scripts
 

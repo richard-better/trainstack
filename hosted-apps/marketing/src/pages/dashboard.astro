@@ -18,12 +18,6 @@ import Layout from "../layouts/Layout.astro";
             <p class="text-sm text-neutral-400 mb-2">Email</p>
             <p id="user-email" class="text-white">Loading...</p>
           </div>
-
-          <div class="rounded-lg bg-neutral-800/50 p-4">
-            <p class="text-sm text-neutral-400 mb-2">Server Message</p>
-            <p id="api-message" class="text-white">Loading...</p>
-          </div>
-
         </div>
       </div>
     </main>
@@ -40,14 +34,12 @@ import Layout from "../layouts/Layout.astro";
 
 <script>
   import { authClient } from "../lib/auth-client";
-  import { orpc } from "../lib/orpc";
 
   const dashboardContent = document.getElementById("dashboard-content")!;
   const loading = document.getElementById("loading")!;
   const redirect = document.getElementById("redirect")!;
   const userName = document.getElementById("user-name")!;
   const userEmail = document.getElementById("user-email")!;
-  const apiMessage = document.getElementById("api-message")!;
 
   async function init() {
     try {
@@ -62,14 +54,6 @@ import Layout from "../layouts/Layout.astro";
 
       userName.textContent = session.user.name || "User";
       userEmail.textContent = session.user.email || "";
-
-      try {
-        const data = await orpc.privateData();
-        apiMessage.textContent = data.message || "Connected to server";
-      } catch (e) {
-        apiMessage.textContent = "Failed to load server data";
-      }
-
 
       loading.classList.add("hidden");
       dashboardContent.classList.remove("hidden");
