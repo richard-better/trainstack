@@ -1,15 +1,13 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const licenses = {
-  hosted: "FSL-1.1-ALv2",
-  packages: "Apache-2.0",
-  app: "AGPL-3.0-only",
-};
+const hostedLicense = "FSL-1.1-ALv2";
+const defaultLicense = "AGPL-3.0-only";
 
-// Licenses that every part of the repository can depend on.
+// Licenses that every part of the repository can depend on, and that a workspace outside
+// hosted/ can choose instead of the default by adding its own LICENSE file.
 const allowedDependencyLicenses = new Set([
   "0BSD",
   "Apache-2.0",
@@ -34,16 +32,29 @@ const dependencyExceptions = [
   },
 ];
 
-function tier(directory) {
-  if (directory.startsWith("hosted/")) return "hosted";
-  if (directory.startsWith("packages/")) return "packages";
-  return "app";
+function isPermissive(license) {
+  return allowedDependencyLicenses.has(license);
 }
 
-const allowedTiers = {
-  hosted: ["hosted", "packages"],
-  packages: ["packages"],
-  app: ["app", "packages"],
+async function exists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+function kind({ directory, manifest }) {
+  if (directory.startsWith("hosted/")) return "hosted";
+  return isPermissive(manifest.license) ? "permissive" : "agpl";
+}
+
+const allowedKinds = {
+  hosted: ["hosted", "permissive"],
+  agpl: ["agpl", "permissive"],
+  permissive: ["permissive"],
 };
 
 async function readJson(path) {
@@ -79,18 +90,26 @@ function dependencyNames(manifest) {
 
 test("workspace packages declare the license of their directory", async () => {
   for (const { directory, manifest } of await workspaces()) {
-    assert.equal(manifest.license, licenses[tier(directory)], `${directory}/package.json`);
+    const where = `${directory}/package.json`;
+    if (directory.startsWith("hosted/")) {
+      assert.equal(manifest.license, hostedLicense, where);
+    } else if (directory !== "." && (await exists(join(directory, "LICENSE")))) {
+      assert.ok(isPermissive(manifest.license), `${where}: ${manifest.license} is not permissive`);
+    } else {
+      assert.equal(manifest.license, defaultLicense, where);
+    }
   }
 });
 
 test("workspace dependencies only point to compatible licenses", async () => {
   const all = await workspaces();
-  const tiers = new Map(all.map(({ directory, manifest }) => [manifest.name, tier(directory)]));
-  for (const { directory, manifest } of all) {
-    for (const name of dependencyNames(manifest).filter((name) => tiers.has(name))) {
+  const kinds = new Map(all.map((workspace) => [workspace.manifest.name, kind(workspace)]));
+  for (const workspace of all) {
+    const { manifest } = workspace;
+    for (const name of dependencyNames(manifest).filter((name) => kinds.has(name))) {
       assert.ok(
-        allowedTiers[tier(directory)].includes(tiers.get(name)),
-        `${manifest.name} (${tier(directory)}) must not depend on ${name} (${tiers.get(name)})`,
+        allowedKinds[kind(workspace)].includes(kinds.get(name)),
+        `${manifest.name} (${kind(workspace)}) must not depend on ${name} (${kinds.get(name)})`,
       );
     }
   }

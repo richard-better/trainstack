@@ -21,7 +21,8 @@ You only sign once. The signature covers all of your future contributions.
 
 Your contribution is licensed according to the directory it lives in. See
 [LICENSING.md](LICENSING.md). Keep code in the right place: shared code that the app or
-third-party clients need belongs in `packages/`, never in `hosted/`.
+third-party clients need belongs in `packages/`, never in `hosted/`. A package that
+`hosted/` depends on needs a permissive license.
 
 ## Checks
 

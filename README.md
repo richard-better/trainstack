@@ -97,9 +97,9 @@ trainstack/
 │   │   ├── api/         # API Worker, auth, and database (Hono, oRPC, Drizzle)
 │   │   └── marketing/   # Website (Astro)
 │   └── infra/           # Cloudflare infrastructure (Alchemy)
-└── packages/            # Apache-2.0
-    ├── contract/        # Shared API contract and types
-    └── config/          # Shared TypeScript configuration
+└── packages/            # AGPL-3.0 unless a package has its own LICENSE
+    ├── contract/        # Shared API contract and types (Apache-2.0)
+    └── config/          # Shared TypeScript configuration (Apache-2.0)
 ```
 
 The hosted API uses [oRPC contract-first](https://v1.orpc.dev/docs/contract-first/define-contract).
@@ -126,4 +126,4 @@ Add API endpoints to the contract first, then implement them in the API router.
 
 ## License
 
-The app is open source under AGPL-3.0, the hosted backend in `hosted/` is source-available under FSL-1.1-ALv2, and shared packages are Apache-2.0. See [LICENSING.md](LICENSING.md).
+TrainStack is open source under AGPL-3.0. The hosted backend in `hosted/` is source-available under FSL-1.1-ALv2, and packages that other code builds on, like the API contract, are explicitly Apache-2.0. See [LICENSING.md](LICENSING.md).
