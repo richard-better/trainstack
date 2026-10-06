@@ -60,11 +60,13 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 
 ## Deployment
 
-The infrastructure lives in [`packages/infra/alchemy.run.ts`](packages/infra/alchemy.run.ts). Alchemy manages the frontend and API Workers, D1 database and migrations, Astro session KV namespace, custom domains with DNS/TLS, and Axiom dataset and ingest token. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
+The Cloudflare infrastructure lives in [`packages/infra/alchemy.run.ts`](packages/infra/alchemy.run.ts). Alchemy manages the frontend and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`packages/infra/observability.ts`](packages/infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
 
 Production uses `trainstackhq.com` for the frontend and `api.trainstackhq.com` for the API. Alchemy supplies the frontend API URL, API auth URL, and trusted frontend origin. Non-production stages use local or `workers.dev` URLs. The production D1 database is retained when removed from the stack or destroyed; Alchemy stops tracking a retained resource, so preserve its ID before a teardown.
 
 [`Check and deploy`](.github/workflows/deploy.yml) checks pull requests targeting `main`. Every push to `main`, including a merged pull request, runs checks, Workers/D1 integration tests, and the backend build before deploying the complete `production` stack. Production deployments are serialized, running deployments are not cancelled, and older revisions are skipped if `main` has advanced. A manual workflow run is also supported from `main`.
+
+If `AXIOM_TOKEN` is missing, the frontend, API, and database still deploy with Cloudflare Workers Logs. Adding the token enables Axiom on the next deployment. Removing it later skips the Axiom stack without deleting its resources or state.
 
 See [`docs/deployment.md`](docs/deployment.md) for account-token permissions, GitHub production secrets, initial setup, migration and recovery procedures.
 

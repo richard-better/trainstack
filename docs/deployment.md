@@ -2,15 +2,15 @@
 
 ## Infrastructure
 
-Alchemy is the single infrastructure owner. Keep infrastructure changes in `packages/infra/alchemy.run.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The stack deploys:
+Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `packages/infra/alchemy.run.ts` and optional Axiom infrastructure in `packages/infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
 
 - API Worker at `api.trainstackhq.com`, with a `DB` binding to D1 and a secret Better Auth signing key.
 - Astro Worker at `trainstackhq.com`, with the API URL, session KV, and Images binding.
 - Committed Drizzle migrations before the API Worker update.
-- Axiom dataset `trainstack-production-logs` and a dataset-scoped ingest token injected into both applications.
+- When configured, Axiom dataset `trainstack-production-logs` and a dataset-scoped ingest token injected into both applications.
 - Shared Cloudflare state storage, using a Worker, Durable Object, and Secrets Store for encrypted state and authentication.
 
-Stack name `trainstack`, stage `production`, and logical resource IDs are persistent identities. Preserve them across deployments. Compatibility is pinned to `2026-07-30`; update it deliberately and test against the Workers runtime.
+Stack names `trainstack` and `trainstack-observability`, stage `production`, and logical resource IDs are persistent identities. Both stacks use the same remote Cloudflare state backend. Preserve them across deployments. Compatibility is pinned to `2026-07-30`; update it deliberately and test against the Workers runtime.
 
 ## Production credentials
 
@@ -38,8 +38,10 @@ Open [GitHub's environment settings](https://github.com/richard-better/trainstac
 | Variable           | `CLOUDFLARE_ACCOUNT_ID` | `01cc6559c6f0e531712c9262c70af1b1`                                            |
 | Secret             | `CLOUDFLARE_API_TOKEN`  | The account-owned token                                                       |
 | Secret             | `BETTER_AUTH_SECRET`    | A stable random secret of at least 32 characters                              |
-| Secret             | `AXIOM_TOKEN`           | An Axiom provisioning token with dataset and API-token management permissions |
+| Secret, optional   | `AXIOM_TOKEN`           | An Axiom provisioning token with dataset and API-token management permissions |
 | Variable, optional | `AXIOM_ORG_ID`          | The target Axiom organization ID, if the token requires one                   |
+
+Without `AXIOM_TOKEN`, deployment skips the Axiom stack and both applications emit logs to Cloudflare Workers Logs. Adding the secret enables Axiom on the next deployment. If it is later removed, the Axiom stack and its state remain untouched, while application log forwarding is disabled. A supplied but invalid token or a failed Axiom deployment remains an error; it is not silently ignored.
 
 The Axiom provisioning token is used by CI; application Workers receive only the ingest token Alchemy creates. Keep `BETTER_AUTH_SECRET` stable across deployments to preserve existing sessions. If generating it locally, send it straight to GitHub without printing it:
 
@@ -52,11 +54,15 @@ To enter a token without putting it into a command argument, use GitHub's secret
 ## First deployment
 
 1. Confirm the domain zone is active in this account and review any existing apex/API DNS records. Cloudflare cannot attach a Worker custom domain over a conflicting CNAME; resolve conflicts deliberately before deployment.
-2. Add the production credentials above. GitHub deployment approvals are optional; requiring them pauses otherwise automatic deploys.
+2. Add the required Cloudflare credentials and auth secret above; Axiom is optional. GitHub deployment approvals are optional; requiring them pauses otherwise automatic deploys.
 3. Merge the workflow and infrastructure changes into `main`. The workflow deploys automatically, bootstrapping Alchemy's state store if absent using `--yes --no-input`. No local state artifact or separate Alchemy password is needed.
 4. The workflow verifies the API's `/health` endpoint and frontend homepage. Initial DNS/certificate propagation is retried; if it exceeds the retry window, check Cloudflare's domain status and re-run the workflow.
 
-For a local plan or deployment, configure Cloudflare and Axiom using `cd packages/infra && bunx alchemy profile edit`, and put the same auth signing secret in the ignored `apps/server/.env`. Use the same Cloudflare account and `production` stage as CI. Run `bun run plan:production` before `bun run deploy:production`. Avoid running a local production deploy while GitHub is deploying; CI concurrency cannot serialize your laptop.
+For a local plan or deployment, configure Cloudflare using `cd packages/infra && bunx alchemy profile edit`, and put the same auth signing secret in the ignored `apps/server/.env`. Use the same Cloudflare account and `production` stage as CI. Run `bun run plan:production` before `bun run deploy:production`. Avoid running a local production deploy while GitHub is deploying; CI concurrency cannot serialize your laptop.
+
+`bun run deploy:production` runs `packages/infra/deploy.ts`. A nonempty `AXIOM_TOKEN` enables Axiom automatically. To use Axiom credentials stored in an Alchemy profile, configure that profile and set `AXIOM_ENABLED=true` when invoking deployment. `AXIOM_ENABLED=false` explicitly disables forwarding and skips the Axiom stack. The wrapper deploys `axiom.run.ts` before the Cloudflare stack and passes the enabled setting to both processes.
+
+To preview Axiom changes, run `bunx alchemy plan --config axiom.run.ts --stage production` from `packages/infra`. After the Axiom stack has been deployed, use `AXIOM_ENABLED=true bun run plan:production` to preview Cloudflare with its shared Axiom outputs. A plain `bun run plan:production` previews Cloudflare without Axiom.
 
 ## Database changes
 
@@ -64,7 +70,7 @@ Edit `packages/db/src/schema`, run `bun run db:generate`, and commit the generat
 
 Use changes compatible with the currently running API because migrations run before its replacement. Add new columns/tables first, deploy code using them, and remove obsolete schema in a later release. A failed deployment can leave successfully applied migrations in place.
 
-Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests bundle the actual API and execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. Alchemy builds the Astro application during deployment.
+Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests exercise deployment orchestration with and without Axiom, and bundle the actual API to execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. Alchemy builds the Astro application during deployment.
 
 ## Recovery
 

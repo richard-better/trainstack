@@ -41,6 +41,9 @@ before(
         BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
         BETTER_AUTH_URL: api,
         CORS_ORIGIN: origin,
+        AXIOM_API_KEY: "",
+        AXIOM_DATASET: "",
+        AXIOM_EDGE_URL: "",
       },
     });
     await runtime.ready;
@@ -60,7 +63,7 @@ test("health fails before migrations, without exposing database errors", async (
   assert.deepEqual(await response.json(), { status: "unavailable" });
 });
 
-test("committed migrations support health checks and authentication on D1", async () => {
+test("committed migrations support health and authentication on D1 without Axiom", async () => {
   const db = await runtime.getD1Database("DB");
   const migrations = "packages/db/src/migrations";
   for (const entry of (await readdir(migrations, { withFileTypes: true }))
