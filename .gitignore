@@ -9,7 +9,7 @@ build
 *.tsbuildinfo
 
 # Generated files
-apps/web/src/routeTree.gen.ts
+hosted-apps/marketing/src/routeTree.gen.ts
 local.db
 local.db-*
 

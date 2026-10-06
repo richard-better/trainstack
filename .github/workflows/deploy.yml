@@ -62,7 +62,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Deploy infrastructure, migrations, and applications
         if: steps.revision.outputs.current == 'true'
-        working-directory: packages/infra
+        working-directory: hosted-infra
         run: |
           for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN BETTER_AUTH_SECRET; do
             if [ -z "${!name}" ]; then
