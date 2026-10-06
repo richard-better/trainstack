@@ -34,6 +34,8 @@
     "hooks:setup": "vp config",
     "db:generate": "vp run --filter @trainstack/db db:generate",
     "deploy": "vp run --filter @trainstack/infra deploy",
+    "deploy:production": "bun run --cwd packages/infra deploy --stage production",
+    "plan:production": "bun run --cwd packages/infra plan --stage production",
     "destroy": "vp run --filter @trainstack/infra destroy",
     "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
     "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/"

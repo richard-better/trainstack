@@ -1,14 +1,20 @@
 import * as Alchemy from "alchemy";
 import * as Axiom from "alchemy/Axiom";
 import * as Cloudflare from "alchemy/Cloudflare";
+import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import "varlock/auto-load";
 
+const production = Alchemy.Stack.pipe(Effect.map(({ stage }) => stage === "production"));
+const webDomain = "trainstackhq.com";
+const serverDomain = `api.${webDomain}`;
+const compatibility = { date: "2026-07-30", flags: ["nodejs_compat"] };
+
 export const db = Cloudflare.D1.Database("database", {
   migrations: "../../packages/db/src/migrations",
-});
+}).pipe(RemovalPolicy.retain(production));
 
 export const observability = Effect.gen(function* () {
   const { stage } = yield* Alchemy.Stack;
@@ -48,12 +54,17 @@ export const observabilityBindings = {
 
 export const server = Cloudflare.Worker("server", {
   main: "../../apps/server/src/index.ts",
-  compatibility: {
-    flags: ["nodejs_compat"],
-  },
+  compatibility,
+  domain: production.pipe(Effect.map((prod) => (prod ? serverDomain : undefined))),
+  workersDev: production.pipe(Effect.map((prod) => !prod)),
   env: {
     DB: db,
-    CORS_ORIGIN: Config.String("CORS_ORIGIN"),
+    NODE_ENV: production.pipe(Effect.map((prod) => (prod ? "production" : "development"))),
+    CORS_ORIGIN: production.pipe(
+      Effect.flatMap((prod) =>
+        prod ? Effect.succeed(`https://${webDomain}`) : Config.String("CORS_ORIGIN"),
+      ),
+    ),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: Cloudflare.Worker.URL,
     ...observabilityBindings,
@@ -72,11 +83,16 @@ export default Alchemy.Stack(
     state: Cloudflare.state(),
   },
   Effect.gen(function* () {
+    const prod = yield* production;
     const observabilityResources = yield* observability;
     const serverWorker = yield* server;
     const webWorker = yield* Cloudflare.Website.Astro("web", {
       rootDir: "../../apps/web",
+      compatibility,
+      domain: prod ? webDomain : undefined,
+      workersDev: !prod,
       env: {
+        NODE_ENV: prod ? "production" : "development",
         ...observabilityBindings,
         SESSION: Cloudflare.KV.Namespace("session"),
         IMAGES: Cloudflare.Images.Images(),
@@ -90,6 +106,7 @@ export default Alchemy.Stack(
     return {
       web: webWorker.url,
       server: serverWorker.url,
+      database: (yield* db).databaseId,
       axiomDataset: observabilityResources.dataset.name,
     };
   }),

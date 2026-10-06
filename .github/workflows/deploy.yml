@@ -1,0 +1,90 @@
+name: Check and deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.20.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run test
+      - run: bun run build
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://trainstackhq.com
+    concurrency:
+      group: trainstack-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.20.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: Check this revision is still main
+        id: revision
+        run: |
+          current_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [ "$current_sha" = "$GITHUB_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "A newer commit is on main; skipping this deployment."
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Deploy infrastructure, migrations, and applications
+        if: steps.revision.outputs.current == 'true'
+        working-directory: packages/infra
+        run: |
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN BETTER_AUTH_SECRET AXIOM_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing production configuration: $name"
+              exit 1
+            fi
+          done
+          bun run deploy --stage production --yes --no-input
+        env:
+          CI: "true"
+          NODE_ENV: production
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
+          AXIOM_ORG_ID: ${{ vars.AXIOM_ORG_ID }}
+      - name: Verify production
+        if: steps.revision.outputs.current == 'true'
+        run: |
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 \
+            https://api.trainstackhq.com/health | jq --exit-status '.status == "ok"'
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 \
+            https://trainstackhq.com/ --output /dev/null

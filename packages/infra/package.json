@@ -6,6 +6,7 @@
     "check-types": "tsc --noEmit",
     "dev": "alchemy dev",
     "deploy": "alchemy deploy",
+    "plan": "alchemy plan",
     "destroy": "alchemy destroy"
   },
   "dependencies": {
