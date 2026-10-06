@@ -40,6 +40,8 @@ Skip all preambles and keep prose brief. Use the user's domain language from `GL
 
 Pick the smallest view that makes the key point clear.
 
+Put code-shaped or whitespace-sensitive examples in fenced code blocks. Choose the matching language tag, such as `text` for file trees, `mermaid` for Mermaid diagrams, and `diff` for diffs.
+
 - Show logic or an algorithm as pseudocode:
 
 ```text
