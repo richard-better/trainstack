@@ -27,6 +27,7 @@
     "build": "vp run -r build",
     "check-types": "vp run -r check-types",
     "check": "vp check && vp run -r check-types",
+    "test": "node --test tests/worker.test.mjs",
     "lint": "vp lint",
     "format": "vp fmt",
     "staged": "vp staged",

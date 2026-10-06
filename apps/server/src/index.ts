@@ -42,6 +42,17 @@ app.use(
   }),
 );
 
+app.get("/health", async (c) => {
+  c.header("Cache-Control", "no-store");
+  try {
+    await ENV.DB.prepare('SELECT 1 FROM "user" LIMIT 1').first();
+    return c.json({ status: "ok" });
+  } catch (error) {
+    c.get("log").error(error instanceof Error ? error : new Error(String(error)));
+    return c.json({ status: "unavailable" }, 503);
+  }
+});
+
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
