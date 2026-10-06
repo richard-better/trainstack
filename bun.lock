@@ -19,7 +19,7 @@
         "vite-plus": "0.3.1",
       },
     },
-    "hosted-apps/account": {
+    "hosted/apps/account": {
       "name": "@trainstack/account",
       "version": "0.0.1",
       "dependencies": {
@@ -38,7 +38,7 @@
         "vite-plus": "0.3.1",
       },
     },
-    "hosted-apps/api": {
+    "hosted/apps/api": {
       "name": "@trainstack/hosted-api",
       "dependencies": {
         "@better-auth/core": "1.7.7",
@@ -47,7 +47,7 @@
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
-        "@trainstack/hosted-contract": "workspace:*",
+        "@trainstack/contract": "workspace:*",
         "better-auth": "catalog:",
         "drizzle-orm": "catalog:",
         "evlog": "catalog:",
@@ -66,7 +66,7 @@
         "typescript": "catalog:",
       },
     },
-    "hosted-apps/marketing": {
+    "hosted/apps/marketing": {
       "name": "@trainstack/marketing",
       "version": "0.0.1",
       "dependencies": {
@@ -86,7 +86,7 @@
         "typescript": "catalog:",
       },
     },
-    "hosted-infra": {
+    "hosted/infra": {
       "name": "@trainstack/hosted-infra",
       "dependencies": {
         "zod": "catalog:",
@@ -105,8 +105,8 @@
       "name": "@trainstack/config",
       "version": "0.0.0",
     },
-    "packages/hosted-contract": {
-      "name": "@trainstack/hosted-contract",
+    "packages/contract": {
+      "name": "@trainstack/contract",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "zod": "catalog:",
@@ -840,17 +840,17 @@
 
     "@testing-library/user-event": ["@testing-library/user-event@14.6.7", "", { "peerDependencies": { "@testing-library/dom": ">=7.21.4" } }, "sha512-MPCpX8bxe8zS+JmmTwLp8jd0dy1rAm60Te/SL8JrQM3qvQJcBOs1d7IefJMyZzqM3EWBrDn/LWDt1BCGu4ASfg=="],
 
-    "@trainstack/account": ["@trainstack/account@workspace:hosted-apps/account"],
+    "@trainstack/account": ["@trainstack/account@workspace:hosted/apps/account"],
 
     "@trainstack/config": ["@trainstack/config@workspace:packages/config"],
 
-    "@trainstack/hosted-api": ["@trainstack/hosted-api@workspace:hosted-apps/api"],
+    "@trainstack/contract": ["@trainstack/contract@workspace:packages/contract"],
 
-    "@trainstack/hosted-contract": ["@trainstack/hosted-contract@workspace:packages/hosted-contract"],
+    "@trainstack/hosted-api": ["@trainstack/hosted-api@workspace:hosted/apps/api"],
 
-    "@trainstack/hosted-infra": ["@trainstack/hosted-infra@workspace:hosted-infra"],
+    "@trainstack/hosted-infra": ["@trainstack/hosted-infra@workspace:hosted/infra"],
 
-    "@trainstack/marketing": ["@trainstack/marketing@workspace:hosted-apps/marketing"],
+    "@trainstack/marketing": ["@trainstack/marketing@workspace:hosted/apps/marketing"],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.4", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A=="],
 

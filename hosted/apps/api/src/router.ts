@@ -1,5 +1,5 @@
 import { implement, ORPCError } from "@orpc/server";
-import { appContract } from "@trainstack/hosted-contract";
+import { appContract } from "@trainstack/contract";
 
 import type { Context } from "./context";
 

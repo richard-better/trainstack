@@ -25,8 +25,9 @@ stack in a single app:
 - **Coach** through coach access to your data, coach-made plans that AI tailors to each
   athlete, and tooling for clubs.
 
-TrainStack is open source. You own your data, the community can extend it with new sports
-and training load models, and anyone can self-host it.
+The TrainStack app is open source, and the server that runs it is source-available. You
+own your data, the community can extend it with new sports and training load models, and
+anyone can self-host it. See [LICENSING.md](../LICENSING.md).
 
 ## Where we start: TrainStack Ride
 

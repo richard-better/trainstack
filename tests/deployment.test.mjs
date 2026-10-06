@@ -20,7 +20,7 @@ async function deploy(env = {}) {
   let error;
   try {
     execFileSync("bun", ["deploy.ts", "--stage", "production", "--yes", "--no-input"], {
-      cwd: resolve("hosted-infra"),
+      cwd: resolve("hosted/infra"),
       env: {
         ...environment,
         BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
