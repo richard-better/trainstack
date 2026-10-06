@@ -26,8 +26,9 @@ Create an **account-owned** API token from [this account's token settings](https
 | Anthropo account        | Secrets Store Write      |
 | Anthropo account        | Account Settings Read    |
 | Only `trainstackhq.com` | Zone Read                |
+| Only `trainstackhq.com` | Workers Routes Write     |
 
-Workers Scripts Write covers the Worker custom-domain API, which manages DNS and certificates automatically. Zone Read lets Alchemy discover this zone. No DNS write, API-token administration, or unrelated product permissions are required. The account grants cover resources created during deployment, including Alchemy's state Worker. Cloudflare does not limit those account-wide grants to this project; consider a dedicated Cloudflare account if stronger isolation is needed. See the [Cloudflare custom-domain API permissions](https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/update/) and [Alchemy CI guide](https://alchemy.run/cloudflare/tutorial/part-5/).
+Workers Scripts Write lets Alchemy upload and deploy Worker scripts. Zone Read lets Alchemy discover this zone. Workers Routes Write, scoped to `trainstackhq.com`, lets it attach the custom domains. No DNS write, API-token administration, or unrelated product permissions are required. The account grants cover resources created during deployment, including Alchemy's state Worker. Cloudflare does not limit those account-wide grants to this project; consider a dedicated Cloudflare account if stronger isolation is needed. See [Cloudflare's Workers permissions](https://developers.cloudflare.com/workers/authorization/workers/), [custom-domain API permissions](https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/update/), and the [Alchemy CI guide](https://alchemy.run/cloudflare/tutorial/part-5/).
 
 Use a one-year expiry and rotate before it expires. Leave IP filtering unrestricted because GitHub-hosted runner addresses vary. Review the configuration yourself, create the token, and paste its value directly into GitHub. Do not paste secrets into chat, repository files, or command arguments.
 
