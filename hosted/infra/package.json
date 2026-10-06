@@ -1,6 +1,7 @@
 {
   "name": "@trainstack/hosted-infra",
   "private": true,
+  "license": "FSL-1.1-ALv2",
   "type": "module",
   "scripts": {
     "check-types": "tsc --noEmit",

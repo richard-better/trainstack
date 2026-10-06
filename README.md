@@ -91,13 +91,13 @@ bun run deploy:production
 
 ```
 trainstack/
-├── hosted/
+├── hosted/              # FSL-1.1-ALv2: everything that runs trainstackhq.com
 │   ├── apps/
 │   │   ├── account/     # Account app placeholder (TanStack Start)
 │   │   ├── api/         # API Worker, auth, and database (Hono, oRPC, Drizzle)
 │   │   └── marketing/   # Website (Astro)
 │   └── infra/           # Cloudflare infrastructure (Alchemy)
-└── packages/
+└── packages/            # Apache-2.0
     ├── contract/        # Shared API contract and types
     └── config/          # Shared TypeScript configuration
 ```
@@ -123,3 +123,7 @@ Add API endpoints to the contract first, then implement them in the API router.
 - `bun run format`: Run Vite+ formatting
 - `bun run staged`: Run Vite+ checks against staged files
 - `bun run hooks:setup`: Install Vite+ native Git hooks with `vp config`
+
+## License
+
+The app is open source under AGPL-3.0, the hosted backend in `hosted/` is source-available under FSL-1.1-ALv2, and shared packages are Apache-2.0. See [LICENSING.md](LICENSING.md).
