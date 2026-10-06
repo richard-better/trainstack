@@ -1,0 +1,50 @@
+name: Ride
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["apps/ride/**", ".github/workflows/ride.yml"]
+  push:
+    branches: [main]
+    paths: ["apps/ride/**", ".github/workflows/ride.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: Format
+    runs-on: xcode-27
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Lint
+        working-directory: apps/ride
+        run: swift format lint --strict --recursive --parallel Ride RideKit
+
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: xcode-27
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: iOS
+            destination: generic/platform=iOS Simulator
+          - platform: macOS
+            destination: platform=macOS,arch=arm64
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Build
+        run: >
+          xcodebuild build
+          -project apps/ride/Ride.xcodeproj
+          -scheme Ride
+          -destination '${{ matrix.destination }}'
+          CODE_SIGNING_ALLOWED=NO

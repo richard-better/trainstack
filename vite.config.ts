@@ -33,6 +33,7 @@ export default defineConfig({
       ".alchemy/**",
       ".wrangler/**",
       "**/.wrangler/**",
+      "apps/**/*.xcassets/**",
     ],
     singleQuote: false,
     semi: true,
