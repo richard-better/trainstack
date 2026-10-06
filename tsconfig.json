@@ -1,0 +1,3 @@
+{
+  "extends": "@trainstack/config/tsconfig.base.json"
+}
