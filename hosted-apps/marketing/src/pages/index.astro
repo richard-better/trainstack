@@ -1,25 +1,162 @@
 ---
-import Layout from "../layouts/Layout.astro";
+import AppIcon from "../components/site/AppIcon.astro";
+import GitHubIcon from "../components/site/GitHubIcon.astro";
+import SiteFooter from "../components/site/SiteFooter.astro";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { links } from "../lib/links";
 
-const TITLE_TEXT = `
- ██████╗ ███████╗████████╗████████╗███████╗██████╗
- ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
- ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
- ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
- ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
- ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
-
- ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
- ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-    ██║       ███████╗   ██║   ███████║██║     █████╔╝
-    ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
-    ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
-    ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
- `;
+const pricing = [
+  { name: "Run it yourself", detail: "Build from source and run locally", price: "$0" },
+  {
+    name: "Download the app",
+    detail: "iPhone, iPad and Mac, with data kept on your device",
+    price: "$0",
+  },
+  {
+    name: "Trainstack Sync",
+    detail: "An account that syncs across devices and with third-party tools",
+    price: "$12/yr",
+    alternative: "or $4/mo",
+  },
+];
 ---
 
-<Layout title="trainstack">
-  <div class="container mx-auto max-w-3xl px-4 py-2">
-    <pre class="overflow-x-auto font-mono text-sm text-white">{TITLE_TEXT}</pre>
+<MarketingLayout
+  title="Trainstack - The last training app you'll need"
+  description="An open-source stack for all your training. First up is Ride, which drives your smart trainer through structured workouts and plans."
+>
+  <div class="bg-ts-night font-geist text-ts-mist">
+    <header class="flex items-center justify-between gap-6 px-6 py-6 md:px-16">
+      <a href="/" class="flex items-center gap-2.5 text-[17px] font-semibold">
+        <img src="/trainstack-logo.svg" alt="" class="size-[26px] brightness-[1.4] invert" />
+        <span>Trainstack</span>
+      </a>
+      <nav class="flex items-center gap-5 text-sm text-ts-muted sm:gap-8">
+        <a href="#apps" class="hover:opacity-75">Apps</a>
+        <a href="#pricing" class="hover:opacity-75">Pricing</a>
+        <a
+          href={links.github}
+          class="flex items-center gap-2 rounded-lg border border-ts-line px-4 py-[9px] text-ts-mist hover:opacity-75"
+        >
+          <GitHubIcon />
+          <span class="max-sm:sr-only">GitHub</span>
+        </a>
+      </nav>
+    </header>
+
+    <section
+      class="flex flex-col items-center gap-7 px-6 pt-14 pb-24 text-center md:px-16 md:pt-[88px] md:pb-28"
+      style="background: radial-gradient(ellipse 60% 50% at 50% 30%, #26272a, var(--color-ts-night) 70%)"
+    >
+      <img
+        src="/trainstack-logo.svg"
+        alt="Trainstack"
+        class="size-32 brightness-[1.4] invert drop-shadow-[0_30px_40px_rgba(0,0,0,0.6)] md:size-[168px]"
+      />
+      <h1 class="m-0 max-w-[960px] text-5xl leading-none font-medium tracking-[-0.04em] md:text-[80px]">
+        The last training app you'll need.
+      </h1>
+      <p class="m-0 max-w-[580px] text-[17px] leading-[1.55] text-ts-muted md:text-[19px]">
+        An open-source stack for all your training. First up is Ride, which drives your smart
+        trainer through structured workouts and plans.
+      </p>
+      <div class="flex flex-wrap justify-center gap-3">
+        <a
+          href={links.github}
+          class="flex items-center gap-2.5 rounded-[10px] bg-ts-mist px-[22px] py-3.5 text-[15px] font-medium text-ts-night hover:opacity-75"
+        >
+          <GitHubIcon />
+          View on GitHub
+        </a>
+        <a
+          href="#apps"
+          class="flex items-center gap-2.5 rounded-[10px] border border-ts-line px-[22px] py-3.5 text-[15px] font-medium hover:opacity-75"
+        >
+          See the apps <span aria-hidden="true">↓</span>
+        </a>
+      </div>
+    </section>
   </div>
-</Layout>
+
+  <section id="apps" class="flex flex-col gap-10 px-6 py-20 md:px-16 md:py-[104px]">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-10">
+      <h2 class="m-0 font-serif text-5xl leading-none font-normal md:text-6xl">One layer at a time.</h2>
+      <p class="m-0 max-w-[400px] text-[17px] leading-[1.55] text-ts-slate">
+        Each app covers one part of training, and they all share a single history.
+      </p>
+    </div>
+
+    <ul class="m-0 flex list-none flex-col gap-2 p-0">
+      <li
+        class="flex flex-col gap-4 rounded-[14px] bg-linear-to-r from-[#2b2c2f] to-[#5c5e63] px-6 py-7 text-ts-paper md:flex-row md:items-center md:justify-between md:px-8"
+      >
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <AppIcon name="ride" />
+          <span class="font-serif text-4xl leading-none">Ride</span>
+          <span class="text-[15px] text-ts-haze">
+            Indoor cycling, structured workouts, trainer control
+          </span>
+        </div>
+        <div class="flex items-center gap-5">
+          <a href="/ride" class="text-sm text-ts-haze hover:opacity-75">Learn more →</a>
+          <span class="rounded-full bg-ts-paper px-3 py-1.5 text-[13px] font-medium text-ts-ink">
+            Available now
+          </span>
+        </div>
+      </li>
+      <li
+        class="flex flex-col gap-4 rounded-[14px] border border-ts-edge bg-ts-card px-6 py-7 md:mx-4 md:flex-row md:items-center md:justify-between md:px-8"
+      >
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-ts-charcoal">
+          <AppIcon name="pre" />
+          <span class="font-serif text-4xl leading-none">Pre</span>
+          <span class="text-[15px] text-ts-slate">Prehab and rehab programmes</span>
+        </div>
+        <span class="text-[13px] text-ts-slate">Coming soon</span>
+      </li>
+      <li
+        class="flex flex-col gap-4 rounded-[14px] border border-dashed border-ts-dash px-6 py-7 md:mx-8 md:flex-row md:items-center md:justify-between md:px-8"
+      >
+        <div class="flex items-center gap-5 text-ts-ghost">
+          <AppIcon name="more" />
+          <span class="font-serif text-4xl leading-none">More layers</span>
+        </div>
+        <a href={links.github} class="self-start text-sm text-ts-slate hover:opacity-75 md:self-auto">
+          Follow the roadmap →
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <section
+    id="pricing"
+    class="grid gap-12 bg-ts-ink px-6 py-20 text-ts-paper md:grid-cols-[1fr_1.4fr] md:gap-16 md:px-16 md:py-[104px]"
+  >
+    <div class="flex flex-col gap-4">
+      <h2 class="m-0 font-serif text-5xl leading-none font-normal md:text-[56px]">
+        Free to use. Pay only for sync.
+      </h2>
+      <p class="m-0 text-base leading-relaxed text-ts-ash">
+        The code is open and the apps are free. Sync is how we keep the lights on.
+      </p>
+    </div>
+    <dl class="m-0 flex flex-col border-b border-ts-line">
+      {
+        pricing.map((tier) => (
+          <div class="grid grid-cols-[1fr_auto] items-center gap-6 border-t border-ts-line py-6">
+            <dt class="flex flex-col gap-1">
+              <span class="text-[19px] font-medium">{tier.name}</span>
+              <span class="text-[15px] text-ts-ash">{tier.detail}</span>
+            </dt>
+            <dd class="m-0 flex flex-col items-end gap-0.5">
+              <span class="font-geist-mono text-2xl">{tier.price}</span>
+              {tier.alternative && <span class="text-[13px] text-ts-ash">{tier.alternative}</span>}
+            </dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <SiteFooter label="Trainstack · Open source" />
+</MarketingLayout>

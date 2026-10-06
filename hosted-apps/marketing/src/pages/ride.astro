@@ -1,0 +1,148 @@
+---
+import SiteFooter from "../components/site/SiteFooter.astro";
+import StoreButtons from "../components/site/StoreButtons.astro";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { links } from "../lib/links";
+
+const metrics = [
+  { label: "Target", value: "245" },
+  { label: "Power", value: "247" },
+  { label: "Cadence", value: "88" },
+];
+
+// Sweet spot 3 x 12 min: warm-up, three efforts with recoveries, cool-down.
+// Efforts already ridden are lit; the playhead sits in the second one.
+const intervals = [
+  { flex: 4, height: "30%", fill: "bg-ts-graphite" },
+  { flex: 7, height: "80%", fill: "bg-linear-to-b from-ts-silver to-ts-steel" },
+  { flex: 2, height: "35%", fill: "bg-ts-steel" },
+  { flex: 7, height: "80%", fill: "bg-linear-to-b from-ts-silver to-ts-steel" },
+  { flex: 2, height: "35%", fill: "bg-ts-graphite" },
+  { flex: 7, height: "80%", fill: "bg-ts-charcoal" },
+  { flex: 4, height: "25%", fill: "bg-ts-graphite" },
+];
+
+const features = [
+  {
+    title: "Trainer control",
+    body: "Pair your smart trainer, heart rate strap and power meter. Resistance follows your targets automatically.",
+  },
+  {
+    title: "Training plans",
+    body: "Multi-week plans for base, threshold and racing. Today's session is always ready to go.",
+  },
+  {
+    title: "Yours, openly",
+    body: "Open source, with your data on your device. Sync with third-party tools if you want.",
+  },
+];
+---
+
+<MarketingLayout
+  title="Ride - Trainstack"
+  description="Pair your smart trainer and pick a workout or plan. Ride sets the resistance for every interval, so you just pedal."
+>
+  <div class="bg-ts-ink text-ts-paper">
+    <header class="flex items-center justify-between gap-6 px-6 py-6 md:px-16">
+      <div class="flex items-center gap-2.5 text-lg font-semibold">
+        <a href="/" class="flex items-center gap-2.5 hover:opacity-75">
+          <img src="/trainstack-logo.svg" alt="" class="size-7 brightness-[1.4] invert" />
+          <span>Trainstack</span>
+        </a>
+        <span class="font-normal text-ts-stone">/</span>
+        <span class="font-medium">Ride</span>
+      </div>
+      <nav class="flex items-center gap-5 text-[15px] text-ts-ash sm:gap-8">
+        <a href="#features" class="hover:opacity-75 max-sm:hidden">Features</a>
+        <a href="/#pricing" class="hover:opacity-75 max-sm:hidden">Pricing</a>
+        <a
+          href="#download"
+          class="rounded-lg bg-ts-paper px-[18px] py-2.5 font-medium text-ts-ink hover:opacity-75"
+        >
+          Download
+        </a>
+      </nav>
+    </header>
+
+    <section
+      class="grid items-center gap-12 px-6 pt-12 pb-20 md:px-16 md:pt-[72px] md:pb-[104px] lg:grid-cols-[1fr_1.2fr] lg:gap-16"
+    >
+      <div class="flex flex-col gap-6">
+        <div class="text-[13px] text-ts-ash">Trainstack Ride</div>
+        <h1 class="m-0 font-serif text-[56px] leading-[0.98] font-normal md:text-[80px]">
+          Indoor training, minus the game.
+        </h1>
+        <p class="m-0 text-lg leading-relaxed text-ts-ash">
+          Pair your smart trainer and pick a workout or plan. Ride sets the resistance for every
+          interval, so you just pedal.
+        </p>
+        <div class="mt-1">
+          <StoreButtons tone="dark" />
+        </div>
+      </div>
+
+      <figure
+        class="m-0 flex flex-col gap-6 rounded-[18px] border border-ts-graphite bg-ts-black p-6 md:p-7"
+        aria-label="Ride workout screen mid-session"
+      >
+        <div class="flex justify-between gap-4 text-[15px] text-ts-ash">
+          <div>Sweet spot · 3 × 12 min</div>
+          <div class="font-geist-mono">32:10 / 60:00</div>
+        </div>
+        <dl class="m-0 flex gap-8 md:gap-10">
+          {
+            metrics.map((metric) => (
+              <div class="flex flex-col gap-0.5">
+                <dt class="text-xs text-ts-stone uppercase">{metric.label}</dt>
+                <dd class="m-0 font-geist-mono text-4xl md:text-[46px]">{metric.value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+        <div class="relative flex h-[150px] items-end gap-[3px]" aria-hidden="true">
+          {
+            intervals.map((interval) => (
+              <div
+                class:list={["rounded-t-[3px]", interval.fill]}
+                style={{ flex: interval.flex, height: interval.height }}
+              />
+            ))
+          }
+          <div class="absolute -top-1.5 bottom-0 left-[53%] w-0.5 bg-ts-paper"></div>
+        </div>
+      </figure>
+    </section>
+  </div>
+
+  <section
+    id="features"
+    class="grid gap-10 px-6 py-20 md:grid-cols-3 md:px-16 md:py-[104px]"
+  >
+    {
+      features.map((feature, index) => (
+        <div class="flex flex-col gap-2.5 border-t border-ts-rule pt-5">
+          <span class="font-geist-mono text-[13px] text-ts-stone">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <h2 class="m-0 font-serif text-[32px] font-normal">{feature.title}</h2>
+          <p class="m-0 text-base leading-[1.55] text-ts-slate">{feature.body}</p>
+        </div>
+      ))
+    }
+  </section>
+
+  <section
+    id="download"
+    class="mx-6 mb-20 flex scroll-mt-6 flex-col gap-8 rounded-[18px] bg-ts-card p-8 md:mx-16 md:mb-[104px] md:flex-row md:items-center md:justify-between md:gap-10 md:p-14"
+  >
+    <div class="flex flex-col gap-2">
+      <h2 class="m-0 font-serif text-5xl leading-none font-normal">Ride is free.</h2>
+      <p class="m-0 text-base text-ts-slate">
+        On iPhone, iPad and Mac. Or <a href={links.github} class="underline underline-offset-2 hover:opacity-75">build it from source</a>.
+      </p>
+    </div>
+    <StoreButtons tone="light" />
+  </section>
+
+  <SiteFooter label="Part of Trainstack" class="border-t border-ts-edge" />
+</MarketingLayout>

@@ -1,0 +1,25 @@
+---
+import { links } from "../../lib/links";
+
+interface Props {
+  label: string;
+  class?: string;
+}
+
+const { label, class: className } = Astro.props;
+---
+
+<footer
+  class:list={[
+    "flex flex-col gap-4 px-6 py-7 text-sm text-ts-stone sm:flex-row sm:items-center sm:justify-between md:px-16",
+    className,
+  ]}
+>
+  <div class="flex items-center gap-2.5">
+    <img src="/trainstack-logo.svg" alt="" class="size-5" />
+    <span>{label}</span>
+  </div>
+  <nav class="flex gap-6">
+    <a href={links.github} class="hover:opacity-75">GitHub</a>
+  </nav>
+</footer>

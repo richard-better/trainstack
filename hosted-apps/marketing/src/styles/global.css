@@ -5,4 +5,36 @@
 
 @theme {
   --font-sans: "Inter", sans-serif;
+  --font-grotesk: "Hanken Grotesk", sans-serif;
+  --font-geist: "Geist", sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, monospace;
+  --font-serif: "Instrument Serif", serif;
+
+  /* Marketing palette: cool greys from near-black to paper. */
+  --color-ts-night: #0f1011;
+  --color-ts-black: #0c0c0d;
+  --color-ts-ink: #18191b;
+  --color-ts-graphite: #2a2b2e;
+  --color-ts-line: #33353a;
+  --color-ts-charcoal: #3a3b3f;
+  --color-ts-slate: #5a5c61;
+  --color-ts-steel: #6b6d72;
+  --color-ts-stone: #6e7177;
+  --color-ts-ghost: #8a8c91;
+  --color-ts-muted: #8e9096;
+  --color-ts-ash: #9a9ca1;
+  --color-ts-dash: #b9bbc0;
+  --color-ts-silver: #c3c5c9;
+  --color-ts-rule: #c6c7cb;
+  --color-ts-haze: #d2d3d6;
+  --color-ts-edge: #d3d4d7;
+  --color-ts-card: #e6e7e9;
+  --color-ts-mist: #ececee;
+  --color-ts-paper: #f2f2f3;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(body.marketing) {
+    scroll-behavior: smooth;
+  }
 }
