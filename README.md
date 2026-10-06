@@ -17,11 +17,13 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 
 ## Getting Started
 
-Use Bun 1.4.2 and Node.js 22.20.0, matching CI. Then install the dependencies:
+Install [mise](https://mise.jdx.dev/) and run `mise install` from the repository root to install the pinned Node.js and Bun versions. With mise activated in your shell, install the dependencies:
 
 ```bash
 bun install
 ```
+
+If your shell does not activate mise automatically, run project commands with `mise exec --`, for example `mise exec -- bun install`.
 
 ## Database Setup
 
