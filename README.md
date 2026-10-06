@@ -17,7 +17,7 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 
 ## Getting Started
 
-First, install the dependencies:
+Use Bun 1.4.2 and Node.js 22.20.0, matching CI. Then install the dependencies:
 
 ```bash
 bun install
@@ -60,27 +60,20 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 
 ## Deployment
 
-### Alchemy
+The Cloudflare infrastructure lives in [`packages/infra/alchemy.run.ts`](packages/infra/alchemy.run.ts). Alchemy manages the frontend and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`packages/infra/observability.ts`](packages/infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
 
-- Target: web on Cloudflare + server on Cloudflare + Axiom observability
-- Configure provider accounts: `cd packages/infra && bunx alchemy profile edit`
-- Dev: bun run dev
-- Deploy: bun run deploy
-- Destroy: bun run destroy
+Production uses `trainstackhq.com` for the frontend and `api.trainstackhq.com` for the API. Alchemy supplies the frontend API URL, API auth URL, and trusted frontend origin. Non-production stages use local or `workers.dev` URLs. The production D1 database is retained when removed from the stack or destroyed; Alchemy stops tracking a retained resource, so preserve its ID before a teardown.
 
-`alchemy profile edit` stores the selected Axiom, Cloudflare, Neon, PlanetScale, and/or Prisma provider profiles under `~/.alchemy`; no provider-specific setup command is required by this scaffold.
+[`Check and deploy`](.github/workflows/deploy.yml) checks pull requests targeting `main`. Every push to `main`, including a merged pull request, runs checks, Workers/D1 integration tests, and the backend build before deploying the complete `production` stack. Production deployments are serialized, running deployments are not cancelled, and older revisions are skipped if `main` has advanced. A manual workflow run is also supported from `main`.
 
-Deploys are staged and default to a personal `dev_<username>` stage. For production, run the deploy with an explicit stage from `packages/infra`:
+If `AXIOM_TOKEN` is missing, the frontend, API, and database still deploy with Cloudflare Workers Logs. Adding the token enables Axiom on the next deployment. Removing it later skips the Axiom stack without deleting its resources or state.
+
+See [`docs/deployment.md`](docs/deployment.md) for account-token permissions, GitHub production secrets, initial setup, migration and recovery procedures.
 
 ```bash
-cd packages/infra && bunx alchemy deploy --stage production
+bun run plan:production
+bun run deploy:production
 ```
-
-Alchemy creates a stage-specific Axiom dataset and a least-privilege ingest token. `dev` injects the credentials into the observed apps without writing the token to an env file.
-
-### Production origins
-
-- Required after the first deploy: set `CORS_ORIGIN` in `apps/server/.env` to the exact deployed web origin, such as `https://app.example.com`, then deploy the server again.
 
 ## Git Hooks and Formatting
 
@@ -108,6 +101,9 @@ trainstack/
 - `bun run check-types`: Check TypeScript types across all apps
 - `bun run db:generate`: Generate database client/types
 - `bun run check`: Run Vite+ format/lint checks and workspace TypeScript checks
+- `bun run test`: Exercise the API and committed migrations in Cloudflare's local Workers/D1 runtime
+- `bun run plan:production`: Preview production infrastructure changes with configured provider credentials
+- `bun run deploy:production`: Deploy the complete production stack with configured provider credentials
 - `bun run lint`: Run Vite+ lint checks
 - `bun run format`: Run Vite+ formatting
 - `bun run staged`: Run Vite+ checks against staged files

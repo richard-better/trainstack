@@ -26,7 +26,18 @@ const identifyUser = createAuthMiddleware((await createAuth()) as BetterAuthInst
 
 const app = new Hono<EvlogVariables>();
 
-app.use(evlog({ drain: createAxiomDrain() }));
+app.use(
+  evlog({
+    drain:
+      ENV.AXIOM_API_KEY && ENV.AXIOM_DATASET
+        ? createAxiomDrain({
+            apiKey: ENV.AXIOM_API_KEY,
+            dataset: ENV.AXIOM_DATASET,
+            edgeUrl: ENV.AXIOM_EDGE_URL,
+          })
+        : undefined,
+  }),
+);
 app.use("*", async (c, next) => {
   await identifyUser(c.get("log"), c.req.raw.headers, c.req.path);
   await next();
@@ -41,6 +52,17 @@ app.use(
     credentials: true,
   }),
 );
+
+app.get("/health", async (c) => {
+  c.header("Cache-Control", "no-store");
+  try {
+    await ENV.DB.prepare('SELECT 1 FROM "user" LIMIT 1').first();
+    return c.json({ status: "ok" });
+  } catch (error) {
+    c.get("log").error(error instanceof Error ? error : new Error(String(error)));
+    return c.json({ status: "unavailable" }, 503);
+  }
+});
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 

@@ -8,8 +8,7 @@
   "scripts": {
     "build": "tsc -b",
     "check-types": "tsc -b",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate:deploy": "drizzle-kit migrate"
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",
