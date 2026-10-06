@@ -5,6 +5,8 @@ export default defineConfig({
     ignorePatterns: [
       "node_modules/**",
       "**/node_modules/**",
+      "hosted-apps/account/dist/**",
+      "hosted-apps/account/src/routeTree.gen.ts",
       "hosted-apps/marketing/dist/**",
       "hosted-apps/marketing/.astro/**",
       "hosted-apps/api/dist/**",
@@ -22,6 +24,8 @@ export default defineConfig({
     ignorePatterns: [
       "node_modules/**",
       "**/node_modules/**",
+      "hosted-apps/account/dist/**",
+      "hosted-apps/account/src/routeTree.gen.ts",
       "hosted-apps/marketing/dist/**",
       "hosted-apps/marketing/.astro/**",
       "hosted-apps/api/dist/**",

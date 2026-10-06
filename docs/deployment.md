@@ -4,6 +4,7 @@
 
 Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted-infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted-infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
 
+- TanStack Start account Worker at `account.trainstackhq.com`, serving a placeholder homepage. Alchemy builds it through `Cloudflare.Website.Vite` and manages the custom domain and TLS.
 - API Worker at `api.trainstackhq.com`, with a `DB` binding to D1 and a secret Better Auth signing key.
 - Astro Worker served at `trainstackhq.com` by a `trainstackhq.com/*` route over the existing proxied DNS records, with the API URL, session KV, and Images binding.
 - Committed Drizzle migrations before the API Worker update.
@@ -28,7 +29,7 @@ Create an **account-owned** API token from [this account's token settings](https
 | Only `trainstackhq.com` | Zone Read                |
 | Only `trainstackhq.com` | Workers Routes Write     |
 
-Workers Scripts Write lets Alchemy upload and deploy Worker scripts. Zone Read lets Alchemy discover this zone. Workers Routes Write, scoped to `trainstackhq.com`, lets it attach the API custom domain and the apex Worker route. No DNS write, API-token administration, or unrelated product permissions are required. The account grants cover resources created during deployment, including Alchemy's state Worker. Cloudflare does not limit those account-wide grants to this project; consider a dedicated Cloudflare account if stronger isolation is needed. See [Cloudflare's Workers permissions](https://developers.cloudflare.com/workers/authorization/workers/), [Workers routes](https://developers.cloudflare.com/workers/configuration/routing/routes/), and the [Alchemy CI guide](https://alchemy.run/cloudflare/tutorial/part-5/).
+Workers Scripts Write lets Alchemy upload and deploy Worker scripts. Zone Read lets Alchemy discover this zone. Workers Routes Write, scoped to `trainstackhq.com`, lets it attach the API and account custom domains and the apex Worker route. No DNS write, API-token administration, or unrelated product permissions are required. The account grants cover resources created during deployment, including Alchemy's state Worker. Cloudflare does not limit those account-wide grants to this project; consider a dedicated Cloudflare account if stronger isolation is needed. See [Cloudflare's Workers permissions](https://developers.cloudflare.com/workers/authorization/workers/), [Workers routes](https://developers.cloudflare.com/workers/configuration/routing/routes/), and the [Alchemy CI guide](https://alchemy.run/cloudflare/tutorial/part-5/).
 
 Use a one-year expiry and rotate before it expires. Leave IP filtering unrestricted because GitHub-hosted runner addresses vary. Review the configuration yourself, create the token, and paste its value directly into GitHub. Do not paste secrets into chat, repository files, or command arguments.
 
@@ -54,10 +55,10 @@ To enter a token without putting it into a command argument, use GitHub's secret
 
 ## First deployment
 
-1. Confirm the domain zone is active in this account and `trainstackhq.com` has a proxied DNS record. The apex Worker route uses the existing proxied records, so keep at least one in place. The API Worker uses a custom domain at `api.trainstackhq.com`; resolve any conflicting records for that exact hostname before deployment.
+1. Confirm the domain zone is active in this account and `trainstackhq.com` has a proxied DNS record. The apex Worker route uses the existing proxied records, so keep at least one in place. The API and account Workers use custom domains at `api.trainstackhq.com` and `account.trainstackhq.com`; resolve any conflicting records for those exact hostnames before deployment. Alchemy creates their domain records and TLS certificates.
 2. Add the required Cloudflare credentials and auth secret above; Axiom is optional. GitHub deployment approvals are optional; requiring them pauses otherwise automatic deploys.
 3. Merge the workflow and infrastructure changes into `main`. The workflow deploys automatically, bootstrapping Alchemy's state store if absent using `--yes --no-input`. No local state artifact or separate Alchemy password is needed.
-4. The workflow verifies the API's `/health` endpoint and frontend homepage. Initial DNS/certificate propagation is retried; if it exceeds the retry window, check Cloudflare's domain status and re-run the workflow.
+4. The workflow verifies the API's `/health` endpoint, marketing homepage, and account homepage title. Initial DNS/certificate propagation is retried; if it exceeds the retry window, check Cloudflare's domain status and re-run the workflow.
 
 For a local plan or deployment, configure Cloudflare using `cd hosted-infra && bunx alchemy profile edit`, and put the same auth signing secret in the ignored `hosted-apps/api/.env`. Use the same Cloudflare account and `production` stage as CI. Run `bun run plan:production` before `bun run deploy:production`. Avoid running a local production deploy while GitHub is deploying; CI concurrency cannot serialize your laptop.
 
@@ -71,7 +72,7 @@ Edit `hosted-apps/api/src/db/schema`, run `bun run db:generate`, and commit the 
 
 Use changes compatible with the currently running API because migrations run before its replacement. Add new columns/tables first, deploy code using them, and remove obsolete schema in a later release. A failed deployment can leave successfully applied migrations in place.
 
-Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests exercise deployment orchestration with and without Axiom, and bundle the actual API to execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. Alchemy builds the Astro application during deployment.
+Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests exercise deployment orchestration with and without Axiom, and bundle the actual API to execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. The check job builds the account app before deployment. Alchemy builds the Astro and TanStack Start applications for Cloudflare during deployment. The account app uses the existing compatibility settings, runs on port 3001 in `alchemy dev`, and uses a `workers.dev` URL outside production. Run `bun run --cwd hosted-apps/account dev:bare` for standalone development without Cloudflare credentials.
 
 ## Recovery
 

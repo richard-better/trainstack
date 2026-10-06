@@ -11,6 +11,7 @@ import { Observability } from "./observability";
 
 const production = Alchemy.Stack.pipe(Effect.map(({ stage }) => stage === "production"));
 const webDomain = "trainstackhq.com";
+const accountDomain = `account.${webDomain}`;
 const serverDomain = `api.${webDomain}`;
 const serverDomainForStage = Output.fromEffect(
   production.pipe(Effect.map((prod) => (prod ? serverDomain : undefined))),
@@ -75,6 +76,15 @@ export default Alchemy.Stack(
     const prod = yield* production;
     const observabilityResources = yield* observability;
     const serverWorker = yield* server;
+    const accountWorker = yield* Cloudflare.Website.Vite("account", {
+      rootDir: "../hosted-apps/account",
+      compatibility,
+      domain: prod ? accountDomain : undefined,
+      workersDev: !prod,
+      dev: {
+        port: 3001,
+      },
+    });
     const webWorker = yield* Cloudflare.Website.Astro("web", {
       rootDir: "../hosted-apps/marketing",
       compatibility,
@@ -94,6 +104,7 @@ export default Alchemy.Stack(
 
     return {
       web: prod ? `https://${webDomain}` : webWorker.url,
+      account: accountWorker.url,
       server: serverWorker.url,
       database: (yield* db).databaseId,
       axiomDataset: observabilityResources.AXIOM_DATASET,

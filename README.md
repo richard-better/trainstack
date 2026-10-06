@@ -6,6 +6,7 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 
 - **TypeScript** - For type safety and improved developer experience
 - **Astro** - The web framework for content-driven websites
+- **TanStack Start** - The account application framework
 - **TailwindCSS** - Utility-first CSS for rapid UI development
 - **Hono** - Lightweight, performant server framework
 - **oRPC** - End-to-end type-safe APIs with OpenAPI integration
@@ -47,10 +48,13 @@ bun run dev
 
 Open [http://localhost:4321](http://localhost:4321) in your browser to see the web application.
 The API is running at [http://localhost:3000](http://localhost:3000).
+The account app is running at [http://localhost:3001](http://localhost:3001). To run its placeholder independently of the infrastructure, use `bun run --cwd hosted-apps/account dev:bare`.
 
 ## Environment Configuration
 
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
+Each app that uses environment variables owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
+
+The account placeholder has no environment variables yet.
 
 Import the generated `ENV` accessor in application code. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
 
@@ -62,11 +66,11 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 
 ## Deployment
 
-The Cloudflare infrastructure lives in [`hosted-infra/alchemy.run.ts`](hosted-infra/alchemy.run.ts). Alchemy manages the marketing and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`hosted-infra/observability.ts`](hosted-infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
+The Cloudflare infrastructure lives in [`hosted-infra/alchemy.run.ts`](hosted-infra/alchemy.run.ts). Alchemy manages the marketing, account, and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`hosted-infra/observability.ts`](hosted-infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
 
-Production uses `trainstackhq.com` for the frontend and `api.trainstackhq.com` for the API. Alchemy supplies the frontend API URL, API auth URL, and trusted frontend origin. Non-production stages use local or `workers.dev` URLs. The production D1 database is retained when removed from the stack or destroyed; Alchemy stops tracking a retained resource, so preserve its ID before a teardown.
+Production uses `trainstackhq.com` for marketing, `account.trainstackhq.com` for the account app, and `api.trainstackhq.com` for the API. The account app currently serves only a placeholder homepage. Alchemy supplies the frontend API URL, API auth URL, and trusted frontend origin. Non-production stages use local or `workers.dev` URLs. The production D1 database is retained when removed from the stack or destroyed; Alchemy stops tracking a retained resource, so preserve its ID before a teardown.
 
-[`Check and deploy`](.github/workflows/deploy.yml) checks pull requests targeting `main`. Every push to `main`, including a merged pull request, runs checks, Workers/D1 integration tests, and the backend build before deploying the complete `production` stack. Production deployments are serialized, running deployments are not cancelled, and older revisions are skipped if `main` has advanced. A manual workflow run is also supported from `main`.
+[`Check and deploy`](.github/workflows/deploy.yml) checks pull requests targeting `main`. Every push to `main`, including a merged pull request, runs checks, Workers/D1 integration tests, and application builds before deploying the complete `production` stack. Production deployments are serialized, running deployments are not cancelled, and older revisions are skipped if `main` has advanced. A manual workflow run is also supported from `main`.
 
 If `AXIOM_TOKEN` is missing, the frontend, API, and database still deploy with Cloudflare Workers Logs. Adding the token enables Axiom on the next deployment. Removing it later skips the Axiom stack without deleting its resources or state.
 
@@ -88,6 +92,7 @@ bun run deploy:production
 ```
 trainstack/
 ├── hosted-apps/
+│   ├── account/     # Account app placeholder (TanStack Start)
 │   ├── api/         # API Worker, auth, and database (Hono, oRPC, Drizzle)
 │   └── marketing/   # Website (Astro)
 ├── packages/
