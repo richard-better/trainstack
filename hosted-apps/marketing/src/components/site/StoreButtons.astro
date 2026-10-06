@@ -1,0 +1,25 @@
+---
+import { links } from "../../lib/links";
+
+interface Props {
+  tone: "light" | "dark";
+}
+
+const { tone } = Astro.props;
+const base = "rounded-lg px-[22px] py-3.5 text-[15px] font-medium transition-opacity hover:opacity-75";
+---
+
+<div class="flex flex-wrap gap-3">
+  <a
+    href={links.appStore}
+    class:list={[base, tone === "dark" ? "bg-ts-paper text-ts-ink" : "bg-ts-ink text-ts-paper"]}
+  >
+    App Store
+  </a>
+  <a
+    href={links.macAppStore}
+    class:list={[base, "border", tone === "dark" ? "border-ts-charcoal" : "border-ts-rule"]}
+  >
+    Mac App Store
+  </a>
+</div>
