@@ -2,83 +2,68 @@ import RideBluetooth
 import SwiftUI
 
 struct DevicesView: View {
-  @State private var discovery = BluetoothDiscovery()
+  let discovery: BluetoothDiscovery
   @State private var showAll = false
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.scenePhase) private var scenePhase
 
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 24) {
+    Group {
+      if discovery.availability == .ready {
+        deviceList
+      } else {
+        bluetoothStatus
+      }
+    }
+    .navigationTitle("Devices")
+  }
+
+  private var deviceList: some View {
+    Form {
+      Section {
+        ForEach(discovery.fitnessDevices) { device in
+          DeviceRow(device: device)
+        }
+        if discovery.fitnessDevices.isEmpty {
+          Text("Wake your trainer or sensor and keep it nearby.")
+            .foregroundStyle(.secondary)
+        }
+      } header: {
+        HStack(spacing: 8) {
+          Text("Nearby fitness devices")
+          ProgressView()
+            .controlSize(.mini)
+            .accessibilityLabel("Scanning")
+        }
+      } footer: {
+        HStack {
+          Text(otherDevicesSummary)
+          Spacer()
           Toggle("Show all", isOn: $showAll)
+            .toggleStyle(.switch)
+            .controlSize(.mini)
             .accessibilityHint(
               "Include nearby Bluetooth devices that do not advertise a fitness service.")
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      }
 
-          if discovery.availability == .ready {
-            availableDevices
-          } else {
-            bluetoothStatus
+      if showAll, !discovery.otherDevices.isEmpty {
+        Section("Other Bluetooth devices") {
+          ForEach(discovery.otherDevices) { device in
+            DeviceRow(device: device)
           }
         }
-        .padding(24)
-      }
-      .navigationTitle("Devices")
-      .toolbar {
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Close", systemImage: "xmark") { dismiss() }
-        }
       }
     }
-    #if os(macOS)
-      .frame(minWidth: 460, idealWidth: 560, minHeight: 420, idealHeight: 600)
-    #endif
-    .onAppear {
-      if scenePhase == .active { discovery.startScanning() }
-    }
-    .onDisappear { discovery.stopScanning() }
-    .onChange(of: scenePhase) { _, phase in
-      if phase == .active {
-        discovery.startScanning()
-      } else {
-        discovery.stopScanning()
-      }
-    }
+    .formStyle(.grouped)
   }
 
-  private var availableDevices: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text("Available")
-        .font(.subheadline.weight(.semibold))
-        .foregroundStyle(.secondary)
-
-      ForEach(devices) { device in
-        DeviceRow(device: device)
-      }
-
-      if devices.isEmpty {
-        ContentUnavailableView {
-          Label("Looking for devices", systemImage: "antenna.radiowaves.left.and.right")
-        } description: {
-          Text(
-            "Wake your trainer or sensor and keep it nearby. Turn on Show all to see other Bluetooth devices."
-          )
-        }
-      }
-
-      HStack(spacing: 8) {
-        ProgressView().controlSize(.small)
-        Text("Scanning Bluetooth…")
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.top, 8)
-    }
-  }
-
-  private var devices: [DiscoveredDevice] {
-    discovery.fitnessDevices + (showAll ? discovery.otherDevices : [])
+  private var otherDevicesSummary: LocalizedStringKey {
+    let count = discovery.otherDevices.count
+    if count == 0 { return "No other Bluetooth devices nearby" }
+    return showAll
+      ? "^[\(count) other Bluetooth device](inflect: true) shown"
+      : "^[\(count) other Bluetooth device](inflect: true) hidden"
   }
 
   private var bluetoothStatus: some View {
@@ -115,49 +100,29 @@ private struct DeviceRow: View {
   let device: DiscoveredDevice
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack(spacing: 12) {
-        Image(systemName: "antenna.radiowaves.left.and.right")
-          .foregroundStyle(device.services.isEmpty ? Color.secondary : Color.accentColor)
-          .accessibilityHidden(true)
-        Text(device.displayName)
-          .font(.headline)
-      }
-
-      if device.name == nil {
-        Text(String(device.id.uuidString.prefix(8)))
-          .font(.caption.monospaced())
+    VStack(alignment: .leading, spacing: 2) {
+      Text(device.displayName)
+      if let detail {
+        Text(detail)
+          .font(.caption)
           .foregroundStyle(.secondary)
       }
-
-      ViewThatFits(in: .horizontal) {
-        HStack { serviceLabels }
-        VStack(alignment: .leading, spacing: 8) { serviceLabels }
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
-    .background(.quaternary, in: RoundedRectangle(cornerRadius: 16))
-    .overlay {
-      RoundedRectangle(cornerRadius: 16)
-        .strokeBorder(.separator, lineWidth: 0.5)
     }
     .accessibilityElement(children: .combine)
   }
 
-  @ViewBuilder
-  private var serviceLabels: some View {
-    ForEach(FitnessService.allCases.filter { device.services.contains($0) }, id: \.self) {
-      service in
-      Text(service.name)
-        .font(.caption.weight(.medium))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+  /// The roles a fitness device advertises, or an identifier to tell unnamed devices apart.
+  private var detail: String? {
+    if device.isFitness {
+      return FitnessService.allCases.filter { device.services.contains($0) }
+        .map(\.name).joined(separator: " · ")
     }
+    return device.name == nil ? String(device.id.uuidString.prefix(8)) : nil
   }
 }
 
 #Preview {
-  DevicesView()
+  NavigationStack {
+    DevicesView(discovery: BluetoothDiscovery())
+  }
 }
