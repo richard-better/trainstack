@@ -1,6 +1,6 @@
 ## Summary
 
-<diagram, diff sketch, or tree that makes the change clear>
+<what changed and why it matters to users or maintainers>
 
 ## Evidence
 
