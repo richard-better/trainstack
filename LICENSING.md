@@ -34,3 +34,8 @@ Dependencies may only point in these directions:
 
 Lint rules and `tests/licenses.test.mjs` enforce these boundaries, and the same test
 restricts third-party dependencies to licenses compatible with all three.
+
+## Trademarks
+
+None of these licenses grant rights to the TrainStack name or logo. See
+[TRADEMARKS.md](TRADEMARKS.md).
