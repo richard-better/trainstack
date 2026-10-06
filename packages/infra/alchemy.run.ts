@@ -1,5 +1,6 @@
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
+import * as Output from "alchemy/Output";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
@@ -11,6 +12,10 @@ import { Observability } from "./observability";
 const production = Alchemy.Stack.pipe(Effect.map(({ stage }) => stage === "production"));
 const webDomain = "trainstackhq.com";
 const serverDomain = `api.${webDomain}`;
+const serverDomainForStage = Output.fromEffect(
+  production.pipe(Effect.map((prod) => (prod ? serverDomain : undefined))),
+);
+const serverWorkersDevForStage = Output.fromEffect(production.pipe(Effect.map((prod) => !prod)));
 const compatibility = { date: "2026-07-30", flags: ["nodejs_compat"] };
 
 export const db = Cloudflare.D1.Database("database", {
@@ -39,8 +44,8 @@ export const observabilityBindings = {
 export const server = Cloudflare.Worker("server", {
   main: "../../apps/server/src/index.ts",
   compatibility,
-  domain: production.pipe(Effect.map((prod) => (prod ? serverDomain : undefined))),
-  workersDev: production.pipe(Effect.map((prod) => !prod)),
+  domain: serverDomainForStage,
+  workersDev: serverWorkersDevForStage,
   env: {
     DB: db,
     NODE_ENV: production.pipe(Effect.map((prod) => (prod ? "production" : "development"))),
