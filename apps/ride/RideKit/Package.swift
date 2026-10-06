@@ -9,11 +9,13 @@ let package = Package(
   ],
   targets: [
     .target(name: "RideBluetooth"),
+    .target(name: "RideData", resources: [.copy("Resources/SampleRide.fit")]),
     .target(
       name: "RideUI",
-      dependencies: ["RideBluetooth"],
+      dependencies: ["RideBluetooth", "RideData"],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
+    .testTarget(name: "RideDataTests", dependencies: ["RideData"]),
   ]
 )
