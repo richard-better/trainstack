@@ -62,6 +62,17 @@ public struct RideRecording: Equatable, Sendable {
     }
   }
 
+  /// A name for the exported `.fit` file. The workout name comes from the file, so anything that
+  /// could move the path out of its directory is replaced.
+  public var exportFileName: String {
+    let date = startDate.formatted(.iso8601.year().month().day())
+    let forbidden = CharacterSet(charactersIn: "/\\:").union(.controlCharacters)
+    let title = (workoutName ?? "Ride")
+      .components(separatedBy: forbidden).joined(separator: "-")
+      .trimmingCharacters(in: CharacterSet(charactersIn: ".").union(.whitespaces))
+    return "\(title.isEmpty ? "Ride" : title) \(date).fit"
+  }
+
   public var hasPower: Bool { samples.contains { $0.power != nil } }
   public var hasHeartRate: Bool { samples.contains { $0.heartRate != nil } }
 }

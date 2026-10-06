@@ -16,10 +16,7 @@ nonisolated struct Ride: Identifiable, Sendable {
 
   var title: String { recording.workoutName ?? "Ride" }
 
-  var exportFileName: String {
-    let date = recording.startDate.formatted(.iso8601.year().month().day())
-    return "\(title) \(date).fit"
-  }
+  var exportFileName: String { recording.exportFileName }
 }
 
 nonisolated extension Ride: Transferable {
