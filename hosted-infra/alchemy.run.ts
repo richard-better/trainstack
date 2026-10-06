@@ -78,7 +78,7 @@ export default Alchemy.Stack(
     const webWorker = yield* Cloudflare.Website.Astro("web", {
       rootDir: "../hosted-apps/marketing",
       compatibility,
-      domain: prod ? webDomain : undefined,
+      routes: prod ? [{ pattern: `${webDomain}/*`, zoneName: webDomain }] : undefined,
       workersDev: !prod,
       env: {
         NODE_ENV: prod ? "production" : "development",
@@ -93,7 +93,7 @@ export default Alchemy.Stack(
     });
 
     return {
-      web: webWorker.url,
+      web: prod ? `https://${webDomain}` : webWorker.url,
       server: serverWorker.url,
       database: (yield* db).databaseId,
       axiomDataset: observabilityResources.AXIOM_DATASET,

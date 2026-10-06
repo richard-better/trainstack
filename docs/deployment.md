@@ -5,7 +5,7 @@
 Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted-infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted-infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
 
 - API Worker at `api.trainstackhq.com`, with a `DB` binding to D1 and a secret Better Auth signing key.
-- Astro Worker at `trainstackhq.com`, with the API URL, session KV, and Images binding.
+- Astro Worker served at `trainstackhq.com` by a `trainstackhq.com/*` route over the existing proxied DNS records, with the API URL, session KV, and Images binding.
 - Committed Drizzle migrations before the API Worker update.
 - When configured, Axiom dataset `trainstack-production-logs` and a dataset-scoped ingest token injected into both applications.
 - Shared Cloudflare state storage, using a Worker, Durable Object, and Secrets Store for encrypted state and authentication.
@@ -28,7 +28,7 @@ Create an **account-owned** API token from [this account's token settings](https
 | Only `trainstackhq.com` | Zone Read                |
 | Only `trainstackhq.com` | Workers Routes Write     |
 
-Workers Scripts Write lets Alchemy upload and deploy Worker scripts. Zone Read lets Alchemy discover this zone. Workers Routes Write, scoped to `trainstackhq.com`, lets it attach the custom domains. No DNS write, API-token administration, or unrelated product permissions are required. The account grants cover resources created during deployment, including Alchemy's state Worker. Cloudflare does not limit those account-wide grants to this project; consider a dedicated Cloudflare account if stronger isolation is needed. See [Cloudflare's Workers permissions](https://developers.cloudflare.com/workers/authorization/workers/), [custom-domain API permissions](https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/update/), and the [Alchemy CI guide](https://alchemy.run/cloudflare/tutorial/part-5/).
+Workers Scripts Write lets Alchemy upload and deploy Worker scripts. Zone Read lets Alchemy discover this zone. Workers Routes Write, scoped to `trainstackhq.com`, lets it attach the API custom domain and the apex Worker route. No DNS write, API-token administration, or unrelated product permissions are required. The account grants cover resources created during deployment, including Alchemy's state Worker. Cloudflare does not limit those account-wide grants to this project; consider a dedicated Cloudflare account if stronger isolation is needed. See [Cloudflare's Workers permissions](https://developers.cloudflare.com/workers/authorization/workers/), [Workers routes](https://developers.cloudflare.com/workers/configuration/routing/routes/), and the [Alchemy CI guide](https://alchemy.run/cloudflare/tutorial/part-5/).
 
 Use a one-year expiry and rotate before it expires. Leave IP filtering unrestricted because GitHub-hosted runner addresses vary. Review the configuration yourself, create the token, and paste its value directly into GitHub. Do not paste secrets into chat, repository files, or command arguments.
 
@@ -54,7 +54,7 @@ To enter a token without putting it into a command argument, use GitHub's secret
 
 ## First deployment
 
-1. Confirm the domain zone is active in this account and review any existing apex/API DNS records. Cloudflare cannot attach a Worker custom domain over a conflicting CNAME; resolve conflicts deliberately before deployment.
+1. Confirm the domain zone is active in this account and `trainstackhq.com` has a proxied DNS record. The apex Worker route uses the existing proxied records, so keep at least one in place. The API Worker uses a custom domain at `api.trainstackhq.com`; resolve any conflicting records for that exact hostname before deployment.
 2. Add the required Cloudflare credentials and auth secret above; Axiom is optional. GitHub deployment approvals are optional; requiring them pauses otherwise automatic deploys.
 3. Merge the workflow and infrastructure changes into `main`. The workflow deploys automatically, bootstrapping Alchemy's state store if absent using `--yes --no-input`. No local state artifact or separate Alchemy password is needed.
 4. The workflow verifies the API's `/health` endpoint and frontend homepage. Initial DNS/certificate propagation is retried; if it exceeds the retry window, check Cloudflare's domain status and re-run the workflow.
