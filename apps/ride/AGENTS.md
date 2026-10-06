@@ -33,8 +33,7 @@ xcodebuild build -project apps/ride/Ride.xcodeproj -scheme Ride \
 ## Conventions
 
 - Swift 6 language mode with strict concurrency.
-- State is plain Observation (`@Observable`); no TCA. UI modules default to `MainActor`
-  isolation.
+- State uses Observation (`@Observable`). UI modules default to `MainActor` isolation.
 - Tests use Swift Testing and live in the package, so they run with `swift test`.
 - Bluetooth: the macOS sandbox grants it with `ENABLE_RESOURCE_ACCESS_BLUETOOTH`, and
   `NSBluetoothAlwaysUsageDescription` is set through `INFOPLIST_KEY_` build settings.
