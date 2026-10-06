@@ -47,7 +47,7 @@
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
-        "@trainstack/hosted-contract": "workspace:*",
+        "@trainstack/contract": "workspace:*",
         "better-auth": "catalog:",
         "drizzle-orm": "catalog:",
         "evlog": "catalog:",
@@ -105,8 +105,8 @@
       "name": "@trainstack/config",
       "version": "0.0.0",
     },
-    "packages/hosted-contract": {
-      "name": "@trainstack/hosted-contract",
+    "packages/contract": {
+      "name": "@trainstack/contract",
       "dependencies": {
         "@orpc/contract": "catalog:",
         "zod": "catalog:",
@@ -844,9 +844,9 @@
 
     "@trainstack/config": ["@trainstack/config@workspace:packages/config"],
 
-    "@trainstack/hosted-api": ["@trainstack/hosted-api@workspace:hosted/apps/api"],
+    "@trainstack/contract": ["@trainstack/contract@workspace:packages/contract"],
 
-    "@trainstack/hosted-contract": ["@trainstack/hosted-contract@workspace:packages/hosted-contract"],
+    "@trainstack/hosted-api": ["@trainstack/hosted-api@workspace:hosted/apps/api"],
 
     "@trainstack/hosted-infra": ["@trainstack/hosted-infra@workspace:hosted/infra"],
 

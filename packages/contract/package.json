@@ -1,5 +1,5 @@
 {
-  "name": "@trainstack/hosted-contract",
+  "name": "@trainstack/contract",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

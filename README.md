@@ -98,12 +98,12 @@ trainstack/
 │   │   └── marketing/   # Website (Astro)
 │   └── infra/           # Cloudflare infrastructure (Alchemy)
 └── packages/
-    ├── hosted-contract/ # Shared API contract and types
+    ├── contract/        # Shared API contract and types
     └── config/          # Shared TypeScript configuration
 ```
 
 The hosted API uses [oRPC contract-first](https://v1.orpc.dev/docs/contract-first/define-contract).
-`packages/hosted-contract/src/index.ts` defines the shared output schemas, errors, and client type.
+`packages/contract/src/index.ts` defines the shared output schemas, errors, and client type.
 `hosted/apps/api/src/router.ts` implements that contract and owns authentication middleware;
 its request context comes from the API's Better Auth implementation. Marketing uses Better Auth
 for authentication and has no oRPC dependency. API consumers can import the contract's client type.

@@ -1,6 +1,6 @@
 {
   "extends": "@trainstack/config/tsconfig.base.json",
-  "references": [{ "path": "../../../packages/hosted-contract" }],
+  "references": [{ "path": "../../../packages/contract" }],
   "compilerOptions": {
     "noEmit": true,
     "paths": {

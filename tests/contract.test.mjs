@@ -4,7 +4,7 @@ import { rolldown } from "rolldown";
 
 test("shared contract bundles for browser clients without server implementations", async () => {
   const bundle = await rolldown({
-    input: "packages/hosted-contract/src/index.ts",
+    input: "packages/contract/src/index.ts",
     platform: "browser",
   });
   try {
