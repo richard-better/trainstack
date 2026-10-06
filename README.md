@@ -29,7 +29,7 @@ If your shell does not activate mise automatically, run project commands with `m
 
 This project uses Cloudflare D1 (SQLite) with Drizzle ORM.
 
-Runtime database access uses the Cloudflare `DB` binding from `packages/infra/alchemy.run.ts`. If a local `DATABASE_URL` is present, it is only for database tooling.
+Runtime database access uses the Cloudflare `DB` binding from `hosted-infra/alchemy.run.ts`. The database and auth implementation live inside the hosted API app.
 
 Alchemy provisions the D1 database and applies migrations during `deploy`.
 
@@ -52,7 +52,7 @@ The API is running at [http://localhost:3000](http://localhost:3000).
 
 Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
 
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
+Import the generated `ENV` accessor in application code. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
 
 For Cloudflare, Alchemy loads and validates deployment inputs with `varlock/auto-load` in its Node/Bun deployment process. Worker code reads native bindings; web clients use the framework's public env API through `src/env.public.ts` where needed. Alchemy supplies resource URLs and managed database credentials. In-Worker Varlock protections are deferred until an official Alchemy integration is available; see [the non-Wrangler deployment guidance](https://varlock.dev/integrations/cloudflare/#non-wrangler-deploy-tools-alchemy-sst-pulumi).
 
@@ -62,7 +62,7 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 
 ## Deployment
 
-The Cloudflare infrastructure lives in [`packages/infra/alchemy.run.ts`](packages/infra/alchemy.run.ts). Alchemy manages the frontend and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`packages/infra/observability.ts`](packages/infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
+The Cloudflare infrastructure lives in [`hosted-infra/alchemy.run.ts`](hosted-infra/alchemy.run.ts). Alchemy manages the marketing and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`hosted-infra/observability.ts`](hosted-infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
 
 Production uses `trainstackhq.com` for the frontend and `api.trainstackhq.com` for the API. Alchemy supplies the frontend API URL, API auth URL, and trusted frontend origin. Non-production stages use local or `workers.dev` URLs. The production D1 database is retained when removed from the stack or destroyed; Alchemy stops tracking a retained resource, so preserve its ID before a teardown.
 
@@ -87,13 +87,13 @@ bun run deploy:production
 
 ```
 trainstack/
-├── apps/
-│   ├── web/         # Frontend application (Astro)
-│   └── server/      # Backend API (Hono, ORPC)
+├── hosted-apps/
+│   ├── api/         # API Worker, auth, and database (Hono, oRPC, Drizzle)
+│   └── marketing/   # Website (Astro)
 ├── packages/
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   ├── hosted-contract/  # Shared API contract and types
+│   └── config/          # Shared TypeScript configuration
+└── hosted-infra/        # Cloudflare infrastructure (Alchemy)
 ```
 
 ## Available Scripts
@@ -101,7 +101,7 @@ trainstack/
 - `bun run dev`: Start all applications in development mode
 - `bun run build`: Build all applications
 - `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:generate`: Generate database client/types
+- `bun run db:generate`: Generate database migrations
 - `bun run check`: Run Vite+ format/lint checks and workspace TypeScript checks
 - `bun run test`: Exercise the API and committed migrations in Cloudflare's local Workers/D1 runtime
 - `bun run plan:production`: Preview production infrastructure changes with configured provider credentials

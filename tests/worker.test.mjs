@@ -15,7 +15,7 @@ before(
   async () => {
     directory = await mkdtemp(join(tmpdir(), "trainstack-worker-"));
     const bundle = await rolldown({
-      input: "apps/server/src/index.ts",
+      input: "hosted-apps/api/src/index.ts",
       platform: "node",
       external: ["cloudflare:workers", /^node:/],
       resolve: { conditionNames: ["workerd", "worker", "browser", "import", "default"] },
@@ -65,7 +65,7 @@ test("health fails before migrations, without exposing database errors", async (
 
 test("committed migrations support health and authentication on D1 without Axiom", async () => {
   const db = await runtime.getD1Database("DB");
-  const migrations = "packages/db/src/migrations";
+  const migrations = "hosted-apps/api/src/db/migrations";
   for (const entry of (await readdir(migrations, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
     .sort((a, b) => a.name.localeCompare(b.name))) {
