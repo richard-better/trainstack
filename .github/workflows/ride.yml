@@ -48,3 +48,6 @@ jobs:
           -scheme Ride
           -destination '${{ matrix.destination }}'
           CODE_SIGNING_ALLOWED=NO
+      - name: Test Bluetooth discovery
+        if: matrix.platform == 'macOS'
+        run: swift test --package-path apps/ride/RideKit
