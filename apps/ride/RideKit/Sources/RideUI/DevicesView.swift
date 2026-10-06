@@ -3,6 +3,7 @@ import SwiftUI
 
 struct DevicesView: View {
   @State private var discovery = BluetoothDiscovery()
+  @State private var showAll = false
   @Environment(\.dismiss) private var dismiss
   @Environment(\.scenePhase) private var scenePhase
 
@@ -10,7 +11,7 @@ struct DevicesView: View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
-          Toggle("Show all", isOn: $discovery.showAll)
+          Toggle("Show all", isOn: $showAll)
             .accessibilityHint(
               "Include nearby Bluetooth devices that do not advertise a fitness service.")
 
@@ -51,11 +52,11 @@ struct DevicesView: View {
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(.secondary)
 
-      ForEach(discovery.devices) { device in
+      ForEach(devices) { device in
         DeviceRow(device: device)
       }
 
-      if discovery.devices.isEmpty {
+      if devices.isEmpty {
         ContentUnavailableView {
           Label("Looking for devices", systemImage: "antenna.radiowaves.left.and.right")
         } description: {
@@ -74,6 +75,10 @@ struct DevicesView: View {
       .frame(maxWidth: .infinity)
       .padding(.top, 8)
     }
+  }
+
+  private var devices: [DiscoveredDevice] {
+    discovery.fitnessDevices + (showAll ? discovery.otherDevices : [])
   }
 
   private var bluetoothStatus: some View {

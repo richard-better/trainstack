@@ -27,6 +27,7 @@ public struct DiscoveredDevice: Identifiable, Equatable, Sendable {
   public var services: Set<FitnessService>
 
   public var displayName: String { name ?? "Unnamed device" }
+  public var isFitness: Bool { !services.isEmpty }
 
   public init(id: UUID, name: String? = nil, services: Set<FitnessService> = []) {
     self.id = id
@@ -40,7 +41,7 @@ protocol DiscoveryTransport: AnyObject {
   var onAvailability: ((BluetoothAvailability) -> Void)? { get set }
   var onDiscovery: ((DiscoveredDevice) -> Void)? { get set }
   func start()
-  func scan(showAll: Bool)
+  func scan()
   func stopScan()
 }
 
@@ -49,22 +50,10 @@ protocol DiscoveryTransport: AnyObject {
 public final class BluetoothDiscovery {
   public private(set) var availability: BluetoothAvailability = .unknown
   public private(set) var isScanning = false
-  public var showAll = false {
-    didSet {
-      guard showAll != oldValue, wantsScan, availability == .ready else { return }
-      transport.stopScan()
-      transport.scan(showAll: showAll)
-    }
-  }
-  public var devices: [DiscoveredDevice] {
-    discovered.values
-      .filter { showAll || !$0.services.isEmpty }
-      .sorted {
-        let order = $0.displayName.localizedStandardCompare($1.displayName)
-        return order == .orderedSame
-          ? $0.id.uuidString < $1.id.uuidString : order == .orderedAscending
-      }
-  }
+  /// Nearby devices that advertise at least one fitness service.
+  public var fitnessDevices: [DiscoveredDevice] { sorted(discovered.values.filter(\.isFitness)) }
+  /// Everything else in range, such as TVs, phones and headphones.
+  public var otherDevices: [DiscoveredDevice] { sorted(discovered.values.filter { !$0.isFitness }) }
 
   private var discovered: [UUID: DiscoveredDevice] = [:]
   @ObservationIgnored private let transport: any DiscoveryTransport
@@ -95,7 +84,7 @@ public final class BluetoothDiscovery {
   private func scan() {
     guard !isScanning else { return }
     isScanning = true
-    transport.scan(showAll: showAll)
+    transport.scan()
   }
 
   private func updateAvailability(_ state: BluetoothAvailability) {
@@ -106,6 +95,14 @@ public final class BluetoothDiscovery {
       isScanning = false
       discovered.removeAll()
       transport.stopScan()
+    }
+  }
+
+  private func sorted(_ devices: [DiscoveredDevice]) -> [DiscoveredDevice] {
+    devices.sorted {
+      let order = $0.displayName.localizedStandardCompare($1.displayName)
+      return order == .orderedSame
+        ? $0.id.uuidString < $1.id.uuidString : order == .orderedAscending
     }
   }
 

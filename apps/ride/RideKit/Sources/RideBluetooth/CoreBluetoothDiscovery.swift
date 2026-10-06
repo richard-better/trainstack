@@ -14,10 +14,10 @@ final class CoreBluetoothDiscovery: NSObject, DiscoveryTransport {
     }
   }
 
-  func scan(showAll: Bool) {
+  // Scans unfiltered so the Devices pane can count the non-fitness devices it hides.
+  func scan() {
     guard let central, central.state == .poweredOn else { return }
-    let services = showAll ? nil : FitnessService.allCases.map { CBUUID(string: $0.rawValue) }
-    central.scanForPeripherals(withServices: services)
+    central.scanForPeripherals(withServices: nil)
   }
 
   func stopScan() {
