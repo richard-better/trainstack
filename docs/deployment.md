@@ -2,7 +2,7 @@
 
 ## Infrastructure
 
-Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted-infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted-infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
+Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted/infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted/infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
 
 - TanStack Start account Worker at `account.trainstackhq.com`, serving a placeholder homepage. Alchemy builds it through `Cloudflare.Website.Vite` and manages the custom domain and TLS.
 - API Worker at `api.trainstackhq.com`, with a `DB` binding to D1 and a secret Better Auth signing key.
@@ -60,19 +60,19 @@ To enter a token without putting it into a command argument, use GitHub's secret
 3. Merge the workflow and infrastructure changes into `main`. The workflow deploys automatically, bootstrapping Alchemy's state store if absent using `--yes --no-input`. No local state artifact or separate Alchemy password is needed.
 4. The workflow verifies the API's `/health` endpoint, marketing homepage, and account homepage title. Initial DNS/certificate propagation is retried; if it exceeds the retry window, check Cloudflare's domain status and re-run the workflow.
 
-For a local plan or deployment, configure Cloudflare using `cd hosted-infra && bunx alchemy profile edit`, and put the same auth signing secret in the ignored `hosted-apps/api/.env`. Use the same Cloudflare account and `production` stage as CI. Run `bun run plan:production` before `bun run deploy:production`. Avoid running a local production deploy while GitHub is deploying; CI concurrency cannot serialize your laptop.
+For a local plan or deployment, configure Cloudflare using `cd hosted/infra && bunx alchemy profile edit`, and put the same auth signing secret in the ignored `hosted/apps/api/.env`. Use the same Cloudflare account and `production` stage as CI. Run `bun run plan:production` before `bun run deploy:production`. Avoid running a local production deploy while GitHub is deploying; CI concurrency cannot serialize your laptop.
 
-`bun run deploy:production` runs `hosted-infra/deploy.ts`. A nonempty `AXIOM_TOKEN` enables Axiom automatically. To use Axiom credentials stored in an Alchemy profile, configure that profile and set `AXIOM_ENABLED=true` when invoking deployment. `AXIOM_ENABLED=false` explicitly disables forwarding and skips the Axiom stack. The wrapper deploys `axiom.run.ts` before the Cloudflare stack and passes the enabled setting to both processes.
+`bun run deploy:production` runs `hosted/infra/deploy.ts`. A nonempty `AXIOM_TOKEN` enables Axiom automatically. To use Axiom credentials stored in an Alchemy profile, configure that profile and set `AXIOM_ENABLED=true` when invoking deployment. `AXIOM_ENABLED=false` explicitly disables forwarding and skips the Axiom stack. The wrapper deploys `axiom.run.ts` before the Cloudflare stack and passes the enabled setting to both processes.
 
-To preview Axiom changes, run `bunx alchemy plan --config axiom.run.ts --stage production` from `hosted-infra`. After the Axiom stack has been deployed, use `AXIOM_ENABLED=true bun run plan:production` to preview Cloudflare with its shared Axiom outputs. A plain `bun run plan:production` previews Cloudflare without Axiom.
+To preview Axiom changes, run `bunx alchemy plan --config axiom.run.ts --stage production` from `hosted/infra`. After the Axiom stack has been deployed, use `AXIOM_ENABLED=true bun run plan:production` to preview Cloudflare with its shared Axiom outputs. A plain `bun run plan:production` previews Cloudflare without Axiom.
 
 ## Database changes
 
-Edit `hosted-apps/api/src/db/schema`, run `bun run db:generate`, and commit the generated SQL **and** snapshots under `hosted-apps/api/src/db/migrations`. Do not generate migrations in CI. Alchemy applies pending migrations and tracks them in `__alchemy_migrations`; it detects changed or missing migration history. Do not run `drizzle-kit migrate` or Wrangler migrations against a database managed by this stack.
+Edit `hosted/apps/api/src/db/schema`, run `bun run db:generate`, and commit the generated SQL **and** snapshots under `hosted/apps/api/src/db/migrations`. Do not generate migrations in CI. Alchemy applies pending migrations and tracks them in `__alchemy_migrations`; it detects changed or missing migration history. Do not run `drizzle-kit migrate` or Wrangler migrations against a database managed by this stack.
 
 Use changes compatible with the currently running API because migrations run before its replacement. Add new columns/tables first, deploy code using them, and remove obsolete schema in a later release. A failed deployment can leave successfully applied migrations in place.
 
-Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests exercise deployment orchestration with and without Axiom, and bundle the actual API to execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. The check job builds the account app before deployment. Alchemy builds the Astro and TanStack Start applications for Cloudflare during deployment. The account app uses the existing compatibility settings, runs on port 3001 in `alchemy dev`, and uses a `workers.dev` URL outside production. Run `bun run --cwd hosted-apps/account dev:bare` for standalone development without Cloudflare credentials.
+Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests exercise deployment orchestration with and without Axiom, and bundle the actual API to execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. The check job builds the account app before deployment. Alchemy builds the Astro and TanStack Start applications for Cloudflare during deployment. The account app uses the existing compatibility settings, runs on port 3001 in `alchemy dev`, and uses a `workers.dev` URL outside production. Run `bun run --cwd hosted/apps/account dev:bare` for standalone development without Cloudflare credentials.
 
 ## Recovery
 

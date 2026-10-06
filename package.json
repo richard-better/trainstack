@@ -3,9 +3,9 @@
   "private": true,
   "workspaces": {
     "packages": [
-      "hosted-apps/*",
+      "hosted/apps/*",
       "packages/*",
-      "hosted-infra"
+      "hosted/infra"
     ],
     "catalog": {
       "zod": "^4.5.4",
@@ -36,11 +36,11 @@
     "hooks:setup": "vp config",
     "db:generate": "vp run --filter @trainstack/hosted-api db:generate",
     "deploy": "vp run --filter @trainstack/hosted-infra deploy",
-    "deploy:production": "bun run --cwd hosted-infra deploy --stage production",
-    "plan:production": "bun run --cwd hosted-infra plan --stage production",
+    "deploy:production": "bun run --cwd hosted/infra deploy --stage production",
+    "plan:production": "bun run --cwd hosted/infra plan --stage production",
     "destroy": "vp run --filter @trainstack/hosted-infra destroy",
-    "env:generate": "varlock codegen --path ./hosted-apps/marketing/ && varlock codegen --path ./hosted-apps/api/ && varlock codegen --path ./hosted-apps/api/db/",
-    "postinstall": "varlock codegen --path ./hosted-apps/marketing/ && varlock codegen --path ./hosted-apps/api/ && varlock codegen --path ./hosted-apps/api/db/"
+    "env:generate": "varlock codegen --path ./hosted/apps/marketing/ && varlock codegen --path ./hosted/apps/api/ && varlock codegen --path ./hosted/apps/api/db/",
+    "postinstall": "varlock codegen --path ./hosted/apps/marketing/ && varlock codegen --path ./hosted/apps/api/ && varlock codegen --path ./hosted/apps/api/db/"
   },
   "dependencies": {
     "zod": "catalog:"

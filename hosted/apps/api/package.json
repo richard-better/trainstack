@@ -4,8 +4,8 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc -b ../../packages/hosted-contract && tsdown",
-    "check-types": "tsc -b ../../packages/hosted-contract && tsc --noEmit",
+    "build": "tsc -b ../../../packages/hosted-contract && tsdown",
+    "check-types": "tsc -b ../../../packages/hosted-contract && tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile api",
     "env:generate": "varlock codegen",
     "db:generate": "cd db && drizzle-kit generate"

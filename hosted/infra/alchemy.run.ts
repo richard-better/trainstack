@@ -20,7 +20,7 @@ const serverWorkersDevForStage = Output.fromEffect(production.pipe(Effect.map((p
 const compatibility = { date: "2026-07-30", flags: ["nodejs_compat"] };
 
 export const db = Cloudflare.D1.Database("database", {
-  migrations: "../hosted-apps/api/src/db/migrations",
+  migrations: "../apps/api/src/db/migrations",
 }).pipe(RemovalPolicy.retain(production));
 
 export const observability = Effect.gen(function* () {
@@ -43,7 +43,7 @@ export const observabilityBindings = {
 };
 
 export const server = Cloudflare.Worker("server", {
-  main: "../hosted-apps/api/src/index.ts",
+  main: "../apps/api/src/index.ts",
   compatibility,
   domain: serverDomainForStage,
   workersDev: serverWorkersDevForStage,
@@ -77,7 +77,7 @@ export default Alchemy.Stack(
     const observabilityResources = yield* observability;
     const serverWorker = yield* server;
     const accountWorker = yield* Cloudflare.Website.Vite("account", {
-      rootDir: "../hosted-apps/account",
+      rootDir: "../apps/account",
       compatibility,
       domain: prod ? accountDomain : undefined,
       workersDev: !prod,
@@ -86,7 +86,7 @@ export default Alchemy.Stack(
       },
     });
     const webWorker = yield* Cloudflare.Website.Astro("web", {
-      rootDir: "../hosted-apps/marketing",
+      rootDir: "../apps/marketing",
       compatibility,
       routes: prod ? [{ pattern: `${webDomain}/*`, zoneName: webDomain }] : undefined,
       workersDev: !prod,

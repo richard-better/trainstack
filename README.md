@@ -30,7 +30,7 @@ If your shell does not activate mise automatically, run project commands with `m
 
 This project uses Cloudflare D1 (SQLite) with Drizzle ORM.
 
-Runtime database access uses the Cloudflare `DB` binding from `hosted-infra/alchemy.run.ts`. The database and auth implementation live inside the hosted API app.
+Runtime database access uses the Cloudflare `DB` binding from `hosted/infra/alchemy.run.ts`. The database and auth implementation live inside the hosted API app.
 
 Alchemy provisions the D1 database and applies migrations during `deploy`.
 
@@ -48,7 +48,7 @@ bun run dev
 
 Open [http://localhost:4321](http://localhost:4321) in your browser to see the web application.
 The API is running at [http://localhost:3000](http://localhost:3000).
-The account app is running at [http://localhost:3001](http://localhost:3001). To run its placeholder independently of the infrastructure, use `bun run --cwd hosted-apps/account dev:bare`.
+The account app is running at [http://localhost:3001](http://localhost:3001). To run its placeholder independently of the infrastructure, use `bun run --cwd hosted/apps/account dev:bare`.
 
 ## Environment Configuration
 
@@ -66,7 +66,7 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 
 ## Deployment
 
-The Cloudflare infrastructure lives in [`hosted-infra/alchemy.run.ts`](hosted-infra/alchemy.run.ts). Alchemy manages the marketing, account, and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`hosted-infra/observability.ts`](hosted-infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
+The Cloudflare infrastructure lives in [`hosted/infra/alchemy.run.ts`](hosted/infra/alchemy.run.ts). Alchemy manages the marketing, account, and API Workers, D1 database and migrations, Astro session KV namespace, and custom domains with DNS/TLS. Optional Axiom resources live in [`hosted/infra/observability.ts`](hosted/infra/observability.ts), in their own stack. Deployment state is stored remotely with `Cloudflare.state()`, shared by local deployments and CI.
 
 Production uses `trainstackhq.com` for marketing, `account.trainstackhq.com` for the account app, and `api.trainstackhq.com` for the API. The account app currently serves only a placeholder homepage. Alchemy supplies the frontend API URL, API auth URL, and trusted frontend origin. Non-production stages use local or `workers.dev` URLs. The production D1 database is retained when removed from the stack or destroyed; Alchemy stops tracking a retained resource, so preserve its ID before a teardown.
 
@@ -91,19 +91,20 @@ bun run deploy:production
 
 ```
 trainstack/
-├── hosted-apps/
-│   ├── account/     # Account app placeholder (TanStack Start)
-│   ├── api/         # API Worker, auth, and database (Hono, oRPC, Drizzle)
-│   └── marketing/   # Website (Astro)
-├── packages/
-│   ├── hosted-contract/  # Shared API contract and types
-│   └── config/          # Shared TypeScript configuration
-└── hosted-infra/        # Cloudflare infrastructure (Alchemy)
+├── hosted/
+│   ├── apps/
+│   │   ├── account/     # Account app placeholder (TanStack Start)
+│   │   ├── api/         # API Worker, auth, and database (Hono, oRPC, Drizzle)
+│   │   └── marketing/   # Website (Astro)
+│   └── infra/           # Cloudflare infrastructure (Alchemy)
+└── packages/
+    ├── hosted-contract/ # Shared API contract and types
+    └── config/          # Shared TypeScript configuration
 ```
 
 The hosted API uses [oRPC contract-first](https://v1.orpc.dev/docs/contract-first/define-contract).
 `packages/hosted-contract/src/index.ts` defines the shared output schemas, errors, and client type.
-`hosted-apps/api/src/router.ts` implements that contract and owns authentication middleware;
+`hosted/apps/api/src/router.ts` implements that contract and owns authentication middleware;
 its request context comes from the API's Better Auth implementation. Marketing uses Better Auth
 for authentication and has no oRPC dependency. API consumers can import the contract's client type.
 Add API endpoints to the contract first, then implement them in the API router.
