@@ -41,7 +41,7 @@ const TITLE_TEXT = `
 
   async function checkHealth() {
     try {
-      const data = await orpc.healthCheck();
+      await orpc.healthCheck();
       statusDot.className = "h-2 w-2 rounded-full bg-green-500";
       statusText.textContent = "Connected";
     } catch (error) {
