@@ -19,10 +19,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
-      - run: mise exec -- bun install --frozen-lockfile
-      - run: mise exec -- bun run check
-      - run: mise exec -- bun run test
-      - run: mise exec -- bun run build
+      - name: Verify mise tools are available in the shell
+        run: |
+          node --version
+          bun --version
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run test
+      - run: bun run build
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -40,7 +44,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
-      - run: mise exec -- bun install --frozen-lockfile
+      - name: Verify mise tools are available in the shell
+        run: |
+          node --version
+          bun --version
+      - run: bun install --frozen-lockfile
       - name: Check this revision is still main
         id: revision
         run: |
@@ -62,7 +70,7 @@ jobs:
               exit 1
             fi
           done
-          mise exec -- bun run deploy --stage production --yes --no-input
+          bun run deploy --stage production --yes --no-input
         env:
           CI: "true"
           NODE_ENV: production
