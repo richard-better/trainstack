@@ -5,11 +5,12 @@ import SwiftUI
 /// A segmented choice between the ways of breaking down the ride.
 struct ZoneSection: View {
   let recording: RideRecording
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var store
 
   private enum Breakdown: String, CaseIterable, Identifiable {
     case powerZones = "Power zones"
     case heartRateZones = "Heart rate zones"
+    case paceZones = "Pace zones"
     case powerCurve = "Power curve"
     var id: Self { self }
   }
@@ -41,6 +42,7 @@ struct ZoneSection: View {
       switch $0 {
       case .powerZones, .powerCurve: recording.hasPower
       case .heartRateZones: recording.hasHeartRate
+      case .paceZones: recording.sport?.paceDistance != nil && recording.hasSpeed
       }
     }
   }
@@ -57,8 +59,9 @@ struct ZoneSection: View {
 
   private func isConfigured(_ breakdown: Breakdown) -> Bool {
     switch breakdown {
-    case .powerZones: profile.zones(for: .power) != nil
-    case .heartRateZones: profile.zones(for: .heartRate) != nil
+    case .powerZones: store.zones(for: .power, of: recording) != nil
+    case .heartRateZones: store.zones(for: .heartRate, of: recording) != nil
+    case .paceZones: store.zones(for: .pace, of: recording) != nil
     case .powerCurve: true
     }
   }
@@ -67,17 +70,20 @@ struct ZoneSection: View {
     switch breakdown {
     case .powerZones: basis(of: .power)
     case .heartRateZones: basis(of: .heartRate)
+    case .paceZones: basis(of: .pace)
     case .powerCurve: nil
     }
   }
 
-  /// What the rider's zones for `metric` come from, such as "Zones from FTP 200 W".
+  /// What the zones for `metric` come from, such as "Zones from FTP 200 W".
   private func basis(of metric: ZoneMetric) -> String? {
-    guard profile.zones(for: metric) != nil else { return nil }
-    let choice = profile.zoneChoice(for: metric)
-    if choice.isCustom { return "Custom zones" }
-    let values = choice.model.basis.thresholds.compactMap { threshold in
-      profile[threshold].map { "\(threshold.abbreviation) \($0) \(threshold.unit)" }
+    guard let settings = store.settings(for: metric, of: recording), settings.zones != nil
+    else { return nil }
+    if settings.choice.isCustom { return "Custom zones" }
+    let values = settings.choice.model.basis.thresholds.compactMap { threshold in
+      settings.thresholds[threshold].map {
+        "\(threshold.abbreviation) \(metric.format($0)) \(metric.unit(in: recording.sport))"
+      }
     }
     return "Zones from " + values.formatted(.list(type: .and))
   }
@@ -86,20 +92,23 @@ struct ZoneSection: View {
     switch breakdown {
     case .powerZones: zones(of: .power)
     case .heartRateZones: zones(of: .heartRate)
+    case .paceZones: zones(of: .pace)
     case .powerCurve: PowerCurveChart(points: recording.powerCurve())
     }
   }
 
   @ViewBuilder private func zones(of metric: ZoneMetric) -> some View {
-    let name = metric == .power ? "power" : "heart rate"
-    if let zones = profile.zones(for: metric) {
+    let name = metric.name
+    let settings = store.settings(for: metric, of: recording)
+    if let zones = settings?.zones {
       ZoneRows(zones: zones, shares: recording.timeInZones(zones, of: metric))
-    } else if case let missing = profile.missingThresholds(for: metric), !missing.isEmpty {
+    } else if let missing = settings?.missingThresholds, !missing.isEmpty {
       MissingSetting(
         "Add your \(missing.map(\.name).formatted(.list(type: .and))) in Settings to see \(name) zones."
       )
     } else {
-      MissingSetting("Check your \(name) thresholds in Settings: they are too close to make zones.")
+      MissingSetting(
+        "Check your \(name) thresholds in Settings: they are too close to make zones.")
     }
   }
 }

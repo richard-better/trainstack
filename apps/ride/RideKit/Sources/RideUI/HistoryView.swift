@@ -149,7 +149,7 @@ struct HistoryView: View {
 
 private struct RideRow: View {
   let ride: Ride
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var store
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -176,7 +176,9 @@ private struct RideRow: View {
   /// Time in power zones when the rider has them, otherwise in heart rate zones.
   @ViewBuilder private var zoneBar: some View {
     let shown = [ZoneMetric.power, .heartRate].lazy.compactMap { metric in
-      profile.zones(for: metric).map { ($0, ride.recording.timeInZones($0, of: metric)) }
+      store.zones(for: metric, of: ride.recording).map {
+        ($0, ride.recording.timeInZones($0, of: metric))
+      }
     }
     if let (zones, shares) = shown.first(where: { !$1.isEmpty }) {
       ZoneBar(zones: zones, shares: shares).frame(height: 4)
@@ -186,12 +188,12 @@ private struct RideRow: View {
 
 #Preview("Wide") {
   HistoryView(library: .sample())
-    .environment(RiderProfileStore.sample)
+    .environment(RiderSettingsStore.sample)
     .frame(width: 1100, height: 760)
 }
 
 #Preview("Narrow") {
   HistoryView(library: .sample())
-    .environment(RiderProfileStore.sample)
+    .environment(RiderSettingsStore.sample)
     .frame(width: 800, height: 760)
 }

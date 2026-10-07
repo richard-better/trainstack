@@ -83,4 +83,5 @@ public struct RideRecording: Equatable, Sendable {
   public var hasPower: Bool { samples.contains { $0.power != nil } }
   public var hasTarget: Bool { samples.contains { $0.targetPower != nil } }
   public var hasHeartRate: Bool { samples.contains { $0.heartRate != nil } }
+  public var hasSpeed: Bool { samples.contains { $0.speed != nil } }
 }

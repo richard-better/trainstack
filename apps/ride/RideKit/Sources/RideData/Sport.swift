@@ -14,6 +14,26 @@ public enum Sport: String, CaseIterable, Codable, Sendable {
     }
   }
 
+  /// The metrics the sport can have zones for.
+  public var metrics: [ZoneMetric] {
+    switch self {
+    case .cycling: [.heartRate, .power]
+    case .running: [.heartRate, .power, .pace]
+    case .swimming: [.heartRate, .pace]
+    case .rowing: [.heartRate, .power]
+    case .strength: [.heartRate]
+    }
+  }
+
+  /// The distance pace is given for, in metres: per kilometre running, per 100 m swimming.
+  public var paceDistance: Double? {
+    switch self {
+    case .running: 1000
+    case .swimming: 100
+    default: nil
+    }
+  }
+
   /// The sport of a FIT session's `sport` and `sub_sport` fields, or nil for one Ride does not
   /// keep zones for.
   init?(fitSport: Int, subSport: Int?) {

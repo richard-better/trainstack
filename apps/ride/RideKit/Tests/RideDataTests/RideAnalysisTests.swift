@@ -5,7 +5,9 @@ import Testing
 
 struct RideAnalysisTests {
   /// Zones at 60, 70, 80 and 90% of a max heart rate of 200.
-  private let heartRateZones = RiderProfile(maxHeartRate: 200).zones(for: .heartRate)!
+  private let heartRateZones = MetricZones(
+    thresholds: [.maxHeartRate: 200], choice: ZoneChoice(model: .percentOfMax)
+  ).zones!
 
   @Test func sharesTimeAcrossZonesAndIgnoresPauses() {
     let ride = recording(
@@ -51,13 +53,31 @@ struct RideAnalysisTests {
   }
 
   @Test func sharesTimeAcrossPowerZones() throws {
-    let powerZones = try #require(RiderProfile(ftp: 200).zones(for: .power))
+    let powerZones = try #require(
+      MetricZones(thresholds: [.ftp: 200], choice: ZoneChoice(model: .coggan6)).zones)
     let zones = try RideRecording.sample().timeInZones(powerZones, of: .power)
     #expect(zones.map(\.zone) == powerZones.zones)
     #expect(abs(zones.map(\.fraction).reduce(0, +) - 1) < 1e-9)
     // The sample ride is an easy ride: nothing above tempo at an FTP of 200.
     #expect(zones[3].seconds == 0)
     #expect(zones[1].fraction > zones[2].fraction)
+  }
+
+  @Test func sharesTimeAcrossPaceZonesWhileMoving() throws {
+    let paceZones = try #require(
+      MetricZones(thresholds: [.thresholdPace: 300], choice: ZoneChoice(model: .frielRunningPace))
+        .zones)
+    var run = recording([
+      // 5:00 per kilometre, then stopped, then 6:40 per kilometre.
+      .init(elapsed: 0, speed: 1000.0 / 300),
+      .init(elapsed: 1, speed: 0),
+      .init(elapsed: 2, speed: 2.5),
+      .init(elapsed: 3, speed: 2.5),
+    ])
+    #expect(run.timeInZones(paceZones, of: .pace).isEmpty)
+    run.sport = .running
+    let shares = run.timeInZones(paceZones, of: .pace)
+    #expect(shares.map(\.seconds) == [1, 0, 0, 0, 1, 0, 0])
   }
 
   @Test func scoresTrainingStressFromNormalizedPower() throws {

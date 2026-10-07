@@ -1,287 +1,265 @@
 import RideData
 import SwiftUI
 
-/// The rider's thresholds and the zones calculated from them, for heart rate or power.
+/// The rider's zones: Default for every sport, and sports that keep their own.
 struct SettingsView: View {
+  @State private var scope = ZoneScope.all
   @State private var metric = ZoneMetric.heartRate
+  @Environment(RiderSettingsStore.self) private var store
+  #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+  #endif
+
+  /// A scope that is no longer listed falls back to Default.
+  private var shownScope: ZoneScope {
+    guard let sport = scope.sport, store.current.sports[sport] == nil else { return scope }
+    return .all
+  }
+
+  private var isWide: Bool {
+    #if os(iOS)
+      sizeClass == .regular
+    #else
+      true
+    #endif
+  }
 
   var body: some View {
-    Form {
-      Section("Thresholds") {
-        ForEach(Threshold.allCases.filter { $0.metric == metric }, id: \.self) {
-          ThresholdField(threshold: $0)
+    Group {
+      if isWide {
+        HStack(spacing: 0) {
+          ScopeList(selection: $scope)
+            .frame(width: 230)
+          Divider()
+          ScopeForm(scope: shownScope, selection: $scope, metric: $metric, showsScopePicker: false)
+        }
+      } else {
+        ScopeForm(scope: shownScope, selection: $scope, metric: $metric, showsScopePicker: true)
+      }
+    }
+    .navigationTitle("Settings")
+  }
+}
+
+/// Default and the listed sports, with buttons to add and remove sports.
+private struct ScopeList: View {
+  @Binding var selection: ZoneScope
+  @Environment(RiderSettingsStore.self) private var store
+
+  var body: some View {
+    VStack(spacing: 0) {
+      List(selection: optionalSelection) {
+        Section("Zones for") {
+          ScopeRow(scope: .all).tag(ZoneScope.all)
+          ForEach(store.current.listedSports, id: \.self) { sport in
+            ScopeRow(scope: .sport(sport)).tag(ZoneScope.sport(sport))
+          }
         }
       }
-      ZonesSection(metric: metric)
+      Divider()
+      HStack(spacing: 4) {
+        AddSportMenu { selection = .sport($0) }
+          .labelStyle(.iconOnly)
+          .menuStyle(.button)
+          .buttonStyle(.borderless)
+        Button("Remove", systemImage: "minus") {
+          if let sport = selection.sport { remove(sport) }
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.borderless)
+        .disabled(selection.sport == nil)
+        Spacer()
+      }
+      .padding(8)
+    }
+  }
+
+  /// The selection as a list takes it. Deselecting keeps the current scope.
+  private var optionalSelection: Binding<ZoneScope?> {
+    Binding(get: { selection }, set: { if let scope = $0 { selection = scope } })
+  }
+
+  private func remove(_ sport: Sport) {
+    store.setListed(false, sport)
+    selection = .all
+  }
+}
+
+private struct ScopeRow: View {
+  let scope: ZoneScope
+  @Environment(RiderSettingsStore.self) private var store
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(scope.title)
+      Text(summary).font(.caption).foregroundStyle(.secondary)
+    }
+    .padding(.vertical, 2)
+  }
+
+  private var summary: String {
+    guard let sport = scope.sport else { return "Any sport without its own" }
+    let own = sport.metrics.filter { !store.current.usesDefault($0, in: sport) }
+    if own.isEmpty { return "Uses Default" }
+    return "Own \(own.map(\.name).formatted(.list(type: .and))) zones"
+  }
+}
+
+/// A menu of the sports not listed yet.
+private struct AddSportMenu: View {
+  let added: (Sport) -> Void
+  @Environment(RiderSettingsStore.self) private var store
+
+  var body: some View {
+    let unlisted = Sport.allCases.filter { store.current.sports[$0] == nil }
+    Menu("Add Sport", systemImage: "plus") {
+      Section("Add zones for") {
+        ForEach(unlisted, id: \.self) { sport in
+          Button(sport.name) {
+            store.setListed(true, sport)
+            added(sport)
+          }
+        }
+      }
+    }
+    .disabled(unlisted.isEmpty)
+  }
+}
+
+/// A scope's thresholds and zones for the chosen metric.
+private struct ScopeForm: View {
+  let scope: ZoneScope
+  @Binding var selection: ZoneScope
+  @Binding var metric: ZoneMetric
+  let showsScopePicker: Bool
+  @Environment(RiderSettingsStore.self) private var store
+
+  private var metrics: [ZoneMetric] { store.current.metrics(in: scope) }
+
+  /// The chosen metric, or the scope's first when it has no zones for that one.
+  private var shownMetric: ZoneMetric {
+    metrics.contains(metric) ? metric : metrics[0]
+  }
+
+  var body: some View {
+    let metric = shownMetric
+    Form {
+      if showsScopePicker {
+        ScopePickerSection(selection: $selection)
+      }
+      if let sport = scope.sport, metric != .pace {
+        Section {
+          Toggle("Use Default \(metric.name) zones", isOn: usesDefault(metric, in: sport))
+        } footer: {
+          Text(
+            "Turn off to give \(sport.name.lowercased()) its own \(metric.name) zones, starting from a copy of Default's."
+          )
+        }
+      }
+      if isOwn(metric) {
+        Section("Thresholds") {
+          ForEach(Threshold.allCases.filter { $0.metric == metric }, id: \.self) {
+            ThresholdField(threshold: $0, scope: scope)
+          }
+        }
+      }
+      ZonesSection(scope: scope, metric: metric)
     }
     .formStyle(.grouped)
-    .navigationTitle("Settings")
     .toolbar {
       ToolbarItem(placement: .principal) {
-        Picker("Zones for", selection: $metric) {
-          ForEach(ZoneMetric.allCases, id: \.self) { Text($0.title).tag($0) }
+        Picker("Metric", selection: $metric) {
+          ForEach(metrics, id: \.self) { Text($0.title).tag($0) }
         }
         .pickerStyle(.segmented)
         .fixedSize()
       }
+    }
+    .onChange(of: scope) { self.metric = shownMetric }
+  }
+
+  private func isOwn(_ metric: ZoneMetric) -> Bool {
+    guard let sport = scope.sport else { return true }
+    return !store.current.usesDefault(metric, in: sport)
+  }
+
+  private func usesDefault(_ metric: ZoneMetric, in sport: Sport) -> Binding<Bool> {
+    Binding(
+      get: { store.current.usesDefault(metric, in: sport) },
+      set: { store.setUsesDefault($0, for: metric, in: sport) })
+  }
+}
+
+/// On narrow screens, the choice between Default and the listed sports.
+private struct ScopePickerSection: View {
+  @Binding var selection: ZoneScope
+  @Environment(RiderSettingsStore.self) private var store
+
+  var body: some View {
+    Section {
+      Picker("Zones for", selection: $selection) {
+        Text("Default").tag(ZoneScope.all)
+        ForEach(store.current.listedSports, id: \.self) { Text($0.name).tag(ZoneScope.sport($0)) }
+      }
+      AddSportMenu { selection = .sport($0) }
+        .labelStyle(.titleAndIcon)
+      if let sport = selection.sport {
+        Button("Remove \(sport.name)", role: .destructive) {
+          store.setListed(false, sport)
+          selection = .all
+        }
+      }
+    } footer: {
+      Text("Default zones apply to every sport without its own.")
     }
   }
 }
 
 private struct ThresholdField: View {
   let threshold: Threshold
-  @Environment(RiderProfileStore.self) private var profile
+  let scope: ZoneScope
+  @Environment(RiderSettingsStore.self) private var store
 
   var body: some View {
-    @Bindable var profile = profile
     LabeledContent {
       HStack(spacing: 6) {
-        TextField(
-          threshold.title, value: $profile[threshold], format: .number.grouping(.never),
-          prompt: Text("Not set")
-        )
-        .labelsHidden()
-        .multilineTextAlignment(.trailing)
-        .frame(maxWidth: 80)
-        #if os(iOS)
-          .keyboardType(.numberPad)
-        #endif
-        Text(threshold.unit).foregroundStyle(.secondary)
+        if let hint = defaultHint {
+          Text(hint).foregroundStyle(.tertiary)
+        }
+        field
+          .labelsHidden()
+          .multilineTextAlignment(.trailing)
+          .frame(maxWidth: 80)
+        Text(threshold.metric.unit(in: scope.sport)).foregroundStyle(.secondary)
       }
     } label: {
       Text(threshold.title)
-      Text(threshold.help)
+      Text(threshold.help(in: scope.sport))
     }
   }
-}
 
-/// The zone model menu and the zones it gives, with each zone's top editable.
-private struct ZonesSection: View {
-  let metric: ZoneMetric
-  @Environment(RiderProfileStore.self) private var profile
-
-  private var choice: ZoneChoice { profile.zoneChoice(for: metric) }
-
-  var body: some View {
-    Section {
-      Picker(selection: model) {
-        ForEach(ZoneModel.groups(for: metric), id: \.title) { group in
-          Section(group.title) {
-            ForEach(group.models, id: \.self) { Text($0.menuTitle).tag(Optional($0)) }
-          }
-        }
-        if choice.isCustom {
-          Text("Custom").tag(ZoneModel?.none)
-        }
-      } label: {
-        Text("Zone model")
-        Text(caption)
-      }
-      if choice.isCustom {
-        Button("Restore \(choice.model.name) zones") { profile.choose(choice.model) }
-      }
-      if let zones = profile.zones(for: metric) {
-        ZoneScale(zones: zones, range: scaleRange(of: zones), unit: unit)
-        ZoneTableHeader(reference: choice.model.basis.reference)
-        ForEach(zones.zones, id: \.index) { zone in
-          ZoneRow(metric: metric, zones: zones, zone: zone)
-        }
-      } else {
-        let missing = profile.missingThresholds(for: metric)
-        Text(
-          missing.isEmpty
-            ? "These thresholds are too close together to make zones."
-            : "Add your \(missing.map(\.name).formatted(.list(type: .and))) to see these zones."
-        )
-        .foregroundStyle(.secondary)
-      }
-    } header: {
-      Text("Zones")
-    } footer: {
-      Text(
-        "Change any upper limit and the next zone starts from it. Changing a threshold recalculates every zone unless they are custom."
+  @ViewBuilder private var field: some View {
+    if threshold.metric == .pace {
+      TextField(threshold.title, value: value, format: .pace, prompt: Text("Not set"))
+    } else {
+      TextField(
+        threshold.title, value: value, format: .number.grouping(.never), prompt: Text("Not set")
       )
+      #if os(iOS)
+        .keyboardType(.numberPad)
+      #endif
     }
   }
 
-  /// The chosen model, or nil when the zones are custom.
-  private var model: Binding<ZoneModel?> {
-    Binding(
-      get: { choice.isCustom ? nil : choice.model },
-      set: { if let model = $0 { profile.choose(model) } })
+  private var value: Binding<Int?> {
+    Binding(get: { store[threshold, scope] }, set: { store[threshold, scope] = $0 })
   }
 
-  private var caption: String {
-    if choice.isCustom { return "Custom limits, based on \(choice.model.menuTitle)" }
-    let thresholds = choice.model.basis.thresholds.map(\.name)
-    return "Uses your \(thresholds.formatted(.list(type: .and)))"
-  }
-
-  private var unit: String { metric == .power ? "W" : "bpm" }
-
-  /// The values the scale spans: up to max heart rate, or 160% of FTP, when they are known.
-  private func scaleRange(of zones: ZoneSet) -> ClosedRange<Int> {
-    let top = zones.zones.last?.lowerLimit ?? 1
-    switch metric {
-    case .heartRate:
-      let max = profile[.maxHeartRate] ?? top * 11 / 10
-      let bottom = profile[.maxHeartRate].map { $0 / 2 } ?? zones.upperLimits[0] * 4 / 5
-      return min(bottom, top - 1)...max
-    case .power:
-      return 0...(profile[.ftp].map { $0 * 8 / 5 } ?? top * 13 / 10)
-    }
-  }
-}
-
-/// A bar of the zones side by side, each as wide as the values it covers.
-private struct ZoneScale: View {
-  let zones: ZoneSet
-  let range: ClosedRange<Int>
-  let unit: String
-
-  var body: some View {
-    VStack(spacing: 4) {
-      GeometryReader { proxy in
-        let widths = zones.zones.map(width)
-        let total = widths.reduce(0, +)
-        HStack(spacing: 1) {
-          ForEach(zones.zones, id: \.index) { zone in
-            Rectangle()
-              .fill(zone.color(in: zones))
-              .frame(width: proxy.size.width * widths[zone.index] / total)
-          }
-        }
-      }
-      .frame(height: 10)
-      .clipShape(.rect(cornerRadius: 3))
-      HStack {
-        Text("\(range.lowerBound) \(unit)")
-        Spacer()
-        Text("\(range.upperBound) \(unit)")
-      }
-      .font(.caption.monospacedDigit())
-      .foregroundStyle(.secondary)
-    }
-    .accessibilityHidden(true)
-  }
-
-  /// The share of the scale `zone` covers, never less than a sliver so every zone shows.
-  private func width(of zone: Zone) -> Double {
-    let bottom = max(zone.lowerLimit, range.lowerBound)
-    let top = zone.upperLimit.map { $0 + 1 } ?? max(range.upperBound, zone.lowerLimit + 1)
-    return Double(max(1, top - bottom))
-  }
-}
-
-private enum ZoneColumn {
-  static let label: CGFloat = 22
-  static let limit: CGFloat = 56
-  static let percent: CGFloat = 96
-}
-
-private struct ZoneTableHeader: View {
-  let reference: Threshold
-
-  var body: some View {
-    HStack(spacing: 10) {
-      Text("Zone").padding(.leading, 18)
-      Spacer()
-      Text("From").frame(width: ZoneColumn.limit, alignment: .trailing)
-      Text("–").hidden()
-      Text("To").frame(width: ZoneColumn.limit, alignment: .leading)
-      Text("% of \(reference.abbreviation)").frame(width: ZoneColumn.percent, alignment: .trailing)
-    }
-    .font(.caption)
-    .foregroundStyle(.secondary)
-  }
-}
-
-private struct ZoneRow: View {
-  let metric: ZoneMetric
-  let zones: ZoneSet
-  let zone: Zone
-  @Environment(RiderProfileStore.self) private var profile
-
-  var body: some View {
-    HStack(spacing: 10) {
-      Circle().fill(zone.color(in: zones)).frame(width: 8, height: 8)
-      Text(zone.label)
-        .foregroundStyle(.secondary)
-        .frame(width: ZoneColumn.label, alignment: .leading)
-      Text(zone.name).lineLimit(1)
-      Spacer(minLength: 0)
-      Text("\(zone.lowerLimit)").frame(width: ZoneColumn.limit, alignment: .trailing)
-      Text("–").foregroundStyle(.secondary)
-      Group {
-        if zone.upperLimit != nil {
-          TextField("Top of \(zone.name)", value: upperLimit, format: .number.grouping(.never))
-            .labelsHidden()
-            .textFieldStyle(.roundedBorder)
-            .multilineTextAlignment(.trailing)
-            #if os(iOS)
-              .keyboardType(.numberPad)
-            #endif
-        } else {
-          Text("and up").foregroundStyle(.secondary)
-        }
-      }
-      .frame(width: ZoneColumn.limit, alignment: .leading)
-      Text(percentages)
-        .foregroundStyle(.secondary)
-        .frame(width: ZoneColumn.percent, alignment: .trailing)
-    }
-    .monospacedDigit()
-  }
-
-  private var upperLimit: Binding<Int> {
-    Binding(
-      get: { zone.upperLimit ?? 0 },
-      set: { profile.setUpperLimit($0, ofZone: zone.index, for: metric) })
-  }
-
-  private var percentages: String {
-    let basis = profile.zoneChoice(for: metric).model.basis
-    guard let reference = profile[basis.reference], reference > 0 else { return "" }
-    func percent(_ value: Int) -> Int {
-      Int((Double(value) / Double(reference) * 100).rounded())
-    }
-    guard let upper = zone.upperLimit else { return "\(percent(zone.lowerLimit))% and up" }
-    if zone.index == 0 { return "under \(percent(upper + 1))%" }
-    return "\(percent(zone.lowerLimit))–\(percent(upper))%"
-  }
-}
-
-extension ZoneMetric {
-  fileprivate var title: String {
-    switch self {
-    case .heartRate: "Heart rate"
-    case .power: "Power"
-    }
-  }
-}
-
-extension ZoneModel {
-  fileprivate var menuTitle: String { "\(name) · \(zoneCount) zones" }
-}
-
-extension Threshold {
-  fileprivate var title: String {
-    switch self {
-    case .lactateThresholdHeartRate: "Lactate threshold heart rate"
-    case .maxHeartRate: "Max heart rate"
-    case .restingHeartRate: "Resting heart rate"
-    case .ftp: "Functional threshold power"
-    }
-  }
-
-  fileprivate var help: String {
-    switch self {
-    case .lactateThresholdHeartRate:
-      "Your average over the last 20 minutes of an all-out 30-minute effort"
-    case .maxHeartRate: "The highest your heart rate reaches in an all-out effort"
-    case .restingHeartRate: "Measured lying down, just after you wake up"
-    case .ftp: "The power you could hold for about an hour"
-    }
+  /// Default's value, shown beside a sport's own when they differ.
+  private var defaultHint: String? {
+    guard scope != .all, let value = store[threshold, .all], value != store[threshold, scope]
+    else { return nil }
+    return "Default \(threshold.metric.format(value))"
   }
 }
 
@@ -289,5 +267,5 @@ extension Threshold {
   NavigationStack {
     SettingsView()
   }
-  .environment(RiderProfileStore.sample)
+  .environment(RiderSettingsStore.sample)
 }
