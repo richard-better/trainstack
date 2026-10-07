@@ -133,6 +133,10 @@ public struct RootView: View {
       }
     }
     .tabViewStyle(.sidebarAdaptable)
+    #if os(iOS)
+      // The tab bar shrinks while scrolling down, and the ride accessory goes inline with it.
+      .tabBarMinimizeBehavior(.onScrollDown)
+    #endif
   }
 }
 
