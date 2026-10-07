@@ -42,6 +42,11 @@ final class RiderSettingsStore {
       .settings(for: metric, in: recording.sport.map(ZoneScope.sport) ?? .all)
   }
 
+  /// Time in each of the zones `recording` is analysed with, or none without zones.
+  func timeInZones(of recording: RideRecording, for metric: ZoneMetric) -> [ZoneShare] {
+    zones(for: metric, of: recording).map { recording.timeInZones($0, of: metric) } ?? []
+  }
+
   func ftp(for recording: RideRecording) -> Int? {
     settings(for: .power, of: recording)?.thresholds[.ftp]
   }

@@ -118,7 +118,7 @@ struct ZoneSection: View {
     let name = metric.name
     let settings = store.settings(for: metric, of: recording)
     if let zones = settings?.zones {
-      ZoneRows(shares: recording.timeInZones(zones, of: metric))
+      ZoneTimeRows(shares: recording.timeInZones(zones, of: metric)).font(.callout)
     } else if let missing = settings?.missingThresholds, !missing.isEmpty {
       MissingSetting(
         "Add your \(missing.map(\.name).formatted(.list(type: .and))) in Settings to see \(name) zones."
@@ -140,45 +140,6 @@ private struct MissingSetting: View {
       .font(.callout)
       .foregroundStyle(.secondary)
       .padding(.vertical, 8)
-  }
-}
-
-private struct ZoneRows: View {
-  let shares: [ZoneShare]
-
-  var body: some View {
-    Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
-      ForEach(shares, id: \.zone) { share in
-        GridRow {
-          Text(share.zone.name).foregroundStyle(.secondary).gridColumnAlignment(.leading)
-          ProgressBar(fraction: share.fraction, color: share.zone.color)
-          Text("\(Int((share.fraction * 100).rounded()))%")
-            .gridColumnAlignment(.trailing)
-          Text(share.seconds.spokenString)
-            .foregroundStyle(.secondary)
-            .gridColumnAlignment(.trailing)
-        }
-        .accessibilityElement(children: .combine)
-      }
-    }
-    .font(.callout.monospacedDigit())
-  }
-}
-
-private struct ProgressBar: View {
-  let fraction: Double
-  let color: Color
-
-  var body: some View {
-    Capsule()
-      .fill(.quaternary.opacity(0.6))
-      .frame(height: 8)
-      .overlay(alignment: .leading) {
-        GeometryReader { proxy in
-          Capsule().fill(color).frame(width: proxy.size.width * fraction)
-        }
-      }
-      .frame(maxWidth: .infinity)
   }
 }
 
