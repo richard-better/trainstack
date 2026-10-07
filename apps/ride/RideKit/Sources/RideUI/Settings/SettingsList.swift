@@ -1,0 +1,40 @@
+import RideBluetooth
+import RideData
+import SwiftUI
+
+/// Settings as a list that drills into each page, for iPhone.
+struct SettingsList: View {
+  let discovery: BluetoothDiscovery
+  @Binding var path: [SettingsPage]
+  @Environment(RiderSettingsStore.self) private var store
+
+  var body: some View {
+    NavigationStack(path: $path) {
+      List {
+        Section("Zones") {
+          NavigationLink("Default", value: SettingsPage.zones(.all))
+          ForEach(store.current.listedSports, id: \.self) { sport in
+            NavigationLink(value: SettingsPage.zones(.sport(sport))) { SportRow(sport: sport) }
+          }
+          .onDelete(perform: unlistSports)
+          AddSportMenu { path.append(.zones(.sport($0))) }
+        }
+        Section {
+          NavigationLink(value: SettingsPage.devices) {
+            Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
+          }
+        }
+      }
+      .navigationTitle("Settings")
+      .navigationDestination(for: SettingsPage.self) { page in
+        SettingsPageView(page: page, discovery: discovery)
+      }
+    }
+  }
+
+  /// Removes the sports at `offsets` from the list, along with their zones.
+  private func unlistSports(at offsets: IndexSet) {
+    let sports = store.current.listedSports
+    for offset in offsets { store.setListed(false, sports[offset]) }
+  }
+}

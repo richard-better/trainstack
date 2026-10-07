@@ -5,7 +5,7 @@ import Foundation
 /// Fitness (chronic training load) is the average daily stress over about six weeks, fatigue
 /// (acute training load) over about a week, both weighted toward recent days. Form is fitness
 /// minus fatigue: positive when rested, negative while building.
-public struct TrainingLoad: Equatable, Sendable {
+public struct TrainingLoad: Equatable, Identifiable, Sendable {
   public static let fitnessDays = 42.0
   public static let fatigueDays = 7.0
 
@@ -108,4 +108,9 @@ extension Sequence where Element == [ZoneShare] {
 private struct ZoneKey: Hashable {
   let label: String
   let name: String
+}
+
+extension TrainingLoad {
+  /// One load per day.
+  public var id: Date { date }
 }

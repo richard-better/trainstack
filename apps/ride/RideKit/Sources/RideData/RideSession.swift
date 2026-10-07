@@ -32,7 +32,7 @@ public struct TrainerReading: Equatable, Sendable {
 /// Ride time and workout time are kept apart. Ride time stops while paused; workout time also
 /// jumps ahead when an interval is skipped.
 public struct RideSession: Sendable {
-  public struct Interval: Equatable, Sendable {
+  public struct Interval: Equatable, Identifiable, Sendable {
     public var index: Int
     public var start: TimeInterval
     public var end: TimeInterval
@@ -164,4 +164,8 @@ extension Comparable {
   fileprivate func clamped(to range: ClosedRange<Self>) -> Self {
     min(max(self, range.lowerBound), range.upperBound)
   }
+}
+
+extension RideSession.Interval {
+  public var id: Int { index }
 }

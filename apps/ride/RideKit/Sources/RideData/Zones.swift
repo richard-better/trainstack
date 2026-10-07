@@ -1,7 +1,7 @@
 import Foundation
 
 /// One zone of a `ZoneSet`, in whole bpm, watts or seconds of pace.
-public struct Zone: Hashable, Sendable {
+public struct Zone: Hashable, Identifiable, Sendable {
   /// Position in the set, from 0 for the easiest.
   public var index: Int
   /// The zone's number, such as 2 or 5a.
@@ -67,7 +67,7 @@ public struct ZoneSet: Equatable, Sendable {
   }
 }
 
-public struct ZoneShare: Equatable, Sendable {
+public struct ZoneShare: Equatable, Identifiable, Sendable {
   public var zone: Zone
   public var seconds: TimeInterval
   /// Share of the time spent in any zone, from 0 to 1.
@@ -106,4 +106,14 @@ extension RideRecording {
       ZoneShare(zone: $0, seconds: seconds[$0.index], fraction: seconds[$0.index] / total)
     }
   }
+}
+
+extension Zone {
+  /// Unique within a zone set.
+  public var id: Int { index }
+}
+
+extension ZoneShare {
+  /// Unique among shares of one set of zones, or of sets combined.
+  public var id: Zone { zone }
 }

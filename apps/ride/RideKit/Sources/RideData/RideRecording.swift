@@ -20,7 +20,7 @@ public struct RideRecording: Equatable, Sendable {
     self.summary = summary
   }
 
-  public struct Sample: Equatable, Sendable {
+  public struct Sample: Equatable, Identifiable, Sendable {
     /// Seconds since the start of the ride.
     public var elapsed: TimeInterval
     public var power: Int?
@@ -84,4 +84,9 @@ public struct RideRecording: Equatable, Sendable {
   public var hasTarget: Bool { samples.contains { $0.targetPower != nil } }
   public var hasHeartRate: Bool { samples.contains { $0.heartRate != nil } }
   public var hasSpeed: Bool { samples.contains { $0.speed != nil } }
+}
+
+extension RideRecording.Sample {
+  /// Unique within a recording, which has at most one sample per moment.
+  public var id: TimeInterval { elapsed }
 }
