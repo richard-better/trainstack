@@ -26,6 +26,11 @@ public struct RootView: View {
           DevicesView(discovery: discovery)
         }
       }
+      Tab("Settings", systemImage: "gearshape", value: .settings) {
+        NavigationStack {
+          SettingsView()
+        }
+      }
     }
     .environment(profile)
     .tabViewStyle(.sidebarAdaptable)
@@ -42,7 +47,7 @@ public struct RootView: View {
 }
 
 private enum Destination: Hashable {
-  case today, history, devices
+  case today, history, devices, settings
 }
 
 private struct TodayView: View {
