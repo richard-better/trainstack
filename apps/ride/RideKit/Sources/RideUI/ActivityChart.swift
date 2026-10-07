@@ -63,7 +63,7 @@ struct ActivityChart: View {
             .foregroundStyle(.secondary.opacity(0.5))
             .annotation(
               position: .top, spacing: 4,
-              overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+              overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))
             ) {
               readout(for: selected)
             }
