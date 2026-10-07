@@ -9,10 +9,10 @@ struct ZonesSection: View {
   @Environment(RiderSettingsStore.self) private var store
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
-    /// A phone is too narrow for the percentage column.
-    private var showsPercentages: Bool { sizeClass != .compact }
+    /// A phone is too narrow for a percentage column, so there they go under each zone's name.
+    private var hasPercentColumn: Bool { sizeClass == .regular }
   #else
-    private let showsPercentages = true
+    private let hasPercentColumn = true
   #endif
 
   private var settings: MetricZones? { store.current.settings(for: metric, in: scope) }
@@ -36,12 +36,12 @@ struct ZonesSection: View {
             zones: zones, range: scaleRange(of: zones, thresholds: settings.thresholds),
             metric: metric, sport: scope.sport)
           ZoneTableHeader(
-            reference: settings.choice.model.basis.reference, showsPercentages: showsPercentages)
+            reference: settings.choice.model.basis.reference, hasPercentColumn: hasPercentColumn)
           ForEach(zones.zones, id: \.index) { zone in
             ZoneRow(
               zones: zones, zone: zone, metric: metric, scope: scope, isEditable: isEditable,
-              reference: showsPercentages
-                ? settings.thresholds[settings.choice.model.basis.reference] : nil)
+              reference: settings.thresholds[settings.choice.model.basis.reference],
+              hasPercentColumn: hasPercentColumn)
           }
         } else {
           let missing = settings.missingThresholds
@@ -170,31 +170,40 @@ private struct ZoneScale: View {
   }
 }
 
+/// Column widths at the default text size. They grow with Dynamic Type.
 private enum ZoneColumn {
-  static let label: CGFloat = 22
-  static let limit: CGFloat = 60
-  static let percent: CGFloat = 104
+  static let label = 22.0
+  static let limit = 60.0
+  static let percent = 104.0
 }
 
 private struct ZoneTableHeader: View {
   let reference: Threshold
-  let showsPercentages: Bool
+  let hasPercentColumn: Bool
+  @ScaledMetric private var limitWidth = ZoneColumn.limit
+  @ScaledMetric private var percentWidth = ZoneColumn.percent
 
   var body: some View {
     HStack(spacing: 10) {
-      Text("Zone").padding(.leading, 18)
+      VStack(alignment: .leading, spacing: 2) {
+        Text("Zone")
+        if !hasPercentColumn { Text(percentTitle) }
+      }
+      .padding(.leading, 18)
       Spacer()
-      Text("From").frame(width: ZoneColumn.limit, alignment: .trailing)
+      Text("From").frame(width: limitWidth, alignment: .trailing)
       Text("–").hidden()
-      Text("To").frame(width: ZoneColumn.limit, alignment: .leading)
-      if showsPercentages {
-        Text("% of \(reference.abbreviation)")
-          .frame(width: ZoneColumn.percent, alignment: .trailing)
+      Text("To").frame(width: limitWidth, alignment: .leading)
+      if hasPercentColumn {
+        Text(percentTitle)
+          .frame(width: percentWidth, alignment: .trailing)
       }
     }
     .font(.caption)
     .foregroundStyle(.secondary)
   }
+
+  private var percentTitle: String { "% of \(reference.abbreviation)" }
 }
 
 private struct ZoneRow: View {
@@ -203,17 +212,27 @@ private struct ZoneRow: View {
   let metric: ZoneMetric
   let scope: ZoneScope
   let isEditable: Bool
-  /// The threshold value percentages are shown against, or nil to show none.
+  /// The threshold value percentages are shown against, or nil when it isn't set.
   let reference: Int?
+  /// Whether percentages have a column of their own, rather than going under the name.
+  let hasPercentColumn: Bool
   @Environment(RiderSettingsStore.self) private var store
+  @ScaledMetric private var labelWidth = ZoneColumn.label
+  @ScaledMetric private var limitWidth = ZoneColumn.limit
+  @ScaledMetric private var percentWidth = ZoneColumn.percent
 
   var body: some View {
     HStack(spacing: 10) {
       Circle().fill(zone.color).frame(width: 8, height: 8)
       Text(zone.label)
         .foregroundStyle(.secondary)
-        .frame(width: ZoneColumn.label, alignment: .leading)
-      Text(zone.name).lineLimit(1)
+        .frame(width: labelWidth, alignment: .leading)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(zone.name).lineLimit(1)
+        if !hasPercentColumn, let reference {
+          Text(percentages(of: reference)).font(.caption).foregroundStyle(.secondary)
+        }
+      }
       Spacer(minLength: 0)
       Group {
         if let start = zone.start {
@@ -222,7 +241,7 @@ private struct ZoneRow: View {
           Text(zones.isDescending ? "slower" : "0").foregroundStyle(.secondary)
         }
       }
-      .frame(width: ZoneColumn.limit, alignment: .trailing)
+      .frame(width: limitWidth, alignment: .trailing)
       Text("–").foregroundStyle(.secondary)
       Group {
         if let end = zone.end {
@@ -235,11 +254,11 @@ private struct ZoneRow: View {
           Text(zones.isDescending ? "faster" : "and up").foregroundStyle(.secondary)
         }
       }
-      .frame(width: ZoneColumn.limit, alignment: .leading)
-      if let reference {
+      .frame(width: limitWidth, alignment: .leading)
+      if hasPercentColumn, let reference {
         Text(percentages(of: reference))
           .foregroundStyle(.secondary)
-          .frame(width: ZoneColumn.percent, alignment: .trailing)
+          .frame(width: percentWidth, alignment: .trailing)
       }
     }
     .monospacedDigit()
