@@ -6,6 +6,7 @@ struct ActivityDetailView: View {
   let ride: Ride
   var onRemove: () -> Void
   @State private var isExporting = false
+  @State private var isConfirmingRemove = false
   @Environment(RiderSettingsStore.self) private var store
 
   private var recording: RideRecording { ride.recording }
@@ -29,22 +30,39 @@ struct ActivityDetailView: View {
       .frame(maxWidth: .infinity)
     }
     .toolbar {
-      ToolbarItem {
+      ToolbarItem(placement: .primaryAction) {
         ShareLink(item: ride, preview: SharePreview(ride.title))
       }
-      ToolbarItem {
-        Menu("More", systemImage: "ellipsis") {
-          Button("Export FIT…") { isExporting = true }
-          Divider()
-          Button("Remove from History", role: .destructive, action: onRemove)
+      #if os(iOS)
+        // Its actions join the system's own overflow menu rather than nesting in it.
+        ToolbarOverflowMenu { moreActions }
+      #else
+        ToolbarItem {
+          Menu("More", systemImage: "ellipsis") { moreActions }
         }
-      }
+      #endif
+    }
+    // Attached outside the menu, which the system owns on iOS, so that it can present.
+    .confirmationDialog("Remove this ride from History?", isPresented: $isConfirmingRemove) {
+      Button("Remove Ride", role: .destructive, action: onRemove)
+    } message: {
+      Text("To get it back, open its FIT file again.")
     }
     .fileExporter(
       isPresented: $isExporting, document: FITDocument(data: ride.fileData),
       contentType: .fitFile, defaultFilename: ride.exportFileName
     ) { _ in }
   }
+
+  @ViewBuilder private var moreActions: some View {
+    Button("Export FIT…", systemImage: "square.and.arrow.down", action: export)
+    Divider()
+    Button("Remove from History", systemImage: "trash", role: .destructive, action: confirmRemove)
+  }
+
+  private func export() { isExporting = true }
+
+  private func confirmRemove() { isConfirmingRemove = true }
 
   private var startLine: String {
     let date = recording.startDate.formatted(

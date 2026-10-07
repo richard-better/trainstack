@@ -104,13 +104,15 @@ struct StartButton: View {
   @Environment(RiderSettingsStore.self) private var settings
 
   var body: some View {
-    Button(title) {
-      if let template, let ftp = settings.ftp { launcher.start(template, ftp: ftp) }
-    }
-    .buttonStyle(.borderedProminent)
-    .keyboardShortcut(.defaultAction)
-    .disabled(template == nil || settings.ftp == nil || launcher.ride != nil)
-    .help(help)
+    Button(title, systemImage: "play.fill", action: start)
+      .buttonStyle(.borderedProminent)
+      .keyboardShortcut(.defaultAction)
+      .disabled(template == nil || settings.ftp == nil || launcher.ride != nil)
+      .help(help)
+  }
+
+  private func start() {
+    if let template, let ftp = settings.ftp { launcher.start(template, ftp: ftp) }
   }
 
   private var help: String {

@@ -223,7 +223,7 @@ private struct ZonesPage: View {
         .fixedSize()
       }
       ToolbarItem(placement: .primaryAction) {
-        Button("Zone History…") { isShowingHistory = true }
+        Button("Zone History…", systemImage: "clock.arrow.circlepath", action: showHistory)
       }
     }
     .sheet(isPresented: $isShowingHistory) {
@@ -241,6 +241,8 @@ private struct ZonesPage: View {
     return EdgeInsets(
       top: 0, leading: safeArea.leading + extra, bottom: 0, trailing: safeArea.trailing + extra)
   }
+
+  private func showHistory() { isShowingHistory = true }
 
   private var lastFTPTest: String {
     guard let test = store.ftpTests(in: scope).last else { return "None" }

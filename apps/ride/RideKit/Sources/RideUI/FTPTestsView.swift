@@ -38,7 +38,7 @@ struct FTPTestsView: View {
     }
     .navigationTitle(scope == .all ? "FTP Tests" : "\(scope.title) FTP Tests")
     .toolbar {
-      ToolbarItem {
+      ToolbarItem(placement: .primaryAction) {
         Button("Add Test", systemImage: "plus") { isAdding = true }
       }
     }

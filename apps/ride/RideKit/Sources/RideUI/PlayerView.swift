@@ -32,14 +32,14 @@ struct PlayerView: View {
         }
       #endif
       ToolbarItem(placement: .primaryAction) {
-        Button("End Ride") { isConfirmingEnd = true }
+        Button("End Ride", systemImage: "stop.fill", action: confirmEnd)
+          .confirmationDialog("End this ride?", isPresented: $isConfirmingEnd) {
+            Button("End Ride", role: .destructive, action: onEnd)
+            Button("Keep Riding", role: .cancel) {}
+          } message: {
+            Text("Rides aren't saved to History yet.")
+          }
       }
-    }
-    .confirmationDialog("End this ride?", isPresented: $isConfirmingEnd) {
-      Button("End Ride", role: .destructive, action: onEnd)
-      Button("Keep Riding", role: .cancel) {}
-    } message: {
-      Text("Rides aren't saved to History yet.")
     }
   }
 
@@ -63,6 +63,8 @@ struct PlayerView: View {
         .frame(maxHeight: .infinity)
     }
   }
+
+  private func confirmEnd() { isConfirmingEnd = true }
 
   private var subtitle: String {
     "\(controller.template.category.name) · \(Int((session.duration / 60).rounded())) min"

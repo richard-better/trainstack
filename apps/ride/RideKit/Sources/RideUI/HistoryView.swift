@@ -88,7 +88,7 @@ struct HistoryView: View {
   }
 
   private var importButton: some ToolbarContent {
-    ToolbarItem {
+    ToolbarItem(placement: .primaryAction) {
       Button("Open FIT File", systemImage: "plus") { isImporting = true }
     }
   }
