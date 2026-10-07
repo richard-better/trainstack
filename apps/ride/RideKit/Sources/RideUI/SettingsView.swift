@@ -1,107 +1,127 @@
+import RideBluetooth
 import RideData
 import SwiftUI
 
-/// The rider's zones: Default for every sport, and sports that keep their own.
-struct SettingsView: View {
-  @State private var scope = ZoneScope.all
-  @State private var metric = ZoneMetric.heartRate
-  @Environment(RiderSettingsStore.self) private var store
-  #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var sizeClass
-  #endif
+/// A page of Settings.
+enum SettingsPage: Hashable {
+  case zones(ZoneScope)
+  case devices
+}
 
-  /// A scope that is no longer listed falls back to Default.
-  private var shownScope: ZoneScope {
-    guard let sport = scope.sport, store.current.sports[sport] == nil else { return scope }
-    return .all
-  }
-
-  private var isWide: Bool {
-    #if os(iOS)
-      sizeClass == .regular
-    #else
-      true
-    #endif
-  }
+/// Settings in its own sidebar, which takes over from the app's until Back to app. On macOS and
+/// iPad; iPhone uses `SettingsList` in a tab instead.
+struct SettingsSplitView: View {
+  @Binding var page: SettingsPage
+  let discovery: BluetoothDiscovery
+  let back: () -> Void
 
   var body: some View {
-    Group {
-      if isWide {
-        HStack(spacing: 0) {
-          ScopeList(selection: $scope)
-            .frame(width: 230)
-          Divider()
-          ScopeForm(scope: shownScope, selection: $scope, metric: $metric, showsScopePicker: false)
-        }
-      } else {
-        ScopeForm(scope: shownScope, selection: $scope, metric: $metric, showsScopePicker: true)
+    NavigationSplitView {
+      SettingsSidebar(page: $page, back: back)
+        .navigationSplitViewColumnWidth(min: 200, ideal: 220)
+    } detail: {
+      NavigationStack {
+        SettingsPageView(page: page, discovery: discovery)
       }
     }
-    .navigationTitle("Settings")
   }
 }
 
-/// Default and the listed sports, with buttons to add and remove sports.
-private struct ScopeList: View {
-  @Binding var selection: ZoneScope
+private struct SettingsSidebar: View {
+  @Binding var page: SettingsPage
+  let back: () -> Void
   @Environment(RiderSettingsStore.self) private var store
 
   var body: some View {
-    VStack(spacing: 0) {
-      List(selection: optionalSelection) {
-        Section("Zones for") {
-          ScopeRow(scope: .all).tag(ZoneScope.all)
+    List(selection: optionalPage) {
+      Button(action: back) {
+        Label("Back to app", systemImage: "chevron.left")
+      }
+      .buttonStyle(.borderless)
+      .foregroundStyle(.secondary)
+      Section {
+        Label("Zones", systemImage: "chart.bar")
+        Group {
+          Text("Default").tag(SettingsPage.zones(.all))
           ForEach(store.current.listedSports, id: \.self) { sport in
-            ScopeRow(scope: .sport(sport)).tag(ZoneScope.sport(sport))
+            SportRow(sport: sport)
+              .tag(SettingsPage.zones(.sport(sport)))
+              .contextMenu {
+                Button("Remove \(sport.name)", role: .destructive) { remove(sport) }
+              }
           }
+          AddSportMenu { page = .zones(.sport($0)) }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .foregroundStyle(.secondary)
         }
+        .padding(.leading, 24)
+        Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
+          .tag(SettingsPage.devices)
+      } header: {
+        Text("Settings").font(.title3.weight(.semibold)).foregroundStyle(.primary)
       }
-      Divider()
-      HStack(spacing: 4) {
-        AddSportMenu { selection = .sport($0) }
-          .labelStyle(.iconOnly)
-          .menuStyle(.button)
-          .buttonStyle(.borderless)
-        Button("Remove", systemImage: "minus") {
-          if let sport = selection.sport { remove(sport) }
-        }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.borderless)
-        .disabled(selection.sport == nil)
-        Spacer()
-      }
-      .padding(8)
     }
   }
 
-  /// The selection as a list takes it. Deselecting keeps the current scope.
-  private var optionalSelection: Binding<ZoneScope?> {
-    Binding(get: { selection }, set: { if let scope = $0 { selection = scope } })
+  /// The page as a list takes it. Deselecting keeps the current page.
+  private var optionalPage: Binding<SettingsPage?> {
+    Binding(get: { page }, set: { if let page = $0 { self.page = page } })
   }
 
   private func remove(_ sport: Sport) {
     store.setListed(false, sport)
-    selection = .all
+    if page == .zones(.sport(sport)) { page = .zones(.all) }
   }
 }
 
-private struct ScopeRow: View {
-  let scope: ZoneScope
+/// Settings as a list that drills into each page, for iPhone.
+struct SettingsList: View {
+  let discovery: BluetoothDiscovery
+  @Binding var path: [SettingsPage]
   @Environment(RiderSettingsStore.self) private var store
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(scope.title)
-      Text(summary).font(.caption).foregroundStyle(.secondary)
+    NavigationStack(path: $path) {
+      List {
+        Section("Zones") {
+          NavigationLink("Default", value: SettingsPage.zones(.all))
+          ForEach(store.current.listedSports, id: \.self) { sport in
+            NavigationLink(value: SettingsPage.zones(.sport(sport))) { SportRow(sport: sport) }
+          }
+          .onDelete { offsets in
+            let sports = store.current.listedSports
+            for offset in offsets { store.setListed(false, sports[offset]) }
+          }
+          AddSportMenu { path.append(.zones(.sport($0))) }
+        }
+        Section {
+          NavigationLink(value: SettingsPage.devices) {
+            Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
+          }
+        }
+      }
+      .navigationTitle("Settings")
+      .navigationDestination(for: SettingsPage.self) { page in
+        SettingsPageView(page: page, discovery: discovery)
+      }
     }
-    .padding(.vertical, 2)
   }
+}
 
-  private var summary: String {
-    guard let sport = scope.sport else { return "Any sport without its own" }
-    let own = sport.metrics.filter { !store.current.usesDefault($0, in: sport) }
-    if own.isEmpty { return "Uses Default" }
-    return "Own \(own.map(\.name).formatted(.list(type: .and))) zones"
+/// A sport in the list of zones, noting when it has none of its own.
+private struct SportRow: View {
+  let sport: Sport
+  @Environment(RiderSettingsStore.self) private var store
+
+  var body: some View {
+    HStack {
+      Text(sport.name)
+      Spacer()
+      if sport.metrics.allSatisfy({ store.current.usesDefault($0, in: sport) }) {
+        Text("Default").foregroundStyle(.tertiary)
+      }
+    }
   }
 }
 
@@ -126,12 +146,22 @@ private struct AddSportMenu: View {
   }
 }
 
-/// A scope's thresholds and zones for the chosen metric.
-private struct ScopeForm: View {
+private struct SettingsPageView: View {
+  let page: SettingsPage
+  let discovery: BluetoothDiscovery
+
+  var body: some View {
+    switch page {
+    case .zones(let scope): ZonesPage(scope: scope)
+    case .devices: DevicesView(discovery: discovery)
+    }
+  }
+}
+
+/// A scope's thresholds and zones for one metric at a time, chosen in the toolbar.
+private struct ZonesPage: View {
   let scope: ZoneScope
-  @Binding var selection: ZoneScope
-  @Binding var metric: ZoneMetric
-  let showsScopePicker: Bool
+  @State private var metric = ZoneMetric.heartRate
   @State private var isShowingHistory = false
   @Environment(RiderSettingsStore.self) private var store
 
@@ -145,16 +175,14 @@ private struct ScopeForm: View {
   var body: some View {
     let metric = shownMetric
     Form {
-      if showsScopePicker {
-        ScopePickerSection(selection: $selection)
-      }
       if let sport = scope.sport, metric != .pace {
         Section {
-          Toggle("Use Default \(metric.name) zones", isOn: usesDefault(metric, in: sport))
-        } footer: {
-          Text(
-            "Turn off to give \(sport.name.lowercased()) its own \(metric.name) zones, starting from a copy of Default's."
-          )
+          Toggle(isOn: usesDefault(metric, in: sport)) {
+            Text("Use Default \(metric.name) zones")
+            Text(
+              "Turn off if your \(sport.name.lowercased()) \(metric.name) differs from your other sports"
+            )
+          }
         }
       }
       if isOwn(metric) {
@@ -172,16 +200,11 @@ private struct ScopeForm: View {
         }
       }
       ZonesSection(scope: scope, metric: metric)
-      Section {
-        LabeledContent(usedFor(metric)) {
-          Button("Zone History…") { isShowingHistory = true }
-        }
-      }
-    }
-    .sheet(isPresented: $isShowingHistory) {
-      ZoneHistoryView()
     }
     .formStyle(.grouped)
+    .frame(maxWidth: 700)
+    .frame(maxWidth: .infinity)
+    .navigationTitle(scope == .all ? "Default zones" : "\(scope.title) zones")
     .toolbar {
       ToolbarItem(placement: .principal) {
         Picker("Metric", selection: $metric) {
@@ -190,6 +213,12 @@ private struct ScopeForm: View {
         .pickerStyle(.segmented)
         .fixedSize()
       }
+      ToolbarItem(placement: .primaryAction) {
+        Button("Zone History…") { isShowingHistory = true }
+      }
+    }
+    .sheet(isPresented: $isShowingHistory) {
+      ZoneHistoryView()
     }
     .onChange(of: scope) { self.metric = shownMetric }
   }
@@ -197,12 +226,6 @@ private struct ScopeForm: View {
   private var lastFTPTest: String {
     guard let test = store.ftpTests(in: scope).last else { return "None" }
     return "\(test.date.formatted(.dateTime.day().month(.wide))) · \(test.kind.name)"
-  }
-
-  private func usedFor(_ metric: ZoneMetric) -> String {
-    guard let sport = scope.sport else { return "Used for every sport without its own" }
-    return store.current.usesDefault(metric, in: sport)
-      ? "\(sport.name) uses Default" : "Used for \(sport.name.lowercased())"
   }
 
   private func isOwn(_ metric: ZoneMetric) -> Bool {
@@ -214,31 +237,6 @@ private struct ScopeForm: View {
     Binding(
       get: { store.current.usesDefault(metric, in: sport) },
       set: { store.setUsesDefault($0, for: metric, in: sport) })
-  }
-}
-
-/// On narrow screens, the choice between Default and the listed sports.
-private struct ScopePickerSection: View {
-  @Binding var selection: ZoneScope
-  @Environment(RiderSettingsStore.self) private var store
-
-  var body: some View {
-    Section {
-      Picker("Zones for", selection: $selection) {
-        Text("Default").tag(ZoneScope.all)
-        ForEach(store.current.listedSports, id: \.self) { Text($0.name).tag(ZoneScope.sport($0)) }
-      }
-      AddSportMenu { selection = .sport($0) }
-        .labelStyle(.titleAndIcon)
-      if let sport = selection.sport {
-        Button("Remove \(sport.name)", role: .destructive) {
-          store.setListed(false, sport)
-          selection = .all
-        }
-      }
-    } footer: {
-      Text("Default zones apply to every sport without its own.")
-    }
   }
 }
 
@@ -291,8 +289,7 @@ private struct ThresholdField: View {
 }
 
 #Preview {
-  NavigationStack {
-    SettingsView()
-  }
-  .environment(RiderSettingsStore.sample)
+  @Previewable @State var page = SettingsPage.zones(.all)
+  SettingsSplitView(page: $page, discovery: BluetoothDiscovery()) {}
+    .environment(RiderSettingsStore.sample)
 }
