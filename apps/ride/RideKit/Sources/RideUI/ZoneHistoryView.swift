@@ -43,7 +43,10 @@ struct ZoneHistoryView: View {
         }
       }
     }
-    .frame(minWidth: 480, minHeight: 420)
+    #if os(macOS)
+      // A sheet on macOS is only as big as its content asks for.
+      .frame(minWidth: 480, minHeight: 420)
+    #endif
   }
 }
 

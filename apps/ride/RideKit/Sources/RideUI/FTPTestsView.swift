@@ -111,6 +111,9 @@ private struct AddFTPTestView: View {
         }
       }
     }
-    .frame(minWidth: 420, minHeight: 360)
+    #if os(macOS)
+      // A sheet on macOS is only as big as its content asks for.
+      .frame(minWidth: 420, minHeight: 360)
+    #endif
   }
 }
