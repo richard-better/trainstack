@@ -33,7 +33,7 @@ struct ZoneBar: View {
   var body: some View {
     GeometryReader { proxy in
       HStack(spacing: 1) {
-        ForEach(shares, id: \.zone) { share in
+        ForEach(shares) { share in
           Rectangle()
             .fill(share.zone.color)
             .frame(width: max(0, proxy.size.width * share.fraction))

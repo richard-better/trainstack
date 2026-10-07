@@ -58,8 +58,8 @@ private struct EntryRow: View {
     VStack(alignment: .leading, spacing: 6) {
       DatePicker("From", selection: day, in: ...Date.now, displayedComponents: .date)
         .fontWeight(.semibold)
-      ForEach(entry.changes.indices, id: \.self) { index in
-        Text(entry.changes[index].summary)
+      ForEach(entry.changes) { change in
+        Text(change.summary)
           .font(.callout)
           .foregroundStyle(.secondary)
       }

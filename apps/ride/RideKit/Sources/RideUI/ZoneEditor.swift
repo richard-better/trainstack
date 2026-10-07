@@ -37,7 +37,7 @@ struct ZonesSection: View {
             metric: metric, sport: scope.sport)
           ZoneTableHeader(
             reference: settings.choice.model.basis.reference, hasPercentColumn: hasPercentColumn)
-          ForEach(zones.zones, id: \.index) { zone in
+          ForEach(zones.zones) { zone in
             ZoneRow(
               zones: zones, zone: zone, metric: metric, scope: scope, isEditable: isEditable,
               reference: settings.thresholds[settings.choice.model.basis.reference],
@@ -134,7 +134,7 @@ private struct ZoneScale: View {
         let widths = zones.zones.map(width)
         let total = widths.reduce(0, +)
         HStack(spacing: 1) {
-          ForEach(zones.zones, id: \.index) { zone in
+          ForEach(zones.zones) { zone in
             Rectangle()
               .fill(zone.color)
               .frame(width: proxy.size.width * widths[zone.index] / total)

@@ -148,7 +148,7 @@ private struct PowerCurveChart: View {
 
   var body: some View {
     // Durations are spaced evenly, since they are chosen to be readable rather than to scale.
-    Chart(points, id: \.duration) { point in
+    Chart(points) { point in
       LineMark(x: .value("Duration", point.duration.spokenString), y: .value("Power", point.power))
         .interpolationMethod(.monotone)
       PointMark(x: .value("Duration", point.duration.spokenString), y: .value("Power", point.power))

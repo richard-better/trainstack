@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PowerCurvePoint: Equatable, Sendable {
+public struct PowerCurvePoint: Equatable, Identifiable, Sendable {
   public var duration: TimeInterval
   /// The highest average power sustained for `duration`, in watts.
   public var power: Int
@@ -37,4 +37,9 @@ extension RideRecording {
     }
     return result
   }
+}
+
+extension PowerCurvePoint {
+  /// One point per duration.
+  public var id: TimeInterval { duration }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 /// One change to a rider's zones.
-public enum ZoneChange: Codable, Equatable, Sendable {
+public enum ZoneChange: Codable, Equatable, Identifiable, Sendable {
   case threshold(Threshold, scope: ZoneScope, value: Int?)
   case choice(ZoneMetric, scope: ZoneScope, ZoneChoice)
   /// Whether a listed sport keeps its own zones for a metric rather than using Default's.
@@ -9,12 +9,15 @@ public enum ZoneChange: Codable, Equatable, Sendable {
   case listed(Sport, Bool)
 
   /// What the change sets. A later change with the same key on the same day replaces it.
-  enum Key: Hashable {
+  public enum Key: Hashable, Sendable {
     case threshold(Threshold, ZoneScope)
     case choice(ZoneMetric, ZoneScope)
     case ownZones(ZoneMetric, Sport)
     case listed(Sport)
   }
+
+  /// Unique among an entry's changes, since a later one with the same key replaces it.
+  public var id: Key { key }
 
   var key: Key {
     switch self {

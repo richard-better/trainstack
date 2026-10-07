@@ -328,7 +328,7 @@ private struct WorkoutProgressChart: View {
 
   var body: some View {
     Chart {
-      ForEach(session.intervals, id: \.index) { interval in
+      ForEach(session.intervals) { interval in
         RectangleMark(
           xStart: .value("Start", interval.start), xEnd: .value("End", interval.end),
           yStart: .value("Floor", 0),

@@ -42,7 +42,7 @@ struct TrendSection: View {
           )
           .foregroundStyle(Color.primary.opacity(0.25))
         }
-        ForEach(shown, id: \.date) { day in
+        ForEach(shown) { day in
           LineMark(x: .value("Day", day.date, unit: .day), y: .value("Fitness", day.fitness))
             .foregroundStyle(Color.primary)
             .lineStyle(StrokeStyle(lineWidth: 2, lineJoin: .round))

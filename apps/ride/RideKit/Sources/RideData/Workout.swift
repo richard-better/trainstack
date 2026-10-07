@@ -32,7 +32,7 @@ public struct Workout: Equatable, Sendable {
   }
 }
 
-public struct TargetSegment: Equatable, Sendable {
+public struct TargetSegment: Equatable, Identifiable, Sendable {
   public var start: TimeInterval
   public var end: TimeInterval
   public var power: Int
@@ -81,4 +81,9 @@ extension RideRecording {
     }
     return Double(onTarget.count) / Double(targeted.count)
   }
+}
+
+extension TargetSegment {
+  /// Segments follow one another without overlapping.
+  public var id: TimeInterval { start }
 }

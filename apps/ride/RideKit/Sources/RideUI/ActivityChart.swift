@@ -32,7 +32,7 @@ struct ActivityChart: View {
       legend
       Chart {
         if shows(.target) {
-          ForEach(recording.targetSegments, id: \.start) { segment in
+          ForEach(recording.targetSegments) { segment in
             RectangleMark(
               xStart: .value("Start", segment.start), xEnd: .value("End", segment.end),
               yStart: .value("Floor", 0), yEnd: .value("Target", segment.power)
@@ -40,7 +40,7 @@ struct ActivityChart: View {
             .foregroundStyle(Series.target.color)
           }
         }
-        ForEach(recording.samples, id: \.elapsed) { sample in
+        ForEach(recording.samples) { sample in
           if shows(.power), let power = sample.power {
             LineMark(
               x: .value("Time", sample.elapsed), y: .value("Value", power),

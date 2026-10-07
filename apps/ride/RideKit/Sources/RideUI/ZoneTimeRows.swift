@@ -7,7 +7,7 @@ struct ZoneTimeRows: View {
 
   var body: some View {
     Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 9) {
-      ForEach(shares, id: \.zone) { share in
+      ForEach(shares) { share in
         GridRow {
           Text(share.zone.name).foregroundStyle(.secondary)
           ProgressBar(fraction: share.fraction, color: share.zone.color)
