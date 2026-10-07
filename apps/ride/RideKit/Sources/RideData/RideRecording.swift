@@ -20,6 +20,8 @@ public struct RideRecording: Equatable, Sendable {
     /// Seconds since the start of the ride.
     public var elapsed: TimeInterval
     public var power: Int?
+    /// The power the trainer was set to hold, in ERG mode. Nil when the ride had no target.
+    public var targetPower: Int?
     public var heartRate: Int?
     public var cadence: Int?
     /// Metres per second.
@@ -28,11 +30,12 @@ public struct RideRecording: Equatable, Sendable {
     public var distance: Double?
 
     public init(
-      elapsed: TimeInterval, power: Int? = nil, heartRate: Int? = nil, cadence: Int? = nil,
-      speed: Double? = nil, distance: Double? = nil
+      elapsed: TimeInterval, power: Int? = nil, targetPower: Int? = nil, heartRate: Int? = nil,
+      cadence: Int? = nil, speed: Double? = nil, distance: Double? = nil
     ) {
       self.elapsed = elapsed
       self.power = power
+      self.targetPower = targetPower
       self.heartRate = heartRate
       self.cadence = cadence
       self.speed = speed
@@ -74,5 +77,6 @@ public struct RideRecording: Equatable, Sendable {
   }
 
   public var hasPower: Bool { samples.contains { $0.power != nil } }
+  public var hasTarget: Bool { samples.contains { $0.targetPower != nil } }
   public var hasHeartRate: Bool { samples.contains { $0.heartRate != nil } }
 }
