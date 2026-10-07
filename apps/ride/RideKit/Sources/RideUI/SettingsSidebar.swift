@@ -33,7 +33,7 @@ struct SettingsSidebar: View {
         Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           .tag(SettingsPage.devices)
       } header: {
-        Text("Settings").font(.title3.weight(.semibold)).foregroundStyle(.primary)
+        Text("Settings").font(.title3).bold().foregroundStyle(.primary)
       }
     }
   }

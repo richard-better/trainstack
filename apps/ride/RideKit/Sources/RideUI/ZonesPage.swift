@@ -15,19 +15,18 @@ struct ZonesPage: View {
 
   /// The chosen metric, or the scope's first when it has no zones for that one.
   private var shownMetric: ZoneMetric {
-    metrics.contains(metric) ? metric : metrics[0]
+    metrics.contains(metric) ? metric : metrics.first ?? metric
   }
 
   var body: some View {
+    @Bindable var store = store
     let metric = shownMetric
     Form {
       if let sport = scope.sport, metric != .pace {
         Section {
-          Toggle(isOn: usesDefault(metric, in: sport)) {
+          Toggle(isOn: $store[usesDefault: metric, in: sport]) {
             Text("Use Default \(metric.name) zones")
-            Text(
-              "Turn off if your \(sport.name.lowercased()) \(metric.name) differs from your other sports"
-            )
+            Text("Turn off if your \(metric.name) for \(sport.name) differs from your other sports")
           }
         }
       }
@@ -89,11 +88,5 @@ struct ZonesPage: View {
   private func isOwn(_ metric: ZoneMetric) -> Bool {
     guard let sport = scope.sport else { return true }
     return !store.current.usesDefault(metric, in: sport)
-  }
-
-  private func usesDefault(_ metric: ZoneMetric, in sport: Sport) -> Binding<Bool> {
-    Binding(
-      get: { store.current.usesDefault(metric, in: sport) },
-      set: { store.setUsesDefault($0, for: metric, in: sport) })
   }
 }

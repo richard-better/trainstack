@@ -28,7 +28,7 @@ struct LegendToggle: View {
     #if os(macOS)
       .pointerStyle(.link)
     #endif
-    .help(isShown ? "Hide \(title.lowercased())" : "Show \(title.lowercased())")
+    .help(isShown ? "Hide \(title)" : "Show \(title)")
     .accessibilityLabel(title)
     .accessibilityValue(isShown ? "Shown" : "Hidden")
     .accessibilityAddTraits(.isToggle)

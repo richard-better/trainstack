@@ -16,10 +16,7 @@ struct SettingsList: View {
           ForEach(store.current.listedSports, id: \.self) { sport in
             NavigationLink(value: SettingsPage.zones(.sport(sport))) { SportRow(sport: sport) }
           }
-          .onDelete { offsets in
-            let sports = store.current.listedSports
-            for offset in offsets { store.setListed(false, sports[offset]) }
-          }
+          .onDelete(perform: unlistSports)
           AddSportMenu { path.append(.zones(.sport($0))) }
         }
         Section {
@@ -33,5 +30,11 @@ struct SettingsList: View {
         SettingsPageView(page: page, discovery: discovery)
       }
     }
+  }
+
+  /// Removes the sports at `offsets` from the list, along with their zones.
+  private func unlistSports(at offsets: IndexSet) {
+    let sports = store.current.listedSports
+    for offset in offsets { store.setListed(false, sports[offset]) }
   }
 }

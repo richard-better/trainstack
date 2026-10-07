@@ -42,7 +42,9 @@ struct AddFTPTestView: View {
           Toggle("Set my FTP from this test", isOn: $updatesFTP)
         } footer: {
           Text(
-            "Your \(scope == .all ? "" : scope.title.lowercased() + " ")zones use this FTP from the day of the test until your next FTP change."
+            scope == .all
+              ? "Your zones use this FTP from the day of the test until your next FTP change."
+              : "Your \(scope.title) zones use this FTP from the day of the test until your next FTP change."
           )
         }
       }
@@ -50,17 +52,11 @@ struct AddFTPTestView: View {
       .navigationTitle("Add FTP Test")
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
+          Button("Cancel", action: cancel)
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button("Add") {
-            if let ftp {
-              store.add(
-                FTPTest(date: date, kind: kind, ftp: ftp, scope: scope), updatesFTP: updatesFTP)
-            }
-            dismiss()
-          }
-          .disabled(!isValid)
+          Button("Add", action: add)
+            .disabled(!isValid)
         }
       }
     }
@@ -69,4 +65,13 @@ struct AddFTPTestView: View {
       .frame(minWidth: 420, minHeight: 360)
     #endif
   }
+
+  private func add() {
+    if let ftp {
+      store.add(FTPTest(date: date, kind: kind, ftp: ftp, scope: scope), updatesFTP: updatesFTP)
+    }
+    dismiss()
+  }
+
+  private func cancel() { dismiss() }
 }

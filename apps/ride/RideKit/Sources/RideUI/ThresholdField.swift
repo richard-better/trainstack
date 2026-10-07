@@ -1,6 +1,7 @@
 import RideData
 import SwiftUI
 
+/// A threshold of a scope, such as FTP, with Default's value beside a sport's own.
 struct ThresholdField: View {
   let threshold: Threshold
   let scope: ZoneScope
@@ -25,6 +26,8 @@ struct ThresholdField: View {
   }
 
   @ViewBuilder private var field: some View {
+    @Bindable var store = store
+    let value = $store[threshold, scope]
     if threshold.metric == .pace {
       TextField(threshold.title, value: value, format: .pace, prompt: Text("Not set"))
     } else {
@@ -35,10 +38,6 @@ struct ThresholdField: View {
         .keyboardType(.numberPad)
       #endif
     }
-  }
-
-  private var value: Binding<Int?> {
-    Binding(get: { store[threshold, scope] }, set: { store[threshold, scope] = $0 })
   }
 
   /// Default's value, shown beside a sport's own when they differ.

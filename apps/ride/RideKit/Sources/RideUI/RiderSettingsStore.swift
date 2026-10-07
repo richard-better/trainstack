@@ -61,6 +61,32 @@ final class RiderSettingsStore {
     }
   }
 
+  /// The model a scope's zones for `metric` follow, or nil when they are custom. Setting nil
+  /// leaves them as they are, since custom zones come from editing them.
+  subscript(modelFor metric: ZoneMetric, in scope: ZoneScope) -> ZoneModel? {
+    get {
+      guard let choice = current.settings(for: metric, in: scope)?.choice else { return nil }
+      return choice.isCustom ? nil : choice.model
+    }
+    set {
+      if let newValue { choose(newValue, in: scope) }
+    }
+  }
+
+  /// Where a zone ends, which moves where the next starts. See `setLimit(_:ofZone:for:in:)`.
+  subscript(endOfZone index: Int, for metric: ZoneMetric, in scope: ZoneScope) -> Int? {
+    get { current.settings(for: metric, in: scope)?.zones?.zones.first { $0.index == index }?.end }
+    set {
+      if let newValue { setLimit(newValue, ofZone: index, for: metric, in: scope) }
+    }
+  }
+
+  /// Whether `sport` uses Default's zones for `metric` rather than its own.
+  subscript(usesDefault metric: ZoneMetric, in sport: Sport) -> Bool {
+    get { current.usesDefault(metric, in: sport) }
+    set { setUsesDefault(newValue, for: metric, in: sport) }
+  }
+
   /// Follows `model`, dropping any custom limits.
   func choose(_ model: ZoneModel, in scope: ZoneScope) {
     record(.choice(model.metric, scope: scope, ZoneChoice(model: model)))

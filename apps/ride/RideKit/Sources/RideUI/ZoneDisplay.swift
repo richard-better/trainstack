@@ -12,7 +12,13 @@ extension ZoneMetric {
   }
 
   /// `heart rate`, for use within a sentence.
-  var name: String { title.lowercased() }
+  var name: String {
+    switch self {
+    case .heartRate: "heart rate"
+    case .power: "power"
+    case .pace: "pace"
+    }
+  }
 
   /// The unit values are shown in, such as `bpm` or `/km`.
   func unit(in sport: Sport?) -> String {

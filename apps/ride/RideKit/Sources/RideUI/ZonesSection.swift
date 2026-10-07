@@ -25,11 +25,10 @@ struct ZonesSection: View {
   var body: some View {
     if let settings {
       Section {
-        modelRow(settings.choice)
+        ZoneModelRow(
+          scope: scope, metric: metric, choice: settings.choice, isEditable: isEditable)
         if isEditable, settings.choice.isCustom {
-          Button("Restore \(settings.choice.model.name) zones") {
-            store.choose(settings.choice.model, in: scope)
-          }
+          Button("Restore \(settings.choice.model.name) zones") { restore(settings.choice.model) }
         }
         if let zones = settings.zones {
           ZoneScale(
@@ -64,41 +63,7 @@ struct ZonesSection: View {
     }
   }
 
-  @ViewBuilder private func modelRow(_ choice: ZoneChoice) -> some View {
-    let caption =
-      choice.isCustom
-      ? "Custom limits, based on \(choice.model.menuTitle)"
-      : "Uses your \(choice.model.basis.thresholds.map(\.name).formatted(.list(type: .and)))"
-    if isEditable {
-      Picker(selection: model(choice)) {
-        ForEach(ZoneModel.groups(for: metric, in: scope.sport), id: \.title) { group in
-          Section(group.title) {
-            ForEach(group.models, id: \.self) { Text($0.menuTitle).tag(Optional($0)) }
-          }
-        }
-        if choice.isCustom {
-          Text("Custom").tag(ZoneModel?.none)
-        }
-      } label: {
-        Text("Zone model")
-        Text(caption)
-      }
-    } else {
-      LabeledContent {
-        Text(choice.isCustom ? "Custom" : choice.model.menuTitle)
-      } label: {
-        Text("Zone model")
-        Text(caption)
-      }
-    }
-  }
-
-  /// The chosen model, or nil when the zones are custom.
-  private func model(_ choice: ZoneChoice) -> Binding<ZoneModel?> {
-    Binding(
-      get: { choice.isCustom ? nil : choice.model },
-      set: { if let model = $0 { store.choose(model, in: scope) } })
-  }
+  private func restore(_ model: ZoneModel) { store.choose(model, in: scope) }
 
   /// The values the scale spans, from easiest to hardest: from half to all of max heart rate,
   /// up to 160% of FTP, or from 140% to 85% of threshold pace, when those are known.

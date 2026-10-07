@@ -41,7 +41,7 @@ struct ZoneRow: View {
       Group {
         if let end = zone.end {
           if isEditable {
-            endField(end)
+            ZoneEndField(zone: zone, metric: metric, scope: scope)
           } else {
             Text(metric.format(end))
           }
@@ -57,25 +57,6 @@ struct ZoneRow: View {
       }
     }
     .monospacedDigit()
-  }
-
-  @ViewBuilder private func endField(_ end: Int) -> some View {
-    let value = Binding(
-      get: { end },
-      set: { store.setLimit($0, ofZone: zone.index, for: metric, in: scope) })
-    Group {
-      if metric == .pace {
-        TextField("End of \(zone.name)", value: value, format: .pace)
-      } else {
-        TextField("End of \(zone.name)", value: value, format: .number.grouping(.never))
-          #if os(iOS)
-            .keyboardType(.numberPad)
-          #endif
-      }
-    }
-    .labelsHidden()
-    .textFieldStyle(.roundedBorder)
-    .multilineTextAlignment(.trailing)
   }
 
   private func percentages(of reference: Int) -> String {

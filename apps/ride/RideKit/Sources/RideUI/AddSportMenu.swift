@@ -11,13 +11,15 @@ struct AddSportMenu: View {
     Menu("Add Sport", systemImage: "plus") {
       Section("Add zones for") {
         ForEach(unlisted, id: \.self) { sport in
-          Button(sport.name) {
-            store.setListed(true, sport)
-            added(sport)
-          }
+          Button(sport.name) { add(sport) }
         }
       }
     }
     .disabled(unlisted.isEmpty)
+  }
+
+  private func add(_ sport: Sport) {
+    store.setListed(true, sport)
+    added(sport)
   }
 }
