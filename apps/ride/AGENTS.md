@@ -1,6 +1,6 @@
 # TrainStack Ride
 
-Native SwiftUI app for iOS, iPadOS, and macOS 26+. It connects to smart trainers and
+Native SwiftUI app for iOS and iPadOS 26.1+ and macOS 26+. It connects to smart trainers and
 sensors over Bluetooth, runs structured workouts, and records rides. See
 [`docs/THESIS.md`](../../docs/THESIS.md) for the product scope.
 
