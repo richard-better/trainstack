@@ -88,8 +88,9 @@ final class RideLibrary {
   }
 
   static func sample() -> RideLibrary {
-    let library = RideLibrary()
-    if let data = try? RideRecording.sampleFITData() { _ = try? library.add(data) }
-    return library
+    guard let recording = try? RideRecording.sample(),
+      let data = try? RideRecording.sampleFITData()
+    else { return RideLibrary() }
+    return RideLibrary(rides: [Ride(recording: recording, fileData: data)])
   }
 }

@@ -17,6 +17,13 @@ struct ActivityChart: View {
     VStack(alignment: .leading, spacing: 8) {
       legend
       Chart {
+        ForEach(recording.targetSegments, id: \.start) { segment in
+          RectangleMark(
+            xStart: .value("Start", segment.start), xEnd: .value("End", segment.end),
+            yStart: .value("Floor", 0), yEnd: .value("Target", segment.power)
+          )
+          .foregroundStyle(Color.primary.opacity(0.14))
+        }
         ForEach(recording.samples, id: \.elapsed) { sample in
           if let power = sample.power {
             LineMark(
@@ -75,6 +82,9 @@ struct ActivityChart: View {
 
   private var legend: some View {
     HStack(spacing: 16) {
+      if recording.hasTarget {
+        legendItem("Target", color: Color.primary.opacity(0.14), height: 10)
+      }
       if recording.hasPower { legendItem("Power", color: .primary.opacity(0.85), height: 2) }
       if recording.hasHeartRate { legendItem("Heart rate", color: .red, height: 2) }
     }
@@ -94,6 +104,9 @@ struct ActivityChart: View {
     VStack(alignment: .leading, spacing: 2) {
       Text(sample.elapsed.clockString).foregroundStyle(.secondary)
       if let power = sample.power { Text("\(power) W") }
+      if let target = sample.targetPower {
+        Text("Target \(target) W").foregroundStyle(.secondary)
+      }
       if let heartRate = sample.heartRate { Text("\(heartRate) bpm") }
     }
     .font(.caption.monospacedDigit())
@@ -107,7 +120,8 @@ struct ActivityChart: View {
   }
 
   private var yMaximum: Double {
-    let peak = recording.samples.lazy.flatMap { [$0.power, $0.heartRate].compactMap { $0 } }.max()
+    let peak = recording.samples.lazy
+      .flatMap { [$0.power, $0.targetPower, $0.heartRate].compactMap { $0 } }.max()
     return (Double(peak ?? 100) * 1.1 / 50).rounded(.up) * 50
   }
 

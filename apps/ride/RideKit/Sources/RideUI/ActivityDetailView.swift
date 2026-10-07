@@ -60,6 +60,10 @@ struct ActivityDetailView: View {
     if let heartRate = summary.averageHeartRate {
       result.append(.init(label: "Avg heart rate", value: "\(heartRate)", unit: "bpm"))
     }
+    if let onTarget = recording.timeOnTarget() {
+      result.append(
+        .init(label: "On target", value: "\(Int((onTarget * 100).rounded()))", unit: "%"))
+    }
     if let distance = summary.distance {
       result.append(
         .init(
