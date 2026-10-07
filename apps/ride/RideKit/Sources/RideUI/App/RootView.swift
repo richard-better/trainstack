@@ -5,6 +5,7 @@ import SwiftUI
 public struct RootView: View {
   @State private var destination = RideLibrary.launchDestination()
   @State private var discovery = BluetoothDiscovery()
+  @State private var heartRateSensor = HeartRateSensor()
   @State private var library = RideLibrary.launchLibrary()
   @State private var settings = RiderSettingsStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
@@ -39,6 +40,7 @@ public struct RootView: View {
     }
     .modifier(PlayerPresentation(launcher: launcher, namespace: player))
     .environment(settings)
+    .environment(heartRateSensor)
     .environment(launcher)
     .onChange(of: destination) { _, destination in
       if destination != .settings { appDestination = destination }
