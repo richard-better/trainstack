@@ -1,5 +1,6 @@
 import Charts
 import RideData
+import RideStyle
 import SwiftUI
 
 /// Hours at each intensity per month for the last 12 months, from power zones when the rider

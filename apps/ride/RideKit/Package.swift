@@ -3,16 +3,17 @@ import PackageDescription
 
 let package = Package(
   name: "RideKit",
-  platforms: [.iOS("27.0"), .macOS(.v26)],
+  platforms: [.iOS("27.0"), .macOS(.v26), .watchOS("27.0")],
   products: [
     .library(name: "RideUI", targets: ["RideUI"])
   ],
   targets: [
     .target(name: "RideBluetooth"),
     .target(name: "RideData", resources: [.copy("Resources/SampleRide.fit")]),
+    .target(name: "RideStyle", dependencies: ["RideData"]),
     .target(
       name: "RideUI",
-      dependencies: ["RideBluetooth", "RideData"],
+      dependencies: ["RideBluetooth", "RideData", "RideStyle"],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),

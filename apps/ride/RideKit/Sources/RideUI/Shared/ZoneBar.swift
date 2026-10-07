@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// A thin bar split by time in each zone.
