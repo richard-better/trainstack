@@ -177,11 +177,11 @@ private struct RideRow: View {
   @ViewBuilder private var zoneBar: some View {
     let shown = [ZoneMetric.power, .heartRate].lazy.compactMap { metric in
       store.zones(for: metric, of: ride.recording).map {
-        ($0, ride.recording.timeInZones($0, of: metric))
+        ride.recording.timeInZones($0, of: metric)
       }
     }
-    if let (zones, shares) = shown.first(where: { !$1.isEmpty }) {
-      ZoneBar(zones: zones, shares: shares).frame(height: 4)
+    if let shares = shown.first(where: { !$0.isEmpty }) {
+      ZoneBar(shares: shares).frame(height: 4)
     }
   }
 }

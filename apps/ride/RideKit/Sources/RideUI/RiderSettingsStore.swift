@@ -24,6 +24,9 @@ final class RiderSettingsStore {
   /// The zones in effect today.
   var current: ZoneProfile { settings.history.current }
 
+  /// The FTP an indoor ride's targets are set from today: cycling's own, or else Default's.
+  var ftp: Int? { current.value(of: .ftp, in: .sport(.cycling)) }
+
   var historyEntries: [ZoneHistory.Entry] { settings.history.entries }
 
   // MARK: Activities

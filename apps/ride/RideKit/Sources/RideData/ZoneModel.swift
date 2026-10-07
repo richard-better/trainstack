@@ -228,6 +228,18 @@ public enum ZoneModel: String, CaseIterable, Codable, Sendable {
     }
   }
 
+  /// Whether time in each zone counts as easy, moderate or hard training.
+  public var intensities: [Intensity] {
+    switch self {
+    case .frielCycling, .frielRunning, .frielRunningPace, .coggan7:
+      [.easy, .easy, .moderate, .moderate, .hard, .hard, .hard]
+    case .cogganHeartRate, .percentOfMax, .karvonen: [.easy, .easy, .moderate, .moderate, .hard]
+    case .coggan6: [.easy, .easy, .moderate, .moderate, .hard, .hard]
+    case .polarized, .seilerHeartRate, .seilerPower: [.easy, .moderate, .hard]
+    case .criticalSwimSpeed: [.easy, .easy, .moderate, .hard, .hard]
+    }
+  }
+
   /// Zone numbers as their author writes them, such as 5a.
   public var zoneLabels: [String] {
     switch self {

@@ -101,7 +101,7 @@ struct ZoneSection: View {
     let name = metric.name
     let settings = store.settings(for: metric, of: recording)
     if let zones = settings?.zones {
-      ZoneRows(zones: zones, shares: recording.timeInZones(zones, of: metric))
+      ZoneRows(shares: recording.timeInZones(zones, of: metric))
     } else if let missing = settings?.missingThresholds, !missing.isEmpty {
       MissingSetting(
         "Add your \(missing.map(\.name).formatted(.list(type: .and))) in Settings to see \(name) zones."
@@ -127,7 +127,6 @@ private struct MissingSetting: View {
 }
 
 private struct ZoneRows: View {
-  let zones: ZoneSet
   let shares: [ZoneShare]
 
   var body: some View {
@@ -135,7 +134,7 @@ private struct ZoneRows: View {
       ForEach(shares, id: \.zone) { share in
         GridRow {
           Text(share.zone.name).foregroundStyle(.secondary).gridColumnAlignment(.leading)
-          ProgressBar(fraction: share.fraction, color: share.zone.color(in: zones))
+          ProgressBar(fraction: share.fraction, color: share.zone.color)
           Text("\(Int((share.fraction * 100).rounded()))%")
             .gridColumnAlignment(.trailing)
           Text(share.seconds.spokenString)

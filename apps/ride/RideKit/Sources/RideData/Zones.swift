@@ -11,6 +11,10 @@ public struct Zone: Hashable, Sendable {
   public var start: Int?
   /// The hardest value in the zone, or nil for the last zone, which takes everything harder.
   public var end: Int?
+  /// Whether time in the zone counts as easy, moderate or hard training.
+  public var intensity: Intensity
+  /// How many zones the zone's set has.
+  public var zoneCount: Int
 }
 
 /// Contiguous zones from easiest to hardest that cover every value, with no gaps or overlaps.
@@ -31,7 +35,8 @@ public struct ZoneSet: Equatable, Sendable {
       Zone(
         index: index, label: model.zoneLabels[index], name: model.zoneNames[index],
         start: index == 0 ? nil : limits[index - 1] + step,
-        end: index < limits.count ? limits[index] : nil)
+        end: index < limits.count ? limits[index] : nil,
+        intensity: model.intensities[index], zoneCount: model.zoneCount)
     }
   }
 

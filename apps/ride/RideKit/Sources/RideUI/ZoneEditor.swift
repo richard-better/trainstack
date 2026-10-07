@@ -136,7 +136,7 @@ private struct ZoneScale: View {
         HStack(spacing: 1) {
           ForEach(zones.zones, id: \.index) { zone in
             Rectangle()
-              .fill(zone.color(in: zones))
+              .fill(zone.color)
               .frame(width: proxy.size.width * widths[zone.index] / total)
           }
         }
@@ -209,7 +209,7 @@ private struct ZoneRow: View {
 
   var body: some View {
     HStack(spacing: 10) {
-      Circle().fill(zone.color(in: zones)).frame(width: 8, height: 8)
+      Circle().fill(zone.color).frame(width: 8, height: 8)
       Text(zone.label)
         .foregroundStyle(.secondary)
         .frame(width: ZoneColumn.label, alignment: .leading)
