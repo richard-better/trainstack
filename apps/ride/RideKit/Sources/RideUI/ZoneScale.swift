@@ -11,15 +11,11 @@ struct ZoneScale: View {
 
   var body: some View {
     VStack(spacing: 4) {
-      GeometryReader { proxy in
-        let widths = zones.zones.map(width)
-        let total = widths.reduce(0, +)
-        HStack(spacing: 1) {
-          ForEach(zones.zones) { zone in
-            Rectangle()
-              .fill(zone.color)
-              .frame(width: proxy.size.width * widths[zone.index] / total)
-          }
+      ProportionalRow(spacing: 1) {
+        ForEach(zones.zones) { zone in
+          Rectangle()
+            .fill(zone.color)
+            .layoutProportion(width(of: zone))
         }
       }
       .frame(height: 10)
