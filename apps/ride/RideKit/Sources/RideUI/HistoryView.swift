@@ -173,15 +173,13 @@ private struct RideRow: View {
     .accessibilityElement(children: .combine)
   }
 
-  /// Time in power zones when the rider has an FTP, otherwise in heart rate zones.
+  /// Time in power zones when the rider has them, otherwise in heart rate zones.
   @ViewBuilder private var zoneBar: some View {
-    let recording = ride.recording
-    if let ftp = profile.ftp, case let shares = recording.powerZones(ftp: ftp), !shares.isEmpty {
-      ZoneBar(shares: shares).frame(height: 4)
-    } else if let maxHeartRate = profile.maxHeartRate,
-      case let shares = recording.heartRateZones(maxHeartRate: maxHeartRate), !shares.isEmpty
-    {
-      ZoneBar(shares: shares).frame(height: 4)
+    let shown = [ZoneMetric.power, .heartRate].lazy.compactMap { metric in
+      profile.zones(for: metric).map { ($0, ride.recording.timeInZones($0, of: metric)) }
+    }
+    if let (zones, shares) = shown.first(where: { !$1.isEmpty }) {
+      ZoneBar(zones: zones, shares: shares).frame(height: 4)
     }
   }
 }

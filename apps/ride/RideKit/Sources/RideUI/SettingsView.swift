@@ -9,21 +9,21 @@ struct SettingsView: View {
     @Bindable var profile = profile
     Form {
       Section {
-        numberField("Max heart rate (bpm)", value: $profile.maxHeartRate)
+        numberField("Max heart rate (bpm)", value: $profile[.maxHeartRate])
       } header: {
         Text("Heart rate")
       } footer: {
         Text(
-          "Sets your heart rate zones. Between \(RiderProfile.maxHeartRateRange.lowerBound) and \(RiderProfile.maxHeartRateRange.upperBound)."
+          "Sets your heart rate zones. Between \(RiderProfile.range(of: .maxHeartRate).lowerBound) and \(RiderProfile.range(of: .maxHeartRate).upperBound)."
         )
       }
       Section {
-        numberField("FTP (watts)", value: $profile.ftp)
+        numberField("FTP (watts)", value: $profile[.ftp])
       } header: {
         Text("Power")
       } footer: {
         Text(
-          "Functional threshold power, the most you could hold for about an hour. Sets your power zones and training stress. Between \(RiderProfile.ftpRange.lowerBound) and \(RiderProfile.ftpRange.upperBound)."
+          "Functional threshold power, the most you could hold for about an hour. Sets your power zones and training stress. Between \(RiderProfile.range(of: .ftp).lowerBound) and \(RiderProfile.range(of: .ftp).upperBound)."
         )
       }
     }

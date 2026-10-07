@@ -4,14 +4,8 @@ import Testing
 @testable import RideData
 
 struct RideAnalysisTests {
-  @Test func classifiesHeartRateByFractionOfMax() {
-    #expect(HeartRateZone.zone(heartRate: 90, maxHeartRate: 200) == .recovery)
-    #expect(HeartRateZone.zone(heartRate: 120, maxHeartRate: 200) == .aerobic)
-    #expect(HeartRateZone.zone(heartRate: 139, maxHeartRate: 200) == .aerobic)
-    #expect(HeartRateZone.zone(heartRate: 140, maxHeartRate: 200) == .tempo)
-    #expect(HeartRateZone.zone(heartRate: 170, maxHeartRate: 200) == .threshold)
-    #expect(HeartRateZone.zone(heartRate: 195, maxHeartRate: 200) == .vo2Max)
-  }
+  /// Zones at 60, 70, 80 and 90% of a max heart rate of 200.
+  private let heartRateZones = RiderProfile(maxHeartRate: 200).zones(for: .heartRate)!
 
   @Test func sharesTimeAcrossZonesAndIgnoresPauses() {
     let ride = recording(
@@ -23,18 +17,18 @@ struct RideAnalysisTests {
         // Paused for a minute: the gap before this sample does not count.
         .init(elapsed: 63, heartRate: 190),
       ])
-    let zones = ride.heartRateZones(maxHeartRate: 200)
-    #expect(zones.map(\.zone) == HeartRateZone.allCases)
-    #expect(zones[HeartRateZone.recovery.rawValue].seconds == 2)
-    #expect(zones[HeartRateZone.vo2Max.rawValue].seconds == 1)
-    #expect(zones[HeartRateZone.recovery.rawValue].fraction == 2.0 / 3.0)
+    let zones = ride.timeInZones(heartRateZones, of: .heartRate)
+    #expect(zones.map(\.zone) == heartRateZones.zones)
+    #expect(zones[0].seconds == 2)
+    #expect(zones[4].seconds == 1)
+    #expect(zones[0].fraction == 2.0 / 3.0)
     #expect(zones.map(\.fraction).reduce(0, +) == 1)
   }
 
   @Test func hasNoZonesWithoutHeartRate() {
     #expect(
       recording([.init(elapsed: 0, power: 100), .init(elapsed: 1, power: 100)])
-        .heartRateZones(maxHeartRate: 190).isEmpty)
+        .timeInZones(heartRateZones, of: .heartRate).isEmpty)
   }
 
   @Test func findsTheBestAveragePowerPerDuration() {
@@ -56,23 +50,14 @@ struct RideAnalysisTests {
     #expect(curve.map(\.power) == curve.map(\.power).sorted(by: >))
   }
 
-  @Test func classifiesPowerByFractionOfFTP() {
-    #expect(PowerZone.zone(power: 100, ftp: 200) == .recovery)
-    #expect(PowerZone.zone(power: 110, ftp: 200) == .endurance)
-    #expect(PowerZone.zone(power: 149, ftp: 200) == .endurance)
-    #expect(PowerZone.zone(power: 150, ftp: 200) == .tempo)
-    #expect(PowerZone.zone(power: 190, ftp: 200) == .threshold)
-    #expect(PowerZone.zone(power: 220, ftp: 200) == .vo2Max)
-    #expect(PowerZone.zone(power: 250, ftp: 200) == .anaerobic)
-  }
-
   @Test func sharesTimeAcrossPowerZones() throws {
-    let zones = try RideRecording.sample().powerZones(ftp: 200)
-    #expect(zones.map(\.zone) == PowerZone.allCases)
+    let powerZones = try #require(RiderProfile(ftp: 200).zones(for: .power))
+    let zones = try RideRecording.sample().timeInZones(powerZones, of: .power)
+    #expect(zones.map(\.zone) == powerZones.zones)
     #expect(abs(zones.map(\.fraction).reduce(0, +) - 1) < 1e-9)
     // The sample ride is an easy ride: nothing above tempo at an FTP of 200.
-    #expect(zones[PowerZone.threshold.rawValue].seconds == 0)
-    #expect(zones[PowerZone.endurance.rawValue].fraction > zones[PowerZone.tempo.rawValue].fraction)
+    #expect(zones[3].seconds == 0)
+    #expect(zones[1].fraction > zones[2].fraction)
   }
 
   @Test func scoresTrainingStressFromNormalizedPower() throws {

@@ -1,111 +1,85 @@
 import Foundation
 
-public struct ZoneShare<Zone: Hashable & Sendable>: Equatable, Sendable {
+/// One zone of a `ZoneSet`, in whole bpm or watts.
+public struct Zone: Hashable, Sendable {
+  /// Position in the set, from 0.
+  public var index: Int
+  /// The zone's number, such as 2 or 5a.
+  public var label: String
+  public var name: String
+  /// The lowest value in the zone: 0 for the first zone.
+  public var lowerLimit: Int
+  /// The highest value in the zone, or nil for the last zone, which has no top.
+  public var upperLimit: Int?
+}
+
+/// Contiguous zones that cover every value from 0 up, with no gaps or overlaps.
+public struct ZoneSet: Equatable, Sendable {
+  public let zones: [Zone]
+
+  /// Zones from `model` with the given tops. Nil unless there is one limit per zone but the last,
+  /// and each zone holds at least one value.
+  public init?(model: ZoneModel, upperLimits: [Int]) {
+    guard upperLimits.count == model.zoneCount - 1, Self.isValid(upperLimits) else { return nil }
+    zones = model.zoneNames.indices.map { index in
+      Zone(
+        index: index, label: model.zoneLabels[index], name: model.zoneNames[index],
+        lowerLimit: index == 0 ? 0 : upperLimits[index - 1] + 1,
+        upperLimit: index < upperLimits.count ? upperLimits[index] : nil)
+    }
+  }
+
+  public var upperLimits: [Int] { zones.compactMap(\.upperLimit) }
+
+  public func zone(containing value: Int) -> Zone {
+    zones.last { value >= $0.lowerLimit } ?? zones[0]
+  }
+
+  /// The tops after moving zone `index`'s top to `limit`, so the next zone starts just above it.
+  /// Nil when that would leave a zone empty.
+  public func upperLimits(settingZone index: Int, upperLimitTo limit: Int) -> [Int]? {
+    var limits = upperLimits
+    guard limits.indices.contains(index) else { return nil }
+    limits[index] = limit
+    return Self.isValid(limits) ? limits : nil
+  }
+
+  private static func isValid(_ upperLimits: [Int]) -> Bool {
+    zip([-1] + upperLimits, upperLimits).allSatisfy { $0 < $1 }
+  }
+}
+
+public struct ZoneShare: Equatable, Sendable {
   public var zone: Zone
   public var seconds: TimeInterval
   /// Share of the time spent in any zone, from 0 to 1.
   public var fraction: Double
 }
 
-/// Five heart rate zones, as fractions of maximum heart rate.
-public enum HeartRateZone: Int, CaseIterable, Sendable {
-  case recovery, aerobic, tempo, threshold, vo2Max
-
-  public var name: String {
-    switch self {
-    case .recovery: "Recovery"
-    case .aerobic: "Aerobic"
-    case .tempo: "Tempo"
-    case .threshold: "Threshold"
-    case .vo2Max: "VO2 max"
-    }
-  }
-
-  /// Lower bound of the zone as a fraction of maximum heart rate.
-  private var lowerBound: Double {
-    switch self {
-    case .recovery: 0
-    case .aerobic: 0.6
-    case .tempo: 0.7
-    case .threshold: 0.8
-    case .vo2Max: 0.9
-    }
-  }
-
-  public static func zone(heartRate: Int, maxHeartRate: Int) -> HeartRateZone {
-    let fraction = Double(heartRate) / Double(maxHeartRate)
-    return allCases.last { fraction >= $0.lowerBound } ?? .recovery
-  }
-}
-
-/// Six power zones, as fractions of functional threshold power (FTP).
-public enum PowerZone: Int, CaseIterable, Sendable {
-  case recovery, endurance, tempo, threshold, vo2Max, anaerobic
-
-  public var name: String {
-    switch self {
-    case .recovery: "Recovery"
-    case .endurance: "Endurance"
-    case .tempo: "Tempo"
-    case .threshold: "Threshold"
-    case .vo2Max: "VO2 max"
-    case .anaerobic: "Anaerobic"
-    }
-  }
-
-  /// Lower bound of the zone as a fraction of FTP.
-  private var lowerBound: Double {
-    switch self {
-    case .recovery: 0
-    case .endurance: 0.55
-    case .tempo: 0.75
-    case .threshold: 0.90
-    case .vo2Max: 1.05
-    case .anaerobic: 1.20
-    }
-  }
-
-  public static func zone(power: Int, ftp: Int) -> PowerZone {
-    let fraction = Double(power) / Double(ftp)
-    return allCases.last { fraction >= $0.lowerBound } ?? .recovery
-  }
-}
-
 extension RideRecording {
-  /// Time spent in each heart rate zone, in zone order. Empty when the ride has no heart rate.
+  /// Time spent in each zone, in zone order. Empty when the ride did not record `metric`.
   ///
   /// Each sample counts until the next one, but a gap longer than `maxSampleGap` is a pause and
   /// does not count.
-  public func heartRateZones(
-    maxHeartRate: Int, maxSampleGap: TimeInterval = 5
-  ) -> [ZoneShare<HeartRateZone>] {
-    zoneShares(maxSampleGap: maxSampleGap) { sample in
-      sample.heartRate.map { HeartRateZone.zone(heartRate: $0, maxHeartRate: maxHeartRate) }
-    }
-  }
-
-  /// Time spent in each power zone, in zone order. Empty when the ride has no power.
-  public func powerZones(ftp: Int, maxSampleGap: TimeInterval = 5) -> [ZoneShare<PowerZone>] {
-    zoneShares(maxSampleGap: maxSampleGap) { sample in
-      sample.power.map { PowerZone.zone(power: $0, ftp: ftp) }
-    }
-  }
-
-  private func zoneShares<Zone: CaseIterable & Hashable & Sendable>(
-    maxSampleGap: TimeInterval, zone: (Sample) -> Zone?
-  ) -> [ZoneShare<Zone>] {
-    var seconds: [Zone: TimeInterval] = [:]
+  public func timeInZones(
+    _ zones: ZoneSet, of metric: ZoneMetric, maxSampleGap: TimeInterval = 5
+  ) -> [ZoneShare] {
+    let value: KeyPath<Sample, Int?> =
+      switch metric {
+      case .heartRate: \.heartRate
+      case .power: \.power
+      }
+    var seconds = [TimeInterval](repeating: 0, count: zones.zones.count)
     for (sample, next) in zip(samples, samples.dropFirst()) {
-      guard let zone = zone(sample) else { continue }
+      guard let value = sample[keyPath: value] else { continue }
       let duration = next.elapsed - sample.elapsed
       guard duration > 0, duration <= maxSampleGap else { continue }
-      seconds[zone, default: 0] += duration
+      seconds[zones.zone(containing: value).index] += duration
     }
-    let total = seconds.values.reduce(0, +)
+    let total = seconds.reduce(0, +)
     guard total > 0 else { return [] }
-    return Zone.allCases.map {
-      let zoneSeconds = seconds[$0] ?? 0
-      return ZoneShare(zone: $0, seconds: zoneSeconds, fraction: zoneSeconds / total)
+    return zones.zones.map {
+      ZoneShare(zone: $0, seconds: seconds[$0.index], fraction: seconds[$0.index] / total)
     }
   }
 }

@@ -21,22 +21,38 @@ final class RiderProfileStore {
     self.profile = profile
   }
 
-  var maxHeartRate: Int? {
-    get { profile.maxHeartRate }
+  subscript(threshold: Threshold) -> Int? {
+    get { profile[threshold] }
     set {
-      guard newValue.map(RiderProfile.maxHeartRateRange.contains) ?? true else { return }
-      profile.maxHeartRate = newValue
+      profile[threshold] = newValue
       save()
     }
   }
 
-  var ftp: Int? {
-    get { profile.ftp }
-    set {
-      guard newValue.map(RiderProfile.ftpRange.contains) ?? true else { return }
-      profile.ftp = newValue
-      save()
-    }
+  var ftp: Int? { profile.ftp }
+
+  func zones(for metric: ZoneMetric) -> ZoneSet? { profile.zones(for: metric) }
+
+  func zoneChoice(for metric: ZoneMetric) -> ZoneChoice { profile.zoneChoice(for: metric) }
+
+  func missingThresholds(for metric: ZoneMetric) -> [Threshold] {
+    profile.missingThresholds(for: metric)
+  }
+
+  /// Follows `model`, dropping any custom limits.
+  func choose(_ model: ZoneModel) {
+    profile.setZoneChoice(ZoneChoice(model: model), for: model.metric)
+    save()
+  }
+
+  /// Moves the top of a zone, which makes the zones custom. Ignored when it would empty a zone.
+  func setUpperLimit(_ limit: Int, ofZone index: Int, for metric: ZoneMetric) {
+    guard let limits = zones(for: metric)?.upperLimits(settingZone: index, upperLimitTo: limit)
+    else { return }
+    var choice = zoneChoice(for: metric)
+    choice.customUpperLimits = limits
+    profile.setZoneChoice(choice, for: metric)
+    save()
   }
 
   private func save() {

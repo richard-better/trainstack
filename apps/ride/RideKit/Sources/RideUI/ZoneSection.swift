@@ -57,36 +57,49 @@ struct ZoneSection: View {
 
   private func isConfigured(_ breakdown: Breakdown) -> Bool {
     switch breakdown {
-    case .powerZones: profile.ftp != nil
-    case .heartRateZones: profile.maxHeartRate != nil
+    case .powerZones: profile.zones(for: .power) != nil
+    case .heartRateZones: profile.zones(for: .heartRate) != nil
     case .powerCurve: true
     }
   }
 
   private func basis(of breakdown: Breakdown) -> String? {
     switch breakdown {
-    case .powerZones: profile.ftp.map { "Zones from FTP \($0) W" }
-    case .heartRateZones: profile.maxHeartRate.map { "Zones from max HR \($0)" }
+    case .powerZones: basis(of: .power)
+    case .heartRateZones: basis(of: .heartRate)
     case .powerCurve: nil
     }
   }
 
+  /// What the rider's zones for `metric` come from, such as "Zones from FTP 200 W".
+  private func basis(of metric: ZoneMetric) -> String? {
+    guard profile.zones(for: metric) != nil else { return nil }
+    let choice = profile.zoneChoice(for: metric)
+    if choice.isCustom { return "Custom zones" }
+    let values = choice.model.basis.thresholds.compactMap { threshold in
+      profile[threshold].map { "\(threshold.abbreviation) \($0) \(threshold.unit)" }
+    }
+    return "Zones from " + values.formatted(.list(type: .and))
+  }
+
   @ViewBuilder private func content(of breakdown: Breakdown) -> some View {
     switch breakdown {
-    case .powerZones:
-      if let ftp = profile.ftp {
-        ZoneRows(shares: recording.powerZones(ftp: ftp))
-      } else {
-        MissingSetting("Add your FTP in Settings to see power zones.")
-      }
-    case .heartRateZones:
-      if let maxHeartRate = profile.maxHeartRate {
-        ZoneRows(shares: recording.heartRateZones(maxHeartRate: maxHeartRate))
-      } else {
-        MissingSetting("Add your max heart rate in Settings to see heart rate zones.")
-      }
-    case .powerCurve:
-      PowerCurveChart(points: recording.powerCurve())
+    case .powerZones: zones(of: .power)
+    case .heartRateZones: zones(of: .heartRate)
+    case .powerCurve: PowerCurveChart(points: recording.powerCurve())
+    }
+  }
+
+  @ViewBuilder private func zones(of metric: ZoneMetric) -> some View {
+    let name = metric == .power ? "power" : "heart rate"
+    if let zones = profile.zones(for: metric) {
+      ZoneRows(zones: zones, shares: recording.timeInZones(zones, of: metric))
+    } else if case let missing = profile.missingThresholds(for: metric), !missing.isEmpty {
+      MissingSetting(
+        "Add your \(missing.map(\.name).formatted(.list(type: .and))) in Settings to see \(name) zones."
+      )
+    } else {
+      MissingSetting("Check your \(name) thresholds in Settings: they are too close to make zones.")
     }
   }
 }
@@ -104,15 +117,16 @@ private struct MissingSetting: View {
   }
 }
 
-private struct ZoneRows<Zone: RideZone>: View {
-  let shares: [ZoneShare<Zone>]
+private struct ZoneRows: View {
+  let zones: ZoneSet
+  let shares: [ZoneShare]
 
   var body: some View {
     Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
       ForEach(shares, id: \.zone) { share in
         GridRow {
           Text(share.zone.name).foregroundStyle(.secondary).gridColumnAlignment(.leading)
-          ProgressBar(fraction: share.fraction, color: share.zone.color)
+          ProgressBar(fraction: share.fraction, color: share.zone.color(in: zones))
           Text("\(Int((share.fraction * 100).rounded()))%")
             .gridColumnAlignment(.trailing)
           Text(share.seconds.spokenString)
