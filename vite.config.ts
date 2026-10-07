@@ -62,6 +62,7 @@ export default defineConfig({
       ".wrangler/**",
       "**/.wrangler/**",
       "apps/**/*.xcassets/**",
+      ".agents/skills/swiftui-pro/**",
     ],
     singleQuote: false,
     semi: true,
