@@ -6,16 +6,37 @@ public struct RootView: View {
   @State private var discovery = BluetoothDiscovery()
   @State private var library = RideLibrary.launchLibrary()
   @State private var profile = RiderProfileStore.launchStore()
+  @State private var launcher = RideLauncher.launchLauncher()
   @Environment(\.scenePhase) private var scenePhase
 
   public init() {}
 
   public var body: some View {
+    Group {
+      // The ride in progress takes over the window until it ends.
+      if let ride = launcher.ride {
+        NavigationStack {
+          PlayerView(controller: ride, onEnd: launcher.end)
+        }
+      } else {
+        tabs
+      }
+    }
+    .environment(profile)
+    .environment(launcher)
+  }
+
+  private var tabs: some View {
     // Sidebar on macOS and iPad, tab bar on iPhone.
     TabView(selection: $destination) {
       Tab("Today", systemImage: "calendar", value: .today) {
         NavigationStack {
           TodayView { destination = .devices }
+        }
+      }
+      Tab("Workouts", systemImage: "chart.bar", value: .workouts) {
+        NavigationStack {
+          WorkoutsView()
         }
       }
       Tab("History", systemImage: "clock", value: .history) {
@@ -32,7 +53,6 @@ public struct RootView: View {
         }
       }
     }
-    .environment(profile)
     .tabViewStyle(.sidebarAdaptable)
     // Driven by selection rather than onAppear, which TabView does not pair reliably.
     .onChange(of: destination == .devices && scenePhase == .active, initial: true) {
@@ -47,7 +67,7 @@ public struct RootView: View {
 }
 
 private enum Destination: Hashable {
-  case today, history, devices, settings
+  case today, workouts, history, devices, settings
 }
 
 private struct TodayView: View {
@@ -77,6 +97,20 @@ extension RiderProfileStore {
       if CommandLine.arguments.contains("-sample-rides") { return .sample }
     #endif
     return RiderProfileStore()
+  }
+}
+
+extension RideLauncher {
+  /// Debug builds started with `-sample-rides` or `-simulated-trainer` ride with a pretend
+  /// trainer, so the player can be tried without hardware.
+  fileprivate static func launchLauncher() -> RideLauncher {
+    #if DEBUG
+      let arguments = CommandLine.arguments
+      if arguments.contains("-sample-rides") || arguments.contains("-simulated-trainer") {
+        return RideLauncher(simulated: true)
+      }
+    #endif
+    return RideLauncher()
   }
 }
 
