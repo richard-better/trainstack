@@ -42,6 +42,11 @@ public struct RootView: View {
       Tab("History", systemImage: "clock", value: .history) {
         HistoryView(library: library)
       }
+      Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: .progress) {
+        NavigationStack {
+          TrainingProgressView(library: library) { destination = .settings }
+        }
+      }
       Tab("Devices", systemImage: "antenna.radiowaves.left.and.right", value: .devices) {
         NavigationStack {
           DevicesView(discovery: discovery)
@@ -67,7 +72,7 @@ public struct RootView: View {
 }
 
 private enum Destination: Hashable {
-  case today, workouts, history, devices, settings
+  case today, workouts, history, progress, devices, settings
 }
 
 #Preview {

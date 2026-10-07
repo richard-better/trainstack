@@ -341,7 +341,8 @@ private struct WorkoutProgressChart: View {
   }
 }
 
-private struct LegendSwatch: View {
+/// A legend entry: a block for an area, a short line for a line.
+struct LegendSwatch: View {
   let title: String
   let color: Color
   let height: CGFloat
