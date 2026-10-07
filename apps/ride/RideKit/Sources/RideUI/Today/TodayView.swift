@@ -37,7 +37,12 @@ struct TodayView: View {
             WorkoutCard(
               template: suggestion.template, tag: suggestion.tag, profileHeight: 120,
               isSelected: index == state.selection, select: { state.selection = index },
-              start: settings.ftp.map { ftp in { launcher.start(suggestion.template, ftp: ftp) } })
+              start: settings.ftp.map { ftp in
+                {
+                  launcher.start(
+                    suggestion.template, ftp: ftp, heartRateZones: settings.heartRateZones)
+                }
+              })
           }
         }
         TodayFootnote(openSettings: openSettings)

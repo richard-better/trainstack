@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RideData
+import RideLink
 
 /// Runs a ride: moves the session on once a second with the latest reading.
 @Observable
@@ -8,14 +9,25 @@ final class RideController {
   private(set) var session: RideSession
   let template: WorkoutTemplate
   let ftp: Int
+  /// The zones the watch shows heart rate in.
+  let heartRateZones: ZoneSet?
+  /// Called after each second of the ride, to keep the watch up to date.
+  @ObservationIgnored var onTick: (() -> Void)?
+  @ObservationIgnored private let heartRate: HeartRateFeed?
   @ObservationIgnored private var simulator: SimulatedTrainer?
   @ObservationIgnored private var clock: Task<Void, Never>?
 
   /// With `simulated` a pretend trainer supplies the readings, for previews and debug builds.
-  /// Without it readings are empty until trainers can be connected.
-  init(template: WorkoutTemplate, ftp: Int, simulated: Bool) {
+  /// Without it readings are empty until trainers can be connected. Heart rate comes from
+  /// `heartRate` whenever a real sensor is sending it.
+  init(
+    template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet? = nil,
+    heartRate: HeartRateFeed? = nil, simulated: Bool
+  ) {
     self.template = template
     self.ftp = ftp
+    self.heartRateZones = heartRateZones
+    self.heartRate = heartRate
     session = RideSession(workout: template.workout(ftp: ftp))
     simulator = simulated ? SimulatedTrainer() : nil
   }
@@ -39,9 +51,14 @@ final class RideController {
   }
 
   /// Moves the ride on by `seconds`, as the clock does each second.
-  func tick(seconds: TimeInterval) {
-    let reading = simulator?.reading(for: session, after: seconds) ?? TrainerReading()
+  func tick(seconds: TimeInterval, at date: Date = .now) {
+    var reading = simulator?.reading(for: session, after: seconds) ?? TrainerReading()
+    if let live = heartRate?.current(at: date) {
+      reading.heartRate = live.bpm
+      reading.heartRateSource = live.source
+    }
     session.advance(by: seconds, reading: reading)
+    onTick?()
   }
 
   func togglePause() { session.togglePause() }
@@ -55,6 +72,11 @@ final class RideController {
 
   func zone(of interval: RideSession.Interval) -> PowerZone {
     PowerZone.zone(power: interval.plannedPower, ftp: ftp)
+  }
+
+  /// The ride as the watch shows it.
+  var glance: RideGlance {
+    RideGlance(session: session, ftp: ftp, heartRateZones: heartRateZones)
   }
 
   /// A controller part way through `template`, for previews.

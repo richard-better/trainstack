@@ -25,12 +25,12 @@ extension RideLauncher {
 
   #if DEBUG
     /// Debug builds started with `-ride "<workout name>"` open straight into that ride.
-    func startLaunchRide(ftp: Int?) {
+    func startLaunchRide(ftp: Int?, heartRateZones: ZoneSet?) {
       let arguments = CommandLine.arguments
       guard let flag = arguments.firstIndex(of: "-ride"), flag + 1 < arguments.count,
         let template = WorkoutTemplate.named(arguments[flag + 1]), let ftp
       else { return }
-      start(template, ftp: ftp)
+      start(template, ftp: ftp, heartRateZones: heartRateZones)
     }
   #endif
 }
