@@ -58,17 +58,27 @@ struct PlayerView: View {
   // MARK: Chart
 
   private var chartHeader: some View {
-    HStack {
-      HStack(spacing: 16) {
-        LegendSwatch(title: "Target", color: .primary.opacity(0.3), height: 10)
-        LegendSwatch(title: "Power", color: .primary.opacity(0.85), height: 2)
-        LegendSwatch(title: "Heart rate", color: .red, height: 2)
+    ViewThatFits(in: .horizontal) {
+      HStack {
+        legend
+        Spacer()
+        Text(intervalLine).lineLimit(1)
       }
-      Spacer()
-      Text(intervalLine)
+      VStack(alignment: .leading, spacing: 4) {
+        Text(intervalLine)
+        legend
+      }
     }
     .font(.caption)
     .foregroundStyle(.secondary)
+  }
+
+  private var legend: some View {
+    HStack(spacing: 16) {
+      LegendSwatch(title: "Target", color: .primary.opacity(0.3), height: 10)
+      LegendSwatch(title: "Power", color: .primary.opacity(0.85), height: 2)
+      LegendSwatch(title: "Heart rate", color: .red, height: 2)
+    }
   }
 
   private var intervalLine: String {
@@ -95,30 +105,55 @@ struct PlayerView: View {
 
   // MARK: Controls
 
+  /// One row with room to spare, otherwise the transport above the trainer setting.
   private var controls: some View {
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: 12) {
+        transport
+        Spacer()
+        trainerSetting
+      }
+      VStack(alignment: .leading, spacing: 10) {
+        transport
+        HStack(spacing: 12) {
+          trainerSetting
+        }
+      }
+      .padding(.vertical, 8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  @ViewBuilder private var transport: some View {
     HStack(spacing: 12) {
       Button(
         session.isPaused ? "Resume" : "Pause",
         systemImage: session.isPaused ? "play.fill" : "pause.fill", action: controller.togglePause
       )
       .labelStyle(.iconOnly)
+      .buttonStyle(.bordered)
       .keyboardShortcut(.space, modifiers: [])
       Button("Skip interval", systemImage: "forward.end.fill", action: controller.skipInterval)
         .buttonStyle(.borderless)
         .disabled(session.isComplete)
         .keyboardShortcut(.rightArrow, modifiers: .command)
         .help("Skip to the next interval (⌘→)")
-      Spacer()
-      Picker("Trainer mode", selection: modeBinding) {
-        ForEach(TrainerMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-      }
-      .pickerStyle(.segmented)
-      .labelsHidden()
-      .fixedSize()
-      SettingStepper(
-        label: settingLabel, decrease: { controller.adjust(by: -1) },
-        increase: { controller.adjust(by: 1) })
     }
+    .fixedSize()
+  }
+
+  @ViewBuilder private var trainerSetting: some View {
+    Picker("Trainer mode", selection: modeBinding) {
+      ForEach(TrainerMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+    }
+    .pickerStyle(.segmented)
+    .labelsHidden()
+    .fixedSize()
+    SettingStepper(
+      label: settingLabel, decrease: { controller.adjust(by: -1) },
+      increase: { controller.adjust(by: 1) }
+    )
+    .fixedSize()
   }
 
   private var modeBinding: Binding<TrainerMode> {
@@ -136,20 +171,48 @@ struct PlayerView: View {
   // MARK: Numbers
 
   private var secondaryStats: some View {
-    DividedRow {
-      SmallStat(label: "Interval left", value: session.intervalRemaining?.clockString ?? "—")
-      SmallStat(
-        label: "Elapsed", value: session.elapsed.clockString,
-        unit: "/ \(session.duration.clockString)")
-      SmallStat(
-        label: "Speed",
-        value: session.latest.speed.map { ($0 * 3.6).formatted(.oneDecimal) } ?? "—",
-        unit: "km/h")
-      SmallStat(
-        label: "Distance", value: (session.distance / 1000).formatted(.oneDecimal), unit: "km")
+    ViewThatFits(in: .horizontal) {
+      DividedRow {
+        intervalLeftNumber
+        elapsedNumber
+        speedNumber
+        distanceNumber
+      }
+      Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
+        GridRow {
+          intervalLeftNumber
+          elapsedNumber
+        }
+        GridRow {
+          speedNumber
+          distanceNumber
+        }
+      }
     }
     .overlay(alignment: .top) { Divider() }
     .overlay(alignment: .bottom) { Divider() }
+  }
+
+  private var intervalLeftNumber: some View {
+    SmallStat(label: "Interval left", value: session.intervalRemaining?.clockString ?? "—")
+  }
+
+  private var elapsedNumber: some View {
+    SmallStat(
+      label: "Elapsed", value: session.elapsed.clockString,
+      unit: "/ \(session.duration.clockString)")
+  }
+
+  private var speedNumber: some View {
+    SmallStat(
+      label: "Speed",
+      value: session.latest.speed.map { ($0 * 3.6).formatted(.oneDecimal) } ?? "—",
+      unit: "km/h")
+  }
+
+  private var distanceNumber: some View {
+    SmallStat(
+      label: "Distance", value: (session.distance / 1000).formatted(.oneDecimal), unit: "km")
   }
 
   private var primaryStats: some View {
@@ -352,7 +415,7 @@ struct LegendSwatch: View {
       RoundedRectangle(cornerRadius: height > 2 ? 2 : 0)
         .fill(color)
         .frame(width: height > 2 ? 10 : 12, height: height)
-      Text(title)
+      Text(title).lineLimit(1).fixedSize()
     }
   }
 }
