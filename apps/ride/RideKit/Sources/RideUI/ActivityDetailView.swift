@@ -7,6 +7,8 @@ struct ActivityDetailView: View {
   var onRemove: () -> Void
   @State private var isExporting = false
   @State private var isConfirmingRemove = false
+  /// Why the last export failed, while it is shown.
+  @State private var exportError: String?
   @Environment(RiderSettingsStore.self) private var store
 
   private var recording: RideRecording { ride.recording }
@@ -15,14 +17,17 @@ struct ActivityDetailView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 22) {
         VStack(alignment: .leading, spacing: 4) {
-          Text(startLine).foregroundStyle(.secondary)
-          Text(ride.title).font(.largeTitle.weight(.semibold))
+          Text(
+            "\(recording.startDate, format: .dateTime.weekday(.wide).day().month(.wide).year()) · \(recording.startDate, format: .dateTime.hour().minute())"
+          )
+          .foregroundStyle(.secondary)
+          Text(ride.title).font(.largeTitle).bold()
         }
-        StatsRow(stats: stats)
+        RideStatsRow(stats: stats)
         if recording.hasPower || recording.hasHeartRate {
           ActivityChart(recording: recording)
         }
-        ZoneSection(recording: recording)
+        RideBreakdownSection(recording: recording)
       }
       .padding(.horizontal, 32)
       .padding(.vertical, 24)
@@ -51,7 +56,13 @@ struct ActivityDetailView: View {
     .fileExporter(
       isPresented: $isExporting, document: FITDocument(data: ride.fileData),
       contentType: .fitFile, defaultFilename: ride.exportFileName
-    ) { _ in }
+    ) { result in
+      if case .failure(let error) = result { exportError = error.localizedDescription }
+    }
+    .alert("Couldn't export the ride", item: $exportError) { _ in
+    } message: { error in
+      Text(error)
+    }
   }
 
   @ViewBuilder private var moreActions: some View {
@@ -64,15 +75,9 @@ struct ActivityDetailView: View {
 
   private func confirmRemove() { isConfirmingRemove = true }
 
-  private var startLine: String {
-    let date = recording.startDate.formatted(
-      .dateTime.weekday(.wide).day().month(.wide).year())
-    return "\(date) · \(recording.startDate.formatted(date: .omitted, time: .shortened))"
-  }
-
-  private var stats: [StatsRow.Stat] {
+  private var stats: [RideStat] {
     let summary = recording.summary
-    var result = [StatsRow.Stat(label: "Duration", value: summary.duration.clockString)]
+    var result = [RideStat(label: "Duration", value: summary.duration.clockString)]
     if let power = summary.averagePower {
       result.append(.init(label: "Avg power", value: "\(power)", unit: "W"))
     }
@@ -93,59 +98,6 @@ struct ActivityDetailView: View {
           value: (distance / 1000).formatted(.number.precision(.fractionLength(1))), unit: "km"))
     }
     return result
-  }
-}
-
-/// The headline numbers in one row when they fit, otherwise in a grid.
-private struct StatsRow: View {
-  struct Stat: Identifiable {
-    let label: String
-    let value: String
-    var unit: String?
-    var id: String { label }
-  }
-
-  let stats: [Stat]
-
-  var body: some View {
-    ViewThatFits(in: .horizontal) {
-      DividedRow(spacing: 16) {
-        ForEach(stats, content: StatCell.init)
-      }
-      grid(columns: 3)
-      grid(columns: 2)
-    }
-    .overlay(alignment: .top) { Divider() }
-    .overlay(alignment: .bottom) { Divider() }
-  }
-
-  private func grid(columns: Int) -> some View {
-    Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 0) {
-      ForEach(Array(stride(from: 0, to: stats.count, by: columns)), id: \.self) { start in
-        GridRow {
-          ForEach(stats[start..<min(start + columns, stats.count)], content: StatCell.init)
-        }
-      }
-    }
-  }
-}
-
-private struct StatCell: View {
-  let stat: StatsRow.Stat
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 3) {
-      Text(stat.label).font(.caption).foregroundStyle(.secondary)
-      HStack(alignment: .firstTextBaseline, spacing: 3) {
-        Text(stat.value).font(.title2.weight(.medium))
-        if let unit = stat.unit { Text(unit).font(.footnote).foregroundStyle(.secondary) }
-      }
-    }
-    .lineLimit(1)
-    .monospacedDigit()
-    .padding(.vertical, 12)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .accessibilityElement(children: .combine)
   }
 }
 

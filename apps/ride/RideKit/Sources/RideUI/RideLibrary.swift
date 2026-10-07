@@ -1,49 +1,8 @@
+import Foundation
 import Observation
 import RideData
-import SwiftUI
-import UniformTypeIdentifiers
 
-extension UTType {
-  /// FIT has no system type, so match on the file extension.
-  nonisolated static let fitFile = UTType(filenameExtension: "fit") ?? .data
-}
-
-nonisolated struct Ride: Identifiable, Sendable {
-  let id = UUID()
-  let recording: RideRecording
-  /// The file as it was opened, kept so the ride can be shared or exported unchanged.
-  let fileData: Data
-
-  var title: String { recording.workoutName ?? "Ride" }
-
-  var exportFileName: String { recording.exportFileName }
-}
-
-nonisolated extension Ride: Transferable {
-  static var transferRepresentation: some TransferRepresentation {
-    FileRepresentation(exportedContentType: .fitFile) { ride in
-      let url = FileManager.default.temporaryDirectory.appending(path: ride.exportFileName)
-      try ride.fileData.write(to: url)
-      return SentTransferredFile(url)
-    }
-  }
-}
-
-nonisolated struct FITDocument: FileDocument {
-  static let readableContentTypes = [UTType.fitFile]
-  let data: Data
-
-  init(data: Data) { self.data = data }
-
-  init(configuration: ReadConfiguration) throws {
-    data = configuration.file.regularFileContents ?? Data()
-  }
-
-  func fileWrapper(configuration: WriteConfiguration) -> FileWrapper {
-    FileWrapper(regularFileWithContents: data)
-  }
-}
-
+/// The finished rides opened from FIT files.
 @Observable
 final class RideLibrary {
   /// Newest first.
