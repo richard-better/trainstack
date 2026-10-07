@@ -45,6 +45,7 @@ struct TodayView: View {
       .pageLayout()
     }
     .navigationTitle("Today")
+    .devicesToolbar()
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
         StartButton(

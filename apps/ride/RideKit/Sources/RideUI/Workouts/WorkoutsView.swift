@@ -28,6 +28,7 @@ struct WorkoutsView: View {
     // The cards scroll under the filters, which sit on a soft edge rather than a rule.
     .safeAreaBar(edge: .top) { WorkoutFilterBar(state: $state, count: shown.count) }
     .navigationTitle("Workouts")
+    .devicesToolbar()
     .searchable(text: $state.search, prompt: "Search")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
