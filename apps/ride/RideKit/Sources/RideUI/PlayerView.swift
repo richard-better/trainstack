@@ -432,6 +432,7 @@ private struct SettingStepper: View {
   let label: String
   let decrease: () -> Void
   let increase: () -> Void
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     HStack(spacing: 0) {
@@ -441,6 +442,7 @@ private struct SettingStepper: View {
         .fontWeight(.medium)
         .frame(minWidth: 64)
         .contentTransition(.numericText())
+        .animation(reduceMotion ? nil : .default, value: label)
       Button("Increase", systemImage: "plus", action: increase)
         .keyboardShortcut(.upArrow, modifiers: [])
     }
@@ -489,6 +491,7 @@ private struct BigStat<Label: View>: View {
   /// A line under the number. Every stat keeps room for one so the numbers line up.
   var detail = ""
   @ViewBuilder let label: Label
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -498,6 +501,7 @@ private struct BigStat<Label: View>: View {
           .font(.system(size: 84, weight: .medium))
           .tracking(-1.5)
           .contentTransition(.numericText())
+          .animation(reduceMotion ? nil : .default, value: value)
         Text(unit).font(.title3).foregroundStyle(.secondary)
       }
       .lineLimit(1)

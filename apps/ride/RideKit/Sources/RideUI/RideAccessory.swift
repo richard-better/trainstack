@@ -8,6 +8,7 @@ import SwiftUI
     let controller: RideController
     let open: () -> Void
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var session: RideSession { controller.session }
 
@@ -42,6 +43,7 @@ import SwiftUI
         .font(.title3)
         .buttonStyle(.plain)
         .contentTransition(.symbolEffect(.replace))
+        .animation(reduceMotion ? nil : .default, value: session.isPaused)
       }
       .padding(.horizontal, 16)
       .monospacedDigit()
@@ -52,6 +54,7 @@ import SwiftUI
         Text(session.latest.power.map(String.init) ?? "—")
           .font(.headline)
           .contentTransition(.numericText())
+          .animation(reduceMotion ? nil : .default, value: session.latest.power)
         Text("W").font(.caption).foregroundStyle(.secondary)
       }
       .accessibilityElement(children: .ignore)
