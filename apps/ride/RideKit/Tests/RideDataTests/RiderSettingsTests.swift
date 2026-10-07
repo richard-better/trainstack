@@ -21,6 +21,8 @@ struct RiderSettingsTests {
     let defaults = try freshDefaults()
     var settings = RiderSettings()
     settings.history.record([.threshold(.ftp, scope: .all, value: 220)], on: .now)
+    settings.add(
+      FTPTest(date: .now, kind: .ramp, ftp: 230, scope: .all), updatesFTP: false)
     settings.save(to: defaults)
     #expect(RiderSettings.load(from: defaults) == settings)
   }
@@ -32,5 +34,20 @@ struct RiderSettingsTests {
     let profile = RiderSettings.load(from: defaults).history.current
     #expect(profile.value(of: .maxHeartRate, in: .all) == 186)
     #expect(profile.value(of: .ftp, in: .all) == nil)
+  }
+
+  @Test func setsFTPFromATestOnTheDayOfTheTest() throws {
+    var settings = RiderSettings()
+    settings.history.record([.threshold(.ftp, scope: .all, value: 200)], on: .distantPast)
+    let testDay = Date.now.addingTimeInterval(-10 * 86400)
+    settings.add(
+      FTPTest(date: testDay, kind: .twentyMinute, ftp: 215, scope: .all), updatesFTP: true)
+    settings.add(FTPTest(date: .now, kind: .other, ftp: 230, scope: .all), updatesFTP: false)
+    #expect(settings.ftpTests(in: .all).map(\.ftp) == [215, 230])
+    #expect(settings.history.profile(on: testDay).value(of: .ftp, in: .all) == 215)
+    #expect(settings.history.current.value(of: .ftp, in: .all) == 215)
+    settings.removeFTPTest(try #require(settings.ftpTests.first?.id))
+    #expect(settings.ftpTests.map(\.ftp) == [230])
+    #expect(settings.history.current.value(of: .ftp, in: .all) == 215)
   }
 }

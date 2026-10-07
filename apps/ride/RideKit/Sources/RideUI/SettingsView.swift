@@ -162,6 +162,13 @@ private struct ScopeForm: View {
           ForEach(Threshold.allCases.filter { $0.metric == metric }, id: \.self) {
             ThresholdField(threshold: $0, scope: scope)
           }
+          if metric == .power {
+            NavigationLink {
+              FTPTestsView(scope: scope)
+            } label: {
+              LabeledContent("Last FTP test", value: lastFTPTest)
+            }
+          }
         }
       }
       ZonesSection(scope: scope, metric: metric)
@@ -185,6 +192,11 @@ private struct ScopeForm: View {
       }
     }
     .onChange(of: scope) { self.metric = shownMetric }
+  }
+
+  private var lastFTPTest: String {
+    guard let test = store.ftpTests(in: scope).last else { return "None" }
+    return "\(test.date.formatted(.dateTime.day().month(.wide))) · \(test.kind.name)"
   }
 
   private func usedFor(_ metric: ZoneMetric) -> String {

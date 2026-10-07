@@ -85,6 +85,18 @@ final class RiderSettingsStore {
     save()
   }
 
+  func ftpTests(in scope: ZoneScope) -> [FTPTest] { settings.ftpTests(in: scope) }
+
+  func add(_ test: FTPTest, updatesFTP: Bool) {
+    settings.add(test, updatesFTP: updatesFTP)
+    save()
+  }
+
+  func removeFTPTest(_ id: FTPTest.ID) {
+    settings.removeFTPTest(id)
+    save()
+  }
+
   private func record(_ change: ZoneChange) {
     settings.history.record([change], on: .now)
     save()
