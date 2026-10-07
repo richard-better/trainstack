@@ -15,26 +15,24 @@ struct WorkoutsView: View {
   private var library: [WorkoutTemplate] { WorkoutTemplate.library }
 
   var body: some View {
-    VStack(spacing: 0) {
-      filterBar
-      Divider()
-      ScrollView {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
-          ForEach(shown) { template in
-            WorkoutCard(
-              template: template, isSelected: template.id == selection,
-              select: { selection = template.id },
-              start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
-          }
+    ScrollView {
+      LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
+        ForEach(shown) { template in
+          WorkoutCard(
+            template: template, isSelected: template.id == selection,
+            select: { selection = template.id },
+            start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
         }
-        .padding(24)
       }
-      .overlay {
-        if shown.isEmpty {
-          ContentUnavailableView.search(text: search)
-        }
+      .padding(24)
+    }
+    .overlay {
+      if shown.isEmpty {
+        ContentUnavailableView.search(text: search)
       }
     }
+    // The cards scroll under the filters, which sit on a soft edge rather than a rule.
+    .safeAreaBar(edge: .top) { filterBar }
     .navigationTitle("Workouts")
     .searchable(text: $search, prompt: "Search")
     .toolbar {
