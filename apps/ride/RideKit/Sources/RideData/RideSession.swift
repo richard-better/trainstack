@@ -1,7 +1,7 @@
 import Foundation
 
 /// How the trainer sets resistance.
-public enum TrainerMode: String, CaseIterable, Sendable {
+public enum TrainerMode: String, CaseIterable, Codable, Sendable {
   /// Holds the workout's target power whatever the cadence.
   case erg = "ERG"
   /// Rides like a road of the chosen gradient.

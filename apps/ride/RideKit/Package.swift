@@ -10,6 +10,7 @@ let package = Package(
   targets: [
     .target(name: "RideBluetooth"),
     .target(name: "RideData", resources: [.copy("Resources/SampleRide.fit")]),
+    .target(name: "RideLink", dependencies: ["RideData"]),
     .target(name: "RideStyle", dependencies: ["RideData"]),
     .target(
       name: "RideUI",
@@ -18,6 +19,7 @@ let package = Package(
     ),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
     .testTarget(name: "RideDataTests", dependencies: ["RideData"]),
+    .testTarget(name: "RideLinkTests", dependencies: ["RideLink"]),
     .testTarget(
       name: "RideUITests",
       dependencies: ["RideUI"],
