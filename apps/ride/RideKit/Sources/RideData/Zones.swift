@@ -66,8 +66,12 @@ public enum PowerZone: Int, CaseIterable, Sendable {
   }
 
   public static func zone(power: Int, ftp: Int) -> PowerZone {
-    let fraction = Double(power) / Double(ftp)
-    return allCases.last { fraction >= $0.lowerBound } ?? .recovery
+    zone(intensity: Double(power) / Double(ftp))
+  }
+
+  /// The zone of a power given as a fraction of FTP.
+  public static func zone(intensity: Double) -> PowerZone {
+    allCases.last { intensity >= $0.lowerBound } ?? .recovery
   }
 }
 
