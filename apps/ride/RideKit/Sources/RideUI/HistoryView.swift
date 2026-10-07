@@ -149,6 +149,7 @@ struct HistoryView: View {
 
 private struct RideRow: View {
   let ride: Ride
+  @Environment(RiderProfileStore.self) private var profile
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -166,23 +167,33 @@ private struct RideRow: View {
       }
       .font(.caption.monospacedDigit())
       .foregroundStyle(.secondary)
-      if !zones.isEmpty {
-        ZoneBar(shares: zones).frame(height: 4)
-      }
+      zoneBar
     }
     .padding(.vertical, 4)
     .accessibilityElement(children: .combine)
   }
 
-  private var zones: [ZoneShare] {
-    ride.recording.heartRateZones(maxHeartRate: RiderProfile().maxHeartRate)
+  /// Time in power zones when the rider has an FTP, otherwise in heart rate zones.
+  @ViewBuilder private var zoneBar: some View {
+    let recording = ride.recording
+    if let ftp = profile.ftp, case let shares = recording.powerZones(ftp: ftp), !shares.isEmpty {
+      ZoneBar(shares: shares).frame(height: 4)
+    } else if let maxHeartRate = profile.maxHeartRate,
+      case let shares = recording.heartRateZones(maxHeartRate: maxHeartRate), !shares.isEmpty
+    {
+      ZoneBar(shares: shares).frame(height: 4)
+    }
   }
 }
 
 #Preview("Wide") {
-  HistoryView(library: .sample()).frame(width: 1100, height: 760)
+  HistoryView(library: .sample())
+    .environment(RiderProfileStore.sample)
+    .frame(width: 1100, height: 760)
 }
 
 #Preview("Narrow") {
-  HistoryView(library: .sample()).frame(width: 800, height: 760)
+  HistoryView(library: .sample())
+    .environment(RiderProfileStore.sample)
+    .frame(width: 800, height: 760)
 }

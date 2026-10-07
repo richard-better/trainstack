@@ -28,7 +28,7 @@ extension RideRecording {
   }
 
   /// Power for each whole second of the ride. Seconds without a reading count as zero.
-  private func powerPerSecond() -> [Int] {
+  func powerPerSecond() -> [Int] {
     guard hasPower, let last = samples.last else { return [] }
     var result = [Int](repeating: 0, count: max(Int(last.elapsed) + 1, 0))
     for sample in samples {

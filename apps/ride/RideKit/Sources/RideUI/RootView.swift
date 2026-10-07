@@ -5,6 +5,7 @@ public struct RootView: View {
   @State private var destination = RideLibrary.launchDestination()
   @State private var discovery = BluetoothDiscovery()
   @State private var library = RideLibrary.launchLibrary()
+  @State private var profile = RiderProfileStore.launchStore()
   @Environment(\.scenePhase) private var scenePhase
 
   public init() {}
@@ -26,6 +27,7 @@ public struct RootView: View {
         }
       }
     }
+    .environment(profile)
     .tabViewStyle(.sidebarAdaptable)
     // Driven by selection rather than onAppear, which TabView does not pair reliably.
     .onChange(of: destination == .devices && scenePhase == .active, initial: true) {
@@ -61,6 +63,16 @@ private struct TodayView: View {
 
 #Preview {
   RootView()
+}
+
+extension RiderProfileStore {
+  /// The saved profile, except that debug builds started with `-sample-rides` use the sample one.
+  fileprivate static func launchStore() -> RiderProfileStore {
+    #if DEBUG
+      if CommandLine.arguments.contains("-sample-rides") { return .sample }
+    #endif
+    return RiderProfileStore()
+  }
 }
 
 extension RideLibrary {

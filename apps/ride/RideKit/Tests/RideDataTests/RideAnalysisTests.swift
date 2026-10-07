@@ -56,6 +56,40 @@ struct RideAnalysisTests {
     #expect(curve.map(\.power) == curve.map(\.power).sorted(by: >))
   }
 
+  @Test func classifiesPowerByFractionOfFTP() {
+    #expect(PowerZone.zone(power: 100, ftp: 200) == .recovery)
+    #expect(PowerZone.zone(power: 110, ftp: 200) == .endurance)
+    #expect(PowerZone.zone(power: 149, ftp: 200) == .endurance)
+    #expect(PowerZone.zone(power: 150, ftp: 200) == .tempo)
+    #expect(PowerZone.zone(power: 190, ftp: 200) == .threshold)
+    #expect(PowerZone.zone(power: 220, ftp: 200) == .vo2Max)
+    #expect(PowerZone.zone(power: 250, ftp: 200) == .anaerobic)
+  }
+
+  @Test func sharesTimeAcrossPowerZones() throws {
+    let zones = try RideRecording.sample().powerZones(ftp: 200)
+    #expect(zones.map(\.zone) == PowerZone.allCases)
+    #expect(abs(zones.map(\.fraction).reduce(0, +) - 1) < 1e-9)
+    // The sample ride is an easy ride: nothing above tempo at an FTP of 200.
+    #expect(zones[PowerZone.threshold.rawValue].seconds == 0)
+    #expect(zones[PowerZone.endurance.rawValue].fraction > zones[PowerZone.tempo.rawValue].fraction)
+  }
+
+  @Test func scoresTrainingStressFromNormalizedPower() throws {
+    let ride = try RideRecording.sample()
+    #expect(ride.normalizedPower() == 139)
+    // About half an hour at 70% of FTP is a score of 24.
+    #expect(ride.trainingStressScore(ftp: 200) == 24)
+    #expect(try #require(ride.trainingStressScore(ftp: 150)) > 24)
+  }
+
+  @Test func hasNoStressForAVeryShortRide() {
+    let samples = (0..<10).map { RideRecording.Sample(elapsed: Double($0), power: 200) }
+    let ride = RideRecording(startDate: .now, samples: samples, summary: .init(duration: 9))
+    #expect(ride.normalizedPower() == nil)
+    #expect(ride.trainingStressScore(ftp: 200) == nil)
+  }
+
   private func recording(_ samples: [RideRecording.Sample]) -> RideRecording {
     RideRecording(
       startDate: .now, samples: samples,

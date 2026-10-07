@@ -2,23 +2,19 @@ import Charts
 import RideData
 import SwiftUI
 
-/// What the rider's zones are measured against. Stored in the app once a profile exists.
-struct RiderProfile {
-  var maxHeartRate = 186
-}
-
 /// A segmented choice between the ways of breaking down the ride.
 struct ZoneSection: View {
   let recording: RideRecording
-  var profile = RiderProfile()
+  @Environment(RiderProfileStore.self) private var profile
 
   private enum Breakdown: String, CaseIterable, Identifiable {
+    case powerZones = "Power zones"
     case heartRateZones = "Heart rate zones"
     case powerCurve = "Power curve"
     var id: Self { self }
   }
 
-  @State private var choice = Breakdown.heartRateZones
+  @State private var choice: Breakdown?
 
   var body: some View {
     if !available.isEmpty {
@@ -31,41 +27,89 @@ struct ZoneSection: View {
           .labelsHidden()
           .fixedSize()
           Spacer()
-          if shown.wrappedValue == .heartRateZones {
-            Text("Zones from max HR \(profile.maxHeartRate)")
-              .font(.caption)
-              .foregroundStyle(.secondary)
+          if let basis = basis(of: shown.wrappedValue) {
+            Text(basis).font(.caption).foregroundStyle(.secondary)
           }
         }
-        switch shown.wrappedValue {
-        case .heartRateZones: zoneRows
-        case .powerCurve: PowerCurveChart(points: recording.powerCurve())
-        }
+        content(of: shown.wrappedValue)
       }
     }
   }
 
   private var available: [Breakdown] {
-    var result: [Breakdown] = []
-    if !zones.isEmpty { result.append(.heartRateZones) }
-    if !recording.powerCurve().isEmpty { result.append(.powerCurve) }
-    return result
+    Breakdown.allCases.filter {
+      switch $0 {
+      case .powerZones, .powerCurve: recording.hasPower
+      case .heartRateZones: recording.hasHeartRate
+      }
+    }
   }
 
-  /// The chosen breakdown, or the first one the ride has data for.
+  /// The chosen breakdown, or the first one that has what it needs from the rider's profile.
   private var shown: Binding<Breakdown> {
     Binding(
-      get: { available.contains(choice) ? choice : (available.first ?? choice) },
+      get: {
+        if let choice, available.contains(choice) { return choice }
+        return available.first(where: isConfigured) ?? available.first ?? .powerCurve
+      },
       set: { choice = $0 })
   }
 
-  private var zones: [ZoneShare] {
-    recording.heartRateZones(maxHeartRate: profile.maxHeartRate)
+  private func isConfigured(_ breakdown: Breakdown) -> Bool {
+    switch breakdown {
+    case .powerZones: profile.ftp != nil
+    case .heartRateZones: profile.maxHeartRate != nil
+    case .powerCurve: true
+    }
   }
 
-  private var zoneRows: some View {
+  private func basis(of breakdown: Breakdown) -> String? {
+    switch breakdown {
+    case .powerZones: profile.ftp.map { "Zones from FTP \($0) W" }
+    case .heartRateZones: profile.maxHeartRate.map { "Zones from max HR \($0)" }
+    case .powerCurve: nil
+    }
+  }
+
+  @ViewBuilder private func content(of breakdown: Breakdown) -> some View {
+    switch breakdown {
+    case .powerZones:
+      if let ftp = profile.ftp {
+        ZoneRows(shares: recording.powerZones(ftp: ftp))
+      } else {
+        MissingSetting("Add your FTP in Settings to see power zones.")
+      }
+    case .heartRateZones:
+      if let maxHeartRate = profile.maxHeartRate {
+        ZoneRows(shares: recording.heartRateZones(maxHeartRate: maxHeartRate))
+      } else {
+        MissingSetting("Add your max heart rate in Settings to see heart rate zones.")
+      }
+    case .powerCurve:
+      PowerCurveChart(points: recording.powerCurve())
+    }
+  }
+}
+
+private struct MissingSetting: View {
+  let message: LocalizedStringKey
+
+  init(_ message: LocalizedStringKey) { self.message = message }
+
+  var body: some View {
+    Label(message, systemImage: "gearshape")
+      .font(.callout)
+      .foregroundStyle(.secondary)
+      .padding(.vertical, 8)
+  }
+}
+
+private struct ZoneRows<Zone: RideZone>: View {
+  let shares: [ZoneShare<Zone>]
+
+  var body: some View {
     Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
-      ForEach(zones, id: \.zone) { share in
+      ForEach(shares, id: \.zone) { share in
         GridRow {
           Text(share.zone.name).foregroundStyle(.secondary).gridColumnAlignment(.leading)
           ProgressBar(fraction: share.fraction, color: share.zone.color)

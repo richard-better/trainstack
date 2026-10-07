@@ -6,6 +6,7 @@ struct ActivityDetailView: View {
   let ride: Ride
   var onRemove: () -> Void
   @State private var isExporting = false
+  @Environment(RiderProfileStore.self) private var profile
 
   private var recording: RideRecording { ride.recording }
 
@@ -59,6 +60,9 @@ struct ActivityDetailView: View {
     }
     if let heartRate = summary.averageHeartRate {
       result.append(.init(label: "Avg heart rate", value: "\(heartRate)", unit: "bpm"))
+    }
+    if let ftp = profile.ftp, let stress = recording.trainingStressScore(ftp: ftp) {
+      result.append(.init(label: "Stress", value: "\(stress)", unit: "TSS"))
     }
     if let onTarget = recording.timeOnTarget() {
       result.append(
@@ -115,5 +119,6 @@ private struct StatsRow: View {
       ActivityDetailView(ride: ride) {}
     }
   }
+  .environment(RiderProfileStore.sample)
   .frame(width: 800, height: 760)
 }
