@@ -4,14 +4,18 @@ import Foundation
 public struct RideRecording: Equatable, Sendable {
   public var startDate: Date
   public var workoutName: String?
+  /// Nil when the file does not say, or names a sport Ride keeps no zones for.
+  public var sport: Sport?
   public var samples: [Sample]
   public var summary: Summary
 
   public init(
-    startDate: Date, workoutName: String? = nil, samples: [Sample], summary: Summary
+    startDate: Date, workoutName: String? = nil, sport: Sport? = nil, samples: [Sample],
+    summary: Summary
   ) {
     self.startDate = startDate
     self.workoutName = workoutName
+    self.sport = sport
     self.samples = samples
     self.summary = summary
   }
