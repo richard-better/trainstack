@@ -174,8 +174,13 @@ struct StartButton: View {
     }
     .buttonStyle(.borderedProminent)
     .keyboardShortcut(.defaultAction)
-    .disabled(template == nil || settings.ftp == nil)
-    .help(settings.ftp == nil ? "Add your FTP in Settings to ride a workout." : "")
+    .disabled(template == nil || settings.ftp == nil || launcher.ride != nil)
+    .help(help)
+  }
+
+  private var help: String {
+    if settings.ftp == nil { return "Add your FTP in Settings to ride a workout." }
+    return launcher.ride == nil ? "" : "End the ride in progress to start another."
   }
 }
 

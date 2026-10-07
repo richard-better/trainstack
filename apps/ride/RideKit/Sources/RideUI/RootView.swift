@@ -13,6 +13,7 @@ public struct RootView: View {
   @State private var settingsPage = SettingsPage.zones(.all)
   @State private var settingsPath: [SettingsPage] = []
   @Environment(\.scenePhase) private var scenePhase
+  @Namespace private var player
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
   #endif
@@ -21,19 +22,27 @@ public struct RootView: View {
 
   public var body: some View {
     Group {
-      // The ride in progress takes over the window until it ends.
-      if let ride = launcher.ride {
-        NavigationStack {
-          PlayerView(controller: ride, onEnd: launcher.end)
+      #if os(iOS)
+        // The player covers the app, and minimises to an accessory above the tab bar.
+        app
+          .fullScreenCover(isPresented: $launcher.isPlayerPresented) {
+            if let ride = launcher.ride {
+              NavigationStack {
+                PlayerView(controller: ride, onEnd: launcher.end)
+              }
+              .navigationTransition(.zoom(sourceID: "player", in: player))
+            }
+          }
+      #else
+        // The ride in progress takes over the window until it ends.
+        if let ride = launcher.ride {
+          NavigationStack {
+            PlayerView(controller: ride, onEnd: launcher.end)
+          }
+        } else {
+          app
         }
-      } else if destination == .settings && hasSidebar {
-        // Settings takes over the sidebar, like drilling into System Settings.
-        SettingsSplitView(page: $settingsPage, discovery: discovery) {
-          destination = appDestination
-        }
-      } else {
-        tabs
-      }
+      #endif
     }
     .environment(settings)
     .environment(launcher)
@@ -62,8 +71,39 @@ public struct RootView: View {
     #endif
   }
 
+  /// The tabs, or Settings when it has taken over the sidebar.
+  @ViewBuilder private var app: some View {
+    if destination == .settings && hasSidebar {
+      // Settings takes over the sidebar, like drilling into System Settings.
+      SettingsSplitView(page: $settingsPage, discovery: discovery) {
+        destination = appDestination
+      }
+    } else {
+      #if os(iOS)
+        tabs
+          .tabViewBottomAccessory(isEnabled: launcher.ride != nil) {
+            if let ride = launcher.ride {
+              RideAccessory(controller: ride) { launcher.isPlayerPresented = true }
+                .matchedTransitionSource(id: "player", in: player)
+            }
+          }
+      #else
+        tabs
+      #endif
+    }
+  }
+
+  /// Whether the player covers everything else.
+  private var isPlayerShowing: Bool {
+    #if os(iOS)
+      launcher.isPlayerPresented
+    #else
+      launcher.ride != nil
+    #endif
+  }
+
   private var isShowingDevices: Bool {
-    guard destination == .settings, launcher.ride == nil else { return false }
+    guard destination == .settings, !isPlayerShowing else { return false }
     return hasSidebar ? settingsPage == .devices : settingsPath.last == .devices
   }
 
