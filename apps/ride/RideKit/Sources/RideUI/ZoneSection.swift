@@ -20,20 +20,37 @@ struct ZoneSection: View {
   var body: some View {
     if !available.isEmpty {
       VStack(alignment: .leading, spacing: 14) {
-        HStack {
-          Picker("Breakdown", selection: shown) {
-            ForEach(available) { Text($0.rawValue).tag($0) }
+        // Side by side with room to spare, otherwise stacked, and as a menu on a narrow phone.
+        ViewThatFits(in: .horizontal) {
+          HStack {
+            picker.pickerStyle(.segmented).fixedSize()
+            Spacer()
+            basisCaption
           }
-          .pickerStyle(.segmented)
-          .labelsHidden()
-          .fixedSize()
-          Spacer()
-          if let basis = basis(of: shown.wrappedValue) {
-            Text(basis).font(.caption).foregroundStyle(.secondary)
+          VStack(alignment: .leading, spacing: 6) {
+            picker.pickerStyle(.segmented).fixedSize()
+            basisCaption
+          }
+          VStack(alignment: .leading, spacing: 6) {
+            picker.pickerStyle(.menu).fixedSize()
+            basisCaption
           }
         }
         content(of: shown.wrappedValue)
       }
+    }
+  }
+
+  private var picker: some View {
+    Picker("Breakdown", selection: shown) {
+      ForEach(available) { Text($0.rawValue).tag($0) }
+    }
+    .labelsHidden()
+  }
+
+  @ViewBuilder private var basisCaption: some View {
+    if let basis = basis(of: shown.wrappedValue) {
+      Text(basis).font(.caption).foregroundStyle(.secondary)
     }
   }
 

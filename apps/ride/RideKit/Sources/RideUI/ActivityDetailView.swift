@@ -96,6 +96,7 @@ struct ActivityDetailView: View {
   }
 }
 
+/// The headline numbers in one row when they fit, otherwise in a grid.
 private struct StatsRow: View {
   struct Stat: Identifiable {
     let label: String
@@ -107,27 +108,44 @@ private struct StatsRow: View {
   let stats: [Stat]
 
   var body: some View {
-    HStack(spacing: 0) {
-      ForEach(Array(stats.enumerated()), id: \.element.id) { index, stat in
-        VStack(alignment: .leading, spacing: 3) {
-          Text(stat.label).font(.caption).foregroundStyle(.secondary)
-          HStack(alignment: .firstTextBaseline, spacing: 3) {
-            Text(stat.value).font(.title2.weight(.medium))
-            if let unit = stat.unit { Text(unit).font(.footnote).foregroundStyle(.secondary) }
-          }
-        }
-        .monospacedDigit()
-        .padding(.vertical, 12)
-        .padding(.leading, index == 0 ? 0 : 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .leading) {
-          if index > 0 { Rectangle().fill(.separator).frame(width: 1) }
-        }
-        .accessibilityElement(children: .combine)
+    ViewThatFits(in: .horizontal) {
+      DividedRow(spacing: 16) {
+        ForEach(stats, content: StatCell.init)
       }
+      grid(columns: 3)
+      grid(columns: 2)
     }
     .overlay(alignment: .top) { Divider() }
     .overlay(alignment: .bottom) { Divider() }
+  }
+
+  private func grid(columns: Int) -> some View {
+    Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 0) {
+      ForEach(Array(stride(from: 0, to: stats.count, by: columns)), id: \.self) { start in
+        GridRow {
+          ForEach(stats[start..<min(start + columns, stats.count)], content: StatCell.init)
+        }
+      }
+    }
+  }
+}
+
+private struct StatCell: View {
+  let stat: StatsRow.Stat
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(stat.label).font(.caption).foregroundStyle(.secondary)
+      HStack(alignment: .firstTextBaseline, spacing: 3) {
+        Text(stat.value).font(.title2.weight(.medium))
+        if let unit = stat.unit { Text(unit).font(.footnote).foregroundStyle(.secondary) }
+      }
+    }
+    .lineLimit(1)
+    .monospacedDigit()
+    .padding(.vertical, 12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .combine)
   }
 }
 
