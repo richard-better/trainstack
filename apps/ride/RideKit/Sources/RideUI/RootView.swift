@@ -2,8 +2,10 @@ import RideBluetooth
 import SwiftUI
 
 public struct RootView: View {
-  @State private var destination = Destination.today
+  @State private var destination = RideLibrary.launchDestination()
   @State private var discovery = BluetoothDiscovery()
+  @State private var library = RideLibrary.launchLibrary()
+  @State private var profile = RiderProfileStore.launchStore()
   @Environment(\.scenePhase) private var scenePhase
 
   public init() {}
@@ -16,12 +18,21 @@ public struct RootView: View {
           TodayView { destination = .devices }
         }
       }
+      Tab("History", systemImage: "clock", value: .history) {
+        HistoryView(library: library)
+      }
       Tab("Devices", systemImage: "antenna.radiowaves.left.and.right", value: .devices) {
         NavigationStack {
           DevicesView(discovery: discovery)
         }
       }
+      Tab("Settings", systemImage: "gearshape", value: .settings) {
+        NavigationStack {
+          SettingsView()
+        }
+      }
     }
+    .environment(profile)
     .tabViewStyle(.sidebarAdaptable)
     // Driven by selection rather than onAppear, which TabView does not pair reliably.
     .onChange(of: destination == .devices && scenePhase == .active, initial: true) {
@@ -36,7 +47,7 @@ public struct RootView: View {
 }
 
 private enum Destination: Hashable {
-  case today, devices
+  case today, history, devices, settings
 }
 
 private struct TodayView: View {
@@ -57,4 +68,32 @@ private struct TodayView: View {
 
 #Preview {
   RootView()
+}
+
+extension RiderProfileStore {
+  /// The saved profile, except that debug builds started with `-sample-rides` use the sample one.
+  fileprivate static func launchStore() -> RiderProfileStore {
+    #if DEBUG
+      if CommandLine.arguments.contains("-sample-rides") { return .sample }
+    #endif
+    return RiderProfileStore()
+  }
+}
+
+extension RideLibrary {
+  /// Empty, except that debug builds started with `-sample-rides` begin with the sample ride.
+  fileprivate static func launchLibrary() -> RideLibrary {
+    #if DEBUG
+      if CommandLine.arguments.contains("-sample-rides") { return .sample() }
+    #endif
+    return RideLibrary()
+  }
+
+  /// Debug builds started with `-sample-rides` open on History, where the sample ride is.
+  fileprivate static func launchDestination() -> Destination {
+    #if DEBUG
+      if CommandLine.arguments.contains("-sample-rides") { return .history }
+    #endif
+    return .today
+  }
 }

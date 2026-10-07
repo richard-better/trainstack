@@ -9,7 +9,8 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
 - `Ride.xcodeproj` and `Ride/` - a thin app target: the `@main` entry point, assets,
   signing, entitlements, and Info.plist keys. Keep code out of it.
 - `RideKit/` - a local Swift package where the app's code lives, one module per concern.
-  The app links the `RideUI` product.
+  The app links the `RideUI` product. `RideData` decodes FIT files into a `RideRecording`
+  and analyses it (zones, power curve) with no UI dependency.
 
 `Ride/` is a folder-synchronized group, so adding or removing files there does not touch
 `project.pbxproj`. Edit the project file only for target-level changes (capabilities,
