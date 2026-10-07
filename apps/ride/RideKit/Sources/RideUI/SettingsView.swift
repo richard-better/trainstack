@@ -5,6 +5,8 @@ import SwiftUI
 /// A page of Settings.
 enum SettingsPage: Hashable {
   case zones(ZoneScope)
+  /// Reached from a zones page rather than the sidebar.
+  case ftpTests(ZoneScope)
   case devices
 }
 
@@ -22,6 +24,9 @@ struct SettingsSplitView: View {
     } detail: {
       NavigationStack {
         SettingsPageView(page: page, discovery: discovery)
+          .navigationDestination(for: SettingsPage.self) { page in
+            SettingsPageView(page: page, discovery: discovery)
+          }
       }
     }
   }
@@ -153,6 +158,7 @@ private struct SettingsPageView: View {
   var body: some View {
     switch page {
     case .zones(let scope): ZonesPage(scope: scope)
+    case .ftpTests(let scope): FTPTestsView(scope: scope)
     case .devices: DevicesView(discovery: discovery)
     }
   }
@@ -191,9 +197,7 @@ private struct ZonesPage: View {
             ThresholdField(threshold: $0, scope: scope)
           }
           if metric == .power {
-            NavigationLink {
-              FTPTestsView(scope: scope)
-            } label: {
+            NavigationLink(value: SettingsPage.ftpTests(scope)) {
               LabeledContent("Last FTP test", value: lastFTPTest)
             }
           }
