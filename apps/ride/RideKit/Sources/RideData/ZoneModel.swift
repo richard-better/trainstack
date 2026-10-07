@@ -28,6 +28,9 @@ public enum Threshold: CaseIterable, Sendable {
   }
 
   public var unit: String { self == .ftp ? "W" : "bpm" }
+
+  /// The metric whose zones this threshold sets.
+  public var metric: ZoneMetric { self == .ftp ? .power : .heartRate }
 }
 
 /// What a zone model's percentages are taken of.
