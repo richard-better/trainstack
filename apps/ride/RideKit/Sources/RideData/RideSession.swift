@@ -15,13 +15,19 @@ public struct TrainerReading: Equatable, Sendable {
   public var power: Int?
   public var cadence: Int?
   public var heartRate: Int?
+  /// Where `heartRate` came from.
+  public var heartRateSource: HeartRateSource?
   /// Metres per second.
   public var speed: Double?
 
-  public init(power: Int? = nil, cadence: Int? = nil, heartRate: Int? = nil, speed: Double? = nil) {
+  public init(
+    power: Int? = nil, cadence: Int? = nil, heartRate: Int? = nil,
+    heartRateSource: HeartRateSource? = nil, speed: Double? = nil
+  ) {
     self.power = power
     self.cadence = cadence
     self.heartRate = heartRate
+    self.heartRateSource = heartRateSource
     self.speed = speed
   }
 }
