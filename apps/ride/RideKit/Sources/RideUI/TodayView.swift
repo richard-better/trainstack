@@ -4,12 +4,11 @@ import SwiftUI
 /// What to ride today: three suggestions, each a different kind of day, sized to the time the
 /// rider has.
 struct TodayView: View {
+  @Binding var state: TodayState
   let openSettings: () -> Void
   @Environment(RideLauncher.self) private var launcher
   @Environment(RiderSettingsStore.self) private var settings
   @AppStorage("today.minutes") private var minutes = 30
-  @State private var shuffle = 0
-  @State private var selection = 0
 
   static let durations = [30, 45, 60, 75, 90, 120]
 
@@ -24,7 +23,7 @@ struct TodayView: View {
           .pickerStyle(.segmented)
           .labelsHidden()
           .fixedSize()
-          Button("Other suggestions", systemImage: "shuffle") { shuffle += 1 }
+          Button("Other suggestions", systemImage: "shuffle") { state.shuffle += 1 }
             .labelStyle(.iconOnly)
             .buttonStyle(.glass)
             .help("Other suggestions")
@@ -34,7 +33,7 @@ struct TodayView: View {
           ForEach(Array(suggestions.enumerated()), id: \.offset) { index, suggestion in
             WorkoutCard(
               template: suggestion.template, tag: suggestion.tag, profileHeight: 120,
-              isSelected: index == selection, select: { selection = index },
+              isSelected: index == state.selection, select: { state.selection = index },
               start: settings.ftp.map { ftp in { launcher.start(suggestion.template, ftp: ftp) } })
           }
         }
@@ -48,7 +47,7 @@ struct TodayView: View {
     .navigationTitle("Today")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
-        let selected = suggestions[min(selection, suggestions.count - 1)].template
+        let selected = suggestions[min(state.selection, suggestions.count - 1)].template
         StartButton(template: selected, title: "Start \(selected.name)")
       }
     }
@@ -97,7 +96,7 @@ struct TodayView: View {
   private var suggestions: [Suggestion] {
     Self.kinds.map { tag, names in
       let templates = names.compactMap(WorkoutTemplate.named)
-      let template = templates[shuffle % templates.count]
+      let template = templates[state.shuffle % templates.count]
       return Suggestion(tag: tag, template: template.fitted(to: TimeInterval(minutes * 60)))
     }
   }
@@ -110,8 +109,9 @@ struct TodayView: View {
 }
 
 #Preview {
+  @Previewable @State var state = TodayState()
   NavigationStack {
-    TodayView {}
+    TodayView(state: $state) {}
   }
   .environment(RideLauncher(simulated: true))
   .environment(RiderSettingsStore.sample)

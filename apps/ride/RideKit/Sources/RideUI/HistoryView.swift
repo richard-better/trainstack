@@ -5,7 +5,7 @@ import SwiftUI
 /// Mail; otherwise the list pushes the ride full width.
 struct HistoryView: View {
   @Bindable var library: RideLibrary
-  @State private var selection: Ride.ID?
+  @Binding var selection: Ride.ID?
   @State private var isImporting = false
   @State private var failures: [String] = []
   #if os(iOS)
@@ -157,7 +157,8 @@ private struct RideRow: View {
 }
 
 #Preview {
-  HistoryView(library: .sample())
+  @Previewable @State var selection: Ride.ID?
+  HistoryView(library: .sample(), selection: $selection)
     .environment(RiderSettingsStore.sample)
     .frame(width: 1100, height: 760)
 }

@@ -5,12 +5,7 @@ import SwiftUI
 struct WorkoutsView: View {
   @Environment(RideLauncher.self) private var launcher
   @Environment(RiderSettingsStore.self) private var settings
-  @State private var selection: WorkoutTemplate.ID?
-  @State private var search = ""
-  @State private var duration = DurationFilter.any
-  @State private var zone: PowerZone?
-  @State private var stress = StressFilter.any
-  @State private var order = Order.name
+  @Binding var state: WorkoutsState
 
   private var library: [WorkoutTemplate] { WorkoutTemplate.library }
 
@@ -19,8 +14,8 @@ struct WorkoutsView: View {
       LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
         ForEach(shown) { template in
           WorkoutCard(
-            template: template, isSelected: template.id == selection,
-            select: { selection = template.id },
+            template: template, isSelected: template.id == state.selection,
+            select: { state.selection = template.id },
             start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
         }
       }
@@ -28,13 +23,13 @@ struct WorkoutsView: View {
     }
     .overlay {
       if shown.isEmpty {
-        ContentUnavailableView.search(text: search)
+        ContentUnavailableView.search(text: state.search)
       }
     }
     // The cards scroll under the filters, which sit on a soft edge rather than a rule.
     .safeAreaBar(edge: .top) { filterBar }
     .navigationTitle("Workouts")
-    .searchable(text: $search, prompt: "Search")
+    .searchable(text: $state.search, prompt: "Search")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
         StartButton(template: selected)
@@ -43,7 +38,7 @@ struct WorkoutsView: View {
   }
 
   private var selected: WorkoutTemplate? {
-    shown.first { $0.id == selection }
+    shown.first { $0.id == state.selection }
   }
 
   /// One row when it fits, otherwise the same row scrolling sideways.
@@ -58,26 +53,26 @@ struct WorkoutsView: View {
 
   private var filters: some View {
     HStack(spacing: 8) {
-      Picker("Duration", selection: $duration) {
-        ForEach(DurationFilter.allCases, id: \.self) { Text($0.title).tag($0) }
+      Picker("Duration", selection: $state.duration) {
+        ForEach(WorkoutDurationFilter.allCases, id: \.self) { Text($0.title).tag($0) }
       }
       .fixedSize()
-      Picker("Zone", selection: $zone) {
+      Picker("Zone", selection: $state.zone) {
         Text("Any zone").tag(PowerZone?.none)
         Divider()
         ForEach(zones, id: \.self) { Text($0.name).tag(Optional($0)) }
       }
       .fixedSize()
-      Picker("Stress", selection: $stress) {
-        ForEach(StressFilter.allCases, id: \.self) { Text($0.title).tag($0) }
+      Picker("Stress", selection: $state.stress) {
+        ForEach(WorkoutStressFilter.allCases, id: \.self) { Text($0.title).tag($0) }
       }
       .fixedSize()
       Spacer()
       Text("^[\(shown.count) workout](inflect: true)")
         .foregroundStyle(.secondary)
         .fixedSize()
-      Picker("Sort", selection: $order) {
-        ForEach(Order.allCases, id: \.self) { Text($0.title).tag($0) }
+      Picker("Sort", selection: $state.order) {
+        ForEach(WorkoutOrder.allCases, id: \.self) { Text($0.title).tag($0) }
       }
       .labelsHidden()
       .fixedSize()
@@ -95,80 +90,7 @@ struct WorkoutsView: View {
     PowerZone.allCases.filter { zone in library.contains { $0.category == zone } }
   }
 
-  private var shown: [WorkoutTemplate] {
-    library
-      .filter { template in
-        (search.isEmpty || template.name.localizedStandardContains(search))
-          && duration.includes(template.duration)
-          && (zone == nil || template.category == zone)
-          && stress.includes(template.stressScore)
-      }
-      .sorted(by: order.areInIncreasingOrder)
-  }
-
-  private enum DurationFilter: CaseIterable {
-    case any, short, medium, long
-
-    var title: String {
-      switch self {
-      case .any: "Any duration"
-      case .short: "Under 45 min"
-      case .medium: "45–75 min"
-      case .long: "Over 75 min"
-      }
-    }
-
-    func includes(_ duration: TimeInterval) -> Bool {
-      switch self {
-      case .any: true
-      case .short: duration < 45 * 60
-      case .medium: (45 * 60...75 * 60).contains(duration)
-      case .long: duration > 75 * 60
-      }
-    }
-  }
-
-  private enum StressFilter: CaseIterable {
-    case any, low, medium, high
-
-    var title: String {
-      switch self {
-      case .any: "Any stress"
-      case .low: "Under 40 TSS"
-      case .medium: "40–70 TSS"
-      case .high: "Over 70 TSS"
-      }
-    }
-
-    func includes(_ stress: Int) -> Bool {
-      switch self {
-      case .any: true
-      case .low: stress < 40
-      case .medium: (40...70).contains(stress)
-      case .high: stress > 70
-      }
-    }
-  }
-
-  private enum Order: CaseIterable {
-    case name, duration, stress
-
-    var title: String {
-      switch self {
-      case .name: "Sort by Name"
-      case .duration: "Sort by Duration"
-      case .stress: "Sort by Stress"
-      }
-    }
-
-    func areInIncreasingOrder(_ a: WorkoutTemplate, _ b: WorkoutTemplate) -> Bool {
-      switch self {
-      case .name: a.name.localizedStandardCompare(b.name) == .orderedAscending
-      case .duration: (a.duration, a.name) < (b.duration, b.name)
-      case .stress: (a.stressScore, a.name) < (b.stressScore, b.name)
-      }
-    }
-  }
+  private var shown: [WorkoutTemplate] { state.shown(in: library) }
 }
 
 /// Starts the selected workout. Return starts it too. Targets are set from FTP, so without one
@@ -196,8 +118,9 @@ struct StartButton: View {
 }
 
 #Preview {
+  @Previewable @State var state = WorkoutsState()
   NavigationStack {
-    WorkoutsView()
+    WorkoutsView(state: $state)
   }
   .environment(RideLauncher(simulated: true))
   .environment(RiderSettingsStore.sample)

@@ -12,6 +12,11 @@ public struct RootView: View {
   @State private var appDestination = Destination.today
   @State private var settingsPage = SettingsPage.zones(.all)
   @State private var settingsPath: [SettingsPage] = []
+  // The tabs are rebuilt when Settings takes over the sidebar, so what the rider chose in them
+  // is held here.
+  @State private var today = TodayState()
+  @State private var workouts = WorkoutsState()
+  @State private var historySelection: Ride.ID?
   @Environment(\.scenePhase) private var scenePhase
   @Namespace private var player
   #if os(iOS)
@@ -112,16 +117,16 @@ public struct RootView: View {
     TabView(selection: $destination) {
       Tab("Today", systemImage: "calendar", value: .today) {
         NavigationStack {
-          TodayView { destination = .settings }
+          TodayView(state: $today) { destination = .settings }
         }
       }
       Tab("Workouts", systemImage: "chart.bar", value: .workouts) {
         NavigationStack {
-          WorkoutsView()
+          WorkoutsView(state: $workouts)
         }
       }
       Tab("History", systemImage: "clock", value: .history) {
-        HistoryView(library: library)
+        HistoryView(library: library, selection: $historySelection)
       }
       Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: .progress) {
         NavigationStack {
