@@ -13,23 +13,11 @@ struct PlayerView: View {
   private var session: RideSession { controller.session }
 
   var body: some View {
-    VStack(spacing: 0) {
-      VStack(alignment: .leading, spacing: 8) {
-        chartHeader
-        WorkoutProgressChart(session: session)
-          .overlay { if session.isPaused { pausedBadge } }
-      }
-      .padding(.horizontal, 24)
-      .padding(.top, 16)
-      .padding(.bottom, 8)
-      controls
-        .padding(.horizontal, 24)
-        .frame(minHeight: 52)
-      secondaryStats
-        .padding(.horizontal, 24)
-      primaryStats
-        .padding(.horizontal, 24)
-        .frame(maxHeight: .infinity)
+    // Everything on one screen when it fits; otherwise, such as in landscape or with large
+    // text, the same layout scrolls.
+    ViewThatFits(in: .vertical) {
+      layout
+      ScrollView { layout }
     }
     .monospacedDigit()
     .navigationTitle(controller.template.name)
@@ -52,6 +40,27 @@ struct PlayerView: View {
       Button("Keep Riding", role: .cancel) {}
     } message: {
       Text("Rides aren't saved to History yet.")
+    }
+  }
+
+  private var layout: some View {
+    VStack(spacing: 0) {
+      VStack(alignment: .leading, spacing: 8) {
+        chartHeader
+        WorkoutProgressChart(session: session)
+          .overlay { if session.isPaused { pausedBadge } }
+      }
+      .padding(.horizontal, 24)
+      .padding(.top, 16)
+      .padding(.bottom, 8)
+      controls
+        .padding(.horizontal, 24)
+        .frame(minHeight: 52)
+      secondaryStats
+        .padding(.horizontal, 24)
+      primaryStats
+        .padding(.horizontal, 24)
+        .frame(maxHeight: .infinity)
     }
   }
 
@@ -78,11 +87,16 @@ struct PlayerView: View {
   }
 
   private var legend: some View {
-    HStack(spacing: 16) {
-      LegendSwatch(title: "Target", color: .primary.opacity(0.3), height: 10)
-      LegendSwatch(title: "Power", color: .primary.opacity(0.85), height: 2)
-      LegendSwatch(title: "Heart rate", color: .red, height: 2)
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: 16) { legendEntries }
+      VStack(alignment: .leading, spacing: 4) { legendEntries }
     }
+  }
+
+  @ViewBuilder private var legendEntries: some View {
+    LegendSwatch(title: "Target", color: .primary.opacity(0.3), height: 10)
+    LegendSwatch(title: "Power", color: .primary.opacity(0.85), height: 2)
+    LegendSwatch(title: "Heart rate", color: .red, height: 2)
   }
 
   private var intervalLine: String {
@@ -109,7 +123,8 @@ struct PlayerView: View {
 
   // MARK: Controls
 
-  /// One row with room to spare, otherwise the transport above the trainer setting.
+  /// One row with room to spare, otherwise the transport above the trainer setting, which
+  /// itself stacks when even that is too narrow.
   private var controls: some View {
     GlassEffectContainer(spacing: 12) {
       ViewThatFits(in: .horizontal) {
@@ -120,8 +135,9 @@ struct PlayerView: View {
         }
         VStack(alignment: .leading, spacing: 10) {
           transport
-          HStack(spacing: 12) {
-            trainerSetting
+          ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { trainerSetting }
+            VStack(alignment: .leading, spacing: 10) { trainerSetting }
           }
         }
         .padding(.vertical, 8)
@@ -353,7 +369,8 @@ private struct WorkoutProgressChart: View {
         }
       }
     }
-    .frame(minHeight: 180, idealHeight: 320, maxHeight: 320)
+    // Ideally as short as it can be, so the player only scrolls when even that doesn't fit.
+    .frame(minHeight: 180, idealHeight: 180, maxHeight: 320)
     .accessibilityLabel("Workout progress")
     .accessibilityValue(
       "\(session.position.spokenString) of \(session.duration.spokenString) done")
