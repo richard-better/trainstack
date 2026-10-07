@@ -169,6 +169,9 @@ private struct ZonesPage: View {
   let scope: ZoneScope
   @State private var metric = ZoneMetric.heartRate
   @State private var isShowingHistory = false
+  /// Side margins that keep the rows no wider than is comfortable to read, or nil for the
+  /// system's own.
+  @State private var margins: EdgeInsets?
   @Environment(RiderSettingsStore.self) private var store
 
   private var metrics: [ZoneMetric] { store.current.metrics(in: scope) }
@@ -206,8 +209,10 @@ private struct ZonesPage: View {
       ZonesSection(scope: scope, metric: metric)
     }
     .formStyle(.grouped)
-    .frame(maxWidth: 700)
-    .frame(maxWidth: .infinity)
+    // Limiting the form's own width would leave its background short of the column's edges.
+    .contentMargins(.leading, margins?.leading, for: .scrollContent)
+    .contentMargins(.trailing, margins?.trailing, for: .scrollContent)
+    .onGeometryChange(for: EdgeInsets?.self, of: readableMargins) { margins = $0 }
     .navigationTitle(scope == .all ? "Default zones" : "\(scope.title) zones")
     .toolbar {
       ToolbarItem(placement: .principal) {
@@ -225,6 +230,16 @@ private struct ZonesPage: View {
       ZoneHistoryView()
     }
     .onChange(of: scope) { self.metric = shownMetric }
+  }
+
+  /// Margins that centre 700 points of rows. They include the safe area, such as under the
+  /// sidebar on iPad, which content margins otherwise only overlap.
+  nonisolated private func readableMargins(of proxy: GeometryProxy) -> EdgeInsets? {
+    let extra = (proxy.size.width - 700) / 2
+    guard extra > 30 else { return nil }
+    let safeArea = proxy.safeAreaInsets
+    return EdgeInsets(
+      top: 0, leading: safeArea.leading + extra, bottom: 0, trailing: safeArea.trailing + extra)
   }
 
   private var lastFTPTest: String {
