@@ -2,7 +2,7 @@ import RideBluetooth
 import SwiftUI
 
 public struct RootView: View {
-  @State private var destination = Destination.today
+  @State private var destination = RideLibrary.launchDestination()
   @State private var discovery = BluetoothDiscovery()
   @State private var library = RideLibrary.launchLibrary()
   @Environment(\.scenePhase) private var scenePhase
@@ -70,5 +70,13 @@ extension RideLibrary {
       if CommandLine.arguments.contains("-sample-rides") { return .sample() }
     #endif
     return RideLibrary()
+  }
+
+  /// Debug builds started with `-sample-rides` open on History, where the sample ride is.
+  fileprivate static func launchDestination() -> Destination {
+    #if DEBUG
+      if CommandLine.arguments.contains("-sample-rides") { return .history }
+    #endif
+    return .today
   }
 }
