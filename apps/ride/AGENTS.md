@@ -10,8 +10,9 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   signing, entitlements, and Info.plist keys. Keep code out of it.
 - `RideKit/` - a local Swift package where the app's code lives, one module per concern.
   The app links the `RideUI` product. `RideData` decodes FIT files into a `RideRecording`
-  and analyses it (zones, power curve) with no UI dependency. `RideUI` has a folder per
-  feature (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`) and
+  and analyses it (zones, power curve) with no UI dependency. `RideBluetooth` finds nearby
+  devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
+  (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`) and
   `Shared` for what several use, with one type per file.
 
 `Ride/` is a folder-synchronized group, so adding or removing files there does not touch

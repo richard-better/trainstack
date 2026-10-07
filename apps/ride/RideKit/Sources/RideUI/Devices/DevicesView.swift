@@ -1,9 +1,14 @@
 import RideBluetooth
 import SwiftUI
 
+/// The rider's paired devices and what each reading comes from, then the fitness devices in
+/// range to pair. Searches for devices while on screen.
 struct DevicesView: View {
-  let devices: BluetoothDevices
+  @Environment(BluetoothDevices.self) private var devices
+  @Environment(RideLauncher.self) private var launcher
+  @Environment(\.scenePhase) private var scenePhase
   @State private var showAll = false
+  @State private var isOnScreen = false
 
   var body: some View {
     Group {
@@ -14,25 +19,56 @@ struct DevicesView: View {
       }
     }
     .navigationTitle("Devices")
+    .onAppear { isOnScreen = true }
+    .onDisappear { isOnScreen = false }
+    .onChange(of: isSearching, initial: true) { _, isSearching in
+      if isSearching {
+        devices.startScanning()
+      } else {
+        devices.stopScanning()
+      }
+    }
+  }
+
+  /// Whether the page can be seen. On iOS the player can cover it without it disappearing.
+  private var isSearching: Bool {
+    guard isOnScreen, scenePhase == .active else { return false }
+    #if os(iOS)
+      return !launcher.isPlayerPresented
+    #else
+      return true
+    #endif
   }
 
   private var deviceList: some View {
     Form {
+      if !devices.paired.isEmpty {
+        Section("My devices") {
+          ForEach(devices.paired) { device in
+            PairedDeviceRow(device: device)
+          }
+        }
+        Section("Data sources") {
+          ForEach(RideMetric.allCases, id: \.self) { metric in
+            DataSourceRow(metric: metric)
+          }
+        }
+      }
+
       Section {
         ForEach(devices.fitnessDevices) { device in
-          DeviceRow(device: device)
+          NearbyDeviceRow(device: device)
         }
         if devices.fitnessDevices.isEmpty {
           Text("Wake your trainer or sensor and keep it nearby.")
             .foregroundStyle(.secondary)
         }
       } header: {
-        HStack(spacing: 8) {
-          Text("Nearby fitness devices")
+        HStack {
+          Text("Nearby")
+          Spacer()
           if devices.isScanning {
-            ProgressView()
-              .controlSize(.mini)
-              .accessibilityLabel("Scanning")
+            Text("Searching…").fontWeight(.regular)
           }
         }
       }
@@ -93,6 +129,8 @@ struct DevicesView: View {
 
 #Preview {
   NavigationStack {
-    DevicesView(devices: BluetoothDevices())
+    DevicesView()
   }
+  .environment(BluetoothDevices())
+  .environment(RideLauncher(simulated: true))
 }

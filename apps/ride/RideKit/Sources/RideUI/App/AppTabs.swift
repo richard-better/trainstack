@@ -1,4 +1,3 @@
-import RideBluetooth
 import SwiftUI
 
 /// The app's sections: a sidebar on macOS and iPad, a tab bar on iPhone. On iOS a ride in
@@ -10,7 +9,6 @@ struct AppTabs: View {
   @Binding var historySelection: Ride.ID?
   @Binding var settingsPath: [SettingsPage]
   let library: RideLibrary
-  let devices: BluetoothDevices
   /// Where the player zooms from and back to.
   let player: Namespace.ID
   @Environment(RideLauncher.self) private var launcher
@@ -36,7 +34,7 @@ struct AppTabs: View {
         }
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
-        SettingsList(devices: devices, path: $settingsPath)
+        SettingsList(path: $settingsPath)
       }
     }
     .tabViewStyle(.sidebarAdaptable)

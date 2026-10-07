@@ -1,10 +1,8 @@
-import RideBluetooth
 import RideData
 import SwiftUI
 
 /// Settings as a list that drills into each page, for iPhone.
 struct SettingsList: View {
-  let devices: BluetoothDevices
   @Binding var path: [SettingsPage]
   @Environment(RiderSettingsStore.self) private var store
 
@@ -27,7 +25,7 @@ struct SettingsList: View {
       }
       .navigationTitle("Settings")
       .navigationDestination(for: SettingsPage.self) { page in
-        SettingsPageView(page: page, devices: devices)
+        SettingsPageView(page: page)
       }
     }
   }

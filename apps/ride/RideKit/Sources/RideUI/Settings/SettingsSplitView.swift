@@ -6,7 +6,6 @@ import SwiftUI
 /// iPad; iPhone uses `SettingsList` in a tab instead.
 struct SettingsSplitView: View {
   @Binding var page: SettingsPage
-  let devices: BluetoothDevices
   let back: () -> Void
 
   var body: some View {
@@ -15,9 +14,9 @@ struct SettingsSplitView: View {
         .navigationSplitViewColumnWidth(min: 200, ideal: 220)
     } detail: {
       NavigationStack {
-        SettingsPageView(page: page, devices: devices)
+        SettingsPageView(page: page)
           .navigationDestination(for: SettingsPage.self) { page in
-            SettingsPageView(page: page, devices: devices)
+            SettingsPageView(page: page)
           }
       }
     }
@@ -26,6 +25,7 @@ struct SettingsSplitView: View {
 
 #Preview {
   @Previewable @State var page = SettingsPage.zones(.all)
-  SettingsSplitView(page: $page, devices: BluetoothDevices()) {}
+  SettingsSplitView(page: $page) {}
+    .environment(BluetoothDevices())
     .environment(RiderSettingsStore.sample)
 }
