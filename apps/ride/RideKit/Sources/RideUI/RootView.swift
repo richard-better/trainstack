@@ -9,19 +9,39 @@ public struct RootView: View {
   @State private var profile = RiderProfileStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
   @Environment(\.scenePhase) private var scenePhase
+  @Namespace private var player
 
   public init() {}
 
   public var body: some View {
     Group {
-      // The ride in progress takes over the window until it ends.
-      if let ride = launcher.ride {
-        NavigationStack {
-          PlayerView(controller: ride, onEnd: launcher.end)
-        }
-      } else {
+      #if os(iOS)
+        // The player covers the tabs, and minimises to an accessory above the tab bar.
         tabs
-      }
+          .tabViewBottomAccessory(isEnabled: launcher.ride != nil) {
+            if let ride = launcher.ride {
+              RideAccessory(controller: ride) { launcher.isPlayerPresented = true }
+                .matchedTransitionSource(id: "player", in: player)
+            }
+          }
+          .fullScreenCover(isPresented: $launcher.isPlayerPresented) {
+            if let ride = launcher.ride {
+              NavigationStack {
+                PlayerView(controller: ride, onEnd: launcher.end)
+              }
+              .navigationTransition(.zoom(sourceID: "player", in: player))
+            }
+          }
+      #else
+        // The ride in progress takes over the window until it ends.
+        if let ride = launcher.ride {
+          NavigationStack {
+            PlayerView(controller: ride, onEnd: launcher.end)
+          }
+        } else {
+          tabs
+        }
+      #endif
     }
     .environment(profile)
     .environment(launcher)

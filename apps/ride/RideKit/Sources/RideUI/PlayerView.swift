@@ -8,6 +8,7 @@ struct PlayerView: View {
   let controller: RideController
   var onEnd: () -> Void
   @State private var isConfirmingEnd = false
+  @Environment(\.dismiss) private var dismiss
 
   private var session: RideSession { controller.session }
 
@@ -37,6 +38,11 @@ struct PlayerView: View {
       .navigationBarTitleDisplayMode(.inline)
     #endif
     .toolbar {
+      #if os(iOS)
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Minimize", systemImage: "chevron.down") { dismiss() }
+        }
+      #endif
       ToolbarItem(placement: .primaryAction) {
         Button("End Ride") { isConfirmingEnd = true }
       }
@@ -47,8 +53,6 @@ struct PlayerView: View {
     } message: {
       Text("Rides aren't saved to History yet.")
     }
-    .onAppear { controller.start() }
-    .onDisappear { controller.stop() }
   }
 
   private var subtitle: String {
