@@ -1,4 +1,5 @@
 import RideBluetooth
+import RideData
 import SwiftUI
 
 public struct RootView: View {
@@ -24,6 +25,9 @@ public struct RootView: View {
     }
     .environment(profile)
     .environment(launcher)
+    #if DEBUG
+      .task { launcher.startLaunchRide(ftp: profile.ftp) }
+    #endif
   }
 
   private var tabs: some View {
@@ -101,6 +105,17 @@ extension RideLauncher {
     #endif
     return RideLauncher()
   }
+
+  #if DEBUG
+    /// Debug builds started with `-ride "<workout name>"` open straight into that ride.
+    fileprivate func startLaunchRide(ftp: Int?) {
+      let arguments = CommandLine.arguments
+      guard let flag = arguments.firstIndex(of: "-ride"), flag + 1 < arguments.count,
+        let template = WorkoutTemplate.named(arguments[flag + 1]), let ftp
+      else { return }
+      start(template, ftp: ftp)
+    }
+  #endif
 }
 
 extension RideLibrary {
