@@ -1,0 +1,42 @@
+import RideData
+import SwiftUI
+
+/// Time left in the interval, time elapsed, speed and distance. One row when it fits,
+/// otherwise two.
+struct PlayerSecondaryStats: View {
+  let session: RideSession
+
+  var body: some View {
+    let intervalLeft = SmallStat(
+      label: "Interval left", value: session.intervalRemaining?.clockString ?? "—")
+    let elapsed = SmallStat(
+      label: "Elapsed", value: session.elapsed.clockString,
+      unit: "/ \(session.duration.clockString)")
+    let speed = SmallStat(
+      label: "Speed",
+      value: session.latest.speed.map { ($0 * 3.6).formatted(.oneDecimal) } ?? "—",
+      unit: "km/h")
+    let distance = SmallStat(
+      label: "Distance", value: (session.distance / 1000).formatted(.oneDecimal), unit: "km")
+    ViewThatFits(in: .horizontal) {
+      DividedRow {
+        intervalLeft
+        elapsed
+        speed
+        distance
+      }
+      Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
+        GridRow {
+          intervalLeft
+          elapsed
+        }
+        GridRow {
+          speed
+          distance
+        }
+      }
+    }
+    .overlay(alignment: .top) { Divider() }
+    .overlay(alignment: .bottom) { Divider() }
+  }
+}
