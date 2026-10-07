@@ -3,6 +3,7 @@ import SwiftUI
 
 struct DevicesView: View {
   let discovery: BluetoothDiscovery
+  @Environment(HeartRateSensor.self) private var sensor
   @State private var showAll = false
 
   var body: some View {
@@ -18,11 +19,31 @@ struct DevicesView: View {
 
   private var deviceList: some View {
     Form {
-      Section {
-        ForEach(discovery.fitnessDevices) { device in
-          DeviceRow(device: device)
+      if let paired = sensor.paired {
+        Section("Heart rate sensor") {
+          PairedSensorRow(sensor: sensor, paired: paired)
+          if sensor.connection == .failed {
+            Button("Try Again", systemImage: "arrow.clockwise", action: sensor.reconnect)
+          }
+          Button(
+            "Forget Sensor", systemImage: "xmark.circle", role: .destructive, action: sensor.forget)
         }
-        if discovery.fitnessDevices.isEmpty {
+      }
+
+      Section {
+        ForEach(nearbyDevices) { device in
+          if device.services.contains(.heartRate) {
+            LabeledContent {
+              Button("Connect") { sensor.pair(device) }
+                .accessibilityLabel("Connect to \(device.displayName)")
+            } label: {
+              DeviceRow(device: device)
+            }
+          } else {
+            DeviceRow(device: device)
+          }
+        }
+        if nearbyDevices.isEmpty {
           Text("Wake your trainer or sensor and keep it nearby.")
             .foregroundStyle(.secondary)
         }
@@ -51,6 +72,11 @@ struct DevicesView: View {
       }
     }
     .formStyle(.grouped)
+  }
+
+  /// Fitness devices in range, apart from the paired sensor, which has its own section.
+  private var nearbyDevices: [DiscoveredDevice] {
+    discovery.fitnessDevices.filter { $0.id != sensor.paired?.id }
   }
 
   private var otherDevicesSummary: LocalizedStringKey {
@@ -95,4 +121,5 @@ struct DevicesView: View {
   NavigationStack {
     DevicesView(discovery: BluetoothDiscovery())
   }
+  .environment(HeartRateSensor())
 }

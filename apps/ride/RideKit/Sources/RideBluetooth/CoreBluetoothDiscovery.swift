@@ -28,17 +28,7 @@ final class CoreBluetoothDiscovery: NSObject, DiscoveryTransport {
 
 extension CoreBluetoothDiscovery: @preconcurrency CBCentralManagerDelegate {
   func centralManagerDidUpdateState(_ central: CBCentralManager) {
-    let availability: BluetoothAvailability
-    switch central.state {
-    case .poweredOn: availability = .ready
-    case .poweredOff: availability = .poweredOff
-    case .unauthorized: availability = .unauthorized
-    case .unsupported: availability = .unsupported
-    case .resetting: availability = .resetting
-    case .unknown: availability = .unknown
-    @unknown default: availability = .unknown
-    }
-    onAvailability?(availability)
+    onAvailability?(BluetoothAvailability(central.state))
   }
 
   func centralManager(

@@ -1,0 +1,30 @@
+import Foundation
+
+/// A reading from the Heart Rate Measurement characteristic (0x2A37).
+struct HeartRateMeasurement: Equatable, Sendable {
+  var beatsPerMinute: Int
+  /// Whether the sensor is touching skin, or nil when it cannot tell.
+  var hasContact: Bool?
+
+  init(beatsPerMinute: Int, hasContact: Bool? = nil) {
+    self.beatsPerMinute = beatsPerMinute
+    self.hasContact = hasContact
+  }
+
+  /// Decodes the characteristic's value, or nil when it is too short to hold a heart rate.
+  init?(_ data: Data) {
+    let bytes = [UInt8](data)
+    guard let flags = bytes.first else { return nil }
+    if flags & 0x01 == 0 {
+      guard bytes.count >= 2 else { return nil }
+      beatsPerMinute = Int(bytes[1])
+    } else {
+      guard bytes.count >= 3 else { return nil }
+      beatsPerMinute = Int(bytes[1]) | Int(bytes[2]) << 8
+    }
+    hasContact = flags & 0x04 == 0 ? nil : flags & 0x02 != 0
+  }
+
+  /// The heart rate, unless the sensor says it is not being worn.
+  var reading: Int? { hasContact == false || beatsPerMinute == 0 ? nil : beatsPerMinute }
+}
