@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
   name: "RideKit",
-  platforms: [.iOS("26.1"), .macOS(.v26)],
+  platforms: [.iOS("27.0"), .macOS(.v26)],
   products: [
     .library(name: "RideUI", targets: ["RideUI"])
   ],

@@ -15,26 +15,24 @@ struct WorkoutsView: View {
   private var library: [WorkoutTemplate] { WorkoutTemplate.library }
 
   var body: some View {
-    VStack(spacing: 0) {
-      filterBar
-      Divider()
-      ScrollView {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
-          ForEach(shown) { template in
-            WorkoutCard(
-              template: template, isSelected: template.id == selection,
-              select: { selection = template.id },
-              start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
-          }
+    ScrollView {
+      LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
+        ForEach(shown) { template in
+          WorkoutCard(
+            template: template, isSelected: template.id == selection,
+            select: { selection = template.id },
+            start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
         }
-        .padding(24)
       }
-      .overlay {
-        if shown.isEmpty {
-          ContentUnavailableView.search(text: search)
-        }
+      .padding(24)
+    }
+    .overlay {
+      if shown.isEmpty {
+        ContentUnavailableView.search(text: search)
       }
     }
+    // The cards scroll under the filters, which sit on a soft edge rather than a rule.
+    .safeAreaBar(edge: .top) { filterBar }
     .navigationTitle("Workouts")
     .searchable(text: $search, prompt: "Search")
     .toolbar {
@@ -48,35 +46,48 @@ struct WorkoutsView: View {
     shown.first { $0.id == selection }
   }
 
+  /// One row when it fits, otherwise the same row scrolling sideways.
   private var filterBar: some View {
+    ViewThatFits(in: .horizontal) {
+      filters
+      ScrollView(.horizontal) { filters }
+        .scrollIndicators(.hidden)
+    }
+    .frame(minHeight: 44)
+  }
+
+  private var filters: some View {
     HStack(spacing: 8) {
       Picker("Duration", selection: $duration) {
         ForEach(DurationFilter.allCases, id: \.self) { Text($0.title).tag($0) }
       }
+      .fixedSize()
       Picker("Zone", selection: $zone) {
         Text("Any zone").tag(PowerZone?.none)
         Divider()
         ForEach(zones, id: \.self) { Text($0.name).tag(Optional($0)) }
       }
+      .fixedSize()
       Picker("Stress", selection: $stress) {
         ForEach(StressFilter.allCases, id: \.self) { Text($0.title).tag($0) }
       }
+      .fixedSize()
       Spacer()
       Text("^[\(shown.count) workout](inflect: true)")
         .foregroundStyle(.secondary)
+        .fixedSize()
       Picker("Sort", selection: $order) {
         ForEach(Order.allCases, id: \.self) { Text($0.title).tag($0) }
       }
       .labelsHidden()
+      .fixedSize()
       .help("Sort")
     }
     .pickerStyle(.menu)
     .labelsHidden()
-    .fixedSize(horizontal: false, vertical: true)
     .font(.callout)
     .controlSize(.small)
     .padding(.horizontal, 24)
-    .frame(minHeight: 44)
   }
 
   /// The zones the library has workouts for, easiest first.

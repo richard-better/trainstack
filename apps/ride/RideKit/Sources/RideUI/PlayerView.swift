@@ -96,7 +96,7 @@ struct PlayerView: View {
       .font(.headline)
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
-      .background(.regularMaterial, in: .rect(cornerRadius: 8))
+      .glassEffect(.regular, in: .rect(cornerRadius: 8))
   }
 
   private var pausedMessage: String {
@@ -111,20 +111,22 @@ struct PlayerView: View {
 
   /// One row with room to spare, otherwise the transport above the trainer setting.
   private var controls: some View {
-    ViewThatFits(in: .horizontal) {
-      HStack(spacing: 12) {
-        transport
-        Spacer()
-        trainerSetting
-      }
-      VStack(alignment: .leading, spacing: 10) {
-        transport
+    GlassEffectContainer(spacing: 12) {
+      ViewThatFits(in: .horizontal) {
         HStack(spacing: 12) {
+          transport
+          Spacer()
           trainerSetting
         }
+        VStack(alignment: .leading, spacing: 10) {
+          transport
+          HStack(spacing: 12) {
+            trainerSetting
+          }
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
-      .padding(.vertical, 8)
-      .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
 
@@ -135,10 +137,11 @@ struct PlayerView: View {
         systemImage: session.isPaused ? "play.fill" : "pause.fill", action: controller.togglePause
       )
       .labelStyle(.iconOnly)
-      .buttonStyle(.bordered)
+      .buttonStyle(.glass)
       .keyboardShortcut(.space, modifiers: [])
       Button("Skip interval", systemImage: "forward.end.fill", action: controller.skipInterval)
-        .buttonStyle(.borderless)
+        .labelStyle(.iconOnly)
+        .buttonStyle(.glass)
         .disabled(session.isComplete)
         .keyboardShortcut(.rightArrow, modifiers: .command)
         .help("Skip to the next interval (⌘→)")
@@ -444,8 +447,8 @@ private struct SettingStepper: View {
     .labelStyle(.iconOnly)
     .buttonStyle(.borderless)
     .padding(.horizontal, 4)
-    .frame(height: 26)
-    .background(.quaternary.opacity(0.6), in: .rect(cornerRadius: 7))
+    .frame(height: 32)
+    .glassEffect(.regular.interactive(), in: .capsule)
     .accessibilityElement(children: .combine)
     .accessibilityLabel("Trainer setting")
     .accessibilityValue(label)

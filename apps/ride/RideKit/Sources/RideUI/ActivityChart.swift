@@ -135,7 +135,7 @@ struct ActivityChart: View {
     }
     .font(.caption.monospacedDigit())
     .padding(6)
-    .background(.regularMaterial, in: .rect(cornerRadius: 6))
+    .glassEffect(.regular, in: .rect(cornerRadius: 6))
   }
 
   private var selected: RideRecording.Sample? {

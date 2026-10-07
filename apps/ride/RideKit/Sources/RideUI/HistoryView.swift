@@ -4,36 +4,54 @@ import SwiftUI
 /// Finished rides. With room to spare the list and the selected ride sit side by side, as in
 /// Mail; otherwise the list pushes the ride full width.
 struct HistoryView: View {
-  /// The content width from which the list and the ride are shown together. It is the width the
-  /// content has after the sidebar, so hiding the sidebar can tip a window over this line.
-  static let splitMinimumWidth: CGFloat = 1000
-  private static let listWidth: CGFloat = 320
-
   @Bindable var library: RideLibrary
   @State private var selection: Ride.ID?
-  @State private var path: [Ride.ID] = []
-  @State private var width: CGFloat = 0
   @State private var isImporting = false
   @State private var failures: [String] = []
+  #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+  #endif
 
-  private var isWide: Bool { width >= Self.splitMinimumWidth }
+  /// Whether the list and the ride are on screen together, rather than one pushing the other.
+  private var showsBothColumns: Bool {
+    #if os(iOS)
+      sizeClass == .regular
+    #else
+      true
+    #endif
+  }
 
   var body: some View {
-    Group {
-      if isWide { splitLayout } else { stackLayout }
-    }
-    .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { width = $0 }
-    .onChange(of: isWide) { _, isWide in
-      // Keep the ride on screen when the window crosses the line.
-      if isWide {
-        selection = path.last ?? selection ?? library.rides.first?.id
+    NavigationSplitView {
+      List(selection: $selection) {
+        ForEach(months, id: \.start) { month in
+          Section(month.label) {
+            ForEach(month.rides) { RideRow(ride: $0).tag($0.id) }
+          }
+        }
+      }
+      .overlay { emptyState }
+      .navigationTitle("History")
+      .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
+      .toolbar { importButton }
+    } detail: {
+      if let ride = library[selection] {
+        detail(of: ride)
+          .navigationTitle(ride.title)
+          #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+          #endif
       } else {
-        path = selection.map { [$0] } ?? []
+        ContentUnavailableView("Select a ride", systemImage: "chart.xyaxis.line")
       }
     }
-    // The split view always has a ride to show, like Mail's.
-    .onChange(of: library.rides.first?.id) { _, newest in
-      if isWide, selection == nil { selection = newest }
+    // The split view always has a ride to show, like Mail's. On a phone, selecting one would
+    // push it, so there the rider chooses.
+    .onChange(of: library.rides.first?.id, initial: true) { _, newest in
+      if showsBothColumns, selection == nil { selection = newest }
+    }
+    .onChange(of: showsBothColumns) { _, showsBothColumns in
+      if showsBothColumns, selection == nil { selection = library.rides.first?.id }
     }
     .fileImporter(
       isPresented: $isImporting, allowedContentTypes: [.fitFile], allowsMultipleSelection: true
@@ -50,57 +68,9 @@ struct HistoryView: View {
     }
   }
 
-  private var splitLayout: some View {
-    NavigationStack {
-      HStack(spacing: 0) {
-        List(selection: $selection) {
-          ForEach(months, id: \.start) { month in
-            Section(month.label) {
-              ForEach(month.rides) { RideRow(ride: $0).tag($0.id) }
-            }
-          }
-        }
-        .overlay { emptyState }
-        .frame(width: Self.listWidth)
-        Divider()
-        Group {
-          if let ride = library[selection] {
-            detail(of: ride)
-          } else {
-            ContentUnavailableView("Select a ride", systemImage: "chart.xyaxis.line")
-          }
-        }
-        .frame(maxWidth: .infinity)
-      }
-      .navigationTitle("History")
-      .toolbar { importButton }
-    }
-  }
-
-  private var stackLayout: some View {
-    NavigationStack(path: $path) {
-      List {
-        ForEach(months, id: \.start) { month in
-          Section(month.label) {
-            ForEach(month.rides) { ride in
-              NavigationLink(value: ride.id) { RideRow(ride: ride) }
-            }
-          }
-        }
-      }
-      .overlay { emptyState }
-      .navigationTitle("History")
-      .toolbar { importButton }
-      .navigationDestination(for: Ride.ID.self) { id in
-        if let ride = library[id] { detail(of: ride).navigationTitle(ride.title) }
-      }
-    }
-  }
-
   private func detail(of ride: Ride) -> some View {
     ActivityDetailView(ride: ride) {
       selection = nil
-      path = []
       library.remove(ride.id)
     }
   }
@@ -186,14 +156,8 @@ private struct RideRow: View {
   }
 }
 
-#Preview("Wide") {
+#Preview {
   HistoryView(library: .sample())
     .environment(RiderSettingsStore.sample)
     .frame(width: 1100, height: 760)
-}
-
-#Preview("Narrow") {
-  HistoryView(library: .sample())
-    .environment(RiderSettingsStore.sample)
-    .frame(width: 800, height: 760)
 }

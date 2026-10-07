@@ -26,6 +26,7 @@ struct TodayView: View {
           .fixedSize()
           Button("Other suggestions", systemImage: "shuffle") { shuffle += 1 }
             .labelStyle(.iconOnly)
+            .buttonStyle(.glass)
             .help("Other suggestions")
         }
         .monospacedDigit()
