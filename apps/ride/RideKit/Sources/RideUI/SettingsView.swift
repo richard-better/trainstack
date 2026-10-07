@@ -132,6 +132,7 @@ private struct ScopeForm: View {
   @Binding var selection: ZoneScope
   @Binding var metric: ZoneMetric
   let showsScopePicker: Bool
+  @State private var isShowingHistory = false
   @Environment(RiderSettingsStore.self) private var store
 
   private var metrics: [ZoneMetric] { store.current.metrics(in: scope) }
@@ -164,6 +165,14 @@ private struct ScopeForm: View {
         }
       }
       ZonesSection(scope: scope, metric: metric)
+      Section {
+        LabeledContent(usedFor(metric)) {
+          Button("Zone History…") { isShowingHistory = true }
+        }
+      }
+    }
+    .sheet(isPresented: $isShowingHistory) {
+      ZoneHistoryView()
     }
     .formStyle(.grouped)
     .toolbar {
@@ -176,6 +185,12 @@ private struct ScopeForm: View {
       }
     }
     .onChange(of: scope) { self.metric = shownMetric }
+  }
+
+  private func usedFor(_ metric: ZoneMetric) -> String {
+    guard let sport = scope.sport else { return "Used for every sport without its own" }
+    return store.current.usesDefault(metric, in: sport)
+      ? "\(sport.name) uses Default" : "Used for \(sport.name.lowercased())"
   }
 
   private func isOwn(_ metric: ZoneMetric) -> Bool {

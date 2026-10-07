@@ -24,6 +24,8 @@ final class RiderSettingsStore {
   /// The zones in effect today.
   var current: ZoneProfile { settings.history.current }
 
+  var historyEntries: [ZoneHistory.Entry] { settings.history.entries }
+
   // MARK: Activities
 
   /// The zones `recording` is analysed with: those of its sport on the day it was recorded.
@@ -71,6 +73,16 @@ final class RiderSettingsStore {
 
   func setListed(_ isListed: Bool, _ sport: Sport) {
     record(.listed(sport, isListed))
+  }
+
+  func moveHistoryEntry(_ id: ZoneHistory.Entry.ID, to date: Date) {
+    settings.history.move(id, to: date)
+    save()
+  }
+
+  func removeHistoryEntry(_ id: ZoneHistory.Entry.ID) {
+    settings.history.remove(id)
+    save()
   }
 
   private func record(_ change: ZoneChange) {
