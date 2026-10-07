@@ -2,8 +2,8 @@ import Charts
 import RideData
 import SwiftUI
 
-/// Fitness day by day over the chosen span, over each week's average daily stress. Its span
-/// is chosen in the toolbar, and changing it redraws only this section.
+/// Fitness day by day over the chosen span, over each week's average daily stress. Changing
+/// the span redraws only this section.
 struct TrendSection: View {
   let load: [TrainingLoad]
   @State private var span = ProgressSpan.sixMonths
@@ -19,21 +19,29 @@ struct TrendSection: View {
       LegendSwatch(title: "Fitness", color: .primary, height: 2)
       LegendSwatch(title: "Stress per day, by week", color: .primary.opacity(0.25), height: 10)
     }
-    let explanation = Text("Fitness is your load over 6 weeks. Fatigue is the last 7 days.")
+    .font(.caption)
+    .foregroundStyle(.secondary)
+    let picker = Picker("Period", selection: $span) {
+      ForEach(ProgressSpan.allCases, id: \.self) { Text($0.title).tag($0) }
+    }
+    .pickerStyle(.segmented)
+    .labelsHidden()
+    .fixedSize()
     VStack(alignment: .leading, spacing: 8) {
       ViewThatFits(in: .horizontal) {
         HStack {
           legend
           Spacer()
-          explanation
+          picker
         }
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
+          picker
           legend
-          explanation
         }
       }
-      .font(.caption)
-      .foregroundStyle(.secondary)
+      Text("Fitness is your load over 6 weeks. Fatigue is the last 7 days.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
       Chart {
         ForEach(weeks) { week in
           BarMark(
@@ -61,15 +69,6 @@ struct TrendSection: View {
         }
       }
       .frame(height: 190)
-    }
-    .toolbar {
-      ToolbarItem(placement: .primaryAction) {
-        Picker("Period", selection: $span) {
-          ForEach(ProgressSpan.allCases, id: \.self) { Text($0.title).tag($0) }
-        }
-        .pickerStyle(.segmented)
-        .fixedSize()
-      }
     }
   }
 }
