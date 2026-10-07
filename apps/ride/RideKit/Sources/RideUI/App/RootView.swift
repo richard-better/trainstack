@@ -4,7 +4,7 @@ import SwiftUI
 
 public struct RootView: View {
   @State private var destination = RideLibrary.launchDestination()
-  @State private var discovery = BluetoothDiscovery()
+  @State private var devices = BluetoothDevices()
   @State private var library = RideLibrary.launchLibrary()
   @State private var settings = RiderSettingsStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
@@ -29,12 +29,12 @@ public struct RootView: View {
     Group {
       if destination == .settings && hasSidebar {
         // Settings takes over the sidebar, like drilling into System Settings.
-        SettingsSplitView(page: $settingsPage, discovery: discovery, back: backToApp)
+        SettingsSplitView(page: $settingsPage, devices: devices, back: backToApp)
       } else {
         AppTabs(
           destination: $destination, today: $today, workouts: $workouts,
           historySelection: $historySelection, settingsPath: $settingsPath, library: library,
-          discovery: discovery, player: player)
+          devices: devices, player: player)
       }
     }
     .modifier(PlayerPresentation(launcher: launcher, namespace: player))
@@ -46,9 +46,9 @@ public struct RootView: View {
     // Scan only while the Devices page is on screen.
     .onChange(of: isShowingDevices && scenePhase == .active, initial: true) { _, isVisible in
       if isVisible {
-        discovery.startScanning()
+        devices.startScanning()
       } else {
-        discovery.stopScanning()
+        devices.stopScanning()
       }
     }
     #if DEBUG

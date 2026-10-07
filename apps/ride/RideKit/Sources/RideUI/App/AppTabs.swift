@@ -10,7 +10,7 @@ struct AppTabs: View {
   @Binding var historySelection: Ride.ID?
   @Binding var settingsPath: [SettingsPage]
   let library: RideLibrary
-  let discovery: BluetoothDiscovery
+  let devices: BluetoothDevices
   /// Where the player zooms from and back to.
   let player: Namespace.ID
   @Environment(RideLauncher.self) private var launcher
@@ -36,7 +36,7 @@ struct AppTabs: View {
         }
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
-        SettingsList(discovery: discovery, path: $settingsPath)
+        SettingsList(devices: devices, path: $settingsPath)
       }
     }
     .tabViewStyle(.sidebarAdaptable)

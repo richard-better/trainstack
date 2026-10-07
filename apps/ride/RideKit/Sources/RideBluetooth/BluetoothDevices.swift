@@ -37,7 +37,7 @@ public struct DiscoveredDevice: Identifiable, Equatable, Sendable {
 }
 
 @MainActor
-protocol DiscoveryTransport: AnyObject {
+protocol BluetoothTransport: AnyObject {
   var onAvailability: ((BluetoothAvailability) -> Void)? { get set }
   var onDiscovery: ((DiscoveredDevice) -> Void)? { get set }
   func start()
@@ -47,7 +47,7 @@ protocol DiscoveryTransport: AnyObject {
 
 @MainActor
 @Observable
-public final class BluetoothDiscovery {
+public final class BluetoothDevices {
   public private(set) var availability: BluetoothAvailability = .unknown
   public private(set) var isScanning = false
   /// Nearby devices that advertise at least one fitness service.
@@ -56,12 +56,12 @@ public final class BluetoothDiscovery {
   public var otherDevices: [DiscoveredDevice] { sorted(discovered.values.filter { !$0.isFitness }) }
 
   private var discovered: [UUID: DiscoveredDevice] = [:]
-  @ObservationIgnored private let transport: any DiscoveryTransport
+  @ObservationIgnored private let transport: any BluetoothTransport
   @ObservationIgnored private var wantsScan = false
 
-  public convenience init() { self.init(transport: CoreBluetoothDiscovery()) }
+  public convenience init() { self.init(transport: CoreBluetoothTransport()) }
 
-  init(transport: any DiscoveryTransport) {
+  init(transport: any BluetoothTransport) {
     self.transport = transport
     transport.onAvailability = { [weak self] state in self?.updateAvailability(state) }
     transport.onDiscovery = { [weak self] device in self?.receive(device) }

@@ -2,7 +2,7 @@ import CoreBluetooth
 import Foundation
 
 @MainActor
-final class CoreBluetoothDiscovery: NSObject, DiscoveryTransport {
+final class CoreBluetoothTransport: NSObject, BluetoothTransport {
   var onAvailability: ((BluetoothAvailability) -> Void)?
   var onDiscovery: ((DiscoveredDevice) -> Void)?
   private var central: CBCentralManager?
@@ -26,7 +26,7 @@ final class CoreBluetoothDiscovery: NSObject, DiscoveryTransport {
   }
 }
 
-extension CoreBluetoothDiscovery: @preconcurrency CBCentralManagerDelegate {
+extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
   func centralManagerDidUpdateState(_ central: CBCentralManager) {
     let availability: BluetoothAvailability
     switch central.state {

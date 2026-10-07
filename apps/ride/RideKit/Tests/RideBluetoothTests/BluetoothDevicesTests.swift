@@ -4,92 +4,92 @@ import Testing
 @testable import RideBluetooth
 
 @MainActor
-struct BluetoothDiscoveryTests {
+struct BluetoothDevicesTests {
   @Test func waitsForBluetoothBeforeScanning() {
-    let transport = FakeDiscoveryTransport()
-    let discovery = BluetoothDiscovery(transport: transport)
-    discovery.startScanning()
+    let transport = FakeTransport()
+    let devices = BluetoothDevices(transport: transport)
+    devices.startScanning()
     #expect(transport.started)
     #expect(transport.scans == 0)
     transport.onAvailability?(.ready)
-    #expect(discovery.isScanning)
+    #expect(devices.isScanning)
     #expect(transport.scans == 1)
-    discovery.startScanning()
+    devices.startScanning()
     #expect(transport.scans == 1)
   }
 
   @Test func deduplicatesAdvertisementsAndPreservesKnownDetails() {
-    let (discovery, transport) = scanningDiscovery()
+    let (devices, transport) = scanningDevices()
     let id = UUID()
     transport.onDiscovery?(.init(id: id, services: [.trainer]))
     transport.onDiscovery?(.init(id: id, name: "KICKR CORE", services: [.power]))
     transport.onDiscovery?(.init(id: id))
     #expect(
-      discovery.fitnessDevices == [.init(id: id, name: "KICKR CORE", services: [.trainer, .power])])
+      devices.fitnessDevices == [.init(id: id, name: "KICKR CORE", services: [.trainer, .power])])
   }
 
   @Test func separatesFitnessDevicesFromOtherBluetoothDevices() {
-    let (discovery, transport) = scanningDiscovery()
+    let (devices, transport) = scanningDevices()
     transport.onDiscovery?(.init(id: UUID(), name: "Living Room"))
     transport.onDiscovery?(.init(id: UUID(), name: "Polar H10", services: [.heartRate]))
     transport.onDiscovery?(.init(id: UUID(), name: "AirPods"))
-    #expect(discovery.fitnessDevices.map(\.displayName) == ["Polar H10"])
-    #expect(discovery.otherDevices.map(\.displayName) == ["AirPods", "Living Room"])
+    #expect(devices.fitnessDevices.map(\.displayName) == ["Polar H10"])
+    #expect(devices.otherDevices.map(\.displayName) == ["AirPods", "Living Room"])
   }
 
   @Test func powerLossClearsDevicesAndResumesWhenReady() {
-    let (discovery, transport) = scanningDiscovery()
+    let (devices, transport) = scanningDevices()
     transport.onDiscovery?(.init(id: UUID(), name: "Trainer", services: [.trainer]))
     transport.onAvailability?(.poweredOff)
-    #expect(!discovery.isScanning)
-    #expect(discovery.fitnessDevices.isEmpty && discovery.otherDevices.isEmpty)
+    #expect(!devices.isScanning)
+    #expect(devices.fitnessDevices.isEmpty && devices.otherDevices.isEmpty)
     transport.onAvailability?(.ready)
-    #expect(discovery.isScanning)
+    #expect(devices.isScanning)
     #expect(transport.scans == 2)
   }
 
   @Test func closingStopsDiscoveryAndIgnoresLateCallbacks() {
-    let (discovery, transport) = scanningDiscovery()
-    discovery.stopScanning()
+    let (devices, transport) = scanningDevices()
+    devices.stopScanning()
     transport.onDiscovery?(.init(id: UUID(), name: "Late sensor", services: [.heartRate]))
     transport.onAvailability?(.ready)
-    #expect(!discovery.isScanning)
-    #expect(discovery.fitnessDevices.isEmpty && discovery.otherDevices.isEmpty)
+    #expect(!devices.isScanning)
+    #expect(devices.fitnessDevices.isEmpty && devices.otherDevices.isEmpty)
     #expect(transport.scans == 1)
     #expect(transport.stops == 1)
   }
 
   @Test func reopeningStartsAFreshSearch() {
-    let (discovery, transport) = scanningDiscovery()
+    let (devices, transport) = scanningDevices()
     transport.onDiscovery?(.init(id: UUID(), name: "Old sensor", services: [.heartRate]))
-    discovery.stopScanning()
-    discovery.startScanning()
-    #expect(discovery.fitnessDevices.isEmpty && discovery.otherDevices.isEmpty)
+    devices.stopScanning()
+    devices.startScanning()
+    #expect(devices.fitnessDevices.isEmpty && devices.otherDevices.isEmpty)
     #expect(transport.scans == 2)
   }
 
   @Test(arguments: [BluetoothAvailability.unauthorized, .unsupported, .resetting])
   func unavailableBluetoothDoesNotScan(state: BluetoothAvailability) {
-    let transport = FakeDiscoveryTransport()
-    let discovery = BluetoothDiscovery(transport: transport)
+    let transport = FakeTransport()
+    let devices = BluetoothDevices(transport: transport)
     transport.onAvailability?(state)
-    discovery.startScanning()
-    #expect(discovery.availability == state)
-    #expect(!discovery.isScanning)
+    devices.startScanning()
+    #expect(devices.availability == state)
+    #expect(!devices.isScanning)
     #expect(transport.scans == 0)
   }
 
-  private func scanningDiscovery() -> (BluetoothDiscovery, FakeDiscoveryTransport) {
-    let transport = FakeDiscoveryTransport()
-    let discovery = BluetoothDiscovery(transport: transport)
+  private func scanningDevices() -> (BluetoothDevices, FakeTransport) {
+    let transport = FakeTransport()
+    let devices = BluetoothDevices(transport: transport)
     transport.onAvailability?(.ready)
-    discovery.startScanning()
-    return (discovery, transport)
+    devices.startScanning()
+    return (devices, transport)
   }
 }
 
 @MainActor
-private final class FakeDiscoveryTransport: DiscoveryTransport {
+private final class FakeTransport: BluetoothTransport {
   var onAvailability: ((BluetoothAvailability) -> Void)?
   var onDiscovery: ((DiscoveredDevice) -> Void)?
   var started = false
