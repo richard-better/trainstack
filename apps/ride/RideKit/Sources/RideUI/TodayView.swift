@@ -26,6 +26,9 @@ struct TodayView: View {
           Button("Other suggestions", systemImage: "shuffle") { state.shuffle += 1 }
             .labelStyle(.iconOnly)
             .buttonStyle(.glass)
+            #if os(iOS)
+              .controlSize(.large)
+            #endif
             .help("Other suggestions")
         }
         .monospacedDigit()
@@ -124,7 +127,19 @@ extension View {
     #if os(macOS)
       buttonStyle(.link)
     #else
-      buttonStyle(.borderless)
+      buttonStyle(InlineLinkButtonStyle())
     #endif
   }
 }
+
+#if os(iOS)
+  /// Tinted text like a link, with a touch target taller than the sentence around it.
+  private struct InlineLinkButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+      configuration.label
+        .foregroundStyle(.tint)
+        .opacity(configuration.isPressed ? 0.5 : 1)
+        .minimumTapTarget()
+    }
+  }
+#endif

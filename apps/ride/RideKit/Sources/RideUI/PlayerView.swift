@@ -162,6 +162,9 @@ struct PlayerView: View {
         .keyboardShortcut(.rightArrow, modifiers: .command)
         .help("Skip to the next interval (⌘→)")
     }
+    #if os(iOS)
+      .controlSize(.large)
+    #endif
     .fixedSize()
   }
 
@@ -370,7 +373,7 @@ private struct WorkoutProgressChart: View {
       }
     }
     // Ideally as short as it can be, so the player only scrolls when even that doesn't fit.
-    .frame(minHeight: 180, idealHeight: 180, maxHeight: 320)
+    .frame(minHeight: 140, idealHeight: 140, maxHeight: 320)
     .accessibilityLabel("Workout progress")
     .accessibilityValue(
       "\(session.position.spokenString) of \(session.duration.spokenString) done")
@@ -453,20 +456,26 @@ private struct SettingStepper: View {
 
   var body: some View {
     HStack(spacing: 0) {
-      Button("Decrease", systemImage: "minus", action: decrease)
-        .keyboardShortcut(.downArrow, modifiers: [])
+      Button(action: decrease) {
+        Label("Decrease", systemImage: "minus").minimumTapTarget()
+      }
+      .keyboardShortcut(.downArrow, modifiers: [])
       Text(label)
         .fontWeight(.medium)
         .frame(minWidth: 64)
         .contentTransition(.numericText())
         .animation(reduceMotion ? nil : .default, value: label)
-      Button("Increase", systemImage: "plus", action: increase)
-        .keyboardShortcut(.upArrow, modifiers: [])
+      Button(action: increase) {
+        Label("Increase", systemImage: "plus").minimumTapTarget()
+      }
+      .keyboardShortcut(.upArrow, modifiers: [])
     }
     .labelStyle(.iconOnly)
     .buttonStyle(.borderless)
     .padding(.horizontal, 4)
-    .frame(height: 32)
+    #if os(macOS)
+      .frame(height: 32)
+    #endif
     .glassEffect(.regular.interactive(), in: .capsule)
     .accessibilityElement(children: .combine)
     .accessibilityLabel("Trainer setting")
@@ -509,13 +518,15 @@ private struct BigStat<Label: View>: View {
   var detail = ""
   @ViewBuilder let label: Label
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// Big enough to read from the saddle, and bigger still with larger text.
+  @ScaledMetric(relativeTo: .largeTitle) private var valueSize = 84.0
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       label.font(.subheadline).foregroundStyle(.secondary).frame(height: 20)
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Text(value)
-          .font(.system(size: 84, weight: .medium))
+          .font(.system(size: valueSize, weight: .medium))
           .tracking(-1.5)
           .contentTransition(.numericText())
           .animation(reduceMotion ? nil : .default, value: value)

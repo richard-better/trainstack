@@ -81,7 +81,9 @@ struct WorkoutsView: View {
     .pickerStyle(.menu)
     .labelsHidden()
     .font(.callout)
-    .controlSize(.small)
+    #if os(macOS)
+      .controlSize(.small)
+    #endif
     .padding(.horizontal, 24)
   }
 

@@ -175,7 +175,7 @@ private struct PowerCurveChart: View {
         .interpolationMethod(.monotone)
       PointMark(x: .value("Duration", point.duration.spokenString), y: .value("Power", point.power))
         .annotation(position: .top, spacing: 4) {
-          Text("\(point.power) W").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+          Text("\(point.power) W").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
         }
     }
     .foregroundStyle(.primary.opacity(0.85))

@@ -10,6 +10,7 @@ struct TrainingProgressView: View {
   @Environment(RiderSettingsStore.self) private var settings
   @State private var span = Span.sixMonths
   @State private var zoneBasis: ZoneBasis?
+  @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
 
   private var calendar: Calendar { .current }
   private var rides: [RideRecording] { library.rides.map(\.recording) }
@@ -302,7 +303,10 @@ struct TrainingProgressView: View {
         HStack(spacing: 12) {
           ForEach(Intensity.allCases, id: \.self) { intensity in
             let share = total > 0 ? Int(((totals[intensity] ?? 0) / total * 100).rounded()) : 0
-            LegendSwatch(title: "\(intensity.name) \(share)%", color: intensity.color, height: 10)
+            LegendSwatch(
+              title: "\(intensity.name) \(share)%",
+              color: intensity.color(differentiatingWithoutColor: differentiateWithoutColor),
+              height: 10)
           }
         }
         .font(.caption)
@@ -311,11 +315,17 @@ struct TrainingProgressView: View {
       Chart {
         ForEach(months) { month in
           ForEach(Intensity.allCases.reversed(), id: \.self) { intensity in
+            let hours = (month.seconds[intensity] ?? 0) / 3600
             BarMark(
               x: .value("Month", month.start, unit: .month),
-              y: .value("Hours", (month.seconds[intensity] ?? 0) / 3600)
+              y: .value("Hours", hours)
             )
-            .foregroundStyle(intensity.color)
+            .foregroundStyle(
+              intensity.color(differentiatingWithoutColor: differentiateWithoutColor)
+            )
+            .accessibilityLabel(month.start.formatted(.dateTime.month(.wide).year()))
+            .accessibilityValue(
+              "\(intensity.name): \(hours.formatted(.number.precision(.fractionLength(1)))) h")
           }
         }
       }
@@ -333,6 +343,17 @@ struct TrainingProgressView: View {
 }
 
 extension Intensity {
+  /// With Differentiate Without Color on, easier intensities are also fainter, so they tell
+  /// apart by more than hue.
+  fileprivate func color(differentiatingWithoutColor: Bool) -> Color {
+    guard differentiatingWithoutColor else { return color }
+    return switch self {
+    case .easy: color.opacity(0.35)
+    case .moderate: color.opacity(0.65)
+    case .hard: color
+    }
+  }
+
   fileprivate var color: Color {
     switch self {
     case .easy: .blue
@@ -348,6 +369,7 @@ private struct HeadlineStat<Content: View>: View {
   /// The first stat in the row has no rule before it.
   var isFirst = false
   @ViewBuilder let content: Content
+  @ScaledMetric(relativeTo: .title) private var valueSize = 28.0
 
   var body: some View {
     VStack(alignment: .leading, spacing: 3) {
@@ -358,7 +380,7 @@ private struct HeadlineStat<Content: View>: View {
       .font(.caption)
       .foregroundStyle(.secondary)
       HStack(alignment: .firstTextBaseline, spacing: 6) { content }
-        .font(.system(size: 28, weight: .medium))
+        .font(.system(size: valueSize, weight: .medium))
         .lineLimit(1)
         .minimumScaleFactor(0.6)
     }

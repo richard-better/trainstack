@@ -177,6 +177,7 @@ private struct LegendToggle: View {
       .padding(.vertical, 4)
       .background(.quaternary.opacity(isHovering ? 1 : 0), in: .rect(cornerRadius: 6))
       .contentShape(.rect(cornerRadius: 6))
+      .minimumTapTarget()
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }

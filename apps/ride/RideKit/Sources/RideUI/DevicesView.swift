@@ -29,30 +29,25 @@ struct DevicesView: View {
       } header: {
         HStack(spacing: 8) {
           Text("Nearby fitness devices")
-          ProgressView()
-            .controlSize(.mini)
-            .accessibilityLabel("Scanning")
+          if discovery.isScanning {
+            ProgressView()
+              .controlSize(.mini)
+              .accessibilityLabel("Scanning")
+          }
         }
-      } footer: {
-        HStack {
-          Text(otherDevicesSummary)
-          Spacer()
-          Toggle("Show all", isOn: $showAll)
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-            .accessibilityHint(
-              "Include nearby Bluetooth devices that do not advertise a fitness service.")
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
       }
 
-      if showAll, !discovery.otherDevices.isEmpty {
-        Section("Other Bluetooth devices") {
+      Section {
+        Toggle("Show other Bluetooth devices", isOn: $showAll)
+          .accessibilityHint(
+            "Include nearby Bluetooth devices that do not advertise a fitness service.")
+        if showAll {
           ForEach(discovery.otherDevices) { device in
             DeviceRow(device: device)
           }
         }
+      } footer: {
+        Text(otherDevicesSummary)
       }
     }
     .formStyle(.grouped)
