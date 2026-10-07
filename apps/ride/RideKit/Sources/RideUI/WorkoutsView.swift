@@ -46,35 +46,48 @@ struct WorkoutsView: View {
     shown.first { $0.id == selection }
   }
 
+  /// One row when it fits, otherwise the same row scrolling sideways.
   private var filterBar: some View {
+    ViewThatFits(in: .horizontal) {
+      filters
+      ScrollView(.horizontal) { filters }
+        .scrollIndicators(.hidden)
+    }
+    .frame(minHeight: 44)
+  }
+
+  private var filters: some View {
     HStack(spacing: 8) {
       Picker("Duration", selection: $duration) {
         ForEach(DurationFilter.allCases, id: \.self) { Text($0.title).tag($0) }
       }
+      .fixedSize()
       Picker("Zone", selection: $zone) {
         Text("Any zone").tag(PowerZone?.none)
         Divider()
         ForEach(zones, id: \.self) { Text($0.name).tag(Optional($0)) }
       }
+      .fixedSize()
       Picker("Stress", selection: $stress) {
         ForEach(StressFilter.allCases, id: \.self) { Text($0.title).tag($0) }
       }
+      .fixedSize()
       Spacer()
       Text("^[\(shown.count) workout](inflect: true)")
         .foregroundStyle(.secondary)
+        .fixedSize()
       Picker("Sort", selection: $order) {
         ForEach(Order.allCases, id: \.self) { Text($0.title).tag($0) }
       }
       .labelsHidden()
+      .fixedSize()
       .help("Sort")
     }
     .pickerStyle(.menu)
     .labelsHidden()
-    .fixedSize(horizontal: false, vertical: true)
     .font(.callout)
     .controlSize(.small)
     .padding(.horizontal, 24)
-    .frame(minHeight: 44)
   }
 
   /// The zones the library has workouts for, easiest first.
