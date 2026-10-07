@@ -1,3 +1,4 @@
+import RideBluetooth
 import RideData
 
 extension RiderSettingsStore {
@@ -50,5 +51,16 @@ extension RideLibrary {
       if CommandLine.arguments.contains("-sample-rides") { return .history }
     #endif
     return .today
+  }
+}
+
+extension BluetoothDevices {
+  /// The rider's devices, except that debug builds started with `-sample-devices` use
+  /// pretend ones, since the simulator has no Bluetooth.
+  static func launchDevices() -> BluetoothDevices {
+    #if DEBUG
+      if CommandLine.arguments.contains("-sample-devices") { return .sample() }
+    #endif
+    return BluetoothDevices()
   }
 }
