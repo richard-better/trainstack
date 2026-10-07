@@ -8,7 +8,7 @@ struct RideStatCell: View {
     VStack(alignment: .leading, spacing: 3) {
       Text(stat.label).font(.caption).foregroundStyle(.secondary)
       HStack(alignment: .firstTextBaseline, spacing: 3) {
-        Text(stat.value).font(.title2.weight(.medium))
+        Text(stat.value).font(Design.statValueFont)
         if let unit = stat.unit { Text(unit).font(.footnote).foregroundStyle(.secondary) }
       }
     }

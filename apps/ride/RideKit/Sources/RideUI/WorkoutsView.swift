@@ -18,7 +18,7 @@ struct WorkoutsView: View {
             start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
         }
       }
-      .padding(24)
+      .padding(Design.wideContentMargin)
     }
     .overlay {
       if shown.isEmpty {

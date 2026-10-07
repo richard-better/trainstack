@@ -10,7 +10,7 @@ struct SmallStat: View {
     VStack(alignment: .leading, spacing: 3) {
       Text(label).font(.caption).foregroundStyle(.secondary)
       HStack(alignment: .firstTextBaseline, spacing: 4) {
-        Text(value).font(.title2.weight(.medium))
+        Text(value).font(Design.statValueFont)
         if let unit { Text(unit).font(.subheadline).foregroundStyle(.secondary) }
       }
       .lineLimit(1)

@@ -21,7 +21,8 @@ import SwiftUI
               .frame(width: 4, height: placement == .inline ? 16 : 28)
             VStack(alignment: .leading, spacing: 0) {
               Text(controller.template.name)
-                .font(.subheadline.weight(.semibold))
+                .font(.subheadline)
+                .bold()
               if placement != .inline {
                 Text(status).font(.caption).foregroundStyle(.secondary)
               }

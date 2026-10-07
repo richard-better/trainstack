@@ -14,7 +14,6 @@ struct SettingStepper: View {
       }
       .keyboardShortcut(.downArrow, modifiers: [])
       Text(label)
-        .fontWeight(.medium)
         .frame(minWidth: 64)
         .contentTransition(.numericText())
         .animation(reduceMotion ? nil : .default, value: label)

@@ -42,10 +42,7 @@ struct TodayView: View {
         }
         TodayFootnote(openSettings: openSettings)
       }
-      .padding(.horizontal, 32)
-      .padding(.vertical, 28)
-      .frame(maxWidth: 1100, alignment: .leading)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .pageLayout()
     }
     .navigationTitle("Today")
     .toolbar {

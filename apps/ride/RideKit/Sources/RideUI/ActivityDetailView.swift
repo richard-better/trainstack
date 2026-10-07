@@ -29,10 +29,7 @@ struct ActivityDetailView: View {
         }
         RideBreakdownSection(recording: recording)
       }
-      .padding(.horizontal, 32)
-      .padding(.vertical, 24)
-      .frame(maxWidth: 900, alignment: .leading)
-      .frame(maxWidth: .infinity)
+      .pageLayout(maxWidth: Design.ridePageWidth, alignment: .center)
     }
     .toolbar {
       ToolbarItem(placement: .primaryAction) {

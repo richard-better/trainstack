@@ -13,16 +13,16 @@ struct PlayerLayout: View {
         WorkoutProgressChart(session: session)
           .overlay { if session.isPaused { PausedBadge() } }
       }
-      .padding(.horizontal, 24)
+      .padding(.horizontal, Design.wideContentMargin)
       .padding(.top, 16)
       .padding(.bottom, 8)
       PlayerControls(controller: controller)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Design.wideContentMargin)
         .frame(minHeight: 52)
       PlayerSecondaryStats(session: session)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Design.wideContentMargin)
       PlayerPrimaryStats(controller: controller)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Design.wideContentMargin)
         .frame(maxHeight: .infinity)
     }
   }

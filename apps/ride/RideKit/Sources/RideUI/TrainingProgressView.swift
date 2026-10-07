@@ -29,10 +29,7 @@ struct TrainingProgressView: View {
             BreakdownSections(rides: rides)
           }
           .monospacedDigit()
-          .padding(.horizontal, 32)
-          .padding(.vertical, 24)
-          .frame(maxWidth: 1100, alignment: .leading)
-          .frame(maxWidth: .infinity, alignment: .leading)
+          .pageLayout()
         }
       }
     }

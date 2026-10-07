@@ -45,7 +45,7 @@ struct WorkoutFilterBar: View {
     #if os(macOS)
       .controlSize(.small)
     #endif
-    .padding(.horizontal, 24)
+    .padding(.horizontal, Design.wideContentMargin)
     ViewThatFits(in: .horizontal) {
       filters
       ScrollView(.horizontal) { filters }
