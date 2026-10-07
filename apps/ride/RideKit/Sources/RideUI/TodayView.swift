@@ -6,7 +6,7 @@ import SwiftUI
 struct TodayView: View {
   let openSettings: () -> Void
   @Environment(RideLauncher.self) private var launcher
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var settings
   @AppStorage("today.minutes") private var minutes = 30
   @State private var shuffle = 0
   @State private var selection = 0
@@ -34,7 +34,7 @@ struct TodayView: View {
             WorkoutCard(
               template: suggestion.template, tag: suggestion.tag, profileHeight: 120,
               isSelected: index == selection, select: { selection = index },
-              start: profile.ftp.map { ftp in { launcher.start(suggestion.template, ftp: ftp) } })
+              start: settings.ftp.map { ftp in { launcher.start(suggestion.template, ftp: ftp) } })
           }
         }
         footnote
@@ -65,7 +65,7 @@ struct TodayView: View {
   }
 
   @ViewBuilder private var footnote: some View {
-    if profile.ftp == nil {
+    if settings.ftp == nil {
       HStack(spacing: 4) {
         Text("Workout targets are set from your FTP.")
         Button("Add it in Settings", action: openSettings)
@@ -113,7 +113,7 @@ struct TodayView: View {
     TodayView {}
   }
   .environment(RideLauncher(simulated: true))
-  .environment(RiderProfileStore.sample)
+  .environment(RiderSettingsStore.sample)
   .frame(width: 900, height: 640)
 }
 

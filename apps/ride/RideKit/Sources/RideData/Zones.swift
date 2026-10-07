@@ -1,115 +1,109 @@
 import Foundation
 
-public struct ZoneShare<Zone: Hashable & Sendable>: Equatable, Sendable {
+/// One zone of a `ZoneSet`, in whole bpm, watts or seconds of pace.
+public struct Zone: Hashable, Sendable {
+  /// Position in the set, from 0 for the easiest.
+  public var index: Int
+  /// The zone's number, such as 2 or 5a.
+  public var label: String
+  public var name: String
+  /// The easiest value in the zone, or nil for the first zone, which takes everything easier.
+  public var start: Int?
+  /// The hardest value in the zone, or nil for the last zone, which takes everything harder.
+  public var end: Int?
+  /// Whether time in the zone counts as easy, moderate or hard training.
+  public var intensity: Intensity
+  /// How many zones the zone's set has.
+  public var zoneCount: Int
+}
+
+/// Contiguous zones from easiest to hardest that cover every value, with no gaps or overlaps.
+/// Values rise through the zones, except pace, where they fall.
+public struct ZoneSet: Equatable, Sendable {
+  public let zones: [Zone]
+  public let isDescending: Bool
+
+  /// Zones from `model` that end at `limits`. Nil unless there is one limit per zone but the
+  /// last, and each zone holds at least one value.
+  public init?(model: ZoneModel, limits: [Int]) {
+    let isDescending = model.metric.isDescending
+    guard limits.count == model.zoneCount - 1, Self.isValid(limits, descending: isDescending)
+    else { return nil }
+    let step = isDescending ? -1 : 1
+    self.isDescending = isDescending
+    zones = model.zoneNames.indices.map { index in
+      Zone(
+        index: index, label: model.zoneLabels[index], name: model.zoneNames[index],
+        start: index == 0 ? nil : limits[index - 1] + step,
+        end: index < limits.count ? limits[index] : nil,
+        intensity: model.intensities[index], zoneCount: model.zoneCount)
+    }
+  }
+
+  /// Where each zone but the last ends.
+  public var limits: [Int] { zones.compactMap(\.end) }
+
+  public func zone(containing value: Int) -> Zone {
+    zones.last { zone in
+      guard let start = zone.start else { return true }
+      return isDescending ? value <= start : value >= start
+    } ?? zones[0]
+  }
+
+  /// The limits after moving the end of zone `index` to `limit`, so the next zone starts just
+  /// past it. Nil when that would leave a zone empty.
+  public func limits(settingZone index: Int, endTo limit: Int) -> [Int]? {
+    var limits = limits
+    guard limits.indices.contains(index) else { return nil }
+    limits[index] = limit
+    return Self.isValid(limits, descending: isDescending) ? limits : nil
+  }
+
+  /// Rising from 0, or for pace falling and staying above a second.
+  private static func isValid(_ limits: [Int], descending: Bool) -> Bool {
+    descending
+      ? zip(limits, limits.dropFirst() + [1]).allSatisfy { $0 > $1 }
+      : zip([-1] + limits, limits).allSatisfy { $0 < $1 }
+  }
+}
+
+public struct ZoneShare: Equatable, Sendable {
   public var zone: Zone
   public var seconds: TimeInterval
   /// Share of the time spent in any zone, from 0 to 1.
   public var fraction: Double
 }
 
-/// Five heart rate zones, as fractions of maximum heart rate.
-public enum HeartRateZone: Int, CaseIterable, Sendable {
-  case recovery, aerobic, tempo, threshold, vo2Max
-
-  public var name: String {
-    switch self {
-    case .recovery: "Recovery"
-    case .aerobic: "Aerobic"
-    case .tempo: "Tempo"
-    case .threshold: "Threshold"
-    case .vo2Max: "VO2 max"
-    }
-  }
-
-  /// Lower bound of the zone as a fraction of maximum heart rate.
-  private var lowerBound: Double {
-    switch self {
-    case .recovery: 0
-    case .aerobic: 0.6
-    case .tempo: 0.7
-    case .threshold: 0.8
-    case .vo2Max: 0.9
-    }
-  }
-
-  public static func zone(heartRate: Int, maxHeartRate: Int) -> HeartRateZone {
-    let fraction = Double(heartRate) / Double(maxHeartRate)
-    return allCases.last { fraction >= $0.lowerBound } ?? .recovery
-  }
-}
-
-/// Six power zones, as fractions of functional threshold power (FTP).
-public enum PowerZone: Int, CaseIterable, Sendable {
-  case recovery, endurance, tempo, threshold, vo2Max, anaerobic
-
-  public var name: String {
-    switch self {
-    case .recovery: "Recovery"
-    case .endurance: "Endurance"
-    case .tempo: "Tempo"
-    case .threshold: "Threshold"
-    case .vo2Max: "VO2 max"
-    case .anaerobic: "Anaerobic"
-    }
-  }
-
-  /// Lower bound of the zone as a fraction of FTP.
-  private var lowerBound: Double {
-    switch self {
-    case .recovery: 0
-    case .endurance: 0.55
-    case .tempo: 0.75
-    case .threshold: 0.90
-    case .vo2Max: 1.05
-    case .anaerobic: 1.20
-    }
-  }
-
-  public static func zone(power: Int, ftp: Int) -> PowerZone {
-    zone(intensity: Double(power) / Double(ftp))
-  }
-
-  /// The zone of a power given as a fraction of FTP.
-  public static func zone(intensity: Double) -> PowerZone {
-    allCases.last { intensity >= $0.lowerBound } ?? .recovery
-  }
-}
-
 extension RideRecording {
-  /// Time spent in each heart rate zone, in zone order. Empty when the ride has no heart rate.
+  /// Time spent in each zone, in zone order. Empty when the ride did not record `metric`, or for
+  /// pace, when it has no sport with a pace.
   ///
   /// Each sample counts until the next one, but a gap longer than `maxSampleGap` is a pause and
-  /// does not count.
-  public func heartRateZones(
-    maxHeartRate: Int, maxSampleGap: TimeInterval = 5
-  ) -> [ZoneShare<HeartRateZone>] {
-    zoneShares(maxSampleGap: maxSampleGap) { sample in
-      sample.heartRate.map { HeartRateZone.zone(heartRate: $0, maxHeartRate: maxHeartRate) }
+  /// does not count. Pace is only counted while moving.
+  public func timeInZones(
+    _ zones: ZoneSet, of metric: ZoneMetric, maxSampleGap: TimeInterval = 5
+  ) -> [ZoneShare] {
+    let value: (Sample) -> Int?
+    switch metric {
+    case .heartRate: value = \.heartRate
+    case .power: value = \.power
+    case .pace:
+      guard let distance = sport?.paceDistance else { return [] }
+      value = { sample in
+        sample.speed.flatMap { $0 > 0 ? Int((distance / $0).rounded()) : nil }
+      }
     }
-  }
-
-  /// Time spent in each power zone, in zone order. Empty when the ride has no power.
-  public func powerZones(ftp: Int, maxSampleGap: TimeInterval = 5) -> [ZoneShare<PowerZone>] {
-    zoneShares(maxSampleGap: maxSampleGap) { sample in
-      sample.power.map { PowerZone.zone(power: $0, ftp: ftp) }
-    }
-  }
-
-  private func zoneShares<Zone: CaseIterable & Hashable & Sendable>(
-    maxSampleGap: TimeInterval, zone: (Sample) -> Zone?
-  ) -> [ZoneShare<Zone>] {
-    var seconds: [Zone: TimeInterval] = [:]
+    var seconds = [TimeInterval](repeating: 0, count: zones.zones.count)
     for (sample, next) in zip(samples, samples.dropFirst()) {
-      guard let zone = zone(sample) else { continue }
+      guard let value = value(sample) else { continue }
       let duration = next.elapsed - sample.elapsed
       guard duration > 0, duration <= maxSampleGap else { continue }
-      seconds[zone, default: 0] += duration
+      seconds[zones.zone(containing: value).index] += duration
     }
-    let total = seconds.values.reduce(0, +)
+    let total = seconds.reduce(0, +)
     guard total > 0 else { return [] }
-    return Zone.allCases.map {
-      let zoneSeconds = seconds[$0] ?? 0
-      return ZoneShare(zone: $0, seconds: zoneSeconds, fraction: zoneSeconds / total)
+    return zones.zones.map {
+      ZoneShare(zone: $0, seconds: seconds[$0.index], fraction: seconds[$0.index] / total)
     }
   }
 }

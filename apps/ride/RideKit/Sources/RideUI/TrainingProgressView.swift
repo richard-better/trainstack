@@ -7,7 +7,7 @@ import SwiftUI
 struct TrainingProgressView: View {
   let library: RideLibrary
   let openSettings: () -> Void
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var settings
   @State private var span = Span.sixMonths
   @State private var zoneBasis: ZoneBasis?
 
@@ -23,8 +23,8 @@ struct TrainingProgressView: View {
       } else {
         ScrollView {
           VStack(alignment: .leading, spacing: 22) {
-            if let ftp = profile.ftp {
-              let load = load(ftp: ftp)
+            if settings.ftp != nil {
+              let load = load()
               headline(load: load)
               trend(load: load)
             } else {
@@ -50,7 +50,7 @@ struct TrainingProgressView: View {
           ForEach(Span.allCases, id: \.self) { Text($0.title).tag($0) }
         }
         .pickerStyle(.segmented)
-        .disabled(rides.isEmpty || profile.ftp == nil)
+        .disabled(rides.isEmpty || settings.ftp == nil)
       }
     }
   }
@@ -79,12 +79,14 @@ struct TrainingProgressView: View {
 
   /// Daily load for the longest span, starting early enough that fitness has built up by the
   /// first day shown.
-  private func load(ftp: Int) -> [TrainingLoad] {
+  /// Each ride is scored against the FTP in effect on its day.
+  private func load() -> [TrainingLoad] {
     let today = Date.now
     let lead = Int(TrainingLoad.fitnessDays) * 3
     let start = calendar.date(byAdding: .day, value: -(Span.oneYear.days + lead), to: today)!
     return TrainingLoad.daily(
-      stress: rides.stressByDay(ftp: ftp, calendar: calendar), from: start, through: today,
+      stress: rides.stressByDay(calendar: calendar) { settings.ftp(for: $0) }, from: start,
+      through: today,
       calendar: calendar)
   }
 
@@ -131,8 +133,9 @@ struct TrainingProgressView: View {
     let week = calendar.dateInterval(of: .weekOfYear, for: .now)
     let ridden = rides.filter { week?.contains($0.startDate) ?? false }
     let seconds = ridden.reduce(0) { $0 + $1.summary.duration }
-    let stress = profile.ftp.map { ftp in
-      ridden.compactMap { $0.trainingStressScore(ftp: ftp) }.reduce(0, +)
+    let stress = settings.ftp.map { _ in
+      ridden.compactMap { ride in settings.ftp(for: ride).flatMap(ride.trainingStressScore) }
+        .reduce(0, +)
     }
     let hours = "\(Int(seconds) / 3600):\(String(format: "%02d", Int(seconds) / 60 % 60))"
     return HeadlineStat(label: "This week") {
@@ -214,8 +217,8 @@ struct TrainingProgressView: View {
 
   private var zoneBases: [ZoneBasis] {
     var result: [ZoneBasis] = []
-    if profile.ftp != nil { result.append(.power) }
-    if profile.maxHeartRate != nil { result.append(.heartRate) }
+    if settings.current.zones(for: .power, in: nil) != nil { result.append(.power) }
+    if settings.current.zones(for: .heartRate, in: nil) != nil { result.append(.heartRate) }
     return result
   }
 
@@ -245,13 +248,11 @@ struct TrainingProgressView: View {
         }
       }
       if zoneBases.isEmpty {
-        Text("Add your FTP or max heart rate in Settings to see your zones.")
+        Text("Set up your heart rate or power zones in Settings to see time in zone.")
           .font(.callout).foregroundStyle(.secondary)
-      } else if shownZoneBasis.wrappedValue == .power, let ftp = profile.ftp {
-        ZoneTimeRows(shares: recent.map { $0.powerZones(ftp: ftp) }.combined())
-      } else if let maxHeartRate = profile.maxHeartRate {
-        ZoneTimeRows(
-          shares: recent.map { $0.heartRateZones(maxHeartRate: maxHeartRate) }.combined())
+      } else {
+        let metric: ZoneMetric = shownZoneBasis.wrappedValue == .power ? .power : .heartRate
+        ZoneTimeRows(shares: recent.map { timeInZones(of: $0, metric) }.combined())
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -279,14 +280,14 @@ struct TrainingProgressView: View {
     }
   }
 
+  /// Time in the zones `ride` was ridden in: those of its sport on its day.
+  private func timeInZones(of ride: RideRecording, _ metric: ZoneMetric) -> [ZoneShare] {
+    settings.zones(for: metric, of: ride).map { ride.timeInZones($0, of: metric) } ?? []
+  }
+
   private func intensities(of ride: RideRecording) -> [(Intensity, TimeInterval)] {
-    if let ftp = profile.ftp, case let shares = ride.powerZones(ftp: ftp), !shares.isEmpty {
-      return shares.map { ($0.zone.intensity, $0.seconds) }
-    }
-    if let maxHeartRate = profile.maxHeartRate {
-      return ride.heartRateZones(maxHeartRate: maxHeartRate).map { ($0.zone.intensity, $0.seconds) }
-    }
-    return []
+    let shares = [ZoneMetric.power, .heartRate].lazy.map { timeInZones(of: ride, $0) }
+    return (shares.first { !$0.isEmpty } ?? []).map { ($0.zone.intensity, $0.seconds) }
   }
 
   private var intensity: some View {
@@ -396,8 +397,8 @@ private struct FormBadge: View {
   }
 }
 
-private struct ZoneTimeRows<Zone: RideZone>: View {
-  let shares: [ZoneShare<Zone>]
+private struct ZoneTimeRows: View {
+  let shares: [ZoneShare]
 
   var body: some View {
     if shares.isEmpty {
@@ -435,6 +436,6 @@ private struct ZoneTimeRows<Zone: RideZone>: View {
   NavigationStack {
     TrainingProgressView(library: .sample()) {}
   }
-  .environment(RiderProfileStore.sample)
+  .environment(RiderSettingsStore.sample)
   .frame(width: 900, height: 800)
 }

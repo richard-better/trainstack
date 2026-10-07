@@ -63,41 +63,49 @@ extension PowerZone {
   }
 }
 
-extension HeartRateZone {
-  public var intensity: Intensity {
-    switch self {
-    case .recovery, .aerobic: .easy
-    case .tempo, .threshold: .moderate
-    case .vo2Max: .hard
-    }
-  }
-}
-
 extension Sequence where Element == RideRecording {
-  /// Training stress per day, keyed by the start of the day. Rides without power are left out.
-  public func stressByDay(ftp: Int, calendar: Calendar = .current) -> [Date: Double] {
+  /// Training stress per day, keyed by the start of the day, each ride scored against the FTP
+  /// `ftp` gives for it. Rides without power or an FTP are left out.
+  public func stressByDay(
+    calendar: Calendar = .current, ftp: (RideRecording) -> Int?
+  ) -> [Date: Double] {
     reduce(into: [:]) { result, ride in
-      guard let stress = ride.trainingStressScore(ftp: ftp) else { return }
+      guard let ftp = ftp(ride), let stress = ride.trainingStressScore(ftp: ftp) else { return }
       result[calendar.startOfDay(for: ride.startDate), default: 0] += Double(stress)
     }
   }
 }
 
-extension Sequence {
-  /// Several rides' zone times added up, in zone order. Empty when none of them had any.
-  public func combined<Zone>() -> [ZoneShare<Zone>] where Element == [ZoneShare<Zone>] {
-    var order: [Zone] = []
-    var seconds: [Zone: TimeInterval] = [:]
+extension Sequence where Element == [ZoneShare] {
+  /// Several rides' zone times added up, in the order zones first appear. Zones with the same
+  /// number and name count as one, even when thresholds moved between rides. Empty when none of
+  /// the rides had any.
+  public func combined() -> [ZoneShare] {
+    var zones: [ZoneKey: Zone] = [:]
+    var order: [ZoneKey] = []
+    var seconds: [ZoneKey: TimeInterval] = [:]
     for shares in self {
       for share in shares {
-        if seconds[share.zone] == nil { order.append(share.zone) }
-        seconds[share.zone, default: 0] += share.seconds
+        let key = ZoneKey(label: share.zone.label, name: share.zone.name)
+        if zones[key] == nil {
+          zones[key] = share.zone
+          order.append(key)
+        }
+        seconds[key, default: 0] += share.seconds
       }
     }
     let total = seconds.values.reduce(0, +)
     guard total > 0 else { return [] }
-    return order.map {
-      ZoneShare(zone: $0, seconds: seconds[$0] ?? 0, fraction: (seconds[$0] ?? 0) / total)
+    return order.compactMap { key in
+      zones[key].map {
+        ZoneShare(zone: $0, seconds: seconds[key] ?? 0, fraction: (seconds[key] ?? 0) / total)
+      }
     }
   }
+}
+
+/// What makes zones from different rides the same zone when adding them up.
+private struct ZoneKey: Hashable {
+  let label: String
+  let name: String
 }

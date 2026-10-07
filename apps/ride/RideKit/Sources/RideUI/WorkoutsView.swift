@@ -4,7 +4,7 @@ import SwiftUI
 /// The workout library: filters as pop-up buttons, and one Start button for the selected card.
 struct WorkoutsView: View {
   @Environment(RideLauncher.self) private var launcher
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var settings
   @State private var selection: WorkoutTemplate.ID?
   @State private var search = ""
   @State private var duration = DurationFilter.any
@@ -24,7 +24,7 @@ struct WorkoutsView: View {
             WorkoutCard(
               template: template, isSelected: template.id == selection,
               select: { selection = template.id },
-              start: profile.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
+              start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
           }
         }
         .padding(24)
@@ -166,20 +166,20 @@ struct StartButton: View {
   let template: WorkoutTemplate?
   var title: String = "Start"
   @Environment(RideLauncher.self) private var launcher
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var settings
 
   var body: some View {
     Button(title) {
-      if let template, let ftp = profile.ftp { launcher.start(template, ftp: ftp) }
+      if let template, let ftp = settings.ftp { launcher.start(template, ftp: ftp) }
     }
     .buttonStyle(.borderedProminent)
     .keyboardShortcut(.defaultAction)
-    .disabled(template == nil || profile.ftp == nil || launcher.ride != nil)
+    .disabled(template == nil || settings.ftp == nil || launcher.ride != nil)
     .help(help)
   }
 
   private var help: String {
-    if profile.ftp == nil { return "Add your FTP in Settings to ride a workout." }
+    if settings.ftp == nil { return "Add your FTP in Settings to ride a workout." }
     return launcher.ride == nil ? "" : "End the ride in progress to start another."
   }
 }
@@ -189,6 +189,6 @@ struct StartButton: View {
     WorkoutsView()
   }
   .environment(RideLauncher(simulated: true))
-  .environment(RiderProfileStore.sample)
+  .environment(RiderSettingsStore.sample)
   .frame(width: 900, height: 780)
 }

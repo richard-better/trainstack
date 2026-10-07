@@ -6,24 +6,25 @@ public struct RootView: View {
   @State private var destination = RideLibrary.launchDestination()
   @State private var discovery = BluetoothDiscovery()
   @State private var library = RideLibrary.launchLibrary()
-  @State private var profile = RiderProfileStore.launchStore()
+  @State private var settings = RiderSettingsStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
+  /// Where Back to app returns to from Settings.
+  @State private var appDestination = Destination.today
+  @State private var settingsPage = SettingsPage.zones(.all)
+  @State private var settingsPath: [SettingsPage] = []
   @Environment(\.scenePhase) private var scenePhase
   @Namespace private var player
+  #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+  #endif
 
   public init() {}
 
   public var body: some View {
     Group {
       #if os(iOS)
-        // The player covers the tabs, and minimises to an accessory above the tab bar.
-        tabs
-          .tabViewBottomAccessory(isEnabled: launcher.ride != nil) {
-            if let ride = launcher.ride {
-              RideAccessory(controller: ride) { launcher.isPlayerPresented = true }
-                .matchedTransitionSource(id: "player", in: player)
-            }
-          }
+        // The player covers the app, and minimises to an accessory above the tab bar.
+        app
           .fullScreenCover(isPresented: $launcher.isPlayerPresented) {
             if let ride = launcher.ride {
               NavigationStack {
@@ -39,15 +40,71 @@ public struct RootView: View {
             PlayerView(controller: ride, onEnd: launcher.end)
           }
         } else {
-          tabs
+          app
         }
       #endif
     }
-    .environment(profile)
+    .environment(settings)
     .environment(launcher)
+    .onChange(of: destination) { _, destination in
+      if destination != .settings { appDestination = destination }
+    }
+    // Scan only while the Devices page is on screen.
+    .onChange(of: isShowingDevices && scenePhase == .active, initial: true) { _, isVisible in
+      if isVisible {
+        discovery.startScanning()
+      } else {
+        discovery.stopScanning()
+      }
+    }
     #if DEBUG
-      .task { launcher.startLaunchRide(ftp: profile.ftp) }
+      .task { launcher.startLaunchRide(ftp: settings.ftp) }
     #endif
+  }
+
+  /// Whether the app has a sidebar for Settings to take over, rather than a tab bar.
+  private var hasSidebar: Bool {
+    #if os(iOS)
+      sizeClass == .regular
+    #else
+      true
+    #endif
+  }
+
+  /// The tabs, or Settings when it has taken over the sidebar.
+  @ViewBuilder private var app: some View {
+    if destination == .settings && hasSidebar {
+      // Settings takes over the sidebar, like drilling into System Settings.
+      SettingsSplitView(page: $settingsPage, discovery: discovery) {
+        destination = appDestination
+      }
+    } else {
+      #if os(iOS)
+        tabs
+          .tabViewBottomAccessory(isEnabled: launcher.ride != nil) {
+            if let ride = launcher.ride {
+              RideAccessory(controller: ride) { launcher.isPlayerPresented = true }
+                .matchedTransitionSource(id: "player", in: player)
+            }
+          }
+      #else
+        tabs
+      #endif
+    }
+  }
+
+  /// Whether the player covers everything else.
+  private var isPlayerShowing: Bool {
+    #if os(iOS)
+      launcher.isPlayerPresented
+    #else
+      launcher.ride != nil
+    #endif
+  }
+
+  private var isShowingDevices: Bool {
+    guard destination == .settings, !isPlayerShowing else { return false }
+    return hasSidebar ? settingsPage == .devices : settingsPath.last == .devices
   }
 
   private var tabs: some View {
@@ -71,45 +128,29 @@ public struct RootView: View {
           TrainingProgressView(library: library) { destination = .settings }
         }
       }
-      Tab("Devices", systemImage: "antenna.radiowaves.left.and.right", value: .devices) {
-        NavigationStack {
-          DevicesView(discovery: discovery)
-        }
-      }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
-        NavigationStack {
-          SettingsView()
-        }
+        SettingsList(discovery: discovery, path: $settingsPath)
       }
     }
     .tabViewStyle(.sidebarAdaptable)
-    // Driven by selection rather than onAppear, which TabView does not pair reliably.
-    .onChange(of: destination == .devices && scenePhase == .active, initial: true) {
-      _, isVisible in
-      if isVisible {
-        discovery.startScanning()
-      } else {
-        discovery.stopScanning()
-      }
-    }
   }
 }
 
 private enum Destination: Hashable {
-  case today, workouts, history, progress, devices, settings
+  case today, workouts, history, progress, settings
 }
 
 #Preview {
   RootView()
 }
 
-extension RiderProfileStore {
+extension RiderSettingsStore {
   /// The saved profile, except that debug builds started with `-sample-rides` use the sample one.
-  fileprivate static func launchStore() -> RiderProfileStore {
+  fileprivate static func launchStore() -> RiderSettingsStore {
     #if DEBUG
       if CommandLine.arguments.contains("-sample-rides") { return .sample }
     #endif
-    return RiderProfileStore()
+    return RiderSettingsStore()
   }
 }
 

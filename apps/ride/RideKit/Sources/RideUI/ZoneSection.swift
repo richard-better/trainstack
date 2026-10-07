@@ -5,11 +5,12 @@ import SwiftUI
 /// A segmented choice between the ways of breaking down the ride.
 struct ZoneSection: View {
   let recording: RideRecording
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var store
 
   private enum Breakdown: String, CaseIterable, Identifiable {
     case powerZones = "Power zones"
     case heartRateZones = "Heart rate zones"
+    case paceZones = "Pace zones"
     case powerCurve = "Power curve"
     var id: Self { self }
   }
@@ -41,6 +42,7 @@ struct ZoneSection: View {
       switch $0 {
       case .powerZones, .powerCurve: recording.hasPower
       case .heartRateZones: recording.hasHeartRate
+      case .paceZones: recording.sport?.paceDistance != nil && recording.hasSpeed
       }
     }
   }
@@ -57,36 +59,56 @@ struct ZoneSection: View {
 
   private func isConfigured(_ breakdown: Breakdown) -> Bool {
     switch breakdown {
-    case .powerZones: profile.ftp != nil
-    case .heartRateZones: profile.maxHeartRate != nil
+    case .powerZones: store.zones(for: .power, of: recording) != nil
+    case .heartRateZones: store.zones(for: .heartRate, of: recording) != nil
+    case .paceZones: store.zones(for: .pace, of: recording) != nil
     case .powerCurve: true
     }
   }
 
   private func basis(of breakdown: Breakdown) -> String? {
     switch breakdown {
-    case .powerZones: profile.ftp.map { "Zones from FTP \($0) W" }
-    case .heartRateZones: profile.maxHeartRate.map { "Zones from max HR \($0)" }
+    case .powerZones: basis(of: .power)
+    case .heartRateZones: basis(of: .heartRate)
+    case .paceZones: basis(of: .pace)
     case .powerCurve: nil
     }
   }
 
+  /// What the zones for `metric` come from, such as "Zones from FTP 200 W".
+  private func basis(of metric: ZoneMetric) -> String? {
+    guard let settings = store.settings(for: metric, of: recording), settings.zones != nil
+    else { return nil }
+    if settings.choice.isCustom { return "Custom zones" }
+    let values = settings.choice.model.basis.thresholds.compactMap { threshold in
+      settings.thresholds[threshold].map {
+        "\(threshold.abbreviation) \(metric.format($0)) \(metric.unit(in: recording.sport))"
+      }
+    }
+    return "Zones from " + values.formatted(.list(type: .and))
+  }
+
   @ViewBuilder private func content(of breakdown: Breakdown) -> some View {
     switch breakdown {
-    case .powerZones:
-      if let ftp = profile.ftp {
-        ZoneRows(shares: recording.powerZones(ftp: ftp))
-      } else {
-        MissingSetting("Add your FTP in Settings to see power zones.")
-      }
-    case .heartRateZones:
-      if let maxHeartRate = profile.maxHeartRate {
-        ZoneRows(shares: recording.heartRateZones(maxHeartRate: maxHeartRate))
-      } else {
-        MissingSetting("Add your max heart rate in Settings to see heart rate zones.")
-      }
-    case .powerCurve:
-      PowerCurveChart(points: recording.powerCurve())
+    case .powerZones: zones(of: .power)
+    case .heartRateZones: zones(of: .heartRate)
+    case .paceZones: zones(of: .pace)
+    case .powerCurve: PowerCurveChart(points: recording.powerCurve())
+    }
+  }
+
+  @ViewBuilder private func zones(of metric: ZoneMetric) -> some View {
+    let name = metric.name
+    let settings = store.settings(for: metric, of: recording)
+    if let zones = settings?.zones {
+      ZoneRows(shares: recording.timeInZones(zones, of: metric))
+    } else if let missing = settings?.missingThresholds, !missing.isEmpty {
+      MissingSetting(
+        "Add your \(missing.map(\.name).formatted(.list(type: .and))) in Settings to see \(name) zones."
+      )
+    } else {
+      MissingSetting(
+        "Check your \(name) thresholds in Settings: they leave no room for every zone.")
     }
   }
 }
@@ -104,8 +126,8 @@ private struct MissingSetting: View {
   }
 }
 
-private struct ZoneRows<Zone: RideZone>: View {
-  let shares: [ZoneShare<Zone>]
+private struct ZoneRows: View {
+  let shares: [ZoneShare]
 
   var body: some View {
     Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {

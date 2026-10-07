@@ -38,14 +38,20 @@ struct TrainingLoadTests {
     #expect(abs((last?.form ?? 1)) < 0.1)
   }
 
-  @Test func addsUpZoneTimeAcrossRides() {
+  @Test func addsUpZoneTimeAcrossRides() throws {
+    func zones(ftp: Int) throws -> ZoneSet {
+      try #require(MetricZones(thresholds: [.ftp: ftp], choice: ZoneChoice(model: .coggan6)).zones)
+    }
+    // The FTP rose between the rides, which moves the zones but keeps them the same zones.
+    let before = try zones(ftp: 200).zones
+    let after = try zones(ftp: 220).zones
     let first = [
-      ZoneShare(zone: PowerZone.endurance, seconds: 300, fraction: 0.75),
-      ZoneShare(zone: PowerZone.tempo, seconds: 100, fraction: 0.25),
+      ZoneShare(zone: before[1], seconds: 300, fraction: 0.75),
+      ZoneShare(zone: before[2], seconds: 100, fraction: 0.25),
     ]
-    let second = [ZoneShare(zone: PowerZone.endurance, seconds: 600, fraction: 1)]
+    let second = [ZoneShare(zone: after[1], seconds: 600, fraction: 1)]
     let combined = [first, second].combined()
-    #expect(combined.map(\.zone) == [.endurance, .tempo])
+    #expect(combined.map(\.zone.name) == ["Endurance", "Tempo"])
     #expect(combined.map(\.seconds) == [900, 100])
     #expect(combined.map(\.fraction) == [0.9, 0.1])
   }
@@ -53,6 +59,9 @@ struct TrainingLoadTests {
   @Test func groupsZonesIntoThreeIntensities() {
     #expect(
       PowerZone.allCases.map(\.intensity) == [.easy, .easy, .moderate, .moderate, .hard, .hard])
-    #expect(HeartRateZone.allCases.map(\.intensity) == [.easy, .easy, .moderate, .moderate, .hard])
+    #expect(ZoneModel.percentOfMax.intensities == [.easy, .easy, .moderate, .moderate, .hard])
+    for model in ZoneModel.allCases {
+      #expect(model.intensities.count == model.zoneCount, "\(model)")
+    }
   }
 }

@@ -71,7 +71,9 @@ public enum FITDecoder {
 
     return RideRecording(
       startDate: Date(timeIntervalSince1970: TimeInterval(startTimestamp) + fitEpoch),
-      workoutName: workoutName, samples: samples, summary: summary)
+      workoutName: workoutName,
+      sport: session?.integer(5).flatMap { Sport(fitSport: $0, subSport: session?.integer(6)) },
+      samples: samples, summary: summary)
   }
 
   private static func mean(_ values: [Int]) -> Int? {

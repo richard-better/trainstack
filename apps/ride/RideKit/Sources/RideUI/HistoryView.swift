@@ -149,7 +149,7 @@ struct HistoryView: View {
 
 private struct RideRow: View {
   let ride: Ride
-  @Environment(RiderProfileStore.self) private var profile
+  @Environment(RiderSettingsStore.self) private var store
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -173,14 +173,14 @@ private struct RideRow: View {
     .accessibilityElement(children: .combine)
   }
 
-  /// Time in power zones when the rider has an FTP, otherwise in heart rate zones.
+  /// Time in power zones when the rider has them, otherwise in heart rate zones.
   @ViewBuilder private var zoneBar: some View {
-    let recording = ride.recording
-    if let ftp = profile.ftp, case let shares = recording.powerZones(ftp: ftp), !shares.isEmpty {
-      ZoneBar(shares: shares).frame(height: 4)
-    } else if let maxHeartRate = profile.maxHeartRate,
-      case let shares = recording.heartRateZones(maxHeartRate: maxHeartRate), !shares.isEmpty
-    {
+    let shown = [ZoneMetric.power, .heartRate].lazy.compactMap { metric in
+      store.zones(for: metric, of: ride.recording).map {
+        ride.recording.timeInZones($0, of: metric)
+      }
+    }
+    if let shares = shown.first(where: { !$0.isEmpty }) {
       ZoneBar(shares: shares).frame(height: 4)
     }
   }
@@ -188,12 +188,12 @@ private struct RideRow: View {
 
 #Preview("Wide") {
   HistoryView(library: .sample())
-    .environment(RiderProfileStore.sample)
+    .environment(RiderSettingsStore.sample)
     .frame(width: 1100, height: 760)
 }
 
 #Preview("Narrow") {
   HistoryView(library: .sample())
-    .environment(RiderProfileStore.sample)
+    .environment(RiderSettingsStore.sample)
     .frame(width: 800, height: 760)
 }

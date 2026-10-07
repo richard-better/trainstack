@@ -14,6 +14,14 @@ struct FITDecoderTests {
     #expect(abs(try #require(ride.summary.distance) - 14389) < 1)
   }
 
+  @Test func decodesTheSport() throws {
+    #expect(try RideRecording.sample().sport == .cycling)
+    #expect(Sport(fitSport: 1, subSport: nil) == .running)
+    #expect(Sport(fitSport: 10, subSport: 20) == .strength)
+    #expect(Sport(fitSport: 10, subSport: 26) == nil)
+    #expect(Sport(fitSport: 0, subSport: nil) == nil)
+  }
+
   @Test func decodesOneSamplePerSecond() throws {
     let ride = try RideRecording.sample()
     #expect(ride.samples.count == 1801)
