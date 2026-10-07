@@ -35,7 +35,9 @@ extension Threshold {
     case .lactateThresholdHeartRate: "Lactate threshold heart rate"
     case .maxHeartRate: "Max heart rate"
     case .restingHeartRate: "Resting heart rate"
+    case .aerobicThresholdHeartRate: "Aerobic threshold heart rate"
     case .ftp: "Functional threshold power"
+    case .aerobicThresholdPower: "Aerobic threshold power"
     case .thresholdPace: "Threshold pace"
     }
   }
@@ -46,7 +48,11 @@ extension Threshold {
       "Your average over the last 20 minutes of an all-out 30-minute effort"
     case .maxHeartRate: "The highest your heart rate reaches in an all-out effort"
     case .restingHeartRate: "Measured lying down, just after you wake up"
+    case .aerobicThresholdHeartRate:
+      "Your first lactate or ventilatory threshold (LT1 or VT1), usually from a lab test"
     case .ftp: "The power you could hold for about an hour"
+    case .aerobicThresholdPower:
+      "Your power at the first lactate or ventilatory threshold (LT1 or VT1)"
     case .thresholdPace:
       sport == .swimming
         ? "Critical swim speed: half the difference between your 400 m and 200 m times"

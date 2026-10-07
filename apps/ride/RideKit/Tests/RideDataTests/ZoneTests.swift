@@ -35,6 +35,28 @@ struct ZoneTests {
     #expect(set.zone(containing: 1000).name == "Anaerobic")
   }
 
+  @Test func splitsSeilerZonesAtTheMeasuredThresholds() throws {
+    let heartRate = try #require(
+      zones(.seilerHeartRate, [.aerobicThresholdHeartRate: 142, .lactateThresholdHeartRate: 168])
+        .zones)
+    #expect(heartRate.limits == [141, 167])
+    #expect(heartRate.zone(containing: 142).name == "Moderate")
+    #expect(heartRate.zone(containing: 168).name == "Hard")
+    let power = try #require(
+      zones(.seilerPower, [.aerobicThresholdPower: 190, .ftp: 260]).zones)
+    #expect(power.limits == [189, 259])
+  }
+
+  @Test func needsBothSeilerThresholdsInOrder() {
+    let missing = zones(.seilerHeartRate, [.lactateThresholdHeartRate: 168])
+    #expect(missing.zones == nil)
+    #expect(missing.missingThresholds == [.aerobicThresholdHeartRate])
+    let reversed = zones(
+      .seilerHeartRate, [.aerobicThresholdHeartRate: 170, .lactateThresholdHeartRate: 168])
+    #expect(reversed.zones == nil)
+    #expect(reversed.missingThresholds.isEmpty)
+  }
+
   @Test func calculatesPaceZonesFromSlowToFast() throws {
     // A threshold pace of 4:00 per kilometre.
     let set = try #require(zones(.frielRunningPace, [.thresholdPace: 240]).zones)
@@ -78,12 +100,12 @@ struct ZoneTests {
   @Test func everyModelHasALabelAndOrderedLimitForEachZone() throws {
     let thresholds: [Threshold: Int] = [
       .lactateThresholdHeartRate: 170, .maxHeartRate: 190, .restingHeartRate: 50, .ftp: 250,
-      .thresholdPace: 240,
+      .thresholdPace: 240, .aerobicThresholdHeartRate: 140, .aerobicThresholdPower: 180,
     ]
     for model in ZoneModel.allCases {
       #expect(model.zoneLabels.count == model.zoneCount)
-      #expect(model.startPercents.count == model.zoneCount - 1)
       let limits = try #require(model.limits(from: thresholds))
+      #expect(limits.count == model.zoneCount - 1, "\(model)")
       #expect(ZoneSet(model: model, limits: limits) != nil, "\(model)")
     }
     let offered = Set(

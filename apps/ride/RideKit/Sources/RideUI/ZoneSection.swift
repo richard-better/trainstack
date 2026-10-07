@@ -108,7 +108,7 @@ struct ZoneSection: View {
       )
     } else {
       MissingSetting(
-        "Check your \(name) thresholds in Settings: they are too close to make zones.")
+        "Check your \(name) thresholds in Settings: they leave no room for every zone.")
     }
   }
 }

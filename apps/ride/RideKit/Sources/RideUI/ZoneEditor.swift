@@ -47,7 +47,7 @@ struct ZonesSection: View {
           let missing = settings.missingThresholds
           Text(
             missing.isEmpty
-              ? "These thresholds are too close together to make zones."
+              ? "These thresholds leave no room for every zone. Check that they are in order."
               : "Add your \(missing.map(\.name).formatted(.list(type: .and))) to see these zones."
           )
           .foregroundStyle(.secondary)
