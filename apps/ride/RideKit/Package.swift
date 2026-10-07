@@ -17,5 +17,10 @@ let package = Package(
     ),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
     .testTarget(name: "RideDataTests", dependencies: ["RideData"]),
+    .testTarget(
+      name: "RideUITests",
+      dependencies: ["RideUI"],
+      swiftSettings: [.defaultIsolation(MainActor.self)]
+    ),
   ]
 )

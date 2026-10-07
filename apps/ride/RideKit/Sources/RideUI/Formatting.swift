@@ -1,29 +1,28 @@
 import Foundation
 
 extension TimeInterval {
-  /// `30:00`, or `1:05:00` for rides of an hour or more.
+  /// `30:00`, or `1:05:00` for rides of an hour or more, with the locale's separator.
   var clockString: String {
-    let total = Int(rounded())
-    let (hours, minutes, seconds) = (total / 3600, total / 60 % 60, total % 60)
-    return hours > 0
-      ? String(format: "%d:%02d:%02d", hours, minutes, seconds)
-      : String(format: "%d:%02d", minutes, seconds)
+    let seconds = rounded()
+    return Duration.seconds(seconds)
+      .formatted(.time(pattern: seconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
   }
 
-  /// `13 s`, `3 min`, `1 h 5 min`.
+  /// `13 sec`, `3 min`, `1 hr, 5 min`, in the rider's language. Rounded to the minute from a
+  /// minute up.
   var spokenString: String {
-    let total = Int(rounded())
-    if total < 60 { return "\(total) s" }
-    let minutes = Int((self / 60).rounded())
-    return minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(minutes % 60) min"
+    let seconds = rounded()
+    let units: Set<Duration.UnitsFormatStyle.Unit> = seconds < 60 ? [.seconds] : [.hours, .minutes]
+    return Duration.seconds(seconds).formatted(.units(allowed: units, width: .abbreviated))
   }
 }
 
-/// Pace as minutes and seconds, such as `4:05`, from a number of seconds. Parses `4:05`, or a
-/// plain number of seconds.
+/// Pace as minutes and seconds, such as `4:05`, from a number of seconds. Parses minutes and
+/// seconds with any separator, such as the `4.05` some locales write, or a plain number of
+/// seconds.
 nonisolated struct PaceFormat: ParseableFormatStyle {
   func format(_ seconds: Int) -> String {
-    String(format: "%d:%02d", seconds / 60, seconds % 60)
+    Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
   }
 
   var parseStrategy: Strategy { Strategy() }
@@ -31,7 +30,7 @@ nonisolated struct PaceFormat: ParseableFormatStyle {
   struct Strategy: ParseStrategy {
     func parse(_ value: String) throws -> Int {
       let parts = value.trimmingCharacters(in: .whitespaces).split(
-        separator: ":", omittingEmptySubsequences: false)
+        omittingEmptySubsequences: false, whereSeparator: { !$0.isNumber })
       let numbers = parts.map { Int($0) }
       switch numbers.count {
       case 1: if let seconds = numbers[0] { return seconds }
