@@ -31,7 +31,7 @@ public struct RootView: View {
     TabView(selection: $destination) {
       Tab("Today", systemImage: "calendar", value: .today) {
         NavigationStack {
-          TodayView { destination = .devices }
+          TodayView { destination = .settings }
         }
       }
       Tab("Workouts", systemImage: "chart.bar", value: .workouts) {
@@ -68,22 +68,6 @@ public struct RootView: View {
 
 private enum Destination: Hashable {
   case today, workouts, history, devices, settings
-}
-
-private struct TodayView: View {
-  let findDevices: () -> Void
-
-  var body: some View {
-    ContentUnavailableView {
-      Label("TrainStack Ride", systemImage: "bicycle")
-    } description: {
-      Text("Find your trainer and sensors to get started.")
-    } actions: {
-      Button("Find devices", action: findDevices)
-        .buttonStyle(.borderedProminent)
-    }
-    .navigationTitle("Today")
-  }
 }
 
 #Preview {
