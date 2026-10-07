@@ -5,7 +5,8 @@ let package = Package(
   name: "RideKit",
   platforms: [.iOS("27.0"), .macOS(.v26), .watchOS("27.0")],
   products: [
-    .library(name: "RideUI", targets: ["RideUI"])
+    .library(name: "RideUI", targets: ["RideUI"]),
+    .library(name: "RideWatch", targets: ["RideWatch"]),
   ],
   targets: [
     .target(name: "RideBluetooth"),
@@ -17,9 +18,19 @@ let package = Package(
       dependencies: ["RideBluetooth", "RideData", "RideLink", "RideStyle"],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
+    .target(
+      name: "RideWatch",
+      dependencies: ["RideData", "RideLink", "RideStyle"],
+      swiftSettings: [.defaultIsolation(MainActor.self)]
+    ),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
     .testTarget(name: "RideDataTests", dependencies: ["RideData"]),
     .testTarget(name: "RideLinkTests", dependencies: ["RideLink"]),
+    .testTarget(
+      name: "RideWatchTests",
+      dependencies: ["RideWatch", "RideLink"],
+      swiftSettings: [.defaultIsolation(MainActor.self)]
+    ),
     .testTarget(
       name: "RideUITests",
       dependencies: ["RideUI", "RideLink"],
