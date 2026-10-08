@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// The steps of a workout as bars: width for duration, height and colour for intensity.

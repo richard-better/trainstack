@@ -1,23 +1,53 @@
 import Observation
+import RideBluetooth
 import RideData
 
 /// Starts and ends rides. Held by the root view, which shows the player while a ride is on.
+///
+/// A ride takes heart rate from the rider's paired sensor, and from an Apple Watch: on iPhone
+/// directly, as the watch starts its workout with the ride, and on the Mac through an iPhone
+/// relaying it.
 @Observable
 final class RideLauncher {
   private(set) var ride: RideController?
   /// Whether the player is showing. On iOS the rider can minimise it to the tab bar while the
   /// ride carries on.
   var isPlayerPresented = false
+  /// The rider's heart rate sensor, which stays connected between rides.
+  let heartRateSensor: HeartRateSensor
   @ObservationIgnored private let simulated: Bool
+  @ObservationIgnored private let heartRate = HeartRateFeed()
+  #if os(macOS)
+    @ObservationIgnored private lazy var watchRelay: WatchRelayReceiver = {
+      let receiver = WatchRelayReceiver()
+      receiver.onReading = { [heartRate] bpm in heartRate.record(bpm, from: .watch) }
+      return receiver
+    }()
+  #endif
 
-  init(simulated: Bool = false) {
+  init(simulated: Bool = false, heartRateSensor: HeartRateSensor = HeartRateSensor()) {
     self.simulated = simulated
+    self.heartRateSensor = heartRateSensor
+    heartRateSensor.onReading = { [heartRate] bpm in heartRate.record(bpm, from: .chestStrap) }
   }
 
   /// Starts `template` with targets from `ftp`, unless a ride is already on.
-  func start(_ template: WorkoutTemplate, ftp: Int) {
+  func start(_ template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet?) {
     guard ride == nil else { return }
-    let ride = RideController(template: template, ftp: ftp, simulated: simulated)
+    let ride = RideController(
+      template: template, ftp: ftp, heartRateZones: heartRateZones, heartRate: heartRate,
+      simulated: simulated)
+    #if os(iOS)
+      let watch = WatchLink.shared
+      watch.onHeartRate = { [heartRate] bpm in heartRate.record(bpm, from: .watch) }
+      ride.onTick = { [weak ride] in
+        if let ride { watch.send(.glance(ride.glance)) }
+      }
+      watch.startWorkout()
+    #endif
+    #if os(macOS)
+      watchRelay.start()
+    #endif
     ride.start()
     self.ride = ride
     isPlayerPresented = true
@@ -27,5 +57,11 @@ final class RideLauncher {
     ride?.stop()
     ride = nil
     isPlayerPresented = false
+    #if os(macOS)
+      watchRelay.stop()
+    #endif
+    #if os(iOS)
+      WatchLink.shared.endRide()
+    #endif
   }
 }

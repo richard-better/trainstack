@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 struct ZoneRow: View {

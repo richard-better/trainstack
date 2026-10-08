@@ -7,17 +7,74 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		79B5580D30756A0000BF33FB /* RideWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 79B5580130756A0000BF33FB /* RideWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		79B5580B30756A0000BF33FB /* RideWatchUI in Frameworks */ = {isa = PBXBuildFile; productRef = 79B5580A30756A0000BF33FB /* RideWatchUI */; };
 		79B557F23075690000BF33FB /* RideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 79B557F13075690000BF33FB /* RideUI */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		79B5580F30756A0000BF33FB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 79B557D63075687F00BF33FB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 79B5580630756A0000BF33FB;
+			remoteInfo = RideWatch;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		79B5580C30756A0000BF33FB /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				79B5580D30756A0000BF33FB /* RideWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		79B557DE3075687F00BF33FB /* Ride.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ride.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		79B5580130756A0000BF33FB /* RideWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RideWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		79B5581030756A0000BF33FB /* Exceptions for "Ride" folder in "Ride" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Ride-iOS.entitlements",
+				Info.plist,
+			);
+			target = 79B557DD3075687F00BF33FB /* Ride */;
+		};
+		79B5581130756A0000BF33FB /* Exceptions for "RideWatch" folder in "RideWatch" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				RideWatch.entitlements,
+			);
+			target = 79B5580630756A0000BF33FB /* RideWatch */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		79B557E03075687F00BF33FB /* Ride */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				79B5581030756A0000BF33FB /* Exceptions for "Ride" folder in "Ride" target */,
+			);
 			path = Ride;
+			sourceTree = "<group>";
+		};
+		79B5580230756A0000BF33FB /* RideWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				79B5581130756A0000BF33FB /* Exceptions for "RideWatch" folder in "RideWatch" target */,
+			);
+			path = RideWatch;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -29,6 +86,12 @@
 				79B557F23075690000BF33FB /* RideUI in Frameworks */,
 			);
 		};
+		79B5580430756A0000BF33FB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				79B5580B30756A0000BF33FB /* RideWatchUI in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -36,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				79B557E03075687F00BF33FB /* Ride */,
+				79B5580230756A0000BF33FB /* RideWatch */,
 				79B557DF3075687F00BF33FB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -44,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				79B557DE3075687F00BF33FB /* Ride.app */,
+				79B5580130756A0000BF33FB /* RideWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -58,8 +123,12 @@
 				79B557DA3075687F00BF33FB /* Sources */,
 				79B557DB3075687F00BF33FB /* Frameworks */,
 				79B557DC3075687F00BF33FB /* Resources */,
+				79B5580C30756A0000BF33FB /* Embed Watch Content */,
 			);
 			buildRules = (
+			);
+			dependencies = (
+				79B5580E30756A0000BF33FB /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				79B557E03075687F00BF33FB /* Ride */,
@@ -70,6 +139,29 @@
 			);
 			productName = Ride;
 			productReference = 79B557DE3075687F00BF33FB /* Ride.app */;
+			productType = "com.apple.product-type.application";
+		};
+		79B5580630756A0000BF33FB /* RideWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 79B5580730756A0000BF33FB /* Build configuration list for PBXNativeTarget "RideWatch" */;
+			buildPhases = (
+				79B5580330756A0000BF33FB /* Sources */,
+				79B5580430756A0000BF33FB /* Frameworks */,
+				79B5580530756A0000BF33FB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				79B5580230756A0000BF33FB /* RideWatch */,
+			);
+			name = RideWatch;
+			packageProductDependencies = (
+				79B5580A30756A0000BF33FB /* RideWatchUI */,
+			);
+			productName = RideWatch;
+			productReference = 79B5580130756A0000BF33FB /* RideWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -83,6 +175,9 @@
 				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					79B557DD3075687F00BF33FB = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					79B5580630756A0000BF33FB = {
 						CreatedOnToolsVersion = 27.1;
 					};
 				};
@@ -105,12 +200,18 @@
 			projectRoot = "";
 			targets = (
 				79B557DD3075687F00BF33FB /* Ride */,
+				79B5580630756A0000BF33FB /* RideWatch */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		79B557DC3075687F00BF33FB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		79B5580530756A0000BF33FB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -123,7 +224,21 @@
 			files = (
 			);
 		};
+		79B5580330756A0000BF33FB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		79B5580E30756A0000BF33FB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 79B5580630756A0000BF33FB /* RideWatch */;
+			targetProxy = 79B5580F30756A0000BF33FB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		79B557E73075688100BF33FB /* Debug configuration for PBXProject "Ride" */ = {
@@ -247,6 +362,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Ride/Ride-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Ride/Ride-iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = S64PDPJKMJ;
@@ -256,9 +373,13 @@
 				ENABLE_RESOURCE_ACCESS_BLUETOOTH = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = Ride/Info.plist;
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = Ride/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ride;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Ride connects to your smart trainer and heart rate monitor over Bluetooth.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Ride connects to your smart trainer and heart rate monitor over Bluetooth, and passes on heart rate from your Apple Watch.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ride reads heart rate from your Apple Watch during a ride.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Your Apple Watch saves your rides to Health as indoor cycling workouts.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -294,6 +415,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Ride/Ride-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Ride/Ride-iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = S64PDPJKMJ;
@@ -303,9 +426,13 @@
 				ENABLE_RESOURCE_ACCESS_BLUETOOTH = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = Ride/Info.plist;
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = Ride/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ride;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Ride connects to your smart trainer and heart rate monitor over Bluetooth.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Ride connects to your smart trainer and heart rate monitor over Bluetooth, and passes on heart rate from your Apple Watch.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ride reads heart rate from your Apple Watch during a ride.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Your Apple Watch saves your rides to Health as indoor cycling workouts.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -336,6 +463,74 @@
 			};
 			name = Release;
 		};
+		79B5580830756A0000BF33FB /* Debug configuration for PBXNativeTarget "RideWatch" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RideWatch/RideWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = S64PDPJKMJ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RideWatch/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ride;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ride measures your heart rate during a ride and sends it to your iPhone or Mac.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ride saves your rides to Health as indoor cycling workouts.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.trainstackhq.ride;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trainstackhq.ride.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		79B5580930756A0000BF33FB /* Release configuration for PBXNativeTarget "RideWatch" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RideWatch/RideWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = S64PDPJKMJ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RideWatch/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ride;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ride measures your heart rate during a ride and sends it to your iPhone or Mac.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ride saves your rides to Health as indoor cycling workouts.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.trainstackhq.ride;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trainstackhq.ride.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -355,6 +550,14 @@
 			);
 			defaultConfigurationName = Release;
 		};
+		79B5580730756A0000BF33FB /* Build configuration list for PBXNativeTarget "RideWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				79B5580830756A0000BF33FB /* Debug configuration for PBXNativeTarget "RideWatch" */,
+				79B5580930756A0000BF33FB /* Release configuration for PBXNativeTarget "RideWatch" */,
+			);
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -368,6 +571,10 @@
 		79B557F13075690000BF33FB /* RideUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RideUI;
+		};
+		79B5580A30756A0000BF33FB /* RideWatchUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RideWatchUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

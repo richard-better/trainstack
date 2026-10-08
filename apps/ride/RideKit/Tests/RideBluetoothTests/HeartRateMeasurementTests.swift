@@ -33,4 +33,14 @@ struct HeartRateMeasurementTests {
   func rejectsTruncatedValues(data: Data) {
     #expect(HeartRateMeasurement(data) == nil)
   }
+
+  @Test(arguments: [
+    HeartRateMeasurement(beatsPerMinute: 72, hasContact: true),
+    HeartRateMeasurement(beatsPerMinute: 300, hasContact: false),
+    HeartRateMeasurement(beatsPerMinute: 255),
+    HeartRateMeasurement(beatsPerMinute: 256),
+  ])
+  func roundTrips(measurement: HeartRateMeasurement) {
+    #expect(HeartRateMeasurement(measurement.data) == measurement)
+  }
 }

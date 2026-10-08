@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// A workout to pick: its profile coloured by zone, so workouts can be told apart by shape and

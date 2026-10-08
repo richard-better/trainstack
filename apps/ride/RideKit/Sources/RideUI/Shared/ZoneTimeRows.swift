@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// Time in each zone, as a bar, a percentage and a duration per zone.
