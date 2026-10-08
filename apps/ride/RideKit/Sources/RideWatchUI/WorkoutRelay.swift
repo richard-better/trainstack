@@ -56,6 +56,16 @@ public final class WorkoutRelay {
     #endif
   }
 
+  #if DEBUG
+    /// A workout with no session behind it, for a ride played in a debug build.
+    func simulateWorkout() {
+      workout = WatchWorkout(startDate: .now, startedOnPhone: true)
+      isPhoneConnected = true
+    }
+
+    func simulateHeartRate(_ bpm: Int?) { heartRate = bpm }
+  #endif
+
   private func reset() {
     workout = nil
     heartRate = nil
@@ -120,7 +130,11 @@ public final class WorkoutRelay {
 
     /// Ends the workout. It is saved to Health once the session has stopped.
     public func end() {
-      session?.end()
+      if let session {
+        session.end()
+      } else {
+        reset()
+      }
     }
 
     private func attach(_ session: HKWorkoutSession, builder: HKLiveWorkoutBuilder) {

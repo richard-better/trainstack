@@ -19,9 +19,7 @@
             .tracking(-1)
             .padding(.top, 4)
           if !isLuminanceReduced {
-            ProgressView(value: interval.progress)
-              .progressViewStyle(.linear)
-              .tint(interval.zone.color)
+            IntervalProgress(progress: interval.progress, color: interval.zone.color)
           }
           power(in: interval)
             .padding(.top, isLuminanceReduced ? 16 : 8)
@@ -42,7 +40,7 @@
       .monospacedDigit()
       .foregroundStyle(isLuminanceReduced ? .secondary : .primary)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .navigationTitle {
+      .screenTitle {
         IntervalTitle(glance: glance)
       }
     }
@@ -95,6 +93,26 @@
         }
         .accessibilityElement(children: .combine)
       }
+    }
+  }
+
+  /// How much of the interval has been ridden, as a thin bar.
+  struct IntervalProgress: View {
+    let progress: Double
+    let color: Color
+
+    var body: some View {
+      Capsule()
+        .fill(.quaternary)
+        .overlay(alignment: .leading) {
+          GeometryReader { proxy in
+            Capsule().fill(color).frame(width: proxy.size.width * progress)
+          }
+        }
+        .frame(height: 4)
+        .accessibilityElement()
+        .accessibilityLabel("Interval progress")
+        .accessibilityValue(progress.formatted(.percent.precision(.fractionLength(0))))
     }
   }
 

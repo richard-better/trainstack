@@ -30,7 +30,7 @@
         .frame(maxWidth: .infinity)
       }
       .monospacedDigit()
-      .navigationTitle {
+      .screenTitle {
         Text("Ride").foregroundStyle(.yellow)
       }
     }

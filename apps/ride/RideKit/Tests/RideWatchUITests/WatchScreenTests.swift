@@ -2,7 +2,7 @@ import Foundation
 import RideLink
 import Testing
 
-@testable import RideWatch
+@testable import RideWatchUI
 
 struct WatchScreenTests {
   private let start = Date(timeIntervalSinceReferenceDate: 0)

@@ -34,7 +34,7 @@
       }
       .monospacedDigit()
       .frame(maxWidth: .infinity, alignment: .leading)
-      .navigationTitle {
+      .screenTitle {
         Text("Heart Rate").foregroundStyle(.pink)
       }
     }

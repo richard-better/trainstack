@@ -2,7 +2,7 @@ import Foundation
 import RideLink
 import Testing
 
-@testable import RideWatch
+@testable import RideWatchUI
 
 struct WorkoutRelayTests {
   private func glance(remaining: Double) -> RideGlance {

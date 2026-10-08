@@ -29,6 +29,10 @@
             .tag(Page.controls)
             NavigationStack {
               ScreenView(screen: screen, relay: relay)
+                #if DEBUG
+                  .environment(
+                    \.isLuminanceReduced, isLuminanceReduced || WorkoutRelay.showsAlwaysOn)
+                #endif
             }
             .tag(Page.ride)
           }
@@ -37,9 +41,15 @@
       }
       .fontDesign(.rounded)
       .onChange(of: relay.workout == nil) { page = .ride }
-      #if os(watchOS)
-        .task { await relay.requestAuthorization() }
-      #endif
+      .task {
+        #if DEBUG
+          if let ride = WorkoutRelay.launchRide {
+            relay.startLaunchRide(ride)
+            return
+          }
+        #endif
+        await relay.requestAuthorization()
+      }
     }
   }
 

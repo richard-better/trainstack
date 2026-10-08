@@ -32,7 +32,7 @@
       }
       .monospacedDigit()
       .frame(maxWidth: .infinity)
-      .navigationTitle {
+      .screenTitle {
         IntervalTitle(glance: glance)
       }
     }
