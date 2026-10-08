@@ -69,8 +69,8 @@ extension WorkoutTemplate {
       + ramp(.coolDown, sections.suffix(coolDown))
   }
 
-  /// The longest run of steps from `start` that repeats at least twice, and how many steps it
-  /// covers. The last repeat may leave out steps at its end.
+  /// The longest run of steps from `start` that repeats at least twice in full, and how many
+  /// steps it covers. One more repeat after those may leave out steps at its end.
   private func repeats(at start: Int) -> (WorkoutSection, Int)? {
     var best: (section: WorkoutSection, length: Int)?
     let remaining = steps.count - start
@@ -93,7 +93,7 @@ extension WorkoutTemplate {
         } ?? 0
       let total = count + (skipped > 0 ? 1 : 0)
       let length = count * size + (skipped > 0 ? size - skipped : 0)
-      guard total >= 2, length > (best?.length ?? 0) else { continue }
+      guard count >= 2, length > (best?.length ?? 0) else { continue }
       best = (
         WorkoutSection(kind: .repeats(total), steps: Array(block), skippedInLastRepeat: skipped),
         length

@@ -26,6 +26,13 @@ struct WorkoutSectionTests {
     #expect(sections.map(\.kind) == [.warmUp, .effort, .recovery, .repeats(4), .coolDown])
   }
 
+  @Test func needsTwoFullRepeatsToMakeASet() throws {
+    // Three blocks at rising targets, with the same recovery between them.
+    let sections = try #require(WorkoutTemplate.named("Threshold waves 3×12")).sections
+    #expect(
+      sections.map(\.kind) == [.warmUp, .effort, .recovery, .effort, .recovery, .effort, .coolDown])
+  }
+
   @Test func leavesAnEasyWorkoutAsItsSteps() throws {
     let template = try #require(WorkoutTemplate.named("Long endurance 90"))
     #expect(template.sections.map(\.kind) == [.effort, .effort, .effort])
