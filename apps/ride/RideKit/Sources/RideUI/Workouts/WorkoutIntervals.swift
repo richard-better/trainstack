@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// A workout's sections as rows: the warm-up and cool-down as one ramp each, and each step of

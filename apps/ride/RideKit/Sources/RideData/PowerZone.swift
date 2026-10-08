@@ -2,7 +2,7 @@ import Foundation
 
 /// The six classic power bands, as fractions of FTP. Workouts are described by them, since a
 /// workout's steps are set as a share of FTP rather than in a rider's own zones.
-public enum PowerZone: Int, CaseIterable, Sendable {
+public enum PowerZone: Int, CaseIterable, Codable, Sendable {
   case recovery, endurance, tempo, threshold, vo2Max, anaerobic
 
   public var name: String {

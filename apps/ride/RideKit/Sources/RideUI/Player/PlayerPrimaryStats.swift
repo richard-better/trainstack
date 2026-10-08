@@ -29,7 +29,10 @@ struct PlayerPrimaryStats: View {
     let cadence = BigStat(value: session.latest.cadence.map(String.init) ?? "—", unit: "rpm") {
       Text("Cadence")
     }
-    let heartRate = BigStat(value: session.latest.heartRate.map(String.init) ?? "—", unit: "bpm") {
+    let heartRate = BigStat(
+      value: session.latest.heartRate.map(String.init) ?? "—", unit: "bpm",
+      detail: session.latest.heartRate == nil ? "" : session.latest.heartRateSource?.name ?? ""
+    ) {
       LegendSwatch(title: "Heart rate", color: .red, height: 2)
     }
     ViewThatFits(in: .horizontal) {

@@ -1,0 +1,97 @@
+{
+  "fill": {
+    "linear-gradient": ["gray:0.30000,1.00000", "gray:0.05000,1.00000"],
+    "orientation": {
+      "start": {
+        "x": 0.5,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.5,
+        "y": 0.7
+      }
+    }
+  },
+  "groups": [
+    {
+      "blend-mode": "normal",
+      "blur-material": 1,
+      "hidden": false,
+      "layers": [
+        {
+          "glass": true,
+          "image-name": "trainingstack-logo-top.svg",
+          "name": "trainingstack-logo-top",
+          "position": {
+            "scale": 0.4,
+            "translation-in-points": [0, 0]
+          }
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": true,
+        "value": 0.5
+      }
+    },
+    {
+      "blend-mode": "normal",
+      "blur-material": 1,
+      "hidden": false,
+      "layers": [
+        {
+          "image-name": "trainingstack-logo-middle.svg",
+          "name": "trainingstack-logo-middle",
+          "position": {
+            "scale": 0.4,
+            "translation-in-points": [0, 0]
+          }
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": true,
+        "value": 0.5
+      }
+    },
+    {
+      "blend-mode": "normal",
+      "blur-material": 1,
+      "hidden": false,
+      "layers": [
+        {
+          "image-name": "trainingstack-logo-bottom.svg",
+          "name": "trainingstack-logo-bottom",
+          "position": {
+            "scale": 0.4,
+            "translation-in-points": [0, 0]
+          }
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": true,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": ["watchOS"],
+    "squares": "shared"
+  }
+}

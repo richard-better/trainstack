@@ -27,6 +27,9 @@ final class RiderSettingsStore {
   /// The FTP an indoor ride's targets are set from today: cycling's own, or else Default's.
   var ftp: Int? { current.value(of: .ftp, in: .sport(.cycling)) }
 
+  /// The heart rate zones an indoor ride is shown in today.
+  var heartRateZones: ZoneSet? { current.zones(for: .heartRate, in: .cycling) }
+
   var historyEntries: [ZoneHistory.Entry] { settings.history.entries }
 
   // MARK: Activities

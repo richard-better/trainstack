@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// Time in each zone as one bar, with a legend of how many minutes each gets.

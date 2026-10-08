@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// A bar of the zones side by side, each as wide as the values it covers.

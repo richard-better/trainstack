@@ -57,16 +57,7 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
 
 extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
   func centralManagerDidUpdateState(_ central: CBCentralManager) {
-    let availability: BluetoothAvailability
-    switch central.state {
-    case .poweredOn: availability = .ready
-    case .poweredOff: availability = .poweredOff
-    case .unauthorized: availability = .unauthorized
-    case .unsupported: availability = .unsupported
-    case .resetting: availability = .resetting
-    case .unknown: availability = .unknown
-    @unknown default: availability = .unknown
-    }
+    let availability = BluetoothAvailability(central.state)
     // Peripherals are invalid once Bluetooth goes down, and must be retrieved again.
     if availability != .ready { peripherals.removeAll() }
     onAvailability?(availability)

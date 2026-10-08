@@ -16,7 +16,8 @@ public struct SimulatedTrainer: Sendable {
   {
     if session.isPaused {
       return TrainerReading(
-        power: 0, cadence: 0, heartRate: Int(drift(by: duration, to: 85)), speed: 0)
+        power: 0, cadence: 0, heartRate: Int(drift(by: duration, to: 85)),
+        heartRateSource: .simulated, speed: 0)
     }
     let effort =
       switch session.mode {
@@ -31,7 +32,8 @@ public struct SimulatedTrainer: Sendable {
     let heartRate = drift(by: duration, to: 70 + effort * 0.45)
     return TrainerReading(
       power: Int(power.rounded()), cadence: Int((88 + (next() - 0.5) * 6).rounded()),
-      heartRate: Int(heartRate.rounded()), speed: Self.speed(power: power))
+      heartRate: Int(heartRate.rounded()), heartRateSource: .simulated,
+      speed: Self.speed(power: power))
   }
 
   /// Flat-road speed in metres per second, mostly fighting air resistance.

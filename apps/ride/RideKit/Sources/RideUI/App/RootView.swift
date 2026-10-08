@@ -38,6 +38,7 @@ public struct RootView: View {
     }
     .modifier(PlayerPresentation(launcher: launcher, namespace: player))
     .environment(settings)
+    .environment(launcher.heartRateSensor)
     .environment(launcher)
     .environment(devices)
     .task { devices.connectPaired() }
@@ -45,7 +46,9 @@ public struct RootView: View {
       if destination != .settings { appDestination = destination }
     }
     #if DEBUG
-      .task { launcher.startLaunchRide(ftp: settings.ftp) }
+      .task {
+        launcher.startLaunchRide(ftp: settings.ftp, heartRateZones: settings.heartRateZones)
+      }
     #endif
   }
 

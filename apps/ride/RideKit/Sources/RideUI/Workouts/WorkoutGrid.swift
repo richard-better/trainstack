@@ -15,7 +15,9 @@ struct WorkoutGrid: View {
           WorkoutCard(
             template: template, isSelected: template.id == state.selection,
             select: { state.selection = template.id },
-            start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
+            start: settings.ftp.map { ftp in
+              { launcher.start(template, ftp: ftp, heartRateZones: settings.heartRateZones) }
+            })
         }
       }
       .padding(Design.wideContentMargin)

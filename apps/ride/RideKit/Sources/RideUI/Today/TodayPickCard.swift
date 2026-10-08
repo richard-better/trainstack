@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// The featured suggestion: its kind of day, profile, name and summary, which open the
