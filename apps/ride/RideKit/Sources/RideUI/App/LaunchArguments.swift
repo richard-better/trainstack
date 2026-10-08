@@ -15,13 +15,14 @@ extension RideLauncher {
   /// Debug builds started with `-sample-rides` or `-simulated-trainer` ride with a pretend
   /// trainer, so the player can be tried without hardware.
   static func launchLauncher() -> RideLauncher {
+    let devices = BluetoothDevices.launchDevices()
     #if DEBUG
       let arguments = CommandLine.arguments
       if arguments.contains("-sample-rides") || arguments.contains("-simulated-trainer") {
-        return RideLauncher(simulated: true)
+        return RideLauncher(simulated: true, devices: devices)
       }
     #endif
-    return RideLauncher()
+    return RideLauncher(devices: devices)
   }
 
   #if DEBUG

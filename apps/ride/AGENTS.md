@@ -22,7 +22,7 @@ The watch runs a HealthKit workout session mirrored to the iPhone: it sends hear
 the phone sends back a `RideGlance` each second. The iPhone passes watch heart rate on as a
 standard Bluetooth heart rate sensor (`HeartRateRelay`) with a Ride service beside it. Ride
 on the Mac connects to that service during a ride (`WatchRelayReceiver`) without pairing. A
-paired chest strap (`HeartRateSensor`) wins over the watch while it keeps reporting.
+paired chest strap (`BluetoothDevices`) wins over the watch while it keeps reporting.
 
 `Ride/` is a folder-synchronized group, so adding or removing files there does not touch
 `project.pbxproj`. Edit the project file only for target-level changes (capabilities,

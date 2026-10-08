@@ -53,6 +53,8 @@ protocol BluetoothTransport: AnyObject {
   var onConnectFailure: ((UUID) -> Void)? { get set }
   /// A device reported its battery level, in percent.
   var onBattery: ((UUID, Int) -> Void)? { get set }
+  /// A heart rate strap sent a reading.
+  var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)? { get set }
   func start()
   func scan()
   func stopScan()
@@ -62,7 +64,8 @@ protocol BluetoothTransport: AnyObject {
 }
 
 /// Nearby Bluetooth devices, and the fitness devices the rider has paired: one of each kind,
-/// remembered between launches and reconnected whenever they are in range.
+/// remembered between launches and reconnected whenever they are in range. Passes on the heart
+/// rate from the paired strap.
 @MainActor
 @Observable
 public final class BluetoothDevices {
@@ -76,16 +79,30 @@ public final class BluetoothDevices {
   }
   /// Everything else in range, such as TVs, phones and headphones.
   public var otherDevices: [DiscoveredDevice] { sorted(discovered.values.filter { !$0.isFitness }) }
+  /// The latest heart rate from the connected strap in beats per minute, or nil while it sends
+  /// none, such as when it is not being worn.
+  public var heartRate: Int? {
+    guard let heartRateReading, source(of: .heartRate)?.id == heartRateReading.device else {
+      return nil
+    }
+    return heartRateReading.bpm
+  }
+  /// Called with each heart rate the strap sends, so a ride can record every beat rather than
+  /// only the latest.
+  @ObservationIgnored public var onHeartRate: ((Int) -> Void)?
 
   private var discovered: [UUID: DiscoveredDevice] = [:]
   private var connections: [UUID: ConnectionState] = [:]
   private var batteryLevels: [UUID: Int] = [:]
+  private var heartRateReading: (device: UUID, bpm: Int)?
   @ObservationIgnored private let transport: any BluetoothTransport
   @ObservationIgnored private let defaults: UserDefaults
   @ObservationIgnored private var wantsScan = false
   @ObservationIgnored private var hasStarted = false
 
   private static let pairedKey = "bluetooth.paired"
+  /// Where Ride kept its one heart rate strap before it paired a device of each kind.
+  private static let legacyHeartRateKey = "pairedHeartRateSensor"
 
   public convenience init() {
     self.init(transport: CoreBluetoothTransport(), defaults: .standard)
@@ -98,12 +115,14 @@ public final class BluetoothDevices {
       defaults.data(forKey: Self.pairedKey).flatMap {
         try? JSONDecoder().decode([DiscoveredDevice].self, from: $0)
       } ?? []
+    adoptLegacyHeartRateSensor()
     transport.onAvailability = { [weak self] state in self?.updateAvailability(state) }
     transport.onDiscovery = { [weak self] device in self?.receive(device) }
     transport.onConnect = { [weak self] id in self?.didConnect(id) }
     transport.onDisconnect = { [weak self] id in self?.didDisconnect(id) }
     transport.onConnectFailure = { [weak self] id in self?.didFailToConnect(id) }
     transport.onBattery = { [weak self] id, level in self?.batteryLevels[id] = level }
+    transport.onHeartRate = { [weak self] id, measurement in self?.receive(measurement, from: id) }
   }
 
   public func connectionState(of id: UUID) -> ConnectionState {
@@ -160,6 +179,7 @@ public final class BluetoothDevices {
     save()
     connections[id] = nil
     batteryLevels[id] = nil
+    if heartRateReading?.device == id { heartRateReading = nil }
     transport.disconnect(id)
   }
 
@@ -201,6 +221,21 @@ public final class BluetoothDevices {
     defaults.set(try? JSONEncoder().encode(paired), forKey: Self.pairedKey)
   }
 
+  /// Pairs the strap saved under the old key, so the rider need not pair it again.
+  private func adoptLegacyHeartRateSensor() {
+    struct LegacySensor: Decodable {
+      let id: UUID
+      let name: String
+    }
+    guard let data = defaults.data(forKey: Self.legacyHeartRateKey) else { return }
+    defaults.removeObject(forKey: Self.legacyHeartRateKey)
+    guard paired(.heartRate) == nil,
+      let sensor = try? JSONDecoder().decode(LegacySensor.self, from: data)
+    else { return }
+    paired.append(DiscoveredDevice(id: sensor.id, name: sensor.name, services: [.heartRate]))
+    save()
+  }
+
   private func updateAvailability(_ state: BluetoothAvailability) {
     availability = state
     if state == .ready {
@@ -213,6 +248,7 @@ public final class BluetoothDevices {
       discovered.removeAll()
       connections.removeAll()
       batteryLevels.removeAll()
+      heartRateReading = nil
       transport.stopScan()
     }
   }
@@ -229,6 +265,7 @@ public final class BluetoothDevices {
   /// reconnected as soon as it is back.
   private func didDisconnect(_ id: UUID) {
     batteryLevels[id] = nil
+    if heartRateReading?.device == id { heartRateReading = nil }
     guard isPaired(id) else { return }
     connections[id] = .disconnected
     connect(id)
@@ -237,6 +274,13 @@ public final class BluetoothDevices {
   private func didFailToConnect(_ id: UUID) {
     guard isPaired(id) else { return }
     connections[id] = .disconnected
+  }
+
+  private func receive(_ measurement: HeartRateMeasurement, from id: UUID) {
+    guard source(of: .heartRate)?.id == id else { return }
+    let bpm = measurement.reading
+    heartRateReading = bpm.map { (id, $0) }
+    if let bpm { onHeartRate?(bpm) }
   }
 
   private func sorted(_ devices: [DiscoveredDevice]) -> [DiscoveredDevice] {

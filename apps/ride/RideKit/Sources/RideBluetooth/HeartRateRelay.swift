@@ -49,18 +49,18 @@ public final class HeartRateRelay: NSObject {
   private func advertise(_ manager: CBPeripheralManager) {
     guard wanted, manager.state == .poweredOn, measurement == nil else { return }
     let measurement = CBMutableCharacteristic(
-      type: CoreBluetoothHeartRate.measurement, properties: .notify, value: nil, permissions: [])
+      type: GATT.heartRateMeasurement, properties: .notify, value: nil, permissions: [])
     let location = CBMutableCharacteristic(
       type: Self.bodySensorLocation, properties: .read, value: Data([Self.wrist]),
       permissions: .readable)
-    let heartRate = CBMutableService(type: CoreBluetoothHeartRate.service, primary: true)
+    let heartRate = CBMutableService(type: GATT.heartRate, primary: true)
     heartRate.characteristics = [measurement, location]
     manager.add(heartRate)
     manager.add(CBMutableService(type: Self.service, primary: true))
     self.measurement = measurement
     manager.startAdvertising([
       CBAdvertisementDataLocalNameKey: "Ride",
-      CBAdvertisementDataServiceUUIDsKey: [CoreBluetoothHeartRate.service, Self.service],
+      CBAdvertisementDataServiceUUIDsKey: [GATT.heartRate, Self.service],
     ])
   }
 }

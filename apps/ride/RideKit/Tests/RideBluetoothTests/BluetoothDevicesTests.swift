@@ -184,6 +184,61 @@ struct BluetoothDevicesTests {
     #expect(transport.connects == [strap.id, strap.id])
   }
 
+  @Test func publishesTheConnectedStrapsHeartRate() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
+    devices.pair(strap)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 120))
+    #expect(devices.heartRate == nil)
+    transport.onConnect?(strap.id)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    #expect(devices.heartRate == 128)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 131, hasContact: false))
+    #expect(devices.heartRate == nil)
+  }
+
+  @Test func passesOnEachHeartRateFromThePairedStrapOnly() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
+    devices.pair(strap)
+    transport.onConnect?(strap.id)
+    var readings: [Int] = []
+    devices.onHeartRate = { readings.append($0) }
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128, hasContact: false))
+    transport.onHeartRate?(UUID(), .init(beatsPerMinute: 90))
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 130))
+    #expect(readings == [128, 130])
+  }
+
+  @Test func dropsTheHeartRateWhenTheStrapGoes() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
+    devices.pair(strap)
+    transport.onConnect?(strap.id)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    transport.onDisconnect?(strap.id)
+    #expect(devices.heartRate == nil)
+    transport.onConnect?(strap.id)
+    #expect(devices.heartRate == nil)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    devices.forget(strap.id)
+    #expect(devices.heartRate == nil)
+  }
+
+  @Test func adoptsTheStrapPairedBeforeDevicesOfEachKind() throws {
+    let defaults = freshDefaults()
+    let id = UUID()
+    defaults.set(
+      try JSONEncoder().encode(["id": id.uuidString, "name": "Polar H10"]),
+      forKey: "pairedHeartRateSensor")
+    let devices = BluetoothDevices(transport: FakeTransport(), defaults: defaults)
+    #expect(devices.paired == [.init(id: id, name: "Polar H10", services: [.heartRate])])
+    #expect(defaults.data(forKey: "pairedHeartRateSensor") == nil)
+    let relaunched = BluetoothDevices(transport: FakeTransport(), defaults: defaults)
+    #expect(relaunched.paired == devices.paired)
+  }
+
   private func scanningDevices(
     defaults: UserDefaults = freshDefaults()
   ) -> (BluetoothDevices, FakeTransport) {
@@ -211,6 +266,7 @@ private final class FakeTransport: BluetoothTransport {
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
   var onBattery: ((UUID, Int) -> Void)?
+  var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
   var started = false
   var scans = 0
   var stops = 0
