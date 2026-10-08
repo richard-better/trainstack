@@ -1,36 +1,43 @@
 import RideBluetooth
 import SwiftUI
 
-/// One kind of device as an icon: with a green dot when connected, or orange with an orange
-/// dot when it is missing. Opens the Devices sheet.
+/// The rider's devices as a row of status icons, which opens the Devices sheet: always a
+/// trainer and a heart rate strap, plus a power meter or cadence sensor once one is paired.
+/// One button, so the row stays together in a toolbar rather than overflowing icon by icon.
 struct DeviceStatusButton: View {
-  let kind: FitnessService
-  /// The paired device of this kind, if any.
-  let device: DiscoveredDevice?
-  let isConnected: Bool
   let action: () -> Void
+  @Environment(BluetoothDevices.self) private var devices
+  @ScaledMetric private var spacing = 20.0
+
+  private static let kinds: [FitnessService] = [.trainer, .power, .heartRate, .speedAndCadence]
+  private static let alwaysShown: Set<FitnessService> = [.trainer, .heartRate]
 
   var body: some View {
-    // A custom label rather than a `Label`, which a toolbar would reduce to a plain symbol
-    // and lose the status.
+    // A custom label rather than a `Label`, which a toolbar would reduce to a plain symbol.
     Button(action: action) {
-      Image(systemName: kind.symbol)
-        .foregroundStyle(isConnected ? Color.primary : .orange)
-        .overlay(alignment: .topTrailing) {
-          Circle()
-            .fill(isConnected ? Color.green : .orange)
-            .frame(width: 8, height: 8)
-            .offset(x: 4, y: -3)
+      HStack(spacing: spacing) {
+        ForEach(kinds, id: \.self) { kind in
+          DeviceStatusIcon(kind: kind, isConnected: isConnected(kind))
         }
+      }
     }
-    .accessibilityLabel(kind.name)
-    .accessibilityValue(status)
+    .accessibilityLabel("Devices")
+    .accessibilityValue(kinds.map(status).joined(separator: ", "))
     .accessibilityHint("Shows your devices.")
-    .help("\(kind.name): \(status)")
   }
 
-  private var status: String {
-    guard let device else { return "Not paired" }
-    return isConnected ? "\(device.displayName), connected" : "\(device.displayName), not connected"
+  private var kinds: [FitnessService] {
+    Self.kinds.filter { Self.alwaysShown.contains($0) || devices.paired($0) != nil }
+  }
+
+  private func isConnected(_ kind: FitnessService) -> Bool {
+    guard let device = devices.paired(kind) else { return false }
+    return devices.connectionState(of: device.id) == .connected
+  }
+
+  private func status(_ kind: FitnessService) -> String {
+    guard let device = devices.paired(kind) else { return "\(kind.name) not paired" }
+    let state = isConnected(kind) ? "connected" : "not connected"
+    return "\(kind.name) \(device.displayName) \(state)"
   }
 }
