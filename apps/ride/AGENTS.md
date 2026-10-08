@@ -11,8 +11,9 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   for the Apple Watch app, which the iOS app embeds.
 - `RideKit/` - a local Swift package where the app's code lives, one module per concern.
   The app links the `RideUI` product. `RideData` decodes FIT files into a `RideRecording`
-  and analyses it (zones, power curve) with no UI dependency. `RideUI` has a folder per
-  feature (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`) and
+  and analyses it (zones, power curve) with no UI dependency. `RideBluetooth` finds nearby
+  devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
+  (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`) and
   `Shared` for what several use, with one type per file. `RideWatchUI` is the watch app,
   `RideLink` what the phone and watch send each other, and `RideStyle` the zone colours both
   apps share.
@@ -21,7 +22,7 @@ The watch runs a HealthKit workout session mirrored to the iPhone: it sends hear
 the phone sends back a `RideGlance` each second. The iPhone passes watch heart rate on as a
 standard Bluetooth heart rate sensor (`HeartRateRelay`) with a Ride service beside it. Ride
 on the Mac connects to that service during a ride (`WatchRelayReceiver`) without pairing. A
-paired chest strap (`HeartRateSensor`) wins over the watch while it keeps reporting.
+paired chest strap (`BluetoothDevices`) wins over the watch while it keeps reporting.
 
 `Ride/` is a folder-synchronized group, so adding or removing files there does not touch
 `project.pbxproj`. Edit the project file only for target-level changes (capabilities,

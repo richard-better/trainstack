@@ -53,7 +53,7 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBCentralManagerDelegate {
   }
 
   func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-    peripheral.discoverServices([CoreBluetoothHeartRate.service])
+    peripheral.discoverServices([GATT.heartRate])
   }
 
   func centralManager(
@@ -75,8 +75,8 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBCentralManagerDelegate {
 
 extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
   func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
-    for service in peripheral.services ?? [] where service.uuid == CoreBluetoothHeartRate.service {
-      peripheral.discoverCharacteristics([CoreBluetoothHeartRate.measurement], for: service)
+    for service in peripheral.services ?? [] where service.uuid == GATT.heartRate {
+      peripheral.discoverCharacteristics([GATT.heartRateMeasurement], for: service)
     }
   }
 
@@ -85,7 +85,7 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
     error: (any Error)?
   ) {
     for characteristic in service.characteristics ?? []
-    where characteristic.uuid == CoreBluetoothHeartRate.measurement {
+    where characteristic.uuid == GATT.heartRateMeasurement {
       peripheral.setNotifyValue(true, for: characteristic)
     }
   }
@@ -94,7 +94,7 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
     _ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic,
     error: (any Error)?
   ) {
-    guard characteristic.uuid == CoreBluetoothHeartRate.measurement,
+    guard characteristic.uuid == GATT.heartRateMeasurement,
       let data = characteristic.value, let measurement = HeartRateMeasurement(data)
     else { return }
     onMeasurement?(peripheral.identifier, measurement)

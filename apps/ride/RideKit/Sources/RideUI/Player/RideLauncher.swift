@@ -4,7 +4,7 @@ import RideData
 
 /// Starts and ends rides. Held by the root view, which shows the player while a ride is on.
 ///
-/// A ride takes heart rate from the rider's paired sensor, and from an Apple Watch: on iPhone
+/// A ride takes heart rate from the rider's paired strap, and from an Apple Watch: on iPhone
 /// directly, as the watch starts its workout with the ride, and on the Mac through an iPhone
 /// relaying it.
 @Observable
@@ -13,8 +13,8 @@ final class RideLauncher {
   /// Whether the player is showing. On iOS the rider can minimise it to the tab bar while the
   /// ride carries on.
   var isPlayerPresented = false
-  /// The rider's heart rate sensor, which stays connected between rides.
-  let heartRateSensor: HeartRateSensor
+  /// The rider's devices, which stay connected between rides.
+  let devices: BluetoothDevices
   @ObservationIgnored private let simulated: Bool
   @ObservationIgnored private let heartRate = HeartRateFeed()
   #if os(macOS)
@@ -25,10 +25,10 @@ final class RideLauncher {
     }()
   #endif
 
-  init(simulated: Bool = false, heartRateSensor: HeartRateSensor = HeartRateSensor()) {
+  init(simulated: Bool = false, devices: BluetoothDevices = BluetoothDevices()) {
     self.simulated = simulated
-    self.heartRateSensor = heartRateSensor
-    heartRateSensor.onReading = { [heartRate] bpm in heartRate.record(bpm, from: .chestStrap) }
+    self.devices = devices
+    devices.onHeartRate = { [heartRate] bpm in heartRate.record(bpm, from: .chestStrap) }
   }
 
   /// Starts `template` with targets from `ftp`, unless a ride is already on.

@@ -9,7 +9,7 @@ struct WorkoutFilterBar: View {
   let count: Int
 
   /// The zones the library has workouts for, easiest first.
-  private static let zones = PowerZone.allCases.filter { zone in
+  static let zones = PowerZone.allCases.filter { zone in
     WorkoutTemplate.library.contains { $0.category == zone }
   }
 

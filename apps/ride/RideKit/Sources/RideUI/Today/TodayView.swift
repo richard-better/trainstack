@@ -1,83 +1,55 @@
+import RideBluetooth
 import RideData
 import SwiftUI
 
 /// What to ride today: three suggestions, each a different kind of day, sized to the time the
-/// rider has.
+/// rider has. Cards side by side with room; on iPhone a featured pick and compact rows.
 struct TodayView: View {
   @Binding var state: TodayState
   let openSettings: () -> Void
-  @Environment(RideLauncher.self) private var launcher
-  @Environment(RiderSettingsStore.self) private var settings
   @AppStorage("today.minutes") private var minutes = 30
-
-  static let durations = [30, 45, 60, 75, 90, 120]
+  #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+  #endif
 
   var body: some View {
     let suggestions = TodaySuggestion.suggestions(minutes: minutes, shuffle: state.shuffle)
-    let selected =
-      suggestions.indices.contains(state.selection)
-      ? suggestions[state.selection] : suggestions.first
-    ScrollView {
-      VStack(alignment: .leading, spacing: 24) {
-        TodayHeader()
-        // The time picker at its natural width when there's room, otherwise sharing the row.
-        ViewThatFits(in: .horizontal) {
-          HStack(spacing: 10) {
-            timePicker.fixedSize()
-            shuffleButton
+    Group {
+      if isWide {
+        TodayCards(
+          suggestions: suggestions, state: $state, minutes: $minutes, openSettings: openSettings
+        )
+        .toolbar {
+          ToolbarItem(placement: .primaryAction) {
+            let selected =
+              suggestions.indices.contains(state.selection)
+              ? suggestions[state.selection] : suggestions.first
+            StartButton(
+              template: selected?.template,
+              title: selected.map { "Start \($0.template.name)" } ?? "Start"
+            )
+            .buttonStyle(.borderedProminent)
           }
-          HStack(spacing: 10) {
-            timePicker
-            shuffleButton
-          }
+          #if os(iOS)
+            .visibilityPriority(.high)
+          #endif
         }
-        .monospacedDigit()
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
-          ForEach(suggestions.enumerated(), id: \.element.id) { index, suggestion in
-            WorkoutCard(
-              template: suggestion.template, tag: suggestion.tag, profileHeight: 120,
-              isSelected: index == state.selection, select: { state.selection = index },
-              start: settings.ftp.map { ftp in
-                {
-                  launcher.start(
-                    suggestion.template, ftp: ftp, heartRateZones: settings.heartRateZones)
-                }
-              })
-          }
-        }
-        TodayFootnote(openSettings: openSettings)
+      } else {
+        TodayList(
+          suggestions: suggestions, state: $state, minutes: $minutes, openSettings: openSettings)
       }
-      .pageLayout()
     }
     .navigationTitle("Today")
-    .toolbar {
-      ToolbarItem(placement: .primaryAction) {
-        StartButton(
-          template: selected?.template,
-          title: selected.map { "Start \($0.template.name)" } ?? "Start")
-      }
-    }
+    .devicesToolbar()
   }
 
-  private var timePicker: some View {
-    Picker("Time you have", selection: $minutes) {
-      ForEach(Self.durations, id: \.self) { Text("\($0)m").tag($0) }
-    }
-    .pickerStyle(.segmented)
-    .labelsHidden()
+  private var isWide: Bool {
+    #if os(iOS)
+      sizeClass == .regular
+    #else
+      true
+    #endif
   }
-
-  private var shuffleButton: some View {
-    Button("Other suggestions", systemImage: "shuffle", action: shuffle)
-      .labelStyle(.iconOnly)
-      .buttonStyle(.glass)
-      #if os(iOS)
-        .controlSize(.large)
-      #endif
-      .help("Other suggestions")
-  }
-
-  private func shuffle() { state.shuffle += 1 }
 }
 
 #Preview {
@@ -87,5 +59,6 @@ struct TodayView: View {
   }
   .environment(RideLauncher(simulated: true))
   .environment(RiderSettingsStore.sample)
+  .environment(BluetoothDevices.sample())
   .frame(width: 900, height: 640)
 }

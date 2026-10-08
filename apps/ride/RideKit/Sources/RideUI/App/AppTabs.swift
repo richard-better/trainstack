@@ -1,4 +1,4 @@
-import RideBluetooth
+import RideData
 import SwiftUI
 
 /// The app's sections: a sidebar on macOS and iPad, a tab bar on iPhone. On iOS a ride in
@@ -10,7 +10,6 @@ struct AppTabs: View {
   @Binding var historySelection: Ride.ID?
   @Binding var settingsPath: [SettingsPage]
   let library: RideLibrary
-  let discovery: BluetoothDiscovery
   /// Where the player zooms from and back to.
   let player: Namespace.ID
   @Environment(RideLauncher.self) private var launcher
@@ -20,11 +19,13 @@ struct AppTabs: View {
       Tab("Today", systemImage: "calendar", value: .today) {
         NavigationStack {
           TodayView(state: $today, openSettings: openSettings)
+            .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
         }
       }
       Tab("Workouts", systemImage: "chart.bar", value: .workouts) {
         NavigationStack {
           WorkoutsView(state: $workouts)
+            .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
         }
       }
       Tab("History", systemImage: "clock", value: .history) {
@@ -36,7 +37,7 @@ struct AppTabs: View {
         }
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
-        SettingsList(discovery: discovery, path: $settingsPath)
+        SettingsList(path: $settingsPath)
       }
     }
     .tabViewStyle(.sidebarAdaptable)

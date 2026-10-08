@@ -1,59 +1,74 @@
 import RideBluetooth
 import SwiftUI
 
+/// The rider's paired devices and what each reading comes from, then the fitness devices in
+/// range to pair. Searches for devices while on screen.
 struct DevicesView: View {
-  let discovery: BluetoothDiscovery
-  @Environment(HeartRateSensor.self) private var sensor
+  @Environment(BluetoothDevices.self) private var devices
+  @Environment(RideLauncher.self) private var launcher
+  @Environment(\.scenePhase) private var scenePhase
   @State private var showAll = false
+  @State private var isOnScreen = false
 
   var body: some View {
     Group {
-      if discovery.availability == .ready {
+      if devices.availability == .ready {
         deviceList
       } else {
         bluetoothStatus
       }
     }
     .navigationTitle("Devices")
+    .onAppear { isOnScreen = true }
+    .onDisappear { isOnScreen = false }
+    .onChange(of: isSearching, initial: true) { _, isSearching in
+      if isSearching {
+        devices.startScanning()
+      } else {
+        devices.stopScanning()
+      }
+    }
+  }
+
+  /// Whether the page can be seen. On iOS the player can cover it without it disappearing.
+  private var isSearching: Bool {
+    guard isOnScreen, scenePhase == .active else { return false }
+    #if os(iOS)
+      return !launcher.isPlayerPresented
+    #else
+      return true
+    #endif
   }
 
   private var deviceList: some View {
     Form {
-      if let paired = sensor.paired {
-        Section("Heart rate sensor") {
-          PairedSensorRow(sensor: sensor, paired: paired)
-          if sensor.connection == .failed {
-            Button("Try Again", systemImage: "arrow.clockwise", action: sensor.reconnect)
+      if !devices.paired.isEmpty {
+        Section("My devices") {
+          ForEach(devices.paired) { device in
+            PairedDeviceRow(device: device)
           }
-          Button(
-            "Forget Sensor", systemImage: "xmark.circle", role: .destructive, action: sensor.forget)
+        }
+        Section("Data sources") {
+          ForEach(RideMetric.allCases, id: \.self) { metric in
+            DataSourceRow(metric: metric)
+          }
         }
       }
 
       Section {
-        ForEach(nearbyDevices) { device in
-          if device.services.contains(.heartRate) {
-            LabeledContent {
-              Button("Connect") { sensor.pair(device) }
-                .accessibilityLabel("Connect to \(device.displayName)")
-            } label: {
-              DeviceRow(device: device)
-            }
-          } else {
-            DeviceRow(device: device)
-          }
+        ForEach(devices.fitnessDevices) { device in
+          NearbyDeviceRow(device: device)
         }
-        if nearbyDevices.isEmpty {
+        if devices.fitnessDevices.isEmpty {
           Text("Wake your trainer or sensor and keep it nearby.")
             .foregroundStyle(.secondary)
         }
       } header: {
-        HStack(spacing: 8) {
-          Text("Nearby fitness devices")
-          if discovery.isScanning {
-            ProgressView()
-              .controlSize(.mini)
-              .accessibilityLabel("Scanning")
+        HStack {
+          Text("Nearby")
+          Spacer()
+          if devices.isScanning {
+            Text("Searching…").fontWeight(.regular)
           }
         }
       }
@@ -63,7 +78,7 @@ struct DevicesView: View {
           .accessibilityHint(
             "Include nearby Bluetooth devices that do not advertise a fitness service.")
         if showAll {
-          ForEach(discovery.otherDevices) { device in
+          ForEach(devices.otherDevices) { device in
             DeviceRow(device: device)
           }
         }
@@ -74,13 +89,8 @@ struct DevicesView: View {
     .formStyle(.grouped)
   }
 
-  /// Fitness devices in range, apart from the paired sensor, which has its own section.
-  private var nearbyDevices: [DiscoveredDevice] {
-    discovery.fitnessDevices.filter { $0.id != sensor.paired?.id }
-  }
-
   private var otherDevicesSummary: LocalizedStringKey {
-    let count = discovery.otherDevices.count
+    let count = devices.otherDevices.count
     if count == 0 { return "No other Bluetooth devices nearby" }
     return showAll
       ? "^[\(count) other Bluetooth device](inflect: true) shown"
@@ -96,7 +106,7 @@ struct DevicesView: View {
   }
 
   private var statusTitle: String {
-    switch discovery.availability {
+    switch devices.availability {
     case .unknown: "Starting Bluetooth"
     case .resetting: "Restarting Bluetooth"
     case .poweredOff: "Bluetooth is off"
@@ -107,7 +117,7 @@ struct DevicesView: View {
   }
 
   private var statusDescription: String {
-    switch discovery.availability {
+    switch devices.availability {
     case .unknown, .resetting: "Devices will appear when Bluetooth is ready."
     case .poweredOff: "Turn on Bluetooth in Settings to find nearby devices."
     case .unauthorized: "Allow Ride to use Bluetooth in Settings > Privacy & Security > Bluetooth."
@@ -119,7 +129,8 @@ struct DevicesView: View {
 
 #Preview {
   NavigationStack {
-    DevicesView(discovery: BluetoothDiscovery())
+    DevicesView()
   }
-  .environment(HeartRateSensor())
+  .environment(BluetoothDevices())
+  .environment(RideLauncher(simulated: true))
 }
