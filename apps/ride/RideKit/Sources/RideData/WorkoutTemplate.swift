@@ -77,7 +77,7 @@ public struct WorkoutTemplate: Identifiable, Hashable, Sendable {
   }
 
   /// Steps below this share of FTP are recovery and endurance, which can stretch or shrink.
-  static let easyIntensity = 0.75
+  public static let easyIntensity = 0.75
 }
 
 extension WorkoutTemplate {

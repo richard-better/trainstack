@@ -1,40 +1,61 @@
+import RideBluetooth
 import RideData
 import SwiftUI
 
-/// The workout library: filters as pop-up buttons, and one Start button for the selected card.
+/// The workout library. With room, a grid of cards with filters as pop-up buttons and one
+/// Start button for the selected card. On iPhone, a list grouped by zone whose rows open each
+/// workout, where it starts.
 struct WorkoutsView: View {
   @Binding var state: WorkoutsState
-  @Environment(RideLauncher.self) private var launcher
-  @Environment(RiderSettingsStore.self) private var settings
+  #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+  #endif
 
   var body: some View {
     let shown = state.shown(in: WorkoutTemplate.library)
-    ScrollView {
-      LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
-        ForEach(shown) { template in
-          WorkoutCard(
-            template: template, isSelected: template.id == state.selection,
-            select: { state.selection = template.id },
-            start: settings.ftp.map { ftp in { launcher.start(template, ftp: ftp) } })
-        }
+    Group {
+      if isWide {
+        WorkoutGrid(state: $state, shown: shown)
+          .safeAreaBar(edge: .top) { WorkoutFilterBar(state: $state, count: shown.count) }
+          .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+              StartButton(template: shown.first { $0.id == state.selection })
+                .buttonStyle(.borderedProminent)
+            }
+            #if os(iOS)
+              .visibilityPriority(.high)
+            #endif
+          }
+      } else {
+        WorkoutList(state: $state, workouts: shown)
       }
-      .padding(Design.wideContentMargin)
     }
     .overlay {
       if shown.isEmpty {
         ContentUnavailableView.search
       }
     }
-    // The cards scroll under the filters, which sit on a soft edge rather than a rule.
-    .safeAreaBar(edge: .top) { WorkoutFilterBar(state: $state, count: shown.count) }
     .navigationTitle("Workouts")
     .devicesToolbar()
-    .searchable(text: $state.search, prompt: "Search")
-    .toolbar {
-      ToolbarItem(placement: .primaryAction) {
-        StartButton(template: shown.first { $0.id == state.selection })
-      }
-    }
+    .searchable(text: $state.search, placement: searchPlacement, prompt: "Search")
+  }
+
+  /// On iPhone the search field sits under the title, revealed by pulling the list down. Kept
+  /// always visible, it starts with the title collapsed.
+  private var searchPlacement: SearchFieldPlacement {
+    #if os(iOS)
+      isWide ? .automatic : .navigationBarDrawer
+    #else
+      .automatic
+    #endif
+  }
+
+  private var isWide: Bool {
+    #if os(iOS)
+      sizeClass == .regular
+    #else
+      true
+    #endif
   }
 }
 
@@ -45,5 +66,6 @@ struct WorkoutsView: View {
   }
   .environment(RideLauncher(simulated: true))
   .environment(RiderSettingsStore.sample)
+  .environment(BluetoothDevices.sample())
   .frame(width: 900, height: 780)
 }

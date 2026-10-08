@@ -5,7 +5,7 @@ import SwiftUI
 struct WorkoutProfile: View {
   let template: WorkoutTemplate
   /// The intensity that fills the full height. Harder steps are cut off.
-  private static let ceiling = 1.75
+  static let ceiling = 1.75
 
   var body: some View {
     Canvas { context, size in

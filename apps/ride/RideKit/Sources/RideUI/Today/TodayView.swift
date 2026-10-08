@@ -51,6 +51,7 @@ struct TodayView: View {
         StartButton(
           template: selected?.template,
           title: selected.map { "Start \($0.template.name)" } ?? "Start")
+          .buttonStyle(.borderedProminent)
       }
     }
   }
