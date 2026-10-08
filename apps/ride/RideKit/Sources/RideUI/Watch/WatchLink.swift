@@ -3,6 +3,7 @@
   import Observation
   import RideBluetooth
   import RideLink
+  import WatchConnectivity
   import os
 
   /// The iPhone's end of the Apple Watch workout: the watch measures heart rate in a workout
@@ -24,6 +25,9 @@
     @ObservationIgnored private var session: HKWorkoutSession?
     @ObservationIgnored private var delegate: SessionDelegate?
     @ObservationIgnored private let relay = HeartRateRelay()
+    /// Says whether there is a watch with Ride on it, so riders without one are never asked
+    /// for Health access.
+    @ObservationIgnored private let pairing = WatchPairing()
     @ObservationIgnored private let log = Logger(
       subsystem: "com.trainstackhq.ride", category: "watch")
 
@@ -35,12 +39,12 @@
       }
     }
 
-    /// Makes sure the link is listening for the watch. Call as the app launches.
+    /// Makes sure the link is listening for the watch. See `WatchSupport.activate()`.
     static func activate() { _ = shared }
 
     /// Opens Ride on the watch and starts its workout, unless one is already running.
     func startWorkout() {
-      guard HKHealthStore.isHealthDataAvailable(), session == nil else { return }
+      guard HKHealthStore.isHealthDataAvailable(), pairing.hasRide, session == nil else { return }
       Task {
         do {
           try await store.requestAuthorization(
@@ -95,6 +99,35 @@
         onHeartRate?(bpm)
         relay.send(bpm: bpm)
       }
+    }
+  }
+
+  /// Whether a paired watch has Ride installed, from WatchConnectivity.
+  private final class WatchPairing: NSObject, WCSessionDelegate {
+    override init() {
+      super.init()
+      guard WCSession.isSupported() else { return }
+      WCSession.default.delegate = self
+      WCSession.default.activate()
+    }
+
+    var hasRide: Bool {
+      guard WCSession.isSupported() else { return false }
+      let session = WCSession.default
+      return session.activationState == .activated && session.isPaired
+        && session.isWatchAppInstalled
+    }
+
+    nonisolated func session(
+      _ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState,
+      error: (any Error)?
+    ) {}
+
+    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
+
+    nonisolated func sessionDidDeactivate(_ session: WCSession) {
+      // A rider switching watches gets the new one.
+      session.activate()
     }
   }
 
