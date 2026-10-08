@@ -36,6 +36,17 @@ struct HeartRateSensorTests {
     #expect(sensor.heartRate == nil)
   }
 
+  @Test func passesOnEachReading() {
+    let sensor = connectedSensor()
+    var readings: [Int] = []
+    sensor.onReading = { readings.append($0) }
+    transport.onMeasurement?(strap.id, .init(beatsPerMinute: 128))
+    transport.onMeasurement?(strap.id, .init(beatsPerMinute: 128, hasContact: false))
+    transport.onMeasurement?(UUID(), .init(beatsPerMinute: 90))
+    transport.onMeasurement?(strap.id, .init(beatsPerMinute: 130))
+    #expect(readings == [128, 130])
+  }
+
   @Test func ignoresReadingsFromOtherSensors() {
     let sensor = connectedSensor()
     transport.onMeasurement?(UUID(), .init(beatsPerMinute: 90))

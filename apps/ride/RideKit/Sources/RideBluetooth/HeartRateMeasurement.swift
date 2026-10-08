@@ -27,4 +27,14 @@ struct HeartRateMeasurement: Equatable, Sendable {
 
   /// The heart rate, unless the sensor says it is not being worn.
   var reading: Int? { hasContact == false || beatsPerMinute == 0 ? nil : beatsPerMinute }
+
+  /// The characteristic's value, in the one-byte form whenever the heart rate fits, with skin
+  /// contact reported when known.
+  var data: Data {
+    var flags: UInt8 = hasContact.map { $0 ? 0b110 : 0b100 } ?? 0
+    let bpm = UInt16(clamping: beatsPerMinute)
+    guard bpm > UInt8.max else { return Data([flags, UInt8(bpm)]) }
+    flags |= 0x01
+    return Data([flags, UInt8(bpm & 0xFF), UInt8(bpm >> 8)])
+  }
 }

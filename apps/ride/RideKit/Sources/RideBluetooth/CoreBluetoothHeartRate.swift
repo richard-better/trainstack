@@ -12,8 +12,8 @@ final class CoreBluetoothHeartRate: NSObject, HeartRateTransport {
   /// The sensors being connected to. CoreBluetooth cancels a connection whose peripheral is
   /// released, so they are held here.
   private var peripherals: [UUID: CBPeripheral] = [:]
-  private static let service = CBUUID(string: FitnessService.heartRate.rawValue)
-  private static let measurement = CBUUID(string: "2A37")
+  static let service = CBUUID(string: FitnessService.heartRate.rawValue)
+  static let measurement = CBUUID(string: "2A37")
 
   func start() {
     if central == nil {

@@ -40,6 +40,9 @@ public final class HeartRateSensor {
   public private(set) var connection = SensorConnection.waitingForBluetooth
   /// The latest heart rate in beats per minute, or nil when there is no live reading.
   public private(set) var heartRate: Int?
+  /// Called with each heart rate the sensor sends, so a ride can record every beat rather than
+  /// only the latest.
+  @ObservationIgnored public var onReading: ((Int) -> Void)?
 
   @ObservationIgnored private let transport: any HeartRateTransport
   @ObservationIgnored private let defaults: UserDefaults
@@ -122,5 +125,6 @@ public final class HeartRateSensor {
   private func receive(_ measurement: HeartRateMeasurement, from id: UUID) {
     guard id == paired?.id, connection == .connected else { return }
     heartRate = measurement.reading
+    if let heartRate { onReading?(heartRate) }
   }
 }
