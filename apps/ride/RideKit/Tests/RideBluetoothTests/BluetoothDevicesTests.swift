@@ -172,6 +172,58 @@ struct BluetoothDevicesTests {
     #expect(devices.source(of: .power) == meter)
   }
 
+  @Test func listsEverySensorForAMetricWhetherOrNotConnected() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    devices.pair(trainer)
+    devices.pair(meter)
+    transport.onConnect?(trainer.id)
+    #expect(devices.sensors(of: .power) == [meter, trainer])
+    #expect(devices.sensors(of: .heartRate).isEmpty)
+  }
+
+  @Test func theRidersPickIsUsedWhileItIsConnectedAndRemembered() {
+    let defaults = freshDefaults()
+    let transport = FakeTransport()
+    let devices = BluetoothDevices(transport: transport, defaults: defaults)
+    transport.onAvailability?(.ready)
+    let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    devices.pair(trainer)
+    devices.pair(meter)
+    transport.onConnect?(trainer.id)
+    transport.onConnect?(meter.id)
+    devices.select(trainer, for: .power)
+    #expect(devices.source(of: .power) == trainer)
+
+    transport.onDisconnect?(trainer.id)
+    #expect(devices.source(of: .power) == meter)
+    transport.onConnect?(trainer.id)
+    #expect(devices.source(of: .power) == trainer)
+
+    let relaunchTransport = FakeTransport()
+    let relaunched = BluetoothDevices(transport: relaunchTransport, defaults: defaults)
+    relaunchTransport.onAvailability?(.ready)
+    relaunchTransport.onConnect?(meter.id)
+    relaunchTransport.onConnect?(trainer.id)
+    #expect(relaunched.source(of: .power) == trainer)
+  }
+
+  @Test func ignoresAPickThatIsNotASensorForTheMetric() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
+    let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
+    devices.pair(trainer)
+    devices.pair(strap)
+    transport.onConnect?(trainer.id)
+    transport.onConnect?(strap.id)
+    devices.select(strap, for: .power)
+    devices.select(trainer, for: .heartRate)
+    #expect(devices.source(of: .power) == trainer)
+    #expect(devices.source(of: .heartRate) == strap)
+  }
+
   @Test func bluetoothGoingOffDropsConnectionsAndReconnectsWhenBack() {
     let (devices, transport) = scanningDevices()
     let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])

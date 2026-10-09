@@ -95,12 +95,15 @@ public final class BluetoothDevices {
   private var connections: [UUID: ConnectionState] = [:]
   private var batteryLevels: [UUID: Int] = [:]
   private var heartRateReading: (device: UUID, bpm: Int)?
+  /// The sensor the rider picked for each metric, keyed by `RideMetric.rawValue`.
+  private var sourcePicks: [String: UUID] = [:]
   @ObservationIgnored private let transport: any BluetoothTransport
   @ObservationIgnored private let defaults: UserDefaults
   @ObservationIgnored private var wantsScan = false
   @ObservationIgnored private var hasStarted = false
 
   private static let pairedKey = "bluetooth.paired"
+  private static let sourcePicksKey = "bluetooth.sourcePicks"
   /// Where Ride kept its one heart rate strap before it paired a device of each kind.
   private static let legacyHeartRateKey = "pairedHeartRateSensor"
 
@@ -115,6 +118,10 @@ public final class BluetoothDevices {
       defaults.data(forKey: Self.pairedKey).flatMap {
         try? JSONDecoder().decode([DiscoveredDevice].self, from: $0)
       } ?? []
+    sourcePicks =
+      defaults.data(forKey: Self.sourcePicksKey).flatMap {
+        try? JSONDecoder().decode([String: UUID].self, from: $0)
+      } ?? [:]
     adoptLegacyHeartRateSensor()
     transport.onAvailability = { [weak self] state in self?.updateAvailability(state) }
     transport.onDiscovery = { [weak self] device in self?.receive(device) }
@@ -136,14 +143,31 @@ public final class BluetoothDevices {
     paired.first { $0.kind == kind }
   }
 
-  /// The connected device that supplies `metric`, in the order of the metric's preferred
-  /// sources.
+  /// The connected device that supplies `metric`: the rider's pick while it is connected,
+  /// otherwise the best connected sensor for the metric.
   public func source(of metric: RideMetric) -> DiscoveredDevice? {
-    let connected = paired.filter { connectionState(of: $0.id) == .connected }
-    for service in metric.sources {
-      if let device = connected.first(where: { $0.services.contains(service) }) { return device }
+    let connected = sensors(of: metric).filter { connectionState(of: $0.id) == .connected }
+    if let pick = sourcePicks[metric.rawValue],
+      let device = connected.first(where: { $0.id == pick })
+    {
+      return device
     }
-    return nil
+    return connected.first
+  }
+
+  /// The paired devices that can supply `metric`, best first, whether or not they are connected.
+  public func sensors(of metric: RideMetric) -> [DiscoveredDevice] {
+    var seen: Set<UUID> = []
+    return metric.sources.flatMap { service in paired.filter { $0.services.contains(service) } }
+      .filter { seen.insert($0.id).inserted }
+  }
+
+  /// Makes `device` the source of `metric` whenever it is connected, and remembers the choice.
+  /// Ignored unless `device` is a paired sensor for `metric`.
+  public func select(_ device: DiscoveredDevice, for metric: RideMetric) {
+    guard sensors(of: metric).contains(where: { $0.id == device.id }) else { return }
+    sourcePicks[metric.rawValue] = device.id
+    saveSourcePicks()
   }
 
   /// Reconnects the paired devices. Bluetooth is only started once there is something to
@@ -177,6 +201,8 @@ public final class BluetoothDevices {
     guard isPaired(id) else { return }
     paired.removeAll { $0.id == id }
     save()
+    sourcePicks = sourcePicks.filter { $0.value != id }
+    saveSourcePicks()
     connections[id] = nil
     batteryLevels[id] = nil
     if heartRateReading?.device == id { heartRateReading = nil }
@@ -219,6 +245,10 @@ public final class BluetoothDevices {
 
   private func save() {
     defaults.set(try? JSONEncoder().encode(paired), forKey: Self.pairedKey)
+  }
+
+  private func saveSourcePicks() {
+    defaults.set(try? JSONEncoder().encode(sourcePicks), forKey: Self.sourcePicksKey)
   }
 
   /// Pairs the strap saved under the old key, so the rider need not pair it again.

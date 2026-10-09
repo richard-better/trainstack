@@ -1,5 +1,5 @@
 /// A reading a ride takes from its devices.
-public enum RideMetric: CaseIterable, Sendable {
+public enum RideMetric: String, CaseIterable, Sendable {
   case power, cadence, heartRate
 
   public var name: String {
