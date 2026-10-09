@@ -616,7 +616,7 @@ test("every request to Strava counts, including the refresh and the retry behind
   );
 });
 
-test("a Strava athlete is connected to one account, which nobody else can take", async () => {
+test("a Strava athlete is connected to one account, which a newcomer cannot take while Strava still trusts it", async () => {
   reset();
   const first = await signUp();
   const second = await signUp();
@@ -625,30 +625,62 @@ test("a Strava athlete is connected to one account, which nobody else can take",
   // A second account whose rider agrees on Strava's page for the same athlete is turned away.
   const link = await start(second.token);
   assert.equal((await callback(link.state)).status, 302);
+  strava.requests.length = 0;
   const refused = await postJson(second.token, "/connect/complete", {
     code_verifier: link.verifier,
   });
   assert.equal(refused.status, 409);
   assert.deepEqual(await refused.json(), { error: "athlete_in_use" });
+  // The holder was checked with Strava, and its new tokens kept.
+  assert.deepEqual(
+    strava.requests.map((r) => [r.path, r.body.grant_type, r.body.refresh_token]),
+    [["/oauth/token", "refresh_token", "refresh-1"]],
+  );
   assert.deepEqual(await (await call(second.token, "")).json(), { connected: false });
   assert.deepEqual(await (await call(first.token, "")).json(), {
     connected: true,
     athleteName: "Ada Rider",
   });
-  // The try is used up, and the first account still works.
+  // The try is used up, and the first account still works with the tokens Strava just gave it.
   assert.equal(
     (await postJson(second.token, "/connect/complete", { code_verifier: link.verifier })).status,
     400,
   );
+  strava.requests.length = 0;
   assert.equal((await upload(first.token)).status, 202);
+  assert.equal(strava.requests[0].auth, "Bearer access-2");
 
-  // Only the first account can let go, after which the athlete is free to connect elsewhere.
+  // The holder letting go frees the athlete for anyone.
   assert.equal((await call(first.token, "", { method: "DELETE" })).status, 204);
   await connect(second.token);
   assert.deepEqual(await (await call(second.token, "")).json(), {
     connected: true,
     athleteName: "Ada Rider",
   });
+});
+
+test("a rider whose athlete was taken first gets it back by removing Ride in Strava", async () => {
+  reset();
+  const squatter = await signUp();
+  const rider = await signUp();
+  await connect(squatter.token);
+
+  // Strava says the squatter's access is gone once the rider has removed Ride in their settings.
+  reset({
+    token: (body) =>
+      body.grant_type === "refresh_token"
+        ? new Response("{}", { status: 400 })
+        : Response.json({
+            ...tokens("rider"),
+            athlete: { id: 42, firstname: "Ada", lastname: "Rider" },
+          }),
+  });
+  await connect(rider.token);
+  assert.deepEqual(await (await call(rider.token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+  assert.deepEqual(await (await call(squatter.token, "")).json(), { connected: false });
 });
 
 test("disconnecting and connecting again does not start a fresh budget", async () => {

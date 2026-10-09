@@ -33,6 +33,9 @@ export function createAuth(
     // The app asks to delete the rider's account, as App Review requires wherever accounts are
     // made. Rows that belong to the user go with it.
     user: { deleteUser: { enabled: true } },
+    // Email accounts are not verified, so someone could register a rider's address first and keep
+    // the password. Signing in with Apple must never quietly join such an account.
+    account: { accountLinking: { enabled: false } },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     advanced: {

@@ -119,6 +119,33 @@ export function stravaRoutes(deps: StravaDeps) {
     return !!row && row.used >= limit && row.windowStart > nowSeconds() - BUDGET_WINDOW_SECONDS;
   };
 
+  /**
+   * Whether the account that holds an athlete has lost Strava's trust, which only the rider can
+   * make happen, by removing Ride in their Strava settings. A holder Strava still accepts is
+   * kept, so an account cannot be evicted by someone who tricked the rider into approving, and a
+   * rider whose athlete was taken first can still get it back by revoking Ride. When it cannot be
+   * told, the holder keeps it.
+   */
+  const holderRevoked = async (holderId: string) => {
+    const keysOfApp = credentials();
+    const row = await connectionOf(holderId);
+    if (!keysOfApp || !row) return false;
+    const refreshToken = await (await getVault()).decrypt(row.refreshToken);
+    if (!refreshToken) return true;
+    if (!(await spend(`athlete:${row.athleteId}`, ATHLETE_CALLS))) return false;
+    const response = await strava
+      .refreshTokens(fetcher, keysOfApp, refreshToken)
+      .catch(() => undefined);
+    if (!response) return false;
+    if (response.status === 400 || response.status === 401) {
+      await forget(holderId);
+      return true;
+    }
+    // Still good: keep the new tokens, since a refresh replaces the old ones.
+    if (response.ok) await save(holderId, (await response.json()) as strava.TokenResponse);
+    return false;
+  };
+
   const save = async (
     userId: string,
     tokens: strava.TokenResponse,
@@ -142,7 +169,7 @@ export function stravaRoutes(deps: StravaDeps) {
           ),
         )
         .get();
-      if (holder) throw new AthleteInUse();
+      if (holder && !(await holderRevoked(holder.userId))) throw new AthleteInUse();
       const name = [tokens.athlete.firstname, tokens.athlete.lastname].filter(Boolean).join(" ");
       try {
         await deps
