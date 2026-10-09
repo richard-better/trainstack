@@ -59,14 +59,18 @@ To enter a token without putting it into a command argument, use GitHub's secret
 
 These optional credentials let the API Worker sign Ride in to Strava so it can upload rides. Register **TrainStack Ride** at [Strava API settings](https://www.strava.com/settings/api) with authorization callback domain `api.trainstackhq.com` (no scheme or path). Use a square PNG rendered from `hosted/apps/marketing/public/trainstack-logo.svg` as the icon. A Strava subscription is currently required to create an app, and an account can have only one API application.
 
-The Worker holds only the client secret and stores nothing. `hosted/apps/api/src/strava.ts` serves four routes:
+Riders connect Strava to their TrainStack account, and the API uploads their rides for them. Everything but the callback needs the rider's session token as `Authorization: Bearer <token>`; the app gets that token by signing in (Sign in with Apple, or email and password), and `hosted/apps/api/src/strava/index.ts` serves:
 
-- `GET /strava/authorize?state=<random>&code_challenge=<S256 challenge>` redirects the rider to Strava, asking for the `activity:write` scope. The app opens it in a web authentication session.
-- `GET /strava/callback` swaps Strava's code for tokens and redirects to `trainstackride://strava` with `state` and a `ticket`, or with `error` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`).
-- `POST /strava/redeem` takes `{ "ticket": "...", "code_verifier": "..." }` and returns the tokens and athlete name.
-- `POST /strava/refresh` takes `{ "refresh_token": "..." }` and returns a fresh token set. It answers 401 `invalid_refresh_token` when the rider has revoked access, and 502 when Strava is unavailable.
+- `POST /strava/connect` returns the Strava address to open in a web authentication session, with state signed for the rider. It asks only for the `activity:write` scope.
+- `GET /strava/callback` (called by Strava's page) stores the rider's tokens and redirects to `trainstackride://strava?connected=1`, or `?error=` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`). Nothing secret is in the redirect.
+- `GET /strava` returns `{ connected, athleteName }`, and `DELETE /strava` tells Strava and forgets the tokens.
+- `POST /strava/uploads?name=&fileName=` takes the FIT file as the body (up to 10 MB), hands it to Strava as an indoor trainer ride and returns `{ id, status }`. `GET /strava/uploads/:id` returns `status` `processing`, `ready` (with `activityId`) or `error` (with `error`, and `duplicateOf` when Strava already has the ride).
 
-Any app can claim the `trainstackride` scheme, so the redirect does not carry the tokens. The ticket is the tokens encrypted with AES-GCM under a key derived from the client secret, tied to the challenge the app sent and valid for five minutes. Only the app that holds the verifier behind the challenge can redeem it. Rotating the client secret invalidates tickets in flight, which is harmless.
+Failures are `409 not_connected` (no connection, or the rider revoked Ride in Strava, which also forgets it), `429 rate_limited` and `502 strava_unavailable`.
+
+Tokens are stored in the `strava_connection` table, encrypted with AES-GCM under a key derived from `BETTER_AUTH_SECRET`, so a copy of the database is no use on its own. Changing that secret signs everyone out and makes riders connect Strava again. Deleting an account deletes its connection.
+
+Sign in with Apple needs no secret: the app sends the identity token Apple gives it and the API checks it against Apple's keys, with the bundle ID `com.trainstackhq.ride` as the audience. Enable the Sign in with Apple capability on that App ID. Revoking a rider's Apple tokens on account deletion, which App Review also expects once Ride ships on the App Store, is not done yet.
 
 The workflow passes the GitHub `production` variable and secret to Alchemy through `hosted/infra/.env.schema`. The API receives a plain ID binding and a redacted secret binding, accessed through `ENV.STRAVA_CLIENT_ID` and `ENV.STRAVA_CLIENT_SECRET` from `hosted/apps/api/src/env.server.ts`. Missing values default to empty strings so deployment works before registration. Configure both before enabling Strava features.
 
