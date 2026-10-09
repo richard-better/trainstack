@@ -35,7 +35,7 @@ let package = Package(
     ),
     .testTarget(
       name: "RideUITests",
-      dependencies: ["RideUI", "RideLink"],
+      dependencies: ["RideUI", "RideLink", "RideStrava"],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
   ]

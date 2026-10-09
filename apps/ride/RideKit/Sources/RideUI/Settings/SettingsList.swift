@@ -21,6 +21,9 @@ struct SettingsList: View {
           NavigationLink(value: SettingsPage.devices) {
             Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           }
+          NavigationLink(value: SettingsPage.strava) {
+            Label("Strava", systemImage: "arrow.up.forward.app")
+          }
         }
       }
       .navigationTitle("Settings")

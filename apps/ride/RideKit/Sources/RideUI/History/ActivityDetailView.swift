@@ -1,4 +1,6 @@
+import AuthenticationServices
 import RideData
+import RideStrava
 import SwiftUI
 
 /// A finished ride: when it happened, the headline numbers, the effort over time, and zones.
@@ -9,7 +11,13 @@ struct ActivityDetailView: View {
   @State private var isConfirmingRemove = false
   /// Why the last export failed, while it is shown.
   @State private var exportError: String?
+  /// How sending the ride to Strava ended, while it is shown.
+  @State private var stravaOutcome: StravaOutcome?
+  @State private var isSendingToStrava = false
   @Environment(RiderSettingsStore.self) private var store
+  @Environment(StravaConnection.self) private var strava
+  @Environment(\.webAuthenticationSession) private var webAuthenticationSession
+  @Environment(\.openURL) private var openURL
 
   private var recording: RideRecording { ride.recording }
 
@@ -60,15 +68,56 @@ struct ActivityDetailView: View {
     } message: { error in
       Text(error)
     }
+    .alert(
+      stravaOutcome?.title ?? "", isPresented: stravaOutcomeShown, presenting: stravaOutcome
+    ) { outcome in
+      if let url = outcome.activityURL {
+        Button("View on Strava") { openURL(url) }
+      }
+      Button("OK") {}
+    } message: { outcome in
+      Text(outcome.message)
+    }
   }
 
   @ViewBuilder private var moreActions: some View {
+    Button("Send to Strava", systemImage: "arrow.up.forward.app", action: sendToStrava)
+      .disabled(isSendingToStrava)
     Button("Export FIT…", systemImage: "square.and.arrow.down", action: export)
     Divider()
     Button("Remove from History", systemImage: "trash", role: .destructive, action: confirmRemove)
   }
 
   private func export() { isExporting = true }
+
+  private var stravaOutcomeShown: Binding<Bool> {
+    Binding(get: { stravaOutcome != nil }, set: { if !$0 { stravaOutcome = nil } })
+  }
+
+  /// Sends the ride to Strava, signing the rider in first if they have not been.
+  private func sendToStrava() {
+    Task {
+      isSendingToStrava = true
+      defer { isSendingToStrava = false }
+      do {
+        if !strava.isConnected {
+          try await strava.connect { url in
+            try await webAuthenticationSession.authenticate(
+              using: url, callback: .customScheme(StravaSignIn.callbackScheme),
+              additionalHeaderFields: [:])
+          }
+        }
+        stravaOutcome = .sent(try await strava.upload(ride).url)
+      } catch StravaError.denied {
+        // The rider backed out of signing in.
+      } catch StravaError.duplicate(let activityID) {
+        stravaOutcome = .alreadyThere(
+          activityID.flatMap { URL(string: "https://www.strava.com/activities/\($0)") })
+      } catch {
+        stravaOutcome = .failed(error.localizedDescription)
+      }
+    }
+  }
 
   private func confirmRemove() { isConfirmingRemove = true }
 
@@ -105,5 +154,6 @@ struct ActivityDetailView: View {
     }
   }
   .environment(RiderSettingsStore.sample)
+  .environment(StravaConnection.sample)
   .frame(width: 800, height: 760)
 }
