@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash, randomBytes } from "node:crypto";
 import { after, before, test } from "node:test";
 import { api, migrate, startWorker } from "./helpers/worker.mjs";
 
@@ -99,23 +100,49 @@ const call = (token, path, init = {}) =>
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
   });
 
-async function connect(token) {
-  const { url } = await (await call(token, "/connect", { method: "POST" })).json();
-  const state = new URL(url).searchParams.get("state");
-  const response = await call(
-    null,
-    `/callback?state=${encodeURIComponent(state)}&code=the-code&scope=read,activity:write`,
-  );
-  assert.equal(response.status, 302);
-  return { url, state, response };
+/** A verifier the app would keep to itself, and the challenge it sends the API. */
+function makeVerifier() {
+  const verifier = randomBytes(48).toString("base64url");
+  return { verifier, challenge: createHash("sha256").update(verifier).digest("base64url") };
 }
 
-const upload = (token, query = "name=Threshold%203x12&fileName=ride.fit") =>
-  call(token, `/uploads?${query}`, {
+const postJson = (token, path, body) =>
+  call(token, path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+/** Starts connecting, as the app does, and returns the state Strava would hand back. */
+async function start(token, pkce = makeVerifier()) {
+  const response = await postJson(token, "/connect", { code_challenge: pkce.challenge });
+  assert.equal(response.status, 200, await response.clone().text());
+  const { url } = await response.json();
+  return { ...pkce, url, state: new URL(url).searchParams.get("state") };
+}
+
+const callback = (state, query = "code=the-code&scope=read,activity:write") =>
+  call(null, `/callback?state=${encodeURIComponent(state)}&${query}`);
+
+/** Connects Strava the whole way: the page, the callback and the app collecting the result. */
+async function connect(token) {
+  const link = await start(token);
+  const response = await callback(link.state);
+  assert.equal(response.status, 302);
+  const completed = await postJson(token, "/connect/complete", { code_verifier: link.verifier });
+  assert.equal(completed.status, 200, await completed.clone().text());
+  return { ...link, response };
+}
+
+/** Sends a ride. Riders are held to one upload every few seconds, which `throttled` tests. */
+const upload = async (token, query = "name=Threshold%203x12&fileName=ride.fit") => {
+  await db.prepare("UPDATE strava_connection SET last_upload_at = NULL").run();
+  return call(token, `/uploads?${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/octet-stream" },
     body: fit,
   });
+};
 
 test("every route but Strava's callback needs the rider to be signed in", async () => {
   for (const [path, method] of [
@@ -134,7 +161,7 @@ test("every route but Strava's callback needs the rider to be signed in", async 
 test("connecting sends the rider to Strava for upload permission only, tied to their account", async () => {
   reset();
   const { token } = await signUp();
-  const { url } = await (await call(token, "/connect", { method: "POST" })).json();
+  const { url } = await start(token);
   const location = new URL(url);
   assert.equal(`${location.origin}${location.pathname}`, "https://www.strava.com/oauth/authorize");
   assert.equal(location.searchParams.get("client_id"), "12345");
@@ -142,8 +169,10 @@ test("connecting sends the rider to Strava for upload permission only, tied to t
   assert.equal(location.searchParams.get("scope"), "activity:write");
   assert.equal(location.searchParams.get("response_type"), "code");
   assert.ok(!url.includes(credentials.STRAVA_CLIENT_SECRET));
-  assert.equal((await call(token, "")).status, 200);
   assert.deepEqual(await (await call(token, "")).json(), { connected: false });
+  for (const body of [{}, { code_challenge: "short" }, { code_challenge: "$".repeat(43) }]) {
+    assert.equal((await postJson(token, "/connect", body)).status, 400);
+  }
 });
 
 test("the callback connects Strava to the rider who started, and keeps the tokens encrypted", async () => {
@@ -177,34 +206,95 @@ test("the callback connects Strava to the rider who started, and keeps the token
   assert.equal(row.expires_at, 4_102_444_800);
 });
 
+test("the callback alone connects nothing: the app that started has to collect the result", async () => {
+  reset();
+  const owner = await signUp();
+  const other = await signUp();
+  const link = await start(owner.token);
+  assert.equal((await callback(link.state)).status, 302);
+  assert.deepEqual(await (await call(owner.token, "")).json(), { connected: false });
+
+  const wrong = makeVerifier();
+  assert.equal(
+    (await postJson(owner.token, "/connect/complete", { code_verifier: wrong.verifier })).status,
+    400,
+  );
+  assert.equal(
+    (await postJson(other.token, "/connect/complete", { code_verifier: link.verifier })).status,
+    400,
+  );
+  assert.equal(
+    (await postJson(owner.token, "/connect/complete", { code_verifier: "short" })).status,
+    400,
+  );
+  assert.equal(
+    (await postJson(null, "/connect/complete", { code_verifier: link.verifier })).status,
+    401,
+  );
+  assert.deepEqual(await (await call(owner.token, "")).json(), { connected: false });
+
+  const completed = await postJson(owner.token, "/connect/complete", {
+    code_verifier: link.verifier,
+  });
+  assert.deepEqual(await completed.json(), { connected: true, athleteName: "Ada Rider" });
+  assert.deepEqual(await (await call(owner.token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+  // The link is used up.
+  assert.equal(
+    (await postJson(owner.token, "/connect/complete", { code_verifier: link.verifier })).status,
+    400,
+  );
+});
+
+test("someone who gets hold of a rider's state cannot link their own Strava to that account", async () => {
+  reset();
+  const victim = await signUp();
+  const link = await start(victim.token);
+
+  // The attacker reaches the callback first, with a code from their own Strava.
+  reset({
+    token: () =>
+      Response.json({ ...tokens("attacker"), athlete: { id: 666, firstname: "Mallory" } }),
+  });
+  assert.equal((await callback(link.state)).status, 302);
+  const attackerVerifier = makeVerifier();
+  assert.equal(
+    (
+      await postJson(victim.token, "/connect/complete", {
+        code_verifier: attackerVerifier.verifier,
+      })
+    ).status,
+    400,
+  );
+
+  // The rider's own sign-in then fails rather than quietly connecting Mallory's Strava.
+  reset();
+  const error = new URL((await callback(link.state)).headers.get("location")).searchParams.get(
+    "error",
+  );
+  assert.equal(error, "exchange_failed");
+  assert.deepEqual(await (await call(victim.token, "")).json(), { connected: false });
+});
+
 test("the callback refuses state it did not sign, and tells the app why a sign-in failed", async () => {
   reset();
   const { token } = await signUp();
-  assert.equal(
-    (await call(null, "/callback?state=forged&code=c&scope=activity:write")).status,
-    400,
-  );
+  assert.equal((await callback("forged")).status, 400);
   assert.equal((await call(null, "/callback?code=c&scope=activity:write")).status, 400);
 
-  const { url } = await (await call(token, "/connect", { method: "POST" })).json();
-  const state = encodeURIComponent(new URL(url).searchParams.get("state"));
-  const [body, signature] = decodeURIComponent(state).split(".");
-  const forged = `${Buffer.from(JSON.stringify({ user: "someone-else", expires: 4_102_444_800 })).toString("base64url")}.${signature}`;
-  assert.equal(
-    (await call(null, `/callback?state=${forged}&code=c&scope=activity:write`)).status,
-    400,
-  );
-  assert.ok(body);
+  const link = await start(token);
+  const [, signature] = link.state.split(".");
+  const forged = `${Buffer.from(JSON.stringify({ link: "someone-else", expires: 4_102_444_800 })).toString("base64url")}.${signature}`;
+  assert.equal((await callback(forged)).status, 400);
 
-  const reason = async (query) =>
-    new URL(
-      (await call(null, `/callback?state=${state}&${query}`)).headers.get("location"),
-    ).searchParams.get("error");
-  assert.equal(await reason("error=access_denied"), "access_denied");
-  assert.equal(await reason("code=c&scope=read"), "insufficient_scope");
-  strava.requests.length = 0;
+  const reason = async (state, query) =>
+    new URL((await callback(state, query)).headers.get("location")).searchParams.get("error");
+  assert.equal(await reason(link.state, "error=access_denied"), "access_denied");
+  assert.equal(await reason(link.state, "code=c&scope=read"), "insufficient_scope");
   reset({ token: () => new Response("{}", { status: 400 }) });
-  assert.equal(await reason("code=bad&scope=activity:write"), "exchange_failed");
+  assert.equal(await reason(link.state, "code=bad&scope=activity:write"), "exchange_failed");
   assert.deepEqual(await (await call(token, "")).json(), { connected: false });
 });
 
@@ -406,5 +496,44 @@ test("deleting the account deletes the Strava connection with it", async () => {
   assert.equal(
     (await db.prepare('SELECT count(*) AS n FROM "user" WHERE email = ?').bind(email).first()).n,
     0,
+  );
+});
+
+test("a rider is held to one upload every few seconds", async () => {
+  reset();
+  const { token } = await signUp();
+  await connect(token);
+  assert.equal((await upload(token)).status, 202);
+  strava.requests.length = 0;
+  const again = await call(token, "/uploads?name=Ride", { method: "POST", body: fit });
+  assert.equal(again.status, 429);
+  assert.deepEqual(await again.json(), { error: "rate_limited" });
+  assert.deepEqual(strava.requests, []);
+});
+
+test("a ride is never read past the size limit, even when it does not say how long it is", async () => {
+  reset();
+  const { token } = await signUp();
+  await connect(token);
+  await db.prepare("UPDATE strava_connection SET last_upload_at = NULL").run();
+  const chunk = new Uint8Array(1024 * 1024);
+  let sent = 0;
+  const body = new ReadableStream({
+    pull(controller) {
+      if (sent >= 64) return controller.close();
+      sent++;
+      controller.enqueue(chunk);
+    },
+  });
+  const response = await call(token, "/uploads?name=Ride", {
+    method: "POST",
+    body,
+    duplex: "half",
+  });
+  assert.equal(response.status, 413);
+  assert.ok(sent < 64, `${sent} MB were read`);
+  assert.deepEqual(
+    strava.requests.filter((r) => r.path.startsWith("/api")),
+    [],
   );
 });

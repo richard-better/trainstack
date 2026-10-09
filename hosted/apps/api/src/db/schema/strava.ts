@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 
@@ -16,6 +16,8 @@ export const stravaConnection = sqliteTable("strava_connection", {
   refreshToken: text("refresh_token").notNull(),
   /** When the access token runs out, in seconds since the epoch. */
   expiresAt: integer("expires_at").notNull(),
+  /** When a ride was last sent, in milliseconds, to hold riders to a few uploads a minute. */
+  lastUploadAt: integer("last_upload_at"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
@@ -24,3 +26,26 @@ export const stravaConnection = sqliteTable("strava_connection", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+/**
+ * A rider connecting Strava, from the app asking for the Strava page until the app collects the
+ * result. The app keeps the verifier behind `challenge` to itself, so a sign-in only ever
+ * becomes a connection on the account and device that started it, whoever else gets to Strava's
+ * callback with the state.
+ */
+export const stravaLink = sqliteTable(
+  "strava_link",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** SHA-256 of the app's verifier, base64url. */
+    challenge: text("challenge").notNull(),
+    /** In seconds since the epoch. */
+    expiresAt: integer("expires_at").notNull(),
+    /** Strava's answer, encrypted, once the rider has agreed. */
+    tokens: text("tokens"),
+  },
+  (table) => [index("strava_link_userId_idx").on(table.userId)],
+);

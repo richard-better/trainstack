@@ -61,10 +61,11 @@ These optional credentials let the API Worker sign Ride in to Strava so it can u
 
 Riders connect Strava to their TrainStack account, and the API uploads their rides for them. Everything but the callback needs the rider's session token as `Authorization: Bearer <token>`; the app gets that token by signing in (Sign in with Apple, or email and password), and `hosted/apps/api/src/strava/index.ts` serves:
 
-- `POST /strava/connect` returns the Strava address to open in a web authentication session, with state signed for the rider. It asks only for the `activity:write` scope.
-- `GET /strava/callback` (called by Strava's page) stores the rider's tokens and redirects to `trainstackride://strava?connected=1`, or `?error=` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`). Nothing secret is in the redirect.
+- `POST /strava/connect` takes `{ "code_challenge": "<SHA-256 of a secret verifier, base64url>" }` and returns the Strava address to open in a web authentication session, with signed state. It asks only for the `activity:write` scope.
+- `GET /strava/callback` (called by Strava's page) keeps the rider's tokens, encrypted, against that sign-in and redirects to `trainstackride://strava?connected=1`, or `?error=` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`). Nothing secret is in the redirect, and it connects nothing by itself.
+- `POST /strava/connect/complete` takes `{ "code_verifier": "..." }`, the verifier behind the challenge, and turns the finished sign-in into the account's connection. Only the app that started the sign-in has the verifier, so a state that leaks cannot be used to link someone else's Strava to an account.
 - `GET /strava` returns `{ connected, athleteName }`, and `DELETE /strava` tells Strava and forgets the tokens.
-- `POST /strava/uploads?name=&fileName=` takes the FIT file as the body (up to 10 MB), hands it to Strava as an indoor trainer ride and returns `{ id, status }`. `GET /strava/uploads/:id` returns `status` `processing`, `ready` (with `activityId`) or `error` (with `error`, and `duplicateOf` when Strava already has the ride).
+- `POST /strava/uploads?name=&fileName=` takes the FIT file as the body (up to 10 MB, read as a stream and never buffered past the limit), hands it to Strava as an indoor trainer ride and returns `{ id, status }`. A rider can upload once every five seconds, because Strava's request limits are shared by every rider. `GET /strava/uploads/:id` returns `status` `processing`, `ready` (with `activityId`) or `error` (with `error`, and `duplicateOf` when Strava already has the ride). The app checks every few seconds, so keep it to a handful of checks per ride.
 
 Failures are `409 not_connected` (no connection, or the rider revoked Ride in Strava, which also forgets it), `429 rate_limited` and `502 strava_unavailable`.
 

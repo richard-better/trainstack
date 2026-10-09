@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, lt } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { Database } from "../db";
-import { stravaConnection } from "../db/schema";
+import { stravaConnection, stravaLink } from "../db/schema";
 import * as strava from "./api";
 import { createVault, type Vault } from "./crypto";
 
@@ -24,7 +24,14 @@ const APP_REDIRECT = "trainstackride://strava";
 const STATE_LIFETIME_SECONDS = 600;
 const MAX_FIT_BYTES = 10 * 1024 * 1024;
 
-type State = { user: string; expires: number };
+/** What the state Strava gives back says: which sign-in this is. */
+type State = { link: string; expires: number };
+
+/** SHA-256 of the app's verifier, base64url without padding. */
+const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
+const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
+/** The shortest time between a rider's uploads. Strava's limits are shared by every rider. */
+const MIN_UPLOAD_GAP_MS = 5000;
 
 /** Signalled when Strava no longer accepts the rider's sign-in. */
 class NotConnected extends Error {}
@@ -154,21 +161,46 @@ export function stravaRoutes(deps: StravaDeps) {
 
   const userIdOf = (c: { get: (key: never) => unknown }) => c.get("userId" as never) as string;
 
-  // The app opens the address this returns in a web authentication session.
+  // The app opens the address this returns in a web authentication session. It keeps the verifier
+  // behind its challenge to itself until Strava's page is done.
   app.post("/connect", async (c) => {
     const keysOfApp = credentials();
     if (!keysOfApp) return c.json({ error: "strava_not_configured" }, 503);
-    const state: State = { user: userIdOf(c), expires: nowSeconds() + STATE_LIFETIME_SECONDS };
+    const body = await c.req.json().catch(() => undefined);
+    const challenge = body?.code_challenge;
+    if (typeof challenge !== "string" || !CHALLENGE.test(challenge)) {
+      return c.json({ error: "invalid_request" }, 400);
+    }
+    const userId = userIdOf(c);
+    const link = crypto.randomUUID();
+    const expires = nowSeconds() + STATE_LIFETIME_SECONDS;
+    const database = deps.database();
+    // One sign-in at a time per rider, and none left lying around.
+    await database.delete(stravaLink).where(eq(stravaLink.userId, userId));
+    await database.delete(stravaLink).where(lt(stravaLink.expiresAt, nowSeconds()));
+    await database.insert(stravaLink).values({ id: link, userId, challenge, expiresAt: expires });
+    const state: State = { link, expires };
     const redirectUri = `${new URL(c.req.url).origin}/strava/callback`;
     return c.json({
       url: strava.authorizeUrl(keysOfApp, redirectUri, await (await getVault()).sign(state)),
     });
   });
 
-  // Strava sends the rider back here; the signed state says whose Strava this is.
+  // Strava sends the rider back here. The tokens wait for the app to collect them: a callback
+  // reached some other way cannot connect anything.
   app.get("/callback", async (c) => {
-    const state = await (await getVault()).verify<State>(c.req.query("state") ?? "");
+    const keys = await getVault();
+    const state = await keys.verify<State>(c.req.query("state") ?? "");
     if (!state || state.expires < nowSeconds()) return c.json({ error: "invalid_state" }, 400);
+    const link = await deps
+      .database()
+      .select()
+      .from(stravaLink)
+      .where(eq(stravaLink.id, state.link))
+      .get();
+    if (!link || link.expiresAt < nowSeconds()) return c.json({ error: "invalid_state" }, 400);
+    // Each sign-in is finished once.
+    if (link.tokens) return c.redirect(toApp({ error: "exchange_failed" }), 302);
     const keysOfApp = credentials();
     if (!keysOfApp) return c.redirect(toApp({ error: "strava_not_configured" }), 302);
 
@@ -180,21 +212,52 @@ export function stravaRoutes(deps: StravaDeps) {
     }
     const response = await strava.exchangeCode(fetcher, keysOfApp, code);
     if (!response.ok) return c.redirect(toApp({ error: "exchange_failed" }), 302);
-    try {
-      await save(state.user, (await response.json()) as strava.TokenResponse);
-    } catch {
-      // The rider deleted their account while signing in to Strava.
-      return c.redirect(toApp({ error: "exchange_failed" }), 302);
-    }
+    const stored = await deps
+      .database()
+      .update(stravaLink)
+      .set({ tokens: await keys.encrypt(JSON.stringify(await response.json())) })
+      .where(and(eq(stravaLink.id, link.id), isNull(stravaLink.tokens)))
+      .returning({ id: stravaLink.id });
+    if (stored.length === 0) return c.redirect(toApp({ error: "exchange_failed" }), 302);
     return c.redirect(toApp({ connected: "1" }), 302);
   });
 
-  app.get("/", async (c) => {
-    const row = await connectionOf(userIdOf(c));
-    return c.json(
-      row ? { connected: true, athleteName: row.athleteName ?? undefined } : { connected: false },
+  // The app trades the verifier for the connection once the web session has ended well.
+  app.post("/connect/complete", async (c) => {
+    const body = await c.req.json().catch(() => undefined);
+    const verifier = body?.code_verifier;
+    if (typeof verifier !== "string" || !VERIFIER.test(verifier)) {
+      return c.json({ error: "invalid_request" }, 400);
+    }
+    const challenge = toBase64Url(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
     );
+    const userId = userIdOf(c);
+    const database = deps.database();
+    const link = await database
+      .select()
+      .from(stravaLink)
+      .where(and(eq(stravaLink.userId, userId), eq(stravaLink.challenge, challenge)))
+      .get();
+    if (!link?.tokens || link.expiresAt < nowSeconds()) {
+      return c.json({ error: "invalid_link" }, 400);
+    }
+    const plain = await (await getVault()).decrypt(link.tokens);
+    if (!plain) return c.json({ error: "invalid_link" }, 400);
+    const tokens = JSON.parse(plain) as strava.TokenResponse;
+    await save(userId, tokens);
+    await database.delete(stravaLink).where(eq(stravaLink.id, link.id));
+    return c.json(await statusOf(userId));
   });
+
+  const statusOf = async (userId: string) => {
+    const row = await connectionOf(userId);
+    return row
+      ? { connected: true, athleteName: row.athleteName ?? undefined }
+      : { connected: false };
+  };
+
+  app.get("/", async (c) => c.json(await statusOf(userIdOf(c))));
 
   app.delete("/", async (c) => {
     const userId = userIdOf(c);
@@ -215,16 +278,33 @@ export function stravaRoutes(deps: StravaDeps) {
     if (Number(c.req.header("content-length") ?? 0) > MAX_FIT_BYTES) {
       return c.json({ error: "too_large" }, 413);
     }
-    const fit = await c.req.arrayBuffer();
+    const userId = userIdOf(c);
+    const row = await connectionOf(userId);
+    if (!row) return c.json({ error: "not_connected" }, 409);
+    if (Date.now() - (row.lastUploadAt ?? 0) < MIN_UPLOAD_GAP_MS) {
+      return c.json({ error: "rate_limited" }, 429);
+    }
+    const fit = await readBody(c.req.raw, MAX_FIT_BYTES);
+    if (!fit) return c.json({ error: "too_large" }, 413);
     if (fit.byteLength === 0) return c.json({ error: "empty" }, 400);
-    if (fit.byteLength > MAX_FIT_BYTES) return c.json({ error: "too_large" }, 413);
+    await deps
+      .database()
+      .update(stravaConnection)
+      .set({ lastUploadAt: Date.now() })
+      .where(eq(stravaConnection.userId, userId));
     const name = (c.req.query("name") ?? "Ride").slice(0, 200) || "Ride";
     const fileName = (c.req.query("fileName") ?? "ride.fit")
       .replace(/[^\w. -]/g, "_")
       .slice(0, 100);
     try {
-      const response = await withToken(userIdOf(c), (token) =>
-        strava.createUpload(fetcher, token, fit, name, fileName || "ride.fit"),
+      const response = await withToken(userId, (token) =>
+        strava.createUpload(
+          fetcher,
+          token,
+          fit.buffer as ArrayBuffer,
+          name,
+          fileName || "ride.fit",
+        ),
       );
       if (response.status === 429) return c.json({ error: "rate_limited" }, 429);
       if (!response.ok && response.status !== 400)
@@ -270,3 +350,34 @@ function shape(upload: StravaUpload) {
   if (upload.activity_id) return { id, status: "ready", activityId: upload.activity_id };
   return { id, status: "processing" };
 }
+
+/** The request's body, or nothing if it is longer than `limit`, without reading past the limit. */
+async function readBody(request: Request, limit: number): Promise<Uint8Array | undefined> {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.byteLength;
+    if (length > limit) {
+      await reader.cancel();
+      return undefined;
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
+const toBase64Url = (bytes: ArrayBuffer) =>
+  btoa(String.fromCharCode(...new Uint8Array(bytes)))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "");

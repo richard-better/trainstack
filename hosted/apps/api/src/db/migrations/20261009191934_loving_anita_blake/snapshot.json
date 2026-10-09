@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "e1fa1d44-b4ba-401a-a601-0b7c93390d22",
+  "id": "74a2e415-4a2d-4cf0-a6d3-83fc779bb799",
   "prevIds": ["ab6659b7-720c-41e2-9675-13e235c6f722"],
   "ddl": [
     {
@@ -22,6 +22,10 @@
     },
     {
       "name": "strava_connection",
+      "entityType": "tables"
+    },
+    {
+      "name": "strava_link",
       "entityType": "tables"
     },
     {
@@ -426,6 +430,16 @@
     },
     {
       "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_upload_at",
+      "entityType": "columns",
+      "table": "strava_connection"
+    },
+    {
+      "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
@@ -443,6 +457,56 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "strava_connection"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "strava_link"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "strava_link"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "challenge",
+      "entityType": "columns",
+      "table": "strava_link"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "strava_link"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tokens",
+      "entityType": "columns",
+      "table": "strava_link"
     },
     {
       "columns": ["user_id"],
@@ -478,6 +542,17 @@
       "table": "strava_connection"
     },
     {
+      "columns": ["user_id"],
+      "tableTo": "user",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_strava_link_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "strava_link"
+    },
+    {
       "columns": ["id"],
       "nameExplicit": false,
       "name": "account_pk",
@@ -510,6 +585,13 @@
       "nameExplicit": false,
       "name": "strava_connection_pk",
       "table": "strava_connection",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "strava_link_pk",
+      "table": "strava_link",
       "entityType": "pks"
     },
     {
@@ -553,6 +635,20 @@
       "name": "verification_identifier_idx",
       "entityType": "indexes",
       "table": "verification"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "strava_link_userId_idx",
+      "entityType": "indexes",
+      "table": "strava_link"
     },
     {
       "columns": ["token"],
