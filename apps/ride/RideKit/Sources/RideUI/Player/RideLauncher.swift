@@ -54,7 +54,10 @@ final class RideLauncher {
     isPlayerPresented = true
   }
 
-  func end() {
+  /// Ends the ride and returns what was ridden, or nil if there was no ride.
+  @discardableResult
+  func end() -> RideRecording? {
+    let recording = ride?.session.recording()
     ride?.stop()
     ride = nil
     isPlayerPresented = false
@@ -64,5 +67,6 @@ final class RideLauncher {
     #if os(iOS)
       WatchLink.shared.endRide()
     #endif
+    return recording
   }
 }

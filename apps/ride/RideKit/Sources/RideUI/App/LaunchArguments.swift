@@ -38,12 +38,13 @@ extension RideLauncher {
 }
 
 extension RideLibrary {
-  /// Empty, except that debug builds started with `-sample-rides` begin with the sample ride.
+  /// The rides saved on this device, except that debug builds started with `-sample-rides`
+  /// begin with only the sample ride, kept in memory.
   static func launchLibrary() -> RideLibrary {
     #if DEBUG
       if CommandLine.arguments.contains("-sample-rides") { return .sample() }
     #endif
-    return RideLibrary()
+    return RideLibrary(directory: storageDirectory)
   }
 
   /// Debug builds started with `-sample-rides` open on History, where the sample ride is.

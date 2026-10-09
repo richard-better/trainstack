@@ -35,11 +35,16 @@ public struct RootView: View {
           player: player)
       }
     }
-    .modifier(PlayerPresentation(launcher: launcher, namespace: player))
+    .modifier(PlayerPresentation(launcher: launcher, library: library, namespace: player))
     .environment(settings)
     .environment(launcher)
     .environment(launcher.devices)
     .task { launcher.devices.connectPaired() }
+    .alert("Couldn't Save the Ride", isPresented: storageProblemShown) {
+      Button("OK") {}
+    } message: {
+      Text(library.storageProblem ?? "")
+    }
     .onChange(of: destination) { _, destination in
       if destination != .settings { appDestination = destination }
     }
@@ -60,6 +65,12 @@ public struct RootView: View {
   }
 
   private func backToApp() { destination = appDestination }
+
+  private var storageProblemShown: Binding<Bool> {
+    Binding(
+      get: { library.storageProblem != nil },
+      set: { if !$0 { library.storageProblem = nil } })
+  }
 }
 
 #Preview {
