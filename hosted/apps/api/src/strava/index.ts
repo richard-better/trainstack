@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { Database } from "../db";
@@ -30,8 +30,12 @@ type State = { link: string; expires: number };
 /** SHA-256 of the app's verifier, base64url without padding. */
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
-/** The shortest time between a rider's uploads. Strava's limits are shared by every rider. */
-const MIN_UPLOAD_GAP_MS = 5000;
+/**
+ * How many calls to Strava one rider may cause in a window. Strava allows the whole app 200
+ * requests in 15 minutes, so riders share that and each gets a small part of it.
+ */
+const BUDGET_CALLS = 30;
+const BUDGET_WINDOW_SECONDS = 15 * 60;
 
 /** Signalled when Strava no longer accepts the rider's sign-in. */
 class NotConnected extends Error {}
@@ -69,6 +73,30 @@ export function stravaRoutes(deps: StravaDeps) {
 
   const forget = (userId: string) =>
     deps.database().delete(stravaConnection).where(eq(stravaConnection.userId, userId));
+
+  /**
+   * Takes one call from the rider's budget, in a single statement so that requests arriving
+   * together cannot all see room that is only there for one.
+   */
+  const spendBudget = async (userId: string) => {
+    const now = nowSeconds();
+    const fresh = sql`${stravaConnection.budgetWindow} <= ${now - BUDGET_WINDOW_SECONDS}`;
+    const spent = await deps
+      .database()
+      .update(stravaConnection)
+      .set({
+        budgetUsed: sql`CASE WHEN ${fresh} THEN 1 ELSE ${stravaConnection.budgetUsed} + 1 END`,
+        budgetWindow: sql`CASE WHEN ${fresh} THEN ${now} ELSE ${stravaConnection.budgetWindow} END`,
+      })
+      .where(
+        and(
+          eq(stravaConnection.userId, userId),
+          or(fresh, lt(stravaConnection.budgetUsed, BUDGET_CALLS)),
+        ),
+      )
+      .returning({ userId: stravaConnection.userId });
+    return spent.length > 0;
+  };
 
   const save = async (
     userId: string,
@@ -143,6 +171,15 @@ export function stravaRoutes(deps: StravaDeps) {
     error instanceof NotConnected
       ? c.json({ error: "not_connected" }, 409)
       : c.json({ error: "strava_unavailable" }, 502);
+
+  /** Why no call could be made: there is no connection, or the rider has used their share. */
+  const outOfBudget = async (
+    c: { json: (body: object, status: 409 | 429) => Response },
+    userId: string,
+  ) =>
+    (await connectionOf(userId))
+      ? c.json({ error: "rate_limited" }, 429)
+      : c.json({ error: "not_connected" }, 409);
 
   app.use("*", async (c, next) => {
     await next();
@@ -279,19 +316,10 @@ export function stravaRoutes(deps: StravaDeps) {
       return c.json({ error: "too_large" }, 413);
     }
     const userId = userIdOf(c);
-    const row = await connectionOf(userId);
-    if (!row) return c.json({ error: "not_connected" }, 409);
-    if (Date.now() - (row.lastUploadAt ?? 0) < MIN_UPLOAD_GAP_MS) {
-      return c.json({ error: "rate_limited" }, 429);
-    }
+    if (!(await spendBudget(userId))) return outOfBudget(c, userId);
     const fit = await readBody(c.req.raw, MAX_FIT_BYTES);
     if (!fit) return c.json({ error: "too_large" }, 413);
     if (fit.byteLength === 0) return c.json({ error: "empty" }, 400);
-    await deps
-      .database()
-      .update(stravaConnection)
-      .set({ lastUploadAt: Date.now() })
-      .where(eq(stravaConnection.userId, userId));
     const name = (c.req.query("name") ?? "Ride").slice(0, 200) || "Ride";
     const fileName = (c.req.query("fileName") ?? "ride.fit")
       .replace(/[^\w. -]/g, "_")
@@ -318,10 +346,10 @@ export function stravaRoutes(deps: StravaDeps) {
   app.get("/uploads/:id", async (c) => {
     const id = Number(c.req.param("id"));
     if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "invalid_request" }, 400);
+    const userId = userIdOf(c);
+    if (!(await spendBudget(userId))) return outOfBudget(c, userId);
     try {
-      const response = await withToken(userIdOf(c), (token) =>
-        strava.getUpload(fetcher, token, id),
-      );
+      const response = await withToken(userId, (token) => strava.getUpload(fetcher, token, id));
       if (response.status === 429) return c.json({ error: "rate_limited" }, 429);
       if (!response.ok) throw new Error(`Strava answered ${response.status}`);
       return c.json(shape(await response.json()));

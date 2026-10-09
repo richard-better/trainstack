@@ -134,9 +134,9 @@ async function connect(token) {
   return { ...link, response };
 }
 
-/** Sends a ride. Riders are held to one upload every few seconds, which `throttled` tests. */
+/** Sends a ride, with the rider's budget of calls to Strava topped up. */
 const upload = async (token, query = "name=Threshold%203x12&fileName=ride.fit") => {
-  await db.prepare("UPDATE strava_connection SET last_upload_at = NULL").run();
+  await db.prepare("UPDATE strava_connection SET budget_used = 0, budget_window = 0").run();
   return call(token, `/uploads?${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/octet-stream" },
@@ -499,23 +499,38 @@ test("deleting the account deletes the Strava connection with it", async () => {
   );
 });
 
-test("a rider is held to one upload every few seconds", async () => {
+test("a rider can cause only so many calls to Strava, however fast they ask", async () => {
   reset();
   const { token } = await signUp();
   await connect(token);
-  assert.equal((await upload(token)).status, 202);
+  await db.prepare("UPDATE strava_connection SET budget_used = 0, budget_window = 0").run();
   strava.requests.length = 0;
-  const again = await call(token, "/uploads?name=Ride", { method: "POST", body: fit });
-  assert.equal(again.status, 429);
-  assert.deepEqual(await again.json(), { error: "rate_limited" });
-  assert.deepEqual(strava.requests, []);
+
+  const answers = await Promise.all(Array.from({ length: 40 }, () => call(token, "/uploads/7")));
+  const statuses = answers.map((answer) => answer.status);
+  assert.equal(statuses.filter((status) => status === 200).length, 30);
+  assert.equal(statuses.filter((status) => status === 429).length, 10);
+  assert.equal(strava.requests.length, 30);
+
+  // Uploads draw on the same share, and a connected rider who is out of it is told to wait.
+  const upload429 = await call(token, "/uploads?name=Ride", { method: "POST", body: fit });
+  assert.equal(upload429.status, 429);
+  assert.deepEqual(await upload429.json(), { error: "rate_limited" });
+  assert.equal(strava.requests.length, 30);
+
+  // Another rider has their own share, and the window opens again after fifteen minutes.
+  const other = await signUp();
+  await connect(other.token);
+  assert.equal((await call(other.token, "/uploads/7")).status, 200);
+  await db.prepare("UPDATE strava_connection SET budget_window = budget_window - 901").run();
+  assert.equal((await call(token, "/uploads/7")).status, 200);
 });
 
 test("a ride is never read past the size limit, even when it does not say how long it is", async () => {
   reset();
   const { token } = await signUp();
   await connect(token);
-  await db.prepare("UPDATE strava_connection SET last_upload_at = NULL").run();
+  await db.prepare("UPDATE strava_connection SET budget_used = 0, budget_window = 0").run();
   const chunk = new Uint8Array(1024 * 1024);
   let sent = 0;
   const body = new ReadableStream({

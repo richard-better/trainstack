@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "74a2e415-4a2d-4cf0-a6d3-83fc779bb799",
+  "id": "1172c579-38fe-49ba-b3c2-cb3f1983acdd",
   "prevIds": ["ab6659b7-720c-41e2-9675-13e235c6f722"],
   "ddl": [
     {
@@ -430,11 +430,21 @@
     },
     {
       "type": "integer",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
-      "default": null,
+      "default": "0",
       "generated": null,
-      "name": "last_upload_at",
+      "name": "budget_window",
+      "entityType": "columns",
+      "table": "strava_connection"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "budget_used",
       "entityType": "columns",
       "table": "strava_connection"
     },

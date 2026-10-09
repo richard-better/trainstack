@@ -16,8 +16,12 @@ export const stravaConnection = sqliteTable("strava_connection", {
   refreshToken: text("refresh_token").notNull(),
   /** When the access token runs out, in seconds since the epoch. */
   expiresAt: integer("expires_at").notNull(),
-  /** When a ride was last sent, in milliseconds, to hold riders to a few uploads a minute. */
-  lastUploadAt: integer("last_upload_at"),
+  /**
+   * How many calls to Strava the rider has caused since `budgetWindow` (seconds since the epoch),
+   * so one rider cannot use up the request limits Strava gives every rider together.
+   */
+  budgetWindow: integer("budget_window").default(0).notNull(),
+  budgetUsed: integer("budget_used").default(0).notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
