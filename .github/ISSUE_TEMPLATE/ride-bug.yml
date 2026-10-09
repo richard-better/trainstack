@@ -1,0 +1,33 @@
+name: Ride bug report
+description: Something in TrainStack Ride did not work
+labels: ["ride"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you were doing, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS
+      placeholder: iPhone 17 Pro, iOS 27.0
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Ride version and build
+      description: Shown in TestFlight.
+  - type: input
+    id: hardware
+    attributes:
+      label: Trainer and sensors
+      placeholder: Wahoo KICKR 2020, Garmin HRM-Pro, Apple Watch Series 11
+  - type: textarea
+    id: ride
+    attributes:
+      label: Ride details
+      description: The workout, the trainer mode, how far into the ride it happened. Attach the exported .fit file if you can.

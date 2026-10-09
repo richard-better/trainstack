@@ -24,6 +24,12 @@ standard Bluetooth heart rate sensor (`HeartRateRelay`) with a Ride service besi
 on the Mac connects to that service during a ride (`WatchRelayReceiver`) without pairing. A
 paired chest strap (`BluetoothDevices`) wins over the watch while it keeps reporting.
 
+While a ride is on, `KeepAwake` stops the screen locking (and App Nap on the Mac). The
+`bluetooth-central` background mode keeps the trainer connected with the app in the background,
+and iOS stops timers there, so the trainer's measurements also move `RideController` on. If a
+paired trainer disconnects mid ride the ride pauses, and the rider resumes it once the trainer is
+back.
+
 `Ride/` is a folder-synchronized group, so adding or removing files there does not touch
 `project.pbxproj`. Edit the project file only for target-level changes (capabilities,
 build settings, new targets), and prefer making those in Xcode.
