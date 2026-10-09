@@ -76,6 +76,6 @@ struct HistoryView: View {
   @Previewable @State var selection: Ride.ID?
   HistoryView(library: .sample(), selection: $selection)
     .environment(RiderSettingsStore.sample)
-    .environment(StravaConnection.sample)
+    .environment(TrainStackAccount.sample)
     .frame(width: 1100, height: 760)
 }

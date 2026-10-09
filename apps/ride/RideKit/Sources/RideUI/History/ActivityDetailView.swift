@@ -1,4 +1,3 @@
-import AuthenticationServices
 import RideData
 import RideStrava
 import SwiftUI
@@ -15,8 +14,7 @@ struct ActivityDetailView: View {
   @State private var stravaOutcome: StravaOutcome?
   @State private var isSendingToStrava = false
   @Environment(RiderSettingsStore.self) private var store
-  @Environment(StravaConnection.self) private var strava
-  @Environment(\.webAuthenticationSession) private var webAuthenticationSession
+  @Environment(TrainStackAccount.self) private var account
   @Environment(\.openURL) private var openURL
 
   private var recording: RideRecording { ride.recording }
@@ -94,22 +92,20 @@ struct ActivityDetailView: View {
     Binding(get: { stravaOutcome != nil }, set: { if !$0 { stravaOutcome = nil } })
   }
 
-  /// Sends the ride to Strava, signing the rider in first if they have not been.
+  /// Sends the ride to Strava, if the rider has set that up in Settings.
   private func sendToStrava() {
+    guard account.isSignedIn, account.isStravaConnected else {
+      stravaOutcome = .failed(
+        account.isSignedIn
+          ? StravaError.notConnected.localizedDescription
+          : StravaError.signedOut.localizedDescription)
+      return
+    }
     Task {
       isSendingToStrava = true
       defer { isSendingToStrava = false }
       do {
-        if !strava.isConnected {
-          try await strava.connect { url in
-            try await webAuthenticationSession.authenticate(
-              using: url, callback: .customScheme(StravaSignIn.callbackScheme),
-              additionalHeaderFields: [:])
-          }
-        }
-        stravaOutcome = .sent(try await strava.upload(ride).url)
-      } catch StravaError.denied {
-        // The rider backed out of signing in.
+        stravaOutcome = .sent(try await account.upload(ride).url)
       } catch StravaError.duplicate(let activityID) {
         stravaOutcome = .alreadyThere(
           activityID.flatMap { URL(string: "https://www.strava.com/activities/\($0)") })
@@ -154,6 +150,6 @@ struct ActivityDetailView: View {
     }
   }
   .environment(RiderSettingsStore.sample)
-  .environment(StravaConnection.sample)
+  .environment(TrainStackAccount.sample)
   .frame(width: 800, height: 760)
 }

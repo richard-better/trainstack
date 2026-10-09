@@ -27,7 +27,7 @@ real hardware, so please tell us what breaks.
 - Heart rate from an Apple Watch, with the watch showing the current interval.
 - Rides saved to History as `.fit` files, with zones, a power curve and a breakdown. You can
   import, share and export `.fit` files, or send a ride to Strava with Send to Strava (sign in
-  under Settings, Strava). A ride interrupted by a crash or quit can be resumed or
+  with Apple under Settings, Account, then connect Strava). A ride interrupted by a crash or quit can be resumed or
   saved when you reopen the app.
 - Power, heart rate and pace zones, FTP tests and your training load on Progress.
 
@@ -35,8 +35,9 @@ real hardware, so please tell us what breaks.
 
 - You cannot build your own workouts or import `.zwo` and `.mrc` files.
 - Strava is the only place Ride can send a ride. Anywhere else, export the `.fit` file and upload it yourself.
-- Everything stays on the device. There is no account, backup or sync, so deleting the app deletes
-  your rides and settings. Export rides you want to keep.
+- Rides and settings stay on the device. There is no backup or sync, so deleting the app deletes
+  your rides and settings. Export rides you want to keep. A TrainStack account exists only to hold
+  your Strava connection, and Ride works without one.
 - No training plans.
 
 ## Try this first

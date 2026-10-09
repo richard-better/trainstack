@@ -7,5 +7,5 @@ enum SettingsPage: Hashable {
   /// Reached from a zones page rather than the sidebar.
   case ftpTests(ZoneScope)
   case devices
-  case strava
+  case account
 }

@@ -7,7 +7,7 @@ public struct RootView: View {
   @State private var library = RideLibrary.launchLibrary()
   @State private var settings = RiderSettingsStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
-  @State private var strava = StravaConnection()
+  @State private var account = TrainStackAccount()
   /// Where Back to app returns to from Settings.
   @State private var appDestination = AppDestination.today
   @State private var settingsPage = SettingsPage.zones(.all)
@@ -40,7 +40,7 @@ public struct RootView: View {
     .environment(settings)
     .environment(launcher)
     .environment(launcher.devices)
-    .environment(strava)
+    .environment(account)
     .task {
       launcher.checkForInterruptedRide()
       launcher.devices.connectPaired()
