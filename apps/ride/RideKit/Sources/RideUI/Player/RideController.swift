@@ -21,6 +21,7 @@ final class RideController {
   @ObservationIgnored let journal: RideJournal?
   @ObservationIgnored private var simulator: SimulatedTrainer?
   @ObservationIgnored private var clock: Task<Void, Never>?
+  @ObservationIgnored private var lastTick = ContinuousClock.now
 
   /// With `simulated` a pretend trainer supplies the readings, for previews and debug builds.
   /// Real power and cadence come from the selected connected sensors in `devices`, and heart
@@ -48,14 +49,15 @@ final class RideController {
   func start() -> Task<Void, Never> {
     if let clock { return clock }
     updateTrainer()
+    lastTick = .now
+    // While the app is in the background its timers stop, but the trainer still wakes it a
+    // few times a second, so those measurements move the ride on as well.
+    devices?.onCyclingActivity = { [weak self] in self?.tickIfDue() }
     let clock = Task { [weak self] in
-      var last = ContinuousClock.now
       while !Task.isCancelled {
         do { try await Task.sleep(for: .seconds(1)) } catch { break }
-        guard !Task.isCancelled, self != nil else { break }
-        let now = ContinuousClock.now
-        self?.tick(seconds: (now - last) / .seconds(1))
-        last = now
+        guard !Task.isCancelled, let self else { break }
+        tickIfDue()
       }
     }
     self.clock = clock
@@ -66,8 +68,20 @@ final class RideController {
   func stop() {
     clock?.cancel()
     clock = nil
+    devices?.onCyclingActivity = nil
     devices?.setTrainerTarget(nil)
   }
+
+  /// Moves the ride on by the time since the last tick, unless that is under a second.
+  func tickIfDue(at now: ContinuousClock.Instant = .now) {
+    let seconds = (now - lastTick) / .seconds(1)
+    guard seconds >= Self.minimumTick else { return }
+    lastTick = now
+    tick(seconds: seconds)
+  }
+
+  /// Just under a second, so a tick that comes a hair early is not skipped.
+  private static let minimumTick: TimeInterval = 0.9
 
   /// Moves the ride on by `seconds`, as the clock does each second.
   func tick(seconds: TimeInterval, at date: Date = .now) {

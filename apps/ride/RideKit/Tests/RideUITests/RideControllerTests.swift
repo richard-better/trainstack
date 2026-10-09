@@ -51,6 +51,35 @@ struct RideControllerTests {
     #expect(transport.trainerWrites == trainerWrites)
   }
 
+  @Test(.timeLimit(.minutes(1)))
+  func trainerMeasurementsMoveTheRideOnWhenTheClockIsNotRunning() {
+    let (devices, transport, trainer) = cyclingDevices()
+    let controller = RideController(
+      template: template, ftp: 200, devices: devices, simulated: false)
+    controller.start()
+    defer { controller.stop() }
+    let start = ContinuousClock.now
+    controller.tickIfDue(at: start + .milliseconds(500))
+    #expect(controller.session.samples.isEmpty)
+    controller.tickIfDue(at: start + .seconds(3))
+    #expect(controller.session.samples.count == 1)
+    #expect(abs(controller.session.elapsed - 3) < 0.1)
+
+    // The measurement is what calls it, but too soon after the last tick it does nothing.
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 250, 0]))
+    #expect(controller.session.samples.count == 1)
+  }
+
+  @Test func stopsListeningForTrainerMeasurementsWhenTheRideStops() {
+    let (devices, _, _) = cyclingDevices()
+    let controller = RideController(
+      template: template, ftp: 200, devices: devices, simulated: false)
+    controller.start()
+    #expect(devices.onCyclingActivity != nil)
+    controller.stop()
+    #expect(devices.onCyclingActivity == nil)
+  }
+
   @Test func takesHeartRateFromARealSensorOverTheSimulator() {
     let feed = HeartRateFeed()
     let controller = RideController(
