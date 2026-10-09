@@ -61,6 +61,8 @@ before(
         BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
         BETTER_AUTH_URL: api,
         CORS_ORIGIN: origin,
+        STRAVA_CLIENT_ID: "12345",
+        STRAVA_CLIENT_SECRET: "test-only-strava-secret",
         AXIOM_API_KEY: "",
         AXIOM_DATASET: "",
         AXIOM_EDGE_URL: "",
@@ -179,4 +181,17 @@ test("OpenAPI reference describes contract outputs and authentication errors", a
   const schema = privateData[200].content["application/json"].schema;
   assert.deepEqual(schema.required, ["message", "user"]);
   assert.equal(schema.properties.user.properties.email.type, "string");
+});
+
+test("the Strava sign-in is served by the Worker", async () => {
+  const response = await runtime.dispatchFetch(
+    `${api}/strava/authorize?state=abcdefghijklmnopqrstuvwxyz012345`,
+    { redirect: "manual" },
+  );
+  assert.equal(response.status, 302);
+  const location = new URL(response.headers.get("location"));
+  assert.equal(location.host, "www.strava.com");
+  assert.equal(location.searchParams.get("client_id"), "12345");
+  assert.equal(location.searchParams.get("redirect_uri"), `${api}/strava/callback`);
+  assert.ok(!response.headers.get("location").includes("test-only-strava-secret"));
 });

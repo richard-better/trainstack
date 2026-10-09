@@ -57,7 +57,13 @@ To enter a token without putting it into a command argument, use GitHub's secret
 
 ### Strava application
 
-These optional credentials prepare the API Worker for OAuth token exchange and future FIT ride uploads; neither feature is implemented yet. Register **TrainStack Ride** at [Strava API settings](https://www.strava.com/settings/api) with authorization callback domain `api.trainstackhq.com` (no scheme or path). Use a square PNG rendered from `hosted/apps/marketing/public/trainstack-logo.svg` as the icon. A Strava subscription is currently required to create an app.
+These optional credentials let the API Worker sign Ride in to Strava so it can upload rides. Register **TrainStack Ride** at [Strava API settings](https://www.strava.com/settings/api) with authorization callback domain `api.trainstackhq.com` (no scheme or path). Use a square PNG rendered from `hosted/apps/marketing/public/trainstack-logo.svg` as the icon. A Strava subscription is currently required to create an app, and an account can have only one API application.
+
+The Worker holds only the client secret and stores nothing. `hosted/apps/api/src/strava.ts` serves three routes:
+
+- `GET /strava/authorize?state=<random>` redirects the rider to Strava, asking for the `activity:write` scope. The app opens it in a web authentication session.
+- `GET /strava/callback` swaps Strava's code for tokens and redirects to `trainstackride://strava` with `state`, `access_token`, `refresh_token`, `expires_at` and the athlete's ID and name, or with `error` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`). The app keeps the tokens in its Keychain and checks `state` is the one it sent.
+- `POST /strava/refresh` takes `{ "refresh_token": "..." }` and returns a fresh token set. It answers 401 `invalid_refresh_token` when the rider has revoked access, and 502 when Strava is unavailable.
 
 The workflow passes the GitHub `production` variable and secret to Alchemy through `hosted/infra/.env.schema`. The API receives a plain ID binding and a redacted secret binding, accessed through `ENV.STRAVA_CLIENT_ID` and `ENV.STRAVA_CLIENT_SECRET` from `hosted/apps/api/src/env.server.ts`. Missing values default to empty strings so deployment works before registration. Configure both before enabling Strava features.
 
@@ -68,7 +74,7 @@ gh secret set STRAVA_CLIENT_SECRET --env production --repo richard-better/trains
 
 The second command prompts for the client secret without putting it in shell history. For rotation, rotate the secret in Strava's API settings, replace the GitHub secret, and redeploy the current `main` revision. Update the ID too if replacing the application. For local deployment, use the ignored `hosted/apps/api/.env`.
 
-New apps start with only their owner's athlete account and default overall limits of 200 requests per 15 minutes and 2,000 per day. Strava now offers a self-service dashboard upgrade to 10 athletes, with overall limits of 400 per 15 minutes and 4,000 per day. Further capacity requires the [Developer Program review form](https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8), including screenshots of every place Strava data appears and the **Connect with Strava** button. Follow the [brand guidelines](https://developers.strava.com/guidelines/) for the button and **Powered by Strava** attribution (the guidelines also allow **Compatible with Strava**). Capacity and rate increases are subject to review and are not guaranteed; see [rate limits](https://developers.strava.com/docs/rate-limits/) and [getting started](https://developers.strava.com/docs/getting-started/). Future uploads need the OAuth scope [`activity:write`](https://developers.strava.com/docs/authentication/).
+New apps start with only their owner's athlete account and default overall limits of 200 requests per 15 minutes and 2,000 per day. Strava now offers a self-service dashboard upgrade to 10 athletes, with overall limits of 400 per 15 minutes and 4,000 per day. Further capacity requires the [Developer Program review form](https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8), including screenshots of every place Strava data appears and the **Connect with Strava** button. Follow the [brand guidelines](https://developers.strava.com/guidelines/) for the button and **Powered by Strava** attribution (the guidelines also allow **Compatible with Strava**). Capacity and rate increases are subject to review and are not guaranteed; see [rate limits](https://developers.strava.com/docs/rate-limits/) and [getting started](https://developers.strava.com/docs/getting-started/). Uploads need the OAuth scope [`activity:write`](https://developers.strava.com/docs/authentication/).
 
 ## First deployment
 

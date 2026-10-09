@@ -14,6 +14,7 @@ import { createContext } from "./context";
 import { ENV } from "./env.server";
 import { appRouter } from "./router";
 import { createAuth } from "./services";
+import { stravaRoutes } from "./strava";
 
 initLogger({
   env: { service: "trainstack-api" },
@@ -63,6 +64,8 @@ app.get("/health", async (c) => {
     return c.json({ status: "unavailable" }, 503);
   }
 });
+
+app.route("/strava", stravaRoutes(ENV));
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 
