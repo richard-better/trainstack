@@ -4,7 +4,8 @@ import RideBluetooth
 import RideData
 import RideLink
 
-/// Runs a ride: moves the session on once a second with the latest reading.
+/// Runs a ride: moves the session on once a second with the latest reading, and keeps the
+/// trainer on the current mode's setting.
 @Observable
 final class RideController {
   private(set) var session: RideSession
@@ -37,6 +38,7 @@ final class RideController {
 
   func start() {
     guard clock == nil else { return }
+    updateTrainer()
     clock = Task { [weak self] in
       var last = ContinuousClock.now
       while !Task.isCancelled {
@@ -48,9 +50,11 @@ final class RideController {
     }
   }
 
+  /// Ends the ride and hands the trainer back.
   func stop() {
     clock?.cancel()
     clock = nil
+    devices?.setTrainerTarget(nil)
   }
 
   /// Moves the ride on by `seconds`, as the clock does each second.
@@ -63,16 +67,44 @@ final class RideController {
       reading.heartRateSource = live.source
     }
     session.advance(by: seconds, reading: reading)
+    updateTrainer(at: date)
     onTick?()
   }
 
   func togglePause() { session.togglePause() }
-  func skipInterval() { session.skipInterval() }
-  func adjust(by steps: Int) { session.adjust(by: steps) }
+
+  func skipInterval() {
+    session.skipInterval()
+    updateTrainer()
+  }
+
+  func adjust(by steps: Int) {
+    session.adjust(by: steps)
+    updateTrainer()
+  }
 
   var mode: TrainerMode {
     get { session.mode }
-    set { session.mode = newValue }
+    set {
+      session.mode = newValue
+      updateTrainer()
+    }
+  }
+
+  /// What the trainer is asked for: the current mode's setting, or a flat road once the
+  /// workout is over.
+  var trainerTarget: TrainerTarget {
+    switch session.mode {
+    case .erg: session.targetPower.map(TrainerTarget.power) ?? .grade(0)
+    case .slope: .grade(session.grade)
+    case .level: .resistance(Double(session.level) / Double(RideSession.levelRange.upperBound))
+    }
+  }
+
+  /// Sends the trainer its target. Calling this each second also retries what the trainer
+  /// left unanswered.
+  private func updateTrainer(at date: Date = .now) {
+    devices?.setTrainerTarget(trainerTarget, at: date)
   }
 
   func zone(of interval: RideSession.Interval) -> PowerZone {
