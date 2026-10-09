@@ -30,6 +30,7 @@ public final class WorkoutRelay {
     @ObservationIgnored private var session: HKWorkoutSession?
     @ObservationIgnored private var builder: HKLiveWorkoutBuilder?
     @ObservationIgnored private var delegate: WorkoutDelegate?
+    @ObservationIgnored private var startup: Task<Void, Never>?
   #endif
 
   init() {}
@@ -101,12 +102,15 @@ public final class WorkoutRelay {
         let startDate = Date.now
         workout = WatchWorkout(startDate: startDate, startedOnPhone: fromPhone)
         session.startActivity(with: startDate)
-        Task {
-          await mirror(session)
+        startup = Task {
           do {
             try await builder.beginCollection(at: startDate)
+            guard !Task.isCancelled, self.session === session else { return }
+            await mirror(session)
           } catch {
+            guard !Task.isCancelled, self.session === session else { return }
             log.error("Workout collection did not begin: \(error.localizedDescription)")
+            session.end()
           }
         }
       } catch {
@@ -119,7 +123,7 @@ public final class WorkoutRelay {
       guard session == nil else { return }
       do {
         let session = try await store.recoverActiveWorkoutSession()
-        guard let session else { return }
+        guard let session, self.session == nil else { return }
         attach(session, builder: session.associatedWorkoutBuilder())
         workout = WatchWorkout(startDate: session.startDate ?? .now, startedOnPhone: false)
         await mirror(session)
@@ -139,12 +143,22 @@ public final class WorkoutRelay {
 
     private func attach(_ session: HKWorkoutSession, builder: HKLiveWorkoutBuilder) {
       let delegate = WorkoutDelegate(
-        heartRate: { [weak self] bpm in self?.measured(bpm) },
-        receive: { [weak self] data in
-          for message in data.compactMap({ try? LinkMessage(data: $0) }) { self?.receive(message) }
+        heartRate: { [weak self, weak session] bpm in
+          guard let self, let session, self.session === session else { return }
+          measured(bpm)
         },
-        disconnect: { [weak self] in self?.isPhoneConnected = false },
-        end: { [weak self] date in self?.finish(at: date) })
+        receive: { [weak self, weak session] data in
+          guard let self, let session, self.session === session else { return }
+          for message in data.compactMap({ try? LinkMessage(data: $0) }) { receive(message) }
+        },
+        disconnect: { [weak self, weak session] in
+          guard let self, let session, self.session === session else { return }
+          isPhoneConnected = false
+        },
+        end: { [weak self, weak session] date in
+          guard let self, let session, self.session === session else { return }
+          finish(at: date)
+        })
       session.delegate = delegate
       builder.delegate = delegate
       self.session = session
@@ -155,6 +169,7 @@ public final class WorkoutRelay {
     private func mirror(_ session: HKWorkoutSession) async {
       do {
         try await session.startMirroringToCompanionDevice()
+        guard self.session === session else { return }
         isPhoneConnected = true
       } catch {
         log.error("Workout not mirrored to iPhone: \(error.localizedDescription)")
@@ -176,11 +191,15 @@ public final class WorkoutRelay {
 
     private func finish(at date: Date) {
       guard let builder else { return }
+      let startup = self.startup
+      self.startup = nil
+      startup?.cancel()
       session = nil
       self.builder = nil
       delegate = nil
       reset()
       Task {
+        await startup?.value
         do {
           try await builder.endCollection(at: date)
           try await builder.finishWorkout()
