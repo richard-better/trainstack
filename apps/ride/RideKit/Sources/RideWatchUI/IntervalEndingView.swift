@@ -8,13 +8,14 @@
   struct IntervalEndingView: View {
     let glance: RideGlance
     let seconds: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
       VStack(spacing: 4) {
         Text("\(seconds)")
           .font(.system(size: 62, weight: .semibold))
           .contentTransition(.numericText(countsDown: true))
-          .animation(.default, value: seconds)
+          .animation(reduceMotion ? nil : .default, value: seconds)
           .frame(width: 110, height: 110)
           .overlay {
             Circle().strokeBorder(color, lineWidth: 6)
