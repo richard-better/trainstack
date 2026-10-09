@@ -659,6 +659,77 @@ test("a Strava athlete is connected to one account, which a newcomer cannot take
   });
 });
 
+const connections = async () =>
+  (await db.prepare("SELECT user_id, refresh_token FROM strava_connection").all()).results;
+
+test("a holder whose tokens cannot be read keeps the athlete rather than losing it to anyone", async () => {
+  reset();
+  const holder = await signUp();
+  const other = await signUp();
+  await connect(holder.token);
+  await db.prepare("UPDATE strava_connection SET refresh_token = 'not-a-valid-ciphertext'").run();
+
+  const link = await start(other.token);
+  await callback(link.state);
+  strava.requests.length = 0;
+  const refused = await postJson(other.token, "/connect/complete", {
+    code_verifier: link.verifier,
+  });
+  assert.equal(refused.status, 409);
+  assert.deepEqual(strava.requests, []);
+  assert.equal((await connections()).length, 1);
+});
+
+test("a holder is not evicted because Strava refused a token another request had just replaced", async () => {
+  reset();
+  const holder = await signUp();
+  const other = await signUp();
+  await connect(holder.token);
+
+  const link = await start(other.token);
+  await callback(link.state);
+  // While the check is asking Strava, the holder's own request replaces the stored tokens, so
+  // Strava refuses the older refresh token the check was holding.
+  reset({
+    token: async () => {
+      await db
+        .prepare("UPDATE strava_connection SET refresh_token = 'replaced-by-the-holder'")
+        .run();
+      return new Response("{}", { status: 400 });
+    },
+  });
+  const refused = await postJson(other.token, "/connect/complete", {
+    code_verifier: link.verifier,
+  });
+  assert.equal(refused.status, 409);
+  const rows = await connections();
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].refresh_token, "replaced-by-the-holder");
+});
+
+test("a rider's own request does not delete a connection that another request refreshed first", async () => {
+  reset();
+  const { email, token } = await signUp();
+  await connect(token);
+  await expireToken(email);
+  reset({
+    token: async () => {
+      await db
+        .prepare("UPDATE strava_connection SET refresh_token = 'replaced-by-another-request'")
+        .run();
+      return new Response("{}", { status: 400 });
+    },
+  });
+  // The ride still goes, with what the other request stored, and nothing is forgotten.
+  const response = await upload(token);
+  assert.equal(response.status, 202);
+  assert.equal((await connections()).length, 1);
+  assert.deepEqual(await (await call(token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+});
+
 test("a rider whose athlete was taken first gets it back by removing Ride in Strava", async () => {
   reset();
   const squatter = await signUp();

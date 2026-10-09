@@ -86,6 +86,42 @@ export function stravaRoutes(deps: StravaDeps) {
     deps.database().delete(stravaConnection).where(eq(stravaConnection.userId, userId));
 
   /**
+   * Forgets a connection only if it still holds the refresh token the caller read. Refresh tokens
+   * rotate, so a request that found its token refused may only have been slow behind another that
+   * replaced it, and must not delete a connection that is fine.
+   */
+  const forgetIfUnchanged = async (userId: string, refreshCipher: string) => {
+    const gone = await deps
+      .database()
+      .delete(stravaConnection)
+      .where(
+        and(eq(stravaConnection.userId, userId), eq(stravaConnection.refreshToken, refreshCipher)),
+      )
+      .returning({ userId: stravaConnection.userId });
+    return gone.length > 0;
+  };
+
+  /** Keeps tokens Strava just gave in place of `refreshCipher`, unless another request got there. */
+  const saveRefreshed = async (
+    userId: string,
+    refreshCipher: string,
+    tokens: strava.TokenResponse,
+  ) => {
+    const keys = await getVault();
+    await deps
+      .database()
+      .update(stravaConnection)
+      .set({
+        accessToken: await keys.encrypt(tokens.access_token),
+        refreshToken: await keys.encrypt(tokens.refresh_token),
+        expiresAt: tokens.expires_at,
+      })
+      .where(
+        and(eq(stravaConnection.userId, userId), eq(stravaConnection.refreshToken, refreshCipher)),
+      );
+  };
+
+  /**
    * Takes one call from the budget `key` if there is any left, in a single statement so that
    * requests arriving together cannot all see room that is only there for one.
    */
@@ -123,74 +159,64 @@ export function stravaRoutes(deps: StravaDeps) {
    * Whether the account that holds an athlete has lost Strava's trust, which only the rider can
    * make happen, by removing Ride in their Strava settings. A holder Strava still accepts is
    * kept, so an account cannot be evicted by someone who tricked the rider into approving, and a
-   * rider whose athlete was taken first can still get it back by revoking Ride. When it cannot be
-   * told, the holder keeps it.
+   * rider whose athlete was taken first can still get it back by revoking Ride. Whenever it
+   * cannot be told for sure, the holder keeps it.
    */
   const holderRevoked = async (holderId: string) => {
     const keysOfApp = credentials();
     const row = await connectionOf(holderId);
-    if (!keysOfApp || !row) return false;
+    if (!row) return true;
+    if (!keysOfApp) return false;
     const refreshToken = await (await getVault()).decrypt(row.refreshToken);
-    if (!refreshToken) return true;
+    if (!refreshToken) return false;
     if (!(await spend(`athlete:${row.athleteId}`, ATHLETE_CALLS))) return false;
     const response = await strava
       .refreshTokens(fetcher, keysOfApp, refreshToken)
       .catch(() => undefined);
     if (!response) return false;
     if (response.status === 400 || response.status === 401) {
-      await forget(holderId);
-      return true;
+      return forgetIfUnchanged(holderId, row.refreshToken);
     }
-    // Still good: keep the new tokens, since a refresh replaces the old ones.
-    if (response.ok) await save(holderId, (await response.json()) as strava.TokenResponse);
+    if (response.ok) {
+      await saveRefreshed(
+        holderId,
+        row.refreshToken,
+        (await response.json()) as strava.TokenResponse,
+      );
+    }
     return false;
   };
 
-  const save = async (
-    userId: string,
-    tokens: strava.TokenResponse,
-    athleteName?: string | null,
-  ) => {
+  /** Connects the athlete Strava's code exchange named to the account. */
+  const save = async (userId: string, tokens: strava.TokenResponse) => {
+    const athlete = tokens.athlete;
+    if (!athlete) throw new Error("Strava did not say which athlete agreed");
     const keys = await getVault();
     const values = {
       accessToken: await keys.encrypt(tokens.access_token),
       refreshToken: await keys.encrypt(tokens.refresh_token),
       expiresAt: tokens.expires_at,
     };
-    if (tokens.athlete) {
-      const holder = await deps
-        .database()
-        .select({ userId: stravaConnection.userId })
-        .from(stravaConnection)
-        .where(
-          and(
-            eq(stravaConnection.athleteId, tokens.athlete.id),
-            ne(stravaConnection.userId, userId),
-          ),
-        )
-        .get();
-      if (holder && !(await holderRevoked(holder.userId))) throw new AthleteInUse();
-      const name = [tokens.athlete.firstname, tokens.athlete.lastname].filter(Boolean).join(" ");
-      try {
-        await deps
-          .database()
-          .insert(stravaConnection)
-          .values({ userId, athleteId: tokens.athlete.id, athleteName: name || null, ...values })
-          .onConflictDoUpdate({
-            target: stravaConnection.userId,
-            set: { athleteId: tokens.athlete.id, athleteName: name || null, ...values },
-          });
-      } catch {
-        // Another account got there between the check and the insert.
-        throw new AthleteInUse();
-      }
-    } else {
-      // A refresh does not say who the athlete is, and nothing about them has changed.
+    const holder = await deps
+      .database()
+      .select({ userId: stravaConnection.userId })
+      .from(stravaConnection)
+      .where(and(eq(stravaConnection.athleteId, athlete.id), ne(stravaConnection.userId, userId)))
+      .get();
+    if (holder && !(await holderRevoked(holder.userId))) throw new AthleteInUse();
+    const name = [athlete.firstname, athlete.lastname].filter(Boolean).join(" ") || null;
+    try {
       await deps
         .database()
-        .update(stravaConnection)
-        .set({ ...values, ...(athleteName === undefined ? {} : { athleteName }) })
-        .where(eq(stravaConnection.userId, userId));
+        .insert(stravaConnection)
+        .values({ userId, athleteId: athlete.id, athleteName: name, ...values })
+        .onConflictDoUpdate({
+          target: stravaConnection.userId,
+          set: { athleteId: athlete.id, athleteName: name, ...values },
+        });
+    } catch {
+      // Another account got there between the check and the insert.
+      throw new AthleteInUse();
     }
   };
 
@@ -208,9 +234,8 @@ export function stravaRoutes(deps: StravaDeps) {
     if (!row || !keysOfApp) throw new NotConnected();
 
     let accessToken = await keys.decrypt(row.accessToken);
-    const refreshToken = await keys.decrypt(row.refreshToken);
-    if (!accessToken || !refreshToken) {
-      await forget(userId);
+    if (!accessToken || !(await keys.decrypt(row.refreshToken))) {
+      await forgetIfUnchanged(userId, row.refreshToken);
       throw new NotConnected();
     }
 
@@ -219,16 +244,24 @@ export function stravaRoutes(deps: StravaDeps) {
       if (!(await spend(budget, ATHLETE_CALLS))) throw new OverBudget();
     };
 
+    // Starts from what is stored now, since another request may have refreshed since this began.
     const refresh = async () => {
+      const current = await connectionOf(userId);
+      const refreshToken = current && (await keys.decrypt(current.refreshToken));
+      if (!current || !refreshToken) throw new NotConnected();
       await spendCall();
       const response = await strava.refreshTokens(fetcher, keysOfApp, refreshToken);
       if (response.status === 400 || response.status === 401) {
-        await forget(userId);
-        throw new NotConnected();
+        if (await forgetIfUnchanged(userId, current.refreshToken)) throw new NotConnected();
+        // Another request replaced the tokens first, so Strava refused the old ones.
+        const latest = await connectionOf(userId);
+        const token = latest && (await keys.decrypt(latest.accessToken));
+        if (!token) throw new NotConnected();
+        return token;
       }
       if (!response.ok) throw new Error(`Strava refresh answered ${response.status}`);
       const tokens = (await response.json()) as strava.TokenResponse;
-      await save(userId, tokens);
+      await saveRefreshed(userId, current.refreshToken, tokens);
       return tokens.access_token;
     };
 

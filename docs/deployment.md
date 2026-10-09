@@ -71,7 +71,7 @@ Strava allows the whole app 200 requests per 15 minutes and counts them by athle
 
 Failures are `409 not_connected` (no connection, or the rider revoked Ride in Strava, which also forgets it), `429 rate_limited` and `502 strava_unavailable`.
 
-Tokens are stored in the `strava_connection` table, encrypted with AES-GCM under a key derived from `BETTER_AUTH_SECRET`, so a copy of the database is no use on its own. Changing that secret signs everyone out and makes riders connect Strava again. Deleting an account deletes its connection.
+Tokens are stored in the `strava_connection` table, encrypted with AES-GCM under a key derived from `BETTER_AUTH_SECRET`, so a copy of the database is no use on its own. Changing that secret signs everyone out and makes riders connect Strava again; the stored tokens become unreadable, and the API keeps such a connection rather than hand its athlete to anyone, so clear it with `DELETE FROM strava_connection` in D1 after a rotation. Deleting an account deletes its connection.
 
 Automatic account linking is off, so signing in with Apple never joins an existing email account, which could have been registered by someone else without verifying the address. Sign in with Apple needs no secret: the app sends the identity token Apple gives it and the API checks it against Apple's keys, with the bundle ID `com.trainstackhq.ride` as the audience. Enable the Sign in with Apple capability on that App ID. Revoking a rider's Apple tokens on account deletion, which App Review also expects once Ride ships on the App Store, is not done yet.
 
