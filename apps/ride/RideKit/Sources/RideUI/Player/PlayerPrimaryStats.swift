@@ -5,21 +5,12 @@ import SwiftUI
 /// wide window, otherwise two.
 struct PlayerPrimaryStats: View {
   let controller: RideController
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     let session = controller.session
     let target = BigStat(value: targetValue.value, unit: targetValue.unit) {
-      HStack(spacing: 8) {
-        Text("Target")
-        if let interval = session.currentInterval {
-          let zone = controller.zone(of: interval)
-          Text("Z\(zone.rawValue + 1) \(zone.name)")
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 1)
-            .background(.quaternary, in: .capsule)
-        }
-      }
+      PlayerTargetLabel(zone: session.currentInterval.map(controller.zone))
     }
     let power = BigStat(
       value: session.latest.power.map(String.init) ?? "—", unit: "W", detail: powerDetail
@@ -35,22 +26,31 @@ struct PlayerPrimaryStats: View {
     ) {
       LegendSwatch(title: "Heart rate", color: .red, height: 2)
     }
-    ViewThatFits(in: .horizontal) {
-      DividedRow {
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: 16) {
         target
         power
         cadence
         heartRate
       }
-      .frame(minWidth: 760)
-      Grid(horizontalSpacing: 0, verticalSpacing: 16) {
-        GridRow {
+    } else {
+      ViewThatFits(in: .horizontal) {
+        DividedRow {
           target
           power
-        }
-        GridRow {
           cadence
           heartRate
+        }
+        .frame(minWidth: 760)
+        Grid(horizontalSpacing: 0, verticalSpacing: 16) {
+          GridRow {
+            target
+            power
+          }
+          GridRow {
+            cadence
+            heartRate
+          }
         }
       }
     }
