@@ -36,7 +36,9 @@ nonisolated struct PaceFormat: ParseableFormatStyle {
       case 1: if let seconds = numbers[0] { return seconds }
       case 2:
         if let minutes = numbers[0], let seconds = numbers[1], (0..<60).contains(seconds) {
-          return minutes * 60 + seconds
+          let (wholeMinutes, minutesOverflow) = minutes.multipliedReportingOverflow(by: 60)
+          let (total, secondsOverflow) = wholeMinutes.addingReportingOverflow(seconds)
+          if !minutesOverflow, !secondsOverflow { return total }
         }
       default: break
       }
