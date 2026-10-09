@@ -2,7 +2,7 @@ import { and, eq, isNull, lt, ne, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { Database } from "../db";
-import { stravaBudget, stravaConnection, stravaLink } from "../db/schema";
+import { account, stravaBudget, stravaConnection, stravaLink } from "../db/schema";
 import * as strava from "./api";
 import { createVault, type Vault } from "./crypto";
 
@@ -44,6 +44,9 @@ const BUDGET_WINDOW_SECONDS = 15 * 60;
 
 /** Signalled when Strava no longer accepts the rider's sign-in. */
 class NotConnected extends Error {}
+
+/** Signalled when the Strava athlete is already connected to a different account. */
+class AthleteInUse extends Error {}
 
 /** Signalled when a request to Strava would go over the rider's share of its limits. */
 class OverBudget extends Error {}
@@ -128,25 +131,32 @@ export function stravaRoutes(deps: StravaDeps) {
       expiresAt: tokens.expires_at,
     };
     if (tokens.athlete) {
-      const name = [tokens.athlete.firstname, tokens.athlete.lastname].filter(Boolean).join(" ");
-      // An athlete is connected to one account. Whoever has just agreed on Strava's page takes it.
-      await deps
+      const holder = await deps
         .database()
-        .delete(stravaConnection)
+        .select({ userId: stravaConnection.userId })
+        .from(stravaConnection)
         .where(
           and(
             eq(stravaConnection.athleteId, tokens.athlete.id),
             ne(stravaConnection.userId, userId),
           ),
-        );
-      await deps
-        .database()
-        .insert(stravaConnection)
-        .values({ userId, athleteId: tokens.athlete.id, athleteName: name || null, ...values })
-        .onConflictDoUpdate({
-          target: stravaConnection.userId,
-          set: { athleteId: tokens.athlete.id, athleteName: name || null, ...values },
-        });
+        )
+        .get();
+      if (holder) throw new AthleteInUse();
+      const name = [tokens.athlete.firstname, tokens.athlete.lastname].filter(Boolean).join(" ");
+      try {
+        await deps
+          .database()
+          .insert(stravaConnection)
+          .values({ userId, athleteId: tokens.athlete.id, athleteName: name || null, ...values })
+          .onConflictDoUpdate({
+            target: stravaConnection.userId,
+            set: { athleteId: tokens.athlete.id, athleteName: name || null, ...values },
+          });
+      } catch {
+        // Another account got there between the check and the insert.
+        throw new AthleteInUse();
+      }
     } else {
       // A refresh does not say who the athlete is, and nothing about them has changed.
       await deps
@@ -242,6 +252,15 @@ export function stravaRoutes(deps: StravaDeps) {
       return c.json({ error: "invalid_request" }, 400);
     }
     const userId = userIdOf(c);
+    // Anyone can make an email account, and every sign-in costs Strava's shared limits, so
+    // connecting is for accounts made with Sign in with Apple, which are not free to make.
+    const apple = await deps
+      .database()
+      .select({ id: account.id })
+      .from(account)
+      .where(and(eq(account.userId, userId), eq(account.providerId, "apple")))
+      .get();
+    if (!apple) return c.json({ error: "apple_account_required" }, 403);
     if (!(await spend(`user:${userId}`, USER_CONNECTS))) {
       return c.json({ error: "rate_limited" }, 429);
     }
@@ -328,7 +347,13 @@ export function stravaRoutes(deps: StravaDeps) {
     const plain = await (await getVault()).decrypt(link.tokens);
     if (!plain) return c.json({ error: "invalid_link" }, 400);
     const tokens = JSON.parse(plain) as strava.TokenResponse;
-    await save(userId, tokens);
+    try {
+      await save(userId, tokens);
+    } catch (error) {
+      if (!(error instanceof AthleteInUse)) throw error;
+      await database.delete(stravaLink).where(eq(stravaLink.id, link.id));
+      return c.json({ error: "athlete_in_use" }, 409);
+    }
     await database.delete(stravaLink).where(eq(stravaLink.id, link.id));
     return c.json(await statusOf(userId));
   });

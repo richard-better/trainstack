@@ -77,9 +77,14 @@ before(
   { timeout: 60_000 },
 );
 
-// The app-wide limit on code exchanges is shared by every test, so each starts with it unspent.
+// A Strava athlete is connected to one account and the budgets are shared, so each test starts
+// from nothing connected and nothing spent.
 beforeEach(async () => {
-  await db.prepare("DELETE FROM strava_budget WHERE key = 'app:exchange'").run();
+  await db.batch([
+    db.prepare("DELETE FROM strava_connection"),
+    db.prepare("DELETE FROM strava_link"),
+    db.prepare("DELETE FROM strava_budget"),
+  ]);
 });
 
 after(async () => {
@@ -87,7 +92,11 @@ after(async () => {
 });
 
 let accounts = 0;
-async function signUp() {
+/**
+ * Signs a rider up. Real Sign in with Apple cannot run here, so an Apple-linked account is made
+ * the way the sign-in would leave it: an email account with an `apple` provider row.
+ */
+async function signUp({ apple = true } = {}) {
   const email = `rider${++accounts}@example.com`;
   const response = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
     method: "POST",
@@ -95,6 +104,15 @@ async function signUp() {
     body: JSON.stringify({ name: `Rider ${accounts}`, email, password: "test-password-12345" }),
   });
   assert.equal(response.status, 200, await response.clone().text());
+  if (apple) {
+    await db
+      .prepare(
+        "INSERT INTO account (id, account_id, provider_id, user_id, updated_at) " +
+          "SELECT ?, ?, 'apple', id, 0 FROM \"user\" WHERE email = ?",
+      )
+      .bind(`apple-${accounts}`, `apple-sub-${accounts}`, email)
+      .run();
+  }
   return { email, token: response.headers.get("set-auth-token") };
 }
 
@@ -598,28 +616,74 @@ test("every request to Strava counts, including the refresh and the retry behind
   );
 });
 
-test("the budget belongs to the Strava athlete, not to the account, and an athlete has one account", async () => {
+test("a Strava athlete is connected to one account, which nobody else can take", async () => {
   reset();
   const first = await signUp();
   const second = await signUp();
   await connect(first.token);
-  await setUsed("athlete:42", 30);
 
-  // The same athlete connecting a second account moves the connection and keeps the budget.
+  // A second account whose rider agrees on Strava's page for the same athlete is turned away.
+  const link = await start(second.token);
+  assert.equal((await callback(link.state)).status, 302);
+  const refused = await postJson(second.token, "/connect/complete", {
+    code_verifier: link.verifier,
+  });
+  assert.equal(refused.status, 409);
+  assert.deepEqual(await refused.json(), { error: "athlete_in_use" });
+  assert.deepEqual(await (await call(second.token, "")).json(), { connected: false });
+  assert.deepEqual(await (await call(first.token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+  // The try is used up, and the first account still works.
+  assert.equal(
+    (await postJson(second.token, "/connect/complete", { code_verifier: link.verifier })).status,
+    400,
+  );
+  assert.equal((await upload(first.token)).status, 202);
+
+  // Only the first account can let go, after which the athlete is free to connect elsewhere.
+  assert.equal((await call(first.token, "", { method: "DELETE" })).status, 204);
   await connect(second.token);
-  assert.deepEqual(await (await call(first.token, "")).json(), { connected: false });
   assert.deepEqual(await (await call(second.token, "")).json(), {
     connected: true,
     athleteName: "Ada Rider",
   });
-  strava.requests.length = 0;
-  assert.equal((await call(second.token, "/uploads/7")).status, 429);
-  assert.deepEqual(strava.requests, []);
+});
 
-  // Disconnecting and connecting again does not start afresh either.
-  assert.equal((await call(second.token, "", { method: "DELETE" })).status, 204);
-  await connect(second.token);
-  assert.equal((await call(second.token, "/uploads/7")).status, 429);
+test("disconnecting and connecting again does not start a fresh budget", async () => {
+  reset();
+  const { token } = await signUp();
+  await connect(token);
+  await setUsed("athlete:42", 30);
+  assert.equal((await call(token, "", { method: "DELETE" })).status, 204);
+  await connect(token);
+  strava.requests.length = 0;
+  assert.equal((await call(token, "/uploads/7")).status, 429);
+  assert.deepEqual(strava.requests, []);
+});
+
+test("only accounts made with Sign in with Apple can start connecting Strava", async () => {
+  reset();
+  const emailOnly = await signUp({ apple: false });
+  const response = await postJson(emailOnly.token, "/connect", {
+    code_challenge: makeVerifier().challenge,
+  });
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), { error: "apple_account_required" });
+  assert.equal(
+    (
+      await db
+        .prepare(
+          'SELECT count(*) AS n FROM strava_link WHERE user_id = (SELECT id FROM "user" WHERE email = ?)',
+        )
+        .bind(emailOnly.email)
+        .first()
+    ).n,
+    0,
+  );
+  // Nothing else about Strava is closed to them: they just have nothing connected.
+  assert.deepEqual(await (await call(emailOnly.token, "")).json(), { connected: false });
 });
 
 test("a sign-in gets one try with Strava, however the callback is reached", async () => {
