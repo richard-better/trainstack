@@ -3,13 +3,16 @@ import RideStyle
 import SwiftUI
 
 /// A workout to pick: its profile coloured by zone, so workouts can be told apart by shape and
-/// intensity at a glance. Click to select, double-click to start.
+/// intensity at a glance. Click to select, double-click to open the workout. The selected card
+/// has its zone's colour around it and a Start button.
 struct WorkoutCard: View {
   let template: WorkoutTemplate
   var tag: String?
   var profileHeight = 96.0
   let isSelected: Bool
   let select: () -> Void
+  /// Opens the workout's page.
+  let open: () -> Void
   let start: (() -> Void)?
 
   var body: some View {
@@ -19,7 +22,7 @@ struct WorkoutCard: View {
           .padding(.horizontal, 12)
           .padding(.top, 14)
           .frame(height: profileHeight)
-          .background(.black.opacity(0.12))
+          .background(.primary.opacity(0.05))
         VStack(alignment: .leading, spacing: 4) {
           if let tag {
             Text(tag).font(.caption).foregroundStyle(.secondary)
@@ -37,24 +40,37 @@ struct WorkoutCard: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
       }
-      .background(.primary.opacity(isSelected ? 0.09 : 0.04))
-      .clipShape(.rect(cornerRadius: 10))
+      .background(.primary.opacity(isSelected ? 0.07 : 0.04))
+      .clipShape(.rect(cornerRadius: 14))
       .overlay {
-        RoundedRectangle(cornerRadius: 10)
-          .strokeBorder(.primary.opacity(isSelected ? 0.4 : 0.06))
+        RoundedRectangle(cornerRadius: 14)
+          .strokeBorder(
+            isSelected
+              ? AnyShapeStyle(template.category.color) : AnyShapeStyle(.primary.opacity(0.06)),
+            lineWidth: isSelected ? 2 : 1)
       }
-      .contentShape(.rect(cornerRadius: 10))
+      .contentShape(.rect(cornerRadius: 14))
     }
     .buttonStyle(.plain)
-    .simultaneousGesture(TapGesture(count: 2).onEnded { start?() })
+    .overlay(alignment: .topTrailing) {
+      if isSelected, let start {
+        Button("Start", systemImage: "play.fill", action: start)
+          .buttonStyle(.glass)
+          .buttonBorderShape(.capsule)
+          .controlSize(.small)
+          .padding(10)
+      }
+    }
+    .simultaneousGesture(TapGesture(count: 2).onEnded { open() })
     .accessibilityAddTraits(isSelected ? .isSelected : [])
+    .accessibilityAction(named: "Show details", open)
     .accessibilityAction(named: "Start") { start?() }
   }
 }
 
 #Preview {
   WorkoutCard(
-    template: .named("Threshold classic 60")!, isSelected: true, select: {}, start: nil
+    template: .named("Threshold classic 60")!, isSelected: true, select: {}, open: {}, start: nil
   )
   .frame(width: 260)
   .padding()

@@ -13,20 +13,24 @@ struct AppTabs: View {
   /// Where the player zooms from and back to.
   let player: Namespace.ID
   @Environment(RideLauncher.self) private var launcher
+  @State private var todayPath: [WorkoutTemplate] = []
+  @State private var workoutsPath: [WorkoutTemplate] = []
 
   var body: some View {
     TabView(selection: $destination) {
       Tab("Today", systemImage: "calendar", value: .today) {
-        NavigationStack {
+        NavigationStack(path: $todayPath) {
           TodayView(state: $today, openSettings: openSettings)
             .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
         }
+        .environment(\.openWorkout) { todayPath.append($0) }
       }
       Tab("Workouts", systemImage: "chart.bar", value: .workouts) {
-        NavigationStack {
+        NavigationStack(path: $workoutsPath) {
           WorkoutsView(state: $workouts)
             .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
         }
+        .environment(\.openWorkout) { workoutsPath.append($0) }
       }
       Tab("History", systemImage: "clock", value: .history) {
         HistoryView(library: library, selection: $historySelection)

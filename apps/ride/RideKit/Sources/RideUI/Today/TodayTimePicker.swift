@@ -35,20 +35,16 @@ struct TodayTimePicker: View {
   }
 
   private var picker: some View {
-    Picker("Time you have", selection: $minutes) {
-      ForEach(Self.durations, id: \.self) { Text("\($0)m").tag($0) }
-    }
-    .pickerStyle(.segmented)
-    .labelsHidden()
+    SegmentedPicker(
+      title: "Time you have", options: Self.durations, selection: $minutes,
+      label: { "\($0)m" })
   }
 
   private var shuffleButton: some View {
     Button("Other suggestions", systemImage: "shuffle", action: shuffle)
       .labelStyle(.iconOnly)
       .buttonStyle(.glass)
-      #if os(iOS)
-        .controlSize(.large)
-      #endif
+      .controlSize(.large)
       .help("Other suggestions")
   }
 }

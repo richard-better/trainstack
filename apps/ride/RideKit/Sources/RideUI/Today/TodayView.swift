@@ -28,6 +28,7 @@ struct TodayView: View {
               template: selected?.template,
               title: selected.map { "Start \($0.template.name)" } ?? "Start"
             )
+            .labelStyle(.titleAndIcon)
             .buttonStyle(.borderedProminent)
           }
           #if os(iOS)

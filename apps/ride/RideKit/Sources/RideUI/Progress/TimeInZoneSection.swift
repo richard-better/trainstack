@@ -52,11 +52,10 @@ struct TimeInZoneSection: View {
   }
 
   private var picker: some View {
-    Picker("Zones", selection: $choice) {
-      ForEach(metrics, id: \.self) { Text($0.title).tag(Optional($0)) }
-    }
-    .pickerStyle(.segmented)
-    .labelsHidden()
+    SegmentedPicker(
+      title: "Zones", options: metrics,
+      selection: Binding(get: { choice ?? metrics[0] }, set: { choice = $0 }), label: \.title
+    )
     .fixedSize()
   }
 

@@ -1,10 +1,11 @@
 import RideData
 import SwiftUI
 
-/// Workout cards in as many columns as fit. Click to select, double-click to start.
+/// Workout cards in as many columns as fit. Click to select, double-click to open.
 struct WorkoutGrid: View {
   @Binding var state: WorkoutsState
   let shown: [WorkoutTemplate]
+  @Environment(\.openWorkout) private var openWorkout
   @Environment(RideLauncher.self) private var launcher
   @Environment(RiderSettingsStore.self) private var settings
 
@@ -15,6 +16,7 @@ struct WorkoutGrid: View {
           WorkoutCard(
             template: template, isSelected: template.id == state.selection,
             select: { state.selection = template.id },
+            open: { openWorkout(template) },
             start: settings.ftp.map { ftp in
               { launcher.start(template, ftp: ftp, heartRateZones: settings.heartRateZones) }
             })

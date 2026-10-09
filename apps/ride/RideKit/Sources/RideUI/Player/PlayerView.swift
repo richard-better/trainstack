@@ -5,9 +5,9 @@ import SwiftUI
 /// a rider checks most underneath it, big enough to read from the saddle.
 struct PlayerView: View {
   let controller: RideController
+  var onMinimize: () -> Void
   var onEnd: () -> Void
   @State private var isConfirmingEnd = false
-  @Environment(\.dismiss) private var dismiss
 
   var body: some View {
     // Everything on one screen when it fits; otherwise, such as in landscape or with large
@@ -25,11 +25,10 @@ struct PlayerView: View {
       .navigationBarTitleDisplayMode(.inline)
     #endif
     .toolbar {
-      #if os(iOS)
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Minimize", systemImage: "chevron.down", action: minimize)
-        }
-      #endif
+      ToolbarItem(placement: minimizePlacement) {
+        Button("Minimize", systemImage: "chevron.down", action: onMinimize)
+          .help("Back to the app while the ride carries on")
+      }
       ToolbarItem(placement: .primaryAction) {
         Button("End Ride", systemImage: "stop.fill", action: confirmEnd)
           .confirmationDialog("End this ride?", isPresented: $isConfirmingEnd) {
@@ -42,14 +41,21 @@ struct PlayerView: View {
     }
   }
 
-  private func minimize() { dismiss() }
+  private var minimizePlacement: ToolbarItemPlacement {
+    #if os(iOS)
+      .cancellationAction
+    #else
+      .navigation
+    #endif
+  }
 
   private func confirmEnd() { isConfirmingEnd = true }
 }
 
 #Preview("Riding") {
   NavigationStack {
-    PlayerView(controller: .preview(.named("Threshold classic 60")!, minutes: 21)) {}
+    PlayerView(controller: .preview(.named("Threshold classic 60")!, minutes: 21), onMinimize: {}) {
+    }
   }
   .frame(width: 1100, height: 760)
 }
@@ -58,7 +64,7 @@ struct PlayerView: View {
   let controller = RideController.preview()
   controller.togglePause()
   return NavigationStack {
-    PlayerView(controller: controller) {}
+    PlayerView(controller: controller, onMinimize: {}) {}
   }
   .frame(width: 800, height: 700)
 }
