@@ -34,18 +34,10 @@ struct TodayTimePicker: View {
     }
   }
 
-  @ViewBuilder private var picker: some View {
-    #if os(macOS)
-      GlassSegmentedControl(
-        title: "Time you have", options: Self.durations, selection: $minutes,
-        label: { "\($0)m" })
-    #else
-      Picker("Time you have", selection: $minutes) {
-        ForEach(Self.durations, id: \.self) { Text("\($0)m").tag($0) }
-      }
-      .pickerStyle(.segmented)
-      .labelsHidden()
-    #endif
+  private var picker: some View {
+    SegmentedPicker(
+      title: "Time you have", options: Self.durations, selection: $minutes,
+      label: { "\($0)m" })
   }
 
   private var shuffleButton: some View {

@@ -21,11 +21,9 @@ struct TrendSection: View {
     }
     .font(.caption)
     .foregroundStyle(.secondary)
-    let picker = Picker("Period", selection: $span) {
-      ForEach(ProgressSpan.allCases, id: \.self) { Text($0.title).tag($0) }
-    }
-    .pickerStyle(.segmented)
-    .labelsHidden()
+    let picker = SegmentedPicker(
+      title: "Period", options: ProgressSpan.allCases, selection: $span, label: \.title
+    )
     .fixedSize()
     VStack(alignment: .leading, spacing: 8) {
       ViewThatFits(in: .horizontal) {
