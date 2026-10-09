@@ -33,7 +33,6 @@ struct PlayerPresentation: ViewModifier {
 
   /// Ends the ride, and saves it unless it was thrown away or never got going.
   private func end(saving: Bool) {
-    let recording = launcher.end()
-    if saving, let recording, !recording.samples.isEmpty { library.save(recording) }
+    launcher.end(saveTo: saving ? library : nil)
   }
 }

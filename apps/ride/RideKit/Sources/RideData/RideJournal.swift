@@ -73,6 +73,21 @@ public final class RideJournal {
     write(header)
   }
 
+  /// Carries on the journal in `directory` after a crash, adding to what it holds. Nil if there
+  /// is none.
+  public init?(resuming directory: URL = defaultDirectory) {
+    url = directory.appending(path: Self.fileName)
+    do {
+      let handle = try FileHandle(forWritingTo: url)
+      try handle.seekToEnd()
+      // Ends a line the crash cut short, so it does not run into the next.
+      try handle.write(contentsOf: Data("\n".utf8))
+      self.handle = handle
+    } catch {
+      return nil
+    }
+  }
+
   deinit { try? handle?.close() }
 
   public func append(_ entry: Entry) { write(entry) }

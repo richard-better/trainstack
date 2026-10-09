@@ -85,6 +85,33 @@ struct RideJournalTests {
     }
   }
 
+  @Test func carriesOnAfterARecovery() throws {
+    try withDirectory { directory in
+      ride(5, journaling: try journal(in: directory))
+      let handle = try FileHandle(forWritingTo: directory.appending(path: "ride.jsonl"))
+      try handle.seekToEnd()
+      try handle.write(contentsOf: Data(#"{"state":{"elapsed":6"#.utf8))
+      try handle.close()
+
+      let interrupted = try #require(RideJournal.recover(from: directory))
+      let resumed = try #require(RideJournal(resuming: directory))
+      var session = interrupted.session()
+      session.togglePause()
+      ride(3, journaling: resumed, from: session)
+
+      let again = try #require(RideJournal.recover(from: directory))
+      #expect(again.samples.count == 8)
+      #expect(again.state.elapsed == 8)
+      #expect(again.header.startDate == start)
+    }
+  }
+
+  @Test func cannotCarryOnWithoutAJournal() throws {
+    try withDirectory { directory in
+      #expect(RideJournal(resuming: directory) == nil)
+    }
+  }
+
   @Test func skipsALineCutOffByTheCrash() throws {
     try withDirectory { directory in
       let session = ride(8, journaling: try journal(in: directory))
