@@ -36,18 +36,24 @@ final class RideController {
     simulator = simulated ? SimulatedTrainer() : nil
   }
 
-  func start() {
-    guard clock == nil else { return }
+  isolated deinit { clock?.cancel() }
+
+  @discardableResult
+  func start() -> Task<Void, Never> {
+    if let clock { return clock }
     updateTrainer()
-    clock = Task { [weak self] in
+    let clock = Task { [weak self] in
       var last = ContinuousClock.now
       while !Task.isCancelled {
-        try? await Task.sleep(for: .seconds(1))
+        do { try await Task.sleep(for: .seconds(1)) } catch { break }
+        guard !Task.isCancelled, self != nil else { break }
         let now = ContinuousClock.now
         self?.tick(seconds: (now - last) / .seconds(1))
         last = now
       }
     }
+    self.clock = clock
+    return clock
   }
 
   /// Ends the ride and hands the trainer back.

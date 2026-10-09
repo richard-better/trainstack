@@ -9,6 +9,33 @@ import Testing
 struct RideControllerTests {
   private let template = WorkoutTemplate.named("Recovery 30")!
 
+  @Test(.timeLimit(.minutes(1)))
+  func releasingTheControllerCancelsItsClock() async throws {
+    var controller: RideController? = RideController(template: template, ftp: 200, simulated: true)
+    weak var released = controller
+    let clock = try #require(controller?.start())
+    controller = nil
+    #expect(released == nil)
+    await clock.value
+    #expect(clock.isCancelled)
+  }
+
+  @Test(.timeLimit(.minutes(1)))
+  func stoppingTheClockDoesNotRecordAnotherSample() async {
+    let controller = RideController(template: template, ftp: 200, simulated: true)
+    let (ticks, continuation) = AsyncStream.makeStream(
+      of: Void.self, bufferingPolicy: .bufferingNewest(1))
+    controller.onTick = { continuation.yield(()) }
+    let clock = controller.start()
+    var iterator = ticks.makeAsyncIterator()
+    await iterator.next()
+    controller.stop()
+    let samples = controller.session.samples
+    await clock.value
+    #expect(controller.session.samples == samples)
+    continuation.finish()
+  }
+
   @Test func takesHeartRateFromARealSensorOverTheSimulator() {
     let feed = HeartRateFeed()
     let controller = RideController(
@@ -30,6 +57,7 @@ struct RideControllerTests {
     let controller = RideController(template: template, ftp: 200, simulated: true)
     var glances: [RideGlance] = []
     controller.onTick = { glances.append(controller.glance) }
+    defer { controller.onTick = nil }
     controller.tick(seconds: 1)
     controller.tick(seconds: 1)
     #expect(glances.map(\.interval?.remaining) == [179, 178])
