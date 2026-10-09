@@ -11,6 +11,8 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
   var onBattery: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
+  var onTrainerControlReady: ((UUID) -> Void)?
+  var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
   private var central: CBCentralManager?
   /// The peripherals connected or being connected to. CoreBluetooth drops a connection when
   /// nothing holds its peripheral.
@@ -51,6 +53,14 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
   func disconnect(_ id: UUID) {
     guard let peripheral = peripherals.removeValue(forKey: id) else { return }
     central?.cancelPeripheralConnection(peripheral)
+  }
+
+  func writeTrainerControl(_ data: Data, to id: UUID) {
+    guard let peripheral = peripherals[id], peripheral.state == .connected,
+      let controlPoint = peripheral.services?.first(where: { $0.uuid == GATT.trainer })?
+        .characteristics?.first(where: { $0.uuid == GATT.fitnessMachineControlPoint })
+    else { return }
+    peripheral.writeValue(data, for: controlPoint, type: .withResponse)
   }
 }
 
@@ -114,7 +124,11 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
       case GATT.speedAndCadence:
         peripheral.discoverCharacteristics([GATT.cyclingSpeedCadenceMeasurement], for: service)
       case GATT.trainer:
-        peripheral.discoverCharacteristics([GATT.indoorBikeData], for: service)
+        peripheral.discoverCharacteristics(
+          [
+            GATT.indoorBikeData, GATT.fitnessMachineControlPoint, GATT.fitnessMachineStatus,
+            GATT.supportedResistanceLevelRange, GATT.supportedPowerRange,
+          ], for: service)
       default: break
       }
     }
@@ -133,8 +147,11 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
           peripheral.setNotifyValue(true, for: characteristic)
         }
       case GATT.heartRateMeasurement, GATT.cyclingPowerMeasurement,
-        GATT.cyclingSpeedCadenceMeasurement, GATT.indoorBikeData:
+        GATT.cyclingSpeedCadenceMeasurement, GATT.indoorBikeData, GATT.fitnessMachineStatus,
+        GATT.fitnessMachineControlPoint:
         peripheral.setNotifyValue(true, for: characteristic)
+      case GATT.supportedResistanceLevelRange, GATT.supportedPowerRange:
+        peripheral.readValue(for: characteristic)
       default: break
       }
     }
@@ -157,7 +174,20 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
     default:
       if let cycling = CyclingCharacteristic(rawValue: characteristic.uuid.uuidString) {
         onCyclingMeasurement?(peripheral.identifier, cycling, value)
+      } else if let trainer = TrainerCharacteristic(rawValue: characteristic.uuid.uuidString) {
+        onTrainerValue?(peripheral.identifier, trainer, value)
       }
     }
+  }
+
+  /// The control point answers commands by indication, so it is ready once they are on.
+  func peripheral(
+    _ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic,
+    error: (any Error)?
+  ) {
+    guard error == nil, characteristic.uuid == GATT.fitnessMachineControlPoint,
+      characteristic.isNotifying, peripherals[peripheral.identifier] === peripheral
+    else { return }
+    onTrainerControlReady?(peripheral.identifier)
   }
 }

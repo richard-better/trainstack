@@ -57,17 +57,23 @@ protocol BluetoothTransport: AnyObject {
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)? { get set }
   /// A connected cycling sensor notified a standard measurement characteristic.
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)? { get set }
+  /// A trainer's control point is ready to answer commands.
+  var onTrainerControlReady: ((UUID) -> Void)? { get set }
+  /// A trainer answered a command, reported its status, or sent a supported range.
+  var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)? { get set }
   func start()
   func scan()
   func stopScan()
   /// Connects to `id` whenever it comes into range. The request does not time out.
   func connect(_ id: UUID)
   func disconnect(_ id: UUID)
+  /// Writes a command to a connected trainer's control point.
+  func writeTrainerControl(_ data: Data, to id: UUID)
 }
 
 /// Nearby Bluetooth devices, and the fitness devices the rider has paired: one of each kind,
 /// remembered between launches and reconnected whenever they are in range. Passes on the heart
-/// rate from the paired strap.
+/// rate from the paired strap, and controls the paired smart trainer.
 @MainActor
 @Observable
 public final class BluetoothDevices {
@@ -107,6 +113,8 @@ public final class BluetoothDevices {
   @ObservationIgnored private var wantsScan = false
   @ObservationIgnored private var hasStarted = false
   @ObservationIgnored private var expiryTask: Task<Void, Never>?
+  @ObservationIgnored private var trainerTarget: TrainerTarget?
+  @ObservationIgnored private var trainerControls: [UUID: FitnessMachineControl] = [:]
 
   private static let pairedKey = "bluetooth.paired"
   private static let sourcePicksKey = "bluetooth.sourcePicks"
@@ -138,6 +146,12 @@ public final class BluetoothDevices {
     transport.onHeartRate = { [weak self] id, measurement in self?.receive(measurement, from: id) }
     transport.onCyclingMeasurement = { [weak self] id, characteristic, data in
       self?.receiveCycling(data, from: id, characteristic: characteristic)
+    }
+    transport.onTrainerControlReady = { [weak self] id in
+      self?.control(id) { $0.becameReady(at: .now) }
+    }
+    transport.onTrainerValue = { [weak self] id, characteristic, data in
+      self?.control(id) { $0.receive(data, from: characteristic, at: .now) }
     }
   }
 
@@ -199,6 +213,15 @@ public final class BluetoothDevices {
     saveSourcePicks()
   }
 
+  /// Asks the paired trainer for `target` whenever it is connected, or hands control of it back
+  /// with nil. A target already sent is not sent again, so a ride can call this each second.
+  public func setTrainerTarget(_ target: TrainerTarget?, at date: Date = .now) {
+    trainerTarget = target
+    for id in trainerControls.keys {
+      control(id) { $0.set(target, at: date) }
+    }
+  }
+
   /// Reconnects the paired devices. Bluetooth is only started once there is something to
   /// connect, so the permission prompt waits until the rider looks for a device.
   public func connectPaired() {
@@ -235,6 +258,7 @@ public final class BluetoothDevices {
     connections[id] = nil
     batteryLevels[id] = nil
     cyclingReadings[id] = nil
+    trainerControls[id] = nil
     if heartRateReading?.device == id { heartRateReading = nil }
     transport.disconnect(id)
   }
@@ -309,6 +333,7 @@ public final class BluetoothDevices {
       connections.removeAll()
       batteryLevels.removeAll()
       cyclingReadings.removeAll()
+      trainerControls.removeAll()
       heartRateReading = nil
       transport.stopScan()
     }
@@ -327,6 +352,8 @@ public final class BluetoothDevices {
   private func didDisconnect(_ id: UUID) {
     batteryLevels[id] = nil
     cyclingReadings[id] = nil
+    // Control lasts only as long as the connection.
+    trainerControls[id] = nil
     if heartRateReading?.device == id { heartRateReading = nil }
     guard isPaired(id) else { return }
     connections[id] = .disconnected
@@ -352,6 +379,17 @@ public final class BluetoothDevices {
     cyclingReadings[id, default: CyclingSensorReadings()].receive(
       data, from: characteristic, at: date)
     startExpiringReadings()
+  }
+
+  /// Applies `change` to the control of trainer `id`, and writes the command it returns.
+  private func control(
+    _ id: UUID, _ change: (inout FitnessMachineControl) -> FitnessMachineCommand?
+  ) {
+    guard paired(.trainer)?.id == id, connectionState(of: id) == .connected else { return }
+    var control = trainerControls[id] ?? FitnessMachineControl(target: trainerTarget)
+    let command = change(&control)
+    trainerControls[id] = control
+    if let command { transport.writeTrainerControl(command.data, to: id) }
   }
 
   private func startExpiringReadings() {

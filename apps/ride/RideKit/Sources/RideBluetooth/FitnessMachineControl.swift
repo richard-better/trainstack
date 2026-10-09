@@ -29,6 +29,10 @@ struct FitnessMachineControl: Sendable {
   private var resistanceRange: FitnessMachineRange?
   private var powerRange: FitnessMachineRange?
 
+  init(target: TrainerTarget? = nil) {
+    self.target = target
+  }
+
   /// The trainer will now answer control point writes.
   mutating func becameReady(at date: Date) -> FitnessMachineCommand? {
     if state == .unavailable { state = .released }

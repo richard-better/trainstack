@@ -1,6 +1,6 @@
 import CoreBluetooth
 
-/// The Bluetooth services and characteristics Ride reads, beyond the ones that identify a
+/// The Bluetooth services and characteristics Ride uses, beyond the ones that identify a
 /// fitness device.
 @MainActor
 enum GATT {
@@ -15,4 +15,10 @@ enum GATT {
   static let cyclingSpeedCadenceMeasurement = CBUUID(
     string: CyclingCharacteristic.speedAndCadence.rawValue)
   static let indoorBikeData = CBUUID(string: CyclingCharacteristic.indoorBike.rawValue)
+  static let fitnessMachineControlPoint = CBUUID(
+    string: TrainerCharacteristic.controlPoint.rawValue)
+  static let fitnessMachineStatus = CBUUID(string: TrainerCharacteristic.status.rawValue)
+  static let supportedResistanceLevelRange = CBUUID(
+    string: TrainerCharacteristic.resistanceRange.rawValue)
+  static let supportedPowerRange = CBUUID(string: TrainerCharacteristic.powerRange.rawValue)
 }
