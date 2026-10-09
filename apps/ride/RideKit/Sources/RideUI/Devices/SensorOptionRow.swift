@@ -36,30 +36,10 @@ struct SensorOptionRow: View {
       .accessibilityAddTraits(isInUse ? .isSelected : [])
       .accessibilityHint(isConnected ? "Uses this sensor for \(metric.name.lowercased())." : "")
 
-      status
+      SensorConnectionStatus(device: device)
     }
     .swipeActions { forgetButton }
     .contextMenu { forgetButton }
-  }
-
-  @ViewBuilder private var status: some View {
-    switch devices.connectionState(of: device.id) {
-    case .connected:
-      ConnectedLabel()
-    case .connecting:
-      HStack(spacing: 6) {
-        ProgressView().controlSize(.small)
-        Text("Connecting…")
-      }
-      .font(.subheadline)
-      .foregroundStyle(.secondary)
-    case .disconnected:
-      Button("Connect", action: reconnect)
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.capsule)
-        .controlSize(.small)
-        .accessibilityLabel("Connect \(device.displayName)")
-    }
   }
 
   private var isConnected: Bool { devices.connectionState(of: device.id) == .connected }
@@ -76,8 +56,6 @@ struct SensorOptionRow: View {
   }
 
   private func choose() { devices.select(device, for: metric) }
-
-  private func reconnect() { devices.reconnect(device.id) }
 
   private func forget() { devices.forget(device.id) }
 }
