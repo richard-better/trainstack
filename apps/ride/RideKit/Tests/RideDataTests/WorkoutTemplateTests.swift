@@ -48,6 +48,13 @@ struct WorkoutTemplateTests {
     }
   }
 
+  @Test func quickTestRunsEasyMediumAndHardForFifteenSecondsEach() throws {
+    let test = try #require(WorkoutTemplate.named("Quick test 45s"))
+    #expect(test.duration == 45)
+    #expect(test.workout(ftp: 200).steps.map(\.duration) == [15, 15, 15])
+    #expect(test.workout(ftp: 200).steps.map(\.targetPower) == [100, 150, 240])
+  }
+
   @Test func zonesStepsByShareOfFTP() {
     #expect([0.5, 0.6, 0.8, 1, 1.1, 1.3].map(PowerZone.zone(intensity:)) == PowerZone.allCases)
   }

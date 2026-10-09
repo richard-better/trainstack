@@ -158,6 +158,12 @@ extension WorkoutTemplate {
       about:
         "Eight short surges over an endurance base. Playful enough to pass the time, easy enough to recover from."
     ),
+    .init(
+      name: "Quick test 45s", category: .vo2Max,
+      steps: minutes([(0.25, 50), (0.25, 75), (0.25, 120)]),
+      about:
+        "Fifteen seconds each at easy, medium and hard. Too short to train anything; it is here to check a trainer and the ride from start to finish."
+    ),
   ]
 
   public static func named(_ name: String) -> WorkoutTemplate? {
