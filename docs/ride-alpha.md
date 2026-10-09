@@ -26,14 +26,15 @@ real hardware, so please tell us what breaks.
 - If the trainer disconnects, the ride pauses and Ride reconnects. You resume when ready.
 - Heart rate from an Apple Watch, with the watch showing the current interval.
 - Rides saved to History as `.fit` files, with zones, a power curve and a breakdown. You can
-  import, share and export `.fit` files. A ride interrupted by a crash or quit can be resumed or
+  import, share and export `.fit` files, or send a ride to Strava with Send to Strava (sign in
+  under Settings, Strava). A ride interrupted by a crash or quit can be resumed or
   saved when you reopen the app.
 - Power, heart rate and pace zones, FTP tests and your training load on Progress.
 
 ## What does not work yet
 
 - You cannot build your own workouts or import `.zwo` and `.mrc` files.
-- Rides are not uploaded to Strava or anything else. Export the `.fit` file and upload it yourself.
+- Strava is the only place Ride can send a ride. Anywhere else, export the `.fit` file and upload it yourself.
 - Everything stays on the device. There is no account, backup or sync, so deleting the app deletes
   your rides and settings. Export rides you want to keep.
 - No training plans.
@@ -47,8 +48,8 @@ is the most useful thing you can do:
    the intervals when you unlock it?
 2. Turn the trainer off for a few seconds. Does the ride pause, and does it reconnect and resume?
 3. Force quit the app mid ride and reopen it. Is the ride offered back?
-4. Finish the ride, export the `.fit` file and open it in Strava, Garmin Connect or
-   TrainingPeaks. Do the power, heart rate and time look right?
+4. Finish the ride and send it to Strava, or export the `.fit` file and open it in Garmin Connect
+   or TrainingPeaks. Do the power, heart rate and time look right?
 
 ## Reporting a problem
 

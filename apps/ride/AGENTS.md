@@ -15,7 +15,8 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
   (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`) and
   `Shared` for what several use, with one type per file. `RideWatchUI` is the watch app,
-  `RideLink` what the phone and watch send each other, and `RideStyle` the zone colours both
+  `RideLink` what the phone and watch send each other, `RideStrava` the Strava sign-in and FIT upload
+  (the hosted API holds the app's secret; see `docs/deployment.md`), and `RideStyle` the zone colours both
   apps share.
 
 The watch runs a HealthKit workout session mirrored to the iPhone: it sends heart rate, and
