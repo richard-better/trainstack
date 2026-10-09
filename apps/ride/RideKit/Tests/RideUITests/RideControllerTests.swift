@@ -110,6 +110,44 @@ struct RideControllerTests {
     #expect(controller.session.latest.power == 200)
   }
 
+  @Test func setsTheTrainerForEachModeAndHandsItBackWhenTheRideStops() {
+    let (devices, transport, trainer) = cyclingDevices()
+    let controller = RideController(
+      template: template, ftp: 200, devices: devices, simulated: false)
+    func answerLastWrite() {
+      guard let opCode = transport.trainerWrites.last?.first else { return }
+      transport.onTrainerValue?(trainer.id, .controlPoint, Data([0x80, opCode, 0x01]))
+    }
+    transport.onTrainerValue?(trainer.id, .resistanceRange, Data([0, 0, 200, 0, 1, 0]))
+    transport.onTrainerControlReady?(trainer.id)
+    controller.tick(seconds: 1)
+    answerLastWrite()
+    answerLastWrite()
+    let power = controller.session.targetPower!
+    #expect(transport.trainerWrites.last == FitnessMachineCommand.targetPower(power).data)
+
+    answerLastWrite()
+    controller.adjust(by: 5)
+    #expect(
+      transport.trainerWrites.last
+        == FitnessMachineCommand.targetPower(controller.session.targetPower!).data)
+    #expect(controller.session.targetPower! > power)
+
+    answerLastWrite()
+    controller.mode = .slope
+    #expect(transport.trainerWrites.last == FitnessMachineCommand.simulation(grade: 2).data)
+
+    answerLastWrite()
+    controller.mode = .level
+    #expect(
+      transport.trainerWrites.last
+        == FitnessMachineCommand.targetResistance(60, wide: false).data)
+
+    answerLastWrite()
+    controller.stop()
+    #expect(transport.trainerWrites.last == FitnessMachineCommand.reset.data)
+  }
+
   private func cyclingDevices() -> (BluetoothDevices, CyclingTestTransport, DiscoveredDevice) {
     let transport = CyclingTestTransport()
     let defaults = UserDefaults(suiteName: "RideControllerTests.\(UUID().uuidString)")!

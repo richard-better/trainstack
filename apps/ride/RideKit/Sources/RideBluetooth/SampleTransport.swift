@@ -2,7 +2,8 @@ import Foundation
 
 /// Pretend devices for previews and debug builds, where there is no Bluetooth to try the
 /// Devices sheet with: a trainer and two heart rate straps, which connect after a moment. A
-/// connected strap sends a heart rate each second.
+/// connected strap sends a heart rate each second. The trainer takes every command, and holds
+/// the power it is set to in ERG mode.
 @MainActor
 final class SampleTransport: BluetoothTransport {
   var onAvailability: ((BluetoothAvailability) -> Void)?
@@ -13,7 +14,11 @@ final class SampleTransport: BluetoothTransport {
   var onBattery: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
+  var onTrainerControlReady: ((UUID) -> Void)?
+  var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
   private var heartbeats: [UUID: Task<Void, Never>] = [:]
+  /// The power the trainer was last set to, or nil outside ERG mode.
+  private var ergWatts: Int?
 
   static let trainer = DiscoveredDevice(
     id: UUID(uuidString: "6A1C0D4E-2B57-4F0B-9E43-7C1A2B3C4D01")!, name: "KICKR CORE",
@@ -41,11 +46,17 @@ final class SampleTransport: BluetoothTransport {
       try? await Task.sleep(for: .seconds(1))
       guard !Task.isCancelled else { return }
       onConnect?(id)
-      if id != Self.trainer.id { onBattery?(id, 78) }
+      if id == Self.trainer.id {
+        onTrainerValue?(id, .powerRange, Data([0, 0, 0xD0, 0x07, 1, 0]))
+        onTrainerValue?(id, .resistanceRange, Data([0, 0, 0xE8, 0x03, 10, 0]))
+        onTrainerControlReady?(id)
+      } else {
+        onBattery?(id, 78)
+      }
       var beat = 0
       while !Task.isCancelled {
         if id == Self.trainer.id {
-          let watts = UInt16(180 + beat % 25)
+          let watts = UInt16(ergWatts.map { $0 - 2 + beat % 5 } ?? 180 + beat % 25)
           let cadence = UInt16((85 + beat % 5) * 2)
           onCyclingMeasurement?(
             id, .indoorBike,
@@ -64,6 +75,20 @@ final class SampleTransport: BluetoothTransport {
 
   func disconnect(_ id: UUID) {
     heartbeats.removeValue(forKey: id)?.cancel()
+    if id == Self.trainer.id { ergWatts = nil }
+  }
+
+  func writeTrainerControl(_ data: Data, to id: UUID) {
+    guard let opCode = data.first else { return }
+    var reader = BluetoothValueReader(data.dropFirst())
+    switch opCode {
+    case 0x05: ergWatts = reader.uint16().map { Int(Int16(bitPattern: $0)) }
+    case 0x01, 0x04, 0x11: ergWatts = nil
+    default: break
+    }
+    Task {
+      onTrainerValue?(id, .controlPoint, Data([0x80, opCode, 0x01]))
+    }
   }
 }
 
