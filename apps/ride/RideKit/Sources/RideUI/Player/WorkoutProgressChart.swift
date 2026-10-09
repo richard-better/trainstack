@@ -6,6 +6,7 @@ import SwiftUI
 /// rate drawn over the part already ridden.
 struct WorkoutProgressChart: View {
   let session: RideSession
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     Chart {
@@ -47,10 +48,12 @@ struct WorkoutProgressChart: View {
       }
     }
     .chartXAxis {
-      AxisMarks(values: .stride(by: xStride)) { value in
-        AxisValueLabel {
-          if let seconds = value.as(Double.self) {
-            Text(seconds.clockString).monospacedDigit()
+      if !dynamicTypeSize.isAccessibilitySize {
+        AxisMarks(values: .stride(by: xStride)) { value in
+          AxisValueLabel {
+            if let seconds = value.as(Double.self) {
+              Text(seconds.clockString).monospacedDigit()
+            }
           }
         }
       }

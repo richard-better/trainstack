@@ -89,12 +89,7 @@ public final class BluetoothDevices {
   public var otherDevices: [DiscoveredDevice] { sorted(discovered.values.filter { !$0.isFitness }) }
   /// The latest heart rate from the connected strap in beats per minute, or nil while it sends
   /// none, such as when it is not being worn.
-  public var heartRate: Int? {
-    guard let heartRateReading, source(of: .heartRate)?.id == heartRateReading.device else {
-      return nil
-    }
-    return heartRateReading.bpm
-  }
+  public var heartRate: Int? { reading(for: .heartRate) }
   public var power: Int? { reading(for: .power) }
   public var cadence: Int? { reading(for: .cadence) }
   /// Called with each heart rate the strap sends, so a ride can record every beat rather than
@@ -104,7 +99,7 @@ public final class BluetoothDevices {
   private var discovered: [UUID: DiscoveredDevice] = [:]
   private var connections: [UUID: ConnectionState] = [:]
   private var batteryLevels: [UUID: Int] = [:]
-  private var heartRateReading: (device: UUID, bpm: Int)?
+  private var heartRateReadings: [UUID: (bpm: Int, date: Date)] = [:]
   private var cyclingReadings: [UUID: CyclingSensorReadings] = [:]
   /// The sensor the rider picked for each metric, keyed by `RideMetric.rawValue`.
   private var sourcePicks: [String: UUID] = [:]
@@ -118,6 +113,7 @@ public final class BluetoothDevices {
 
   private static let pairedKey = "bluetooth.paired"
   private static let sourcePicksKey = "bluetooth.sourcePicks"
+  private static let heartRateMaxAge: TimeInterval = 5
   /// Where Ride kept its one heart rate strap before it paired a device of each kind.
   private static let legacyHeartRateKey = "pairedHeartRateSensor"
 
@@ -171,7 +167,10 @@ public final class BluetoothDevices {
   public func reading(for metric: RideMetric, from id: UUID, at date: Date = .now) -> Int? {
     guard connectionState(of: id) == .connected else { return nil }
     if metric == .heartRate {
-      return heartRateReading?.device == id ? heartRateReading?.bpm : nil
+      guard let reading = heartRateReadings[id],
+        date.timeIntervalSince(reading.date) <= Self.heartRateMaxAge
+      else { return nil }
+      return reading.bpm
     }
     return cyclingReadings[id]?.reading(for: metric, at: date)
   }
@@ -239,7 +238,11 @@ public final class BluetoothDevices {
       paired.append(device)
       save()
     }
-    connect(device.id)
+    if hasStarted {
+      connect(device.id)
+    } else {
+      start()
+    }
   }
 
   /// Tries again to connect to a paired device whose last attempt failed.
@@ -259,7 +262,7 @@ public final class BluetoothDevices {
     batteryLevels[id] = nil
     cyclingReadings[id] = nil
     trainerControls[id] = nil
-    if heartRateReading?.device == id { heartRateReading = nil }
+    heartRateReadings[id] = nil
     transport.disconnect(id)
   }
 
@@ -334,7 +337,7 @@ public final class BluetoothDevices {
       batteryLevels.removeAll()
       cyclingReadings.removeAll()
       trainerControls.removeAll()
-      heartRateReading = nil
+      heartRateReadings.removeAll()
       transport.stopScan()
     }
   }
@@ -354,7 +357,7 @@ public final class BluetoothDevices {
     cyclingReadings[id] = nil
     // Control lasts only as long as the connection.
     trainerControls[id] = nil
-    if heartRateReading?.device == id { heartRateReading = nil }
+    heartRateReadings[id] = nil
     guard isPaired(id) else { return }
     connections[id] = .disconnected
     connect(id)
@@ -366,10 +369,11 @@ public final class BluetoothDevices {
   }
 
   private func receive(_ measurement: HeartRateMeasurement, from id: UUID) {
-    guard source(of: .heartRate)?.id == id else { return }
+    guard isPaired(id), connectionState(of: id) == .connected else { return }
     let bpm = measurement.reading
-    heartRateReading = bpm.map { (id, $0) }
-    if let bpm { onHeartRate?(bpm) }
+    heartRateReadings[id] = bpm.map { ($0, .now) }
+    if let bpm, source(of: .heartRate)?.id == id { onHeartRate?(bpm) }
+    startExpiringReadings()
   }
 
   func receiveCycling(
@@ -399,7 +403,10 @@ public final class BluetoothDevices {
         do { try await Task.sleep(for: .seconds(1)) } catch { break }
         guard let self else { break }
         for id in cyclingReadings.keys { cyclingReadings[id]?.expire(at: .now) }
-        if cyclingReadings.isEmpty {
+        heartRateReadings = heartRateReadings.filter {
+          Date.now.timeIntervalSince($0.value.date) <= Self.heartRateMaxAge
+        }
+        if cyclingReadings.isEmpty, heartRateReadings.isEmpty {
           expiryTask = nil
           break
         }

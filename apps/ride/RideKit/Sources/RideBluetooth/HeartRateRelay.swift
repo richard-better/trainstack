@@ -41,9 +41,7 @@ public final class HeartRateRelay: NSObject {
   public func send(bpm: Int) {
     guard let manager, let measurement else { return }
     let data = HeartRateMeasurement(beatsPerMinute: bpm, hasContact: true).data
-    if !manager.updateValue(data, for: measurement, onSubscribedCentrals: nil) {
-      pending = data
-    }
+    pending = manager.updateValue(data, for: measurement, onSubscribedCentrals: nil) ? nil : data
   }
 
   private func advertise(_ manager: CBPeripheralManager) {
@@ -72,6 +70,7 @@ extension HeartRateRelay: @preconcurrency CBPeripheralManagerDelegate {
     } else {
       // Services are gone once Bluetooth turns off, and are added again when it is back.
       measurement = nil
+      pending = nil
     }
   }
 

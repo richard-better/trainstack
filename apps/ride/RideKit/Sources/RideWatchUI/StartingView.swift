@@ -9,6 +9,7 @@
     let workoutName: String?
     let heartRate: Int?
     let isPhoneConnected: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
       VStack(alignment: .leading, spacing: 6) {
@@ -24,7 +25,7 @@
           Text("\(count)")
             .font(.system(size: 56, weight: .semibold))
             .contentTransition(.numericText(countsDown: true))
-            .animation(.default, value: count)
+            .animation(reduceMotion ? nil : .default, value: count)
           HeartRateStatus(heartRate: heartRate, isPhoneConnected: isPhoneConnected)
         }
         .frame(maxWidth: .infinity)

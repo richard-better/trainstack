@@ -6,6 +6,7 @@ struct SensorReadingValue: View {
   let metric: RideMetric
   let device: DiscoveredDevice
   @Environment(BluetoothDevices.self) private var devices
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     let value = devices.reading(for: metric, from: device.id)
@@ -15,14 +16,14 @@ struct SensorReadingValue: View {
           if metric == .heartRate {
             Image(systemName: "heart.fill")
               .foregroundStyle(.red)
-              .symbolEffect(.pulse)
+              .symbolEffect(.pulse, isActive: !reduceMotion)
               .accessibilityHidden(true)
           }
           Text("\(value) \(unit)")
             .monospacedDigit()
             .contentTransition(.numericText(value: Double(value)))
         }
-        .animation(.default, value: value)
+        .animation(reduceMotion ? nil : .default, value: value)
       } else {
         Text(metric == .heartRate ? "Put the strap on" : "Waiting for data")
           .foregroundStyle(.secondary)

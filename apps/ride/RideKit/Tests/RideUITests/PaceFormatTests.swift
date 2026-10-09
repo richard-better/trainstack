@@ -20,4 +20,9 @@ struct PaceFormatTests {
       #expect(try format.parseStrategy.parse(format.format(seconds)) == seconds)
     }
   }
+
+  @Test(arguments: ["\(Int.max):00", "\(Int.max / 60):\(Int.max % 60 + 1)"])
+  func rejectsPacesThatOverflowSeconds(_ text: String) {
+    #expect(throws: CocoaError(.formatting)) { try PaceFormat().parseStrategy.parse(text) }
+  }
 }

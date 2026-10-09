@@ -5,6 +5,7 @@ import SwiftUI
 /// otherwise two.
 struct PlayerSecondaryStats: View {
   let session: RideSession
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     let intervalLeft = SmallStat(
@@ -18,21 +19,32 @@ struct PlayerSecondaryStats: View {
       unit: "km/h")
     let distance = SmallStat(
       label: "Distance", value: (session.distance / 1000).formatted(.oneDecimal), unit: "km")
-    ViewThatFits(in: .horizontal) {
-      DividedRow {
-        intervalLeft
-        elapsed
-        speed
-        distance
-      }
-      Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
-        GridRow {
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: 8) {
           intervalLeft
           elapsed
-        }
-        GridRow {
           speed
           distance
+        }
+      } else {
+        ViewThatFits(in: .horizontal) {
+          DividedRow {
+            intervalLeft
+            elapsed
+            speed
+            distance
+          }
+          Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
+            GridRow {
+              intervalLeft
+              elapsed
+            }
+            GridRow {
+              speed
+              distance
+            }
+          }
         }
       }
     }

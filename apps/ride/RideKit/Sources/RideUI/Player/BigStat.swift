@@ -13,7 +13,7 @@ struct BigStat<Label: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      label.font(.subheadline).foregroundStyle(.secondary).frame(height: 20)
+      label.font(.subheadline).foregroundStyle(.secondary).frame(minHeight: 20)
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Text(value)
           .font(.system(size: valueSize, weight: .medium))

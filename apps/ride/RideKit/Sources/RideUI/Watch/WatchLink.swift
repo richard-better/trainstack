@@ -73,7 +73,10 @@
 
     private func attach(_ session: HKWorkoutSession) {
       let delegate = SessionDelegate(
-        receive: { [weak self] data in self?.receive(data) },
+        receive: { [weak self, weak session] data in
+          guard let self, let session, self.session === session else { return }
+          receive(data)
+        },
         end: { [weak self, weak session] in
           if let session { self?.detach(session) }
         })
