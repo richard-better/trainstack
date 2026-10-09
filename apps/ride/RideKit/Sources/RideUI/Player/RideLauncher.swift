@@ -21,6 +21,7 @@ final class RideLauncher {
   @ObservationIgnored private let simulated: Bool
   @ObservationIgnored private let journalDirectory: URL
   @ObservationIgnored private let heartRate = HeartRateFeed()
+  @ObservationIgnored private let keepAwake = KeepAwake()
   #if os(macOS)
     @ObservationIgnored private lazy var watchRelay: WatchRelayReceiver = {
       let receiver = WatchRelayReceiver()
@@ -65,6 +66,7 @@ final class RideLauncher {
     #if os(macOS)
       watchRelay.start()
     #endif
+    keepAwake.begin()
     ride.start()
     self.ride = ride
     isPlayerPresented = true
@@ -79,6 +81,7 @@ final class RideLauncher {
     ride?.journal?.finish()
     ride = nil
     isPlayerPresented = false
+    keepAwake.end()
     #if os(macOS)
       watchRelay.stop()
     #endif
