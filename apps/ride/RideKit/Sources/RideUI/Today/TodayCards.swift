@@ -2,15 +2,14 @@ import RideData
 import SwiftUI
 
 /// Today's suggestions for wide windows: the selected one large, with Start ride on it, and
-/// the others beside it. Click a smaller card to make it the large one, double-click to start
+/// the others beside it. Click a smaller card to make it the large one, double-click to open
 /// it.
 struct TodayCards: View {
   let suggestions: [TodaySuggestion]
   @Binding var state: TodayState
   @Binding var minutes: Int
+  @Environment(\.openWorkout) private var openWorkout
   let openSettings: () -> Void
-  @Environment(RideLauncher.self) private var launcher
-  @Environment(RiderSettingsStore.self) private var settings
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -46,11 +45,7 @@ struct TodayCards: View {
       WorkoutCard(
         template: suggestion.template, tag: suggestion.tag, profileHeight: 80,
         isSelected: false, select: { feature(suggestion) },
-        start: settings.ftp.map { ftp in
-          {
-            launcher.start(suggestion.template, ftp: ftp, heartRateZones: settings.heartRateZones)
-          }
-        })
+        open: { openWorkout(suggestion.template) }, start: nil)
     }
   }
 

@@ -51,6 +51,10 @@ struct WorkoutDetailView: View {
       .toolbarVisibility(.hidden, for: .tabBar)
       .navigationBarTitleDisplayMode(.large)
     #endif
+    #if os(macOS)
+      .frame(maxWidth: Design.ridePageWidth)
+      .frame(maxWidth: .infinity)
+    #endif
     .navigationTitle(template.name)
     .safeAreaBar(edge: .bottom) { startBar }
     .sheet(isPresented: $isShowingDevices) { DevicesSheet() }
@@ -72,6 +76,9 @@ struct WorkoutDetailView: View {
           .font(.headline)
       }
     }
+    #if os(macOS)
+      .frame(maxWidth: 560)
+    #endif
     .padding(.horizontal, 16)
     .padding(.bottom, 8)
   }

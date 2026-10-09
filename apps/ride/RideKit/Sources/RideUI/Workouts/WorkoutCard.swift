@@ -3,14 +3,16 @@ import RideStyle
 import SwiftUI
 
 /// A workout to pick: its profile coloured by zone, so workouts can be told apart by shape and
-/// intensity at a glance. Click to select, double-click to start. The selected card has its
-/// zone's colour around it and a Start button.
+/// intensity at a glance. Click to select, double-click to open the workout. The selected card
+/// has its zone's colour around it and a Start button.
 struct WorkoutCard: View {
   let template: WorkoutTemplate
   var tag: String?
   var profileHeight = 96.0
   let isSelected: Bool
   let select: () -> Void
+  /// Opens the workout's page.
+  let open: () -> Void
   let start: (() -> Void)?
 
   var body: some View {
@@ -59,15 +61,16 @@ struct WorkoutCard: View {
           .padding(10)
       }
     }
-    .simultaneousGesture(TapGesture(count: 2).onEnded { start?() })
+    .simultaneousGesture(TapGesture(count: 2).onEnded { open() })
     .accessibilityAddTraits(isSelected ? .isSelected : [])
+    .accessibilityAction(named: "Show details", open)
     .accessibilityAction(named: "Start") { start?() }
   }
 }
 
 #Preview {
   WorkoutCard(
-    template: .named("Threshold classic 60")!, isSelected: true, select: {}, start: nil
+    template: .named("Threshold classic 60")!, isSelected: true, select: {}, open: {}, start: nil
   )
   .frame(width: 260)
   .padding()
