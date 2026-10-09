@@ -158,7 +158,7 @@ public struct RideSession: Sendable {
       values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
     }
     return RideRecording(
-      startDate: startDate, workoutName: workout.name, samples: recorded,
+      startDate: startDate, workoutName: workout.name, sport: .cycling, samples: recorded,
       summary: .init(
         duration: elapsed, distance: distance > 0 ? distance : nil,
         averagePower: average(powers), maxPower: powers.max(),
