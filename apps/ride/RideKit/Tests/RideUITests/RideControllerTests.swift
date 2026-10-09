@@ -80,6 +80,66 @@ struct RideControllerTests {
     #expect(devices.onCyclingActivity == nil)
   }
 
+  @Test func pausesWhenTheTrainerDropsAndWaitsForTheRiderToResume() {
+    let (devices, transport, trainer) = cyclingDevices()
+    let controller = RideController(
+      template: template, ftp: 200, devices: devices, simulated: false)
+    controller.tick(seconds: 1)
+    #expect(controller.trainerNotice == nil)
+    #expect(controller.session.samples.count == 1)
+
+    transport.onDisconnect?(trainer.id)
+    controller.tick(seconds: 1)
+    #expect(controller.session.isPaused)
+    #expect(controller.pausedForTrainer)
+    #expect(controller.session.samples.count == 1)
+    #expect(controller.trainerNotice == "KICKR disconnected, so the ride is paused. Reconnecting…")
+
+    transport.onConnect?(trainer.id)
+    controller.tick(seconds: 1)
+    #expect(controller.session.isPaused)
+    #expect(controller.trainerNotice == "KICKR is back. Resume when you are ready.")
+
+    controller.togglePause()
+    controller.tick(seconds: 1)
+    #expect(!controller.session.isPaused)
+    #expect(!controller.pausedForTrainer)
+    #expect(controller.trainerNotice == nil)
+    #expect(controller.session.samples.count == 2)
+  }
+
+  @Test func doesNotPauseAgainWhenResumedBeforeTheTrainerIsBack() {
+    let (devices, transport, trainer) = cyclingDevices()
+    let controller = RideController(
+      template: template, ftp: 200, devices: devices, simulated: false)
+    controller.tick(seconds: 1)
+    transport.onDisconnect?(trainer.id)
+    controller.tick(seconds: 1)
+    controller.togglePause()
+    controller.tick(seconds: 1)
+    controller.tick(seconds: 1)
+    #expect(!controller.session.isPaused)
+    #expect(controller.trainerNotice == "KICKR is not connected. Reconnecting…")
+    #expect(controller.session.samples.count == 3)
+  }
+
+  @Test func leavesARideWithoutAConnectedTrainerRunning() {
+    let controller = RideController(template: template, ftp: 200, simulated: true)
+    controller.tick(seconds: 1)
+    #expect(controller.trainerNotice == nil)
+    #expect(!controller.session.isPaused)
+
+    let transport = CyclingTestTransport()
+    let devices = BluetoothDevices(
+      transport: transport, defaults: UserDefaults(suiteName: "RideControllerTests.\(UUID())")!)
+    devices.pair(DiscoveredDevice(id: UUID(), name: "KICKR", services: [.trainer]))
+    let waiting = RideController(
+      template: template, ftp: 200, devices: devices, simulated: false)
+    waiting.tick(seconds: 1)
+    #expect(!waiting.session.isPaused)
+    #expect(waiting.trainerNotice == "KICKR is not connected. Reconnecting…")
+  }
+
   @Test func takesHeartRateFromARealSensorOverTheSimulator() {
     let feed = HeartRateFeed()
     let controller = RideController(

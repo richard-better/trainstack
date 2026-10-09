@@ -163,6 +163,8 @@ public struct RideSession: Sendable {
 
   public mutating func togglePause() { isPaused.toggle() }
 
+  public mutating func pause() { isPaused = true }
+
   /// Moves on to the start of the next interval, or to the end of the workout from the last.
   public mutating func skipInterval() {
     guard let interval = currentInterval else { return }

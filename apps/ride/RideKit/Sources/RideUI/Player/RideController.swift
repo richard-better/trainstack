@@ -22,6 +22,7 @@ final class RideController {
   @ObservationIgnored private var simulator: SimulatedTrainer?
   @ObservationIgnored private var clock: Task<Void, Never>?
   @ObservationIgnored private var lastTick = ContinuousClock.now
+  @ObservationIgnored private var trainerWasConnected = false
 
   /// With `simulated` a pretend trainer supplies the readings, for previews and debug builds.
   /// Real power and cadence come from the selected connected sensors in `devices`, and heart
@@ -41,6 +42,7 @@ final class RideController {
     self.journal = journal
     self.session = session ?? RideSession(workout: template.workout(ftp: ftp))
     simulator = simulated ? SimulatedTrainer() : nil
+    trainerWasConnected = isTrainerConnected == true
   }
 
   isolated deinit { clock?.cancel() }
@@ -85,6 +87,7 @@ final class RideController {
 
   /// Moves the ride on by `seconds`, as the clock does each second.
   func tick(seconds: TimeInterval, at date: Date = .now) {
+    pauseIfTrainerDropped()
     var reading = simulator?.reading(for: session, after: seconds) ?? TrainerReading()
     if let power = devices?.reading(for: .power, at: date) { reading.power = power }
     if let cadence = devices?.reading(for: .cadence, at: date) { reading.cadence = cadence }
@@ -102,7 +105,42 @@ final class RideController {
     onTick?()
   }
 
-  func togglePause() { session.togglePause() }
+  func togglePause() {
+    pausedForTrainer = false
+    session.togglePause()
+  }
+
+  /// Whether the ride is paused because the trainer disconnected, until the rider resumes it.
+  /// It does not resume by itself, since the trainer would jump straight to the target power.
+  private(set) var pausedForTrainer = false
+
+  /// Whether the rider's trainer is connected, or nil if they have not paired one.
+  var isTrainerConnected: Bool? {
+    guard let devices, let trainer = devices.paired(.trainer) else { return nil }
+    return devices.connectionState(of: trainer.id) == .connected
+  }
+
+  /// What to tell the rider while the trainer is not as it should be, or nil if it is fine.
+  var trainerNotice: String? {
+    guard let name = devices?.paired(.trainer)?.displayName, let connected = isTrainerConnected
+    else { return nil }
+    switch (connected, pausedForTrainer) {
+    case (false, true): return "\(name) disconnected, so the ride is paused. Reconnecting…"
+    case (false, false): return "\(name) is not connected. Reconnecting…"
+    case (true, true): return "\(name) is back. Resume when you are ready."
+    case (true, false): return nil
+    }
+  }
+
+  /// Pauses the ride when a trainer that was connected is not any more, so the workout does not
+  /// carry on without anything holding the resistance.
+  private func pauseIfTrainerDropped() {
+    let connected = isTrainerConnected == true
+    defer { trainerWasConnected = connected }
+    guard trainerWasConnected, !connected, !session.isPaused else { return }
+    session.pause()
+    pausedForTrainer = true
+  }
 
   func skipInterval() {
     session.skipInterval()
