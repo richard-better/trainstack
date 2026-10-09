@@ -20,7 +20,7 @@ public struct RideRecording: Equatable, Sendable {
     self.summary = summary
   }
 
-  public struct Sample: Equatable, Identifiable, Sendable {
+  public struct Sample: Equatable, Identifiable, Codable, Sendable {
     /// Seconds since the start of the ride.
     public var elapsed: TimeInterval
     public var power: Int?

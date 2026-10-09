@@ -1,8 +1,8 @@
 import Foundation
 
 /// A workout written against FTP rather than in watts, so one template suits every rider.
-public struct WorkoutTemplate: Identifiable, Hashable, Sendable {
-  public struct Step: Hashable, Sendable {
+public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
+  public struct Step: Hashable, Codable, Sendable {
     public var duration: TimeInterval
     /// Target power as a fraction of FTP.
     public var intensity: Double
