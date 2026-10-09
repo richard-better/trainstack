@@ -21,19 +21,34 @@ struct RideControllerTests {
   }
 
   @Test(.timeLimit(.minutes(1)))
-  func stoppingTheClockDoesNotRecordAnotherSample() async {
-    let controller = RideController(template: template, ftp: 200, simulated: true)
+  func stoppingTheClockDoesNotRecordAnotherSampleOrReclaimTheTrainer() async throws {
+    let (devices, transport, trainer) = cyclingDevices()
+    let controller = RideController(
+      template: template, ftp: 200, devices: devices, simulated: true)
     let (ticks, continuation) = AsyncStream.makeStream(
       of: Void.self, bufferingPolicy: .bufferingNewest(1))
     controller.onTick = { continuation.yield(()) }
     let clock = controller.start()
+    defer {
+      controller.stop()
+      continuation.finish()
+    }
+    transport.onTrainerControlReady?(trainer.id)
+    for _ in 0..<3 {
+      let opCode = try #require(transport.trainerWrites.last?.first)
+      transport.onTrainerValue?(trainer.id, .controlPoint, Data([0x80, opCode, 0x01]))
+    }
     var iterator = ticks.makeAsyncIterator()
     await iterator.next()
     controller.stop()
+    #expect(transport.trainerWrites.last == FitnessMachineCommand.reset.data)
+    transport.onTrainerValue?(
+      trainer.id, .controlPoint, Data([0x80, FitnessMachineCommand.reset.opCode, 0x01]))
     let samples = controller.session.samples
+    let trainerWrites = transport.trainerWrites
     await clock.value
     #expect(controller.session.samples == samples)
-    continuation.finish()
+    #expect(transport.trainerWrites == trainerWrites)
   }
 
   @Test func takesHeartRateFromARealSensorOverTheSimulator() {
