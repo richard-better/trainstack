@@ -38,7 +38,7 @@ extension StravaError: LocalizedError {
     case .signInFailed: "Sign in didn't work. Try again."
     case .connectFailed: "Couldn't connect Strava. Try again."
     case .athleteInUse:
-      "That Strava account is already connected to another TrainStack account. Disconnect it there first."
+      "That Strava account is already connected to another TrainStack account. If it isn't yours to keep, remove Ride in Strava's settings under My Apps, then connect again."
     case .appleAccountRequired: "Sign in with Apple to connect Strava."
     case .signedOut: "Sign in to your TrainStack account in Settings first."
     case .notConnected: "Connect Strava in Settings first."
