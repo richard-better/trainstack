@@ -5,6 +5,18 @@ import Testing
 
 @MainActor
 struct BluetoothDevicesTests {
+  @Test func pairingStartsBluetoothWithoutScanning() {
+    let transport = FakeTransport()
+    let devices = BluetoothDevices(transport: transport, defaults: freshDefaults())
+    let trainer = DiscoveredDevice(id: UUID(), services: [.trainer])
+    devices.pair(trainer)
+    #expect(transport.started)
+    #expect(transport.connects.isEmpty)
+    transport.onAvailability?(.ready)
+    #expect(transport.connects == [trainer.id])
+    #expect(transport.scans == 0)
+  }
+
   @Test func waitsForBluetoothBeforeScanning() {
     let transport = FakeTransport()
     let devices = BluetoothDevices(transport: transport, defaults: freshDefaults())

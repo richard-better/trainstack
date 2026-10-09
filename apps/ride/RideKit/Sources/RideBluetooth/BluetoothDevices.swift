@@ -239,7 +239,11 @@ public final class BluetoothDevices {
       paired.append(device)
       save()
     }
-    connect(device.id)
+    if hasStarted {
+      connect(device.id)
+    } else {
+      start()
+    }
   }
 
   /// Tries again to connect to a paired device whose last attempt failed.
