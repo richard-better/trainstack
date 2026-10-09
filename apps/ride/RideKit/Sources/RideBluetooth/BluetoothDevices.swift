@@ -146,7 +146,7 @@ public final class BluetoothDevices {
   /// The connected device that supplies `metric`: the rider's pick while it is connected,
   /// otherwise the best connected sensor for the metric.
   public func source(of metric: RideMetric) -> DiscoveredDevice? {
-    let connected = sensors(of: metric).filter { connectionState(of: $0.id) == .connected }
+    let connected = connectedSensors(of: metric)
     if let pick = sourcePicks[metric.rawValue],
       let device = connected.first(where: { $0.id == pick })
     {
@@ -160,6 +160,11 @@ public final class BluetoothDevices {
     var seen: Set<UUID> = []
     return metric.sources.flatMap { service in paired.filter { $0.services.contains(service) } }
       .filter { seen.insert($0.id).inserted }
+  }
+
+  /// The paired devices that can supply `metric` and are connected now, best first.
+  public func connectedSensors(of metric: RideMetric) -> [DiscoveredDevice] {
+    sensors(of: metric).filter { connectionState(of: $0.id) == .connected }
   }
 
   /// Makes `device` the source of `metric` whenever it is connected, and remembers the choice.

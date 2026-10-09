@@ -183,6 +183,22 @@ struct BluetoothDevicesTests {
     #expect(devices.sensors(of: .heartRate).isEmpty)
   }
 
+  @Test func countsOnlyTheConnectedSensorsForAMetric() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    devices.pair(trainer)
+    devices.pair(meter)
+    #expect(devices.connectedSensors(of: .power).isEmpty)
+    transport.onConnect?(meter.id)
+    #expect(devices.connectedSensors(of: .power) == [meter])
+    transport.onConnect?(trainer.id)
+    #expect(devices.connectedSensors(of: .power) == [meter, trainer])
+    #expect(devices.connectedSensors(of: .heartRate).isEmpty)
+    transport.onDisconnect?(trainer.id)
+    #expect(devices.connectedSensors(of: .power) == [meter])
+  }
+
   @Test func theRidersPickIsUsedWhileItIsConnectedAndRemembered() {
     let defaults = freshDefaults()
     let transport = FakeTransport()
