@@ -11,8 +11,7 @@ import RideData
 @Observable
 final class RideLauncher {
   private(set) var ride: RideController?
-  /// Whether the player is showing. On iOS the rider can minimise it to the tab bar while the
-  /// ride carries on.
+  /// Whether the player is showing. The rider can minimise it while the ride carries on.
   var isPlayerPresented = false
   /// The rider's devices, which stay connected between rides.
   let devices: BluetoothDevices
