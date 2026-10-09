@@ -40,6 +40,8 @@ Open [GitHub's environment settings](https://github.com/richard-better/trainstac
 | Variable           | `CLOUDFLARE_ACCOUNT_ID` | `01cc6559c6f0e531712c9262c70af1b1`                                            |
 | Secret             | `CLOUDFLARE_API_TOKEN`  | The account-owned token                                                       |
 | Secret             | `BETTER_AUTH_SECRET`    | A stable random secret of at least 32 characters                              |
+| Variable, optional | `STRAVA_CLIENT_ID`      | The client ID of the TrainStack Ride Strava API application                   |
+| Secret, optional   | `STRAVA_CLIENT_SECRET`  | The client secret of the same Strava API application                          |
 | Secret, optional   | `AXIOM_TOKEN`           | An Axiom provisioning token with dataset and API-token management permissions |
 | Variable, optional | `AXIOM_ORG_ID`          | The target Axiom organization ID, if the token requires one                   |
 
@@ -52,6 +54,21 @@ openssl rand -base64 48 | gh secret set BETTER_AUTH_SECRET --env production --re
 ```
 
 To enter a token without putting it into a command argument, use GitHub's secret form or `gh secret set CLOUDFLARE_API_TOKEN --env production --repo richard-better/trainstack` and its interactive input.
+
+### Strava application
+
+These optional credentials prepare the API Worker for OAuth token exchange and future FIT ride uploads; neither feature is implemented yet. Register **TrainStack Ride** at [Strava API settings](https://www.strava.com/settings/api) with authorization callback domain `api.trainstackhq.com` (no scheme or path). Use a square PNG rendered from `hosted/apps/marketing/public/trainstack-logo.svg` as the icon. A Strava subscription is currently required to create an app.
+
+The workflow passes the GitHub `production` variable and secret to Alchemy through `hosted/infra/.env.schema`. The API receives a plain ID binding and a redacted secret binding, accessed through `ENV.STRAVA_CLIENT_ID` and `ENV.STRAVA_CLIENT_SECRET` from `hosted/apps/api/src/env.server.ts`. Missing values default to empty strings so deployment works before registration. Configure both before enabling Strava features.
+
+```bash
+gh variable set STRAVA_CLIENT_ID --env production --repo richard-better/trainstack --body '<CLIENT_ID>'
+gh secret set STRAVA_CLIENT_SECRET --env production --repo richard-better/trainstack
+```
+
+The second command prompts for the client secret without putting it in shell history. For rotation, rotate the secret in Strava's API settings, replace the GitHub secret, and redeploy the current `main` revision. Update the ID too if replacing the application. For local deployment, use the ignored `hosted/apps/api/.env`.
+
+New apps start with only their owner's athlete account and default overall limits of 200 requests per 15 minutes and 2,000 per day. Strava now offers a self-service dashboard upgrade to 10 athletes, with overall limits of 400 per 15 minutes and 4,000 per day. Further capacity requires the [Developer Program review form](https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8), including screenshots of every place Strava data appears and the **Connect with Strava** button. Follow the [brand guidelines](https://developers.strava.com/guidelines/) for the button and **Powered by Strava** attribution (the guidelines also allow **Compatible with Strava**). Capacity and rate increases are subject to review and are not guaranteed; see [rate limits](https://developers.strava.com/docs/rate-limits/) and [getting started](https://developers.strava.com/docs/getting-started/). Future uploads need the OAuth scope [`activity:write`](https://developers.strava.com/docs/authentication/).
 
 ## First deployment
 
