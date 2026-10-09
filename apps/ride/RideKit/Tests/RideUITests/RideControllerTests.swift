@@ -12,7 +12,7 @@ struct RideControllerTests {
   @Test(.timeLimit(.minutes(1)))
   func releasingTheControllerCancelsItsClock() async throws {
     var controller: RideController? = RideController(template: template, ftp: 200, simulated: true)
-    weak var released = controller
+    weak let released = controller
     let clock = try #require(controller?.start())
     controller = nil
     #expect(released == nil)
