@@ -277,6 +277,36 @@ struct BluetoothDevicesTests {
     #expect(devices.heartRate == nil)
   }
 
+  @Test func expiresHeartRateWhenAConnectedSensorStopsReporting() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), services: [.heartRate])
+    devices.pair(strap)
+    transport.onConnect?(strap.id)
+    let now = Date.now
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    #expect(devices.reading(for: .heartRate, at: now) == 128)
+    #expect(devices.reading(for: .heartRate, at: now.addingTimeInterval(6)) == nil)
+  }
+
+  @Test func keepsHeartRateFromAlternativeSensorsForThePicker() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), services: [.heartRate])
+    let trainer = DiscoveredDevice(id: UUID(), services: [.trainer, .heartRate])
+    devices.pair(strap)
+    devices.pair(trainer)
+    transport.onConnect?(strap.id)
+    transport.onConnect?(trainer.id)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    transport.onHeartRate?(trainer.id, .init(beatsPerMinute: 140))
+    #expect(devices.heartRate == 128)
+    #expect(devices.reading(for: .heartRate, from: trainer.id) == 140)
+    devices.select(trainer, for: .heartRate)
+    #expect(devices.heartRate == 140)
+    transport.onHeartRate?(trainer.id, .init(beatsPerMinute: 140, hasContact: false))
+    #expect(devices.heartRate == nil)
+    #expect(devices.reading(for: .heartRate, from: strap.id) == 128)
+  }
+
   @Test func readsEachCyclingSensorAndSwitchesTheSelectedMetricImmediately() {
     let (devices, transport) = scanningDevices()
     let trainer = DiscoveredDevice(id: UUID(), name: "KICKR", services: [.trainer])
