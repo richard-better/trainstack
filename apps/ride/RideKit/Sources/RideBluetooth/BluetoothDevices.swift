@@ -55,6 +55,8 @@ protocol BluetoothTransport: AnyObject {
   var onBattery: ((UUID, Int) -> Void)? { get set }
   /// A heart rate strap sent a reading.
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)? { get set }
+  /// A connected cycling sensor notified a standard measurement characteristic.
+  var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)? { get set }
   func start()
   func scan()
   func stopScan()
@@ -87,6 +89,8 @@ public final class BluetoothDevices {
     }
     return heartRateReading.bpm
   }
+  public var power: Int? { reading(for: .power) }
+  public var cadence: Int? { reading(for: .cadence) }
   /// Called with each heart rate the strap sends, so a ride can record every beat rather than
   /// only the latest.
   @ObservationIgnored public var onHeartRate: ((Int) -> Void)?
@@ -95,12 +99,17 @@ public final class BluetoothDevices {
   private var connections: [UUID: ConnectionState] = [:]
   private var batteryLevels: [UUID: Int] = [:]
   private var heartRateReading: (device: UUID, bpm: Int)?
+  private var cyclingReadings: [UUID: CyclingSensorReadings] = [:]
+  /// The sensor the rider picked for each metric, keyed by `RideMetric.rawValue`.
+  private var sourcePicks: [String: UUID] = [:]
   @ObservationIgnored private let transport: any BluetoothTransport
   @ObservationIgnored private let defaults: UserDefaults
   @ObservationIgnored private var wantsScan = false
   @ObservationIgnored private var hasStarted = false
+  @ObservationIgnored private var expiryTask: Task<Void, Never>?
 
   private static let pairedKey = "bluetooth.paired"
+  private static let sourcePicksKey = "bluetooth.sourcePicks"
   /// Where Ride kept its one heart rate strap before it paired a device of each kind.
   private static let legacyHeartRateKey = "pairedHeartRateSensor"
 
@@ -115,6 +124,10 @@ public final class BluetoothDevices {
       defaults.data(forKey: Self.pairedKey).flatMap {
         try? JSONDecoder().decode([DiscoveredDevice].self, from: $0)
       } ?? []
+    sourcePicks =
+      defaults.data(forKey: Self.sourcePicksKey).flatMap {
+        try? JSONDecoder().decode([String: UUID].self, from: $0)
+      } ?? [:]
     adoptLegacyHeartRateSensor()
     transport.onAvailability = { [weak self] state in self?.updateAvailability(state) }
     transport.onDiscovery = { [weak self] device in self?.receive(device) }
@@ -123,6 +136,9 @@ public final class BluetoothDevices {
     transport.onConnectFailure = { [weak self] id in self?.didFailToConnect(id) }
     transport.onBattery = { [weak self] id, level in self?.batteryLevels[id] = level }
     transport.onHeartRate = { [weak self] id, measurement in self?.receive(measurement, from: id) }
+    transport.onCyclingMeasurement = { [weak self] id, characteristic, data in
+      self?.receiveCycling(data, from: id, characteristic: characteristic)
+    }
   }
 
   public func connectionState(of id: UUID) -> ConnectionState {
@@ -131,19 +147,56 @@ public final class BluetoothDevices {
 
   public func batteryLevel(of id: UUID) -> Int? { batteryLevels[id] }
 
+  /// The selected sensor's recent reading, in watts, rpm or bpm. Zero is a valid reading.
+  public func reading(for metric: RideMetric, at date: Date = .now) -> Int? {
+    guard let source = source(of: metric) else { return nil }
+    return reading(for: metric, from: source.id, at: date)
+  }
+
+  /// Each connected sensor's reading, including alternatives in the source picker.
+  public func reading(for metric: RideMetric, from id: UUID, at date: Date = .now) -> Int? {
+    guard connectionState(of: id) == .connected else { return nil }
+    if metric == .heartRate {
+      return heartRateReading?.device == id ? heartRateReading?.bpm : nil
+    }
+    return cyclingReadings[id]?.reading(for: metric, at: date)
+  }
+
   /// The paired device of `kind`, if there is one.
   public func paired(_ kind: FitnessService) -> DiscoveredDevice? {
     paired.first { $0.kind == kind }
   }
 
-  /// The connected device that supplies `metric`, in the order of the metric's preferred
-  /// sources.
+  /// The connected device that supplies `metric`: the rider's pick while it is connected,
+  /// otherwise the best connected sensor for the metric.
   public func source(of metric: RideMetric) -> DiscoveredDevice? {
-    let connected = paired.filter { connectionState(of: $0.id) == .connected }
-    for service in metric.sources {
-      if let device = connected.first(where: { $0.services.contains(service) }) { return device }
+    let connected = connectedSensors(of: metric)
+    if let pick = sourcePicks[metric.rawValue],
+      let device = connected.first(where: { $0.id == pick })
+    {
+      return device
     }
-    return nil
+    return connected.first
+  }
+
+  /// The paired devices that can supply `metric`, best first, whether or not they are connected.
+  public func sensors(of metric: RideMetric) -> [DiscoveredDevice] {
+    var seen: Set<UUID> = []
+    return metric.sources.flatMap { service in paired.filter { $0.services.contains(service) } }
+      .filter { seen.insert($0.id).inserted }
+  }
+
+  /// The paired devices that can supply `metric` and are connected now, best first.
+  public func connectedSensors(of metric: RideMetric) -> [DiscoveredDevice] {
+    sensors(of: metric).filter { connectionState(of: $0.id) == .connected }
+  }
+
+  /// Makes `device` the source of `metric` whenever it is connected, and remembers the choice.
+  /// Ignored unless `device` is a paired sensor for `metric`.
+  public func select(_ device: DiscoveredDevice, for metric: RideMetric) {
+    guard sensors(of: metric).contains(where: { $0.id == device.id }) else { return }
+    sourcePicks[metric.rawValue] = device.id
+    saveSourcePicks()
   }
 
   /// Reconnects the paired devices. Bluetooth is only started once there is something to
@@ -177,8 +230,11 @@ public final class BluetoothDevices {
     guard isPaired(id) else { return }
     paired.removeAll { $0.id == id }
     save()
+    sourcePicks = sourcePicks.filter { $0.value != id }
+    saveSourcePicks()
     connections[id] = nil
     batteryLevels[id] = nil
+    cyclingReadings[id] = nil
     if heartRateReading?.device == id { heartRateReading = nil }
     transport.disconnect(id)
   }
@@ -221,6 +277,10 @@ public final class BluetoothDevices {
     defaults.set(try? JSONEncoder().encode(paired), forKey: Self.pairedKey)
   }
 
+  private func saveSourcePicks() {
+    defaults.set(try? JSONEncoder().encode(sourcePicks), forKey: Self.sourcePicksKey)
+  }
+
   /// Pairs the strap saved under the old key, so the rider need not pair it again.
   private func adoptLegacyHeartRateSensor() {
     struct LegacySensor: Decodable {
@@ -248,6 +308,7 @@ public final class BluetoothDevices {
       discovered.removeAll()
       connections.removeAll()
       batteryLevels.removeAll()
+      cyclingReadings.removeAll()
       heartRateReading = nil
       transport.stopScan()
     }
@@ -265,6 +326,7 @@ public final class BluetoothDevices {
   /// reconnected as soon as it is back.
   private func didDisconnect(_ id: UUID) {
     batteryLevels[id] = nil
+    cyclingReadings[id] = nil
     if heartRateReading?.device == id { heartRateReading = nil }
     guard isPaired(id) else { return }
     connections[id] = .disconnected
@@ -281,6 +343,30 @@ public final class BluetoothDevices {
     let bpm = measurement.reading
     heartRateReading = bpm.map { (id, $0) }
     if let bpm { onHeartRate?(bpm) }
+  }
+
+  func receiveCycling(
+    _ data: Data, from id: UUID, characteristic: CyclingCharacteristic, at date: Date = .now
+  ) {
+    guard isPaired(id), connectionState(of: id) == .connected else { return }
+    cyclingReadings[id, default: CyclingSensorReadings()].receive(
+      data, from: characteristic, at: date)
+    startExpiringReadings()
+  }
+
+  private func startExpiringReadings() {
+    guard expiryTask == nil else { return }
+    expiryTask = Task { [weak self] in
+      while !Task.isCancelled {
+        do { try await Task.sleep(for: .seconds(1)) } catch { break }
+        guard let self else { break }
+        for id in cyclingReadings.keys { cyclingReadings[id]?.expire(at: .now) }
+        if cyclingReadings.isEmpty {
+          expiryTask = nil
+          break
+        }
+      }
+    }
   }
 
   private func sorted(_ devices: [DiscoveredDevice]) -> [DiscoveredDevice] {

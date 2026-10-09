@@ -42,17 +42,14 @@ struct DevicesView: View {
 
   private var deviceList: some View {
     Form {
-      if !devices.paired.isEmpty {
-        Section("My devices") {
-          ForEach(devices.paired) { device in
-            PairedDeviceRow(device: device)
-          }
+      Section {
+        ForEach(RideMetric.allCases, id: \.self) { metric in
+          SensorMetricRow(metric: metric)
         }
-        Section("Data sources") {
-          ForEach(RideMetric.allCases, id: \.self) { metric in
-            DataSourceRow(metric: metric)
-          }
-        }
+      } header: {
+        Text("Sensors")
+      } footer: {
+        Text("Click a row to pick a different sensor. Ride remembers your pick for next time.")
       }
 
       Section {
@@ -63,6 +60,21 @@ struct DevicesView: View {
           Text("Wake your trainer or sensor and keep it nearby.")
             .foregroundStyle(.secondary)
         }
+        Toggle(isOn: $showAll) {
+          VStack(alignment: .leading, spacing: 1) {
+            Text("Show other Bluetooth devices")
+            Text(otherDevicesSummary)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+        }
+        .accessibilityHint(
+          "Include nearby Bluetooth devices that do not advertise a fitness service.")
+        if showAll {
+          ForEach(devices.otherDevices) { device in
+            DeviceRow(device: device)
+          }
+        }
       } header: {
         HStack {
           Text("Nearby")
@@ -71,19 +83,6 @@ struct DevicesView: View {
             Text("Searching…").fontWeight(.regular)
           }
         }
-      }
-
-      Section {
-        Toggle("Show other Bluetooth devices", isOn: $showAll)
-          .accessibilityHint(
-            "Include nearby Bluetooth devices that do not advertise a fitness service.")
-        if showAll {
-          ForEach(devices.otherDevices) { device in
-            DeviceRow(device: device)
-          }
-        }
-      } footer: {
-        Text(otherDevicesSummary)
       }
     }
     .formStyle(.grouped)
