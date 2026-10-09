@@ -12,6 +12,7 @@ final class SampleTransport: BluetoothTransport {
   var onConnectFailure: ((UUID) -> Void)?
   var onBattery: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
+  var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   private var heartbeats: [UUID: Task<Void, Never>] = [:]
 
   static let trainer = DiscoveredDevice(
@@ -40,11 +41,21 @@ final class SampleTransport: BluetoothTransport {
       try? await Task.sleep(for: .seconds(1))
       guard !Task.isCancelled else { return }
       onConnect?(id)
-      guard id != Self.trainer.id else { return }
-      onBattery?(id, 78)
+      if id != Self.trainer.id { onBattery?(id, 78) }
       var beat = 0
       while !Task.isCancelled {
-        onHeartRate?(id, .init(beatsPerMinute: 124 + beat % 7, hasContact: true))
+        if id == Self.trainer.id {
+          let watts = UInt16(180 + beat % 25)
+          let cadence = UInt16((85 + beat % 5) * 2)
+          onCyclingMeasurement?(
+            id, .indoorBike,
+            Data([
+              0x45, 0, UInt8(cadence & 0xFF), UInt8(cadence >> 8),
+              UInt8(watts & 0xFF), UInt8(watts >> 8),
+            ]))
+        } else {
+          onHeartRate?(id, .init(beatsPerMinute: 124 + beat % 7, hasContact: true))
+        }
         beat += 1
         try? await Task.sleep(for: .seconds(1))
       }

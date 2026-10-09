@@ -10,6 +10,7 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
   var onConnectFailure: ((UUID) -> Void)?
   var onBattery: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
+  var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   private var central: CBCentralManager?
   /// The peripherals connected or being connected to. CoreBluetooth drops a connection when
   /// nothing holds its peripheral.
@@ -78,7 +79,9 @@ extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
 
   func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
     onConnect?(peripheral.identifier)
-    peripheral.discoverServices([GATT.battery, GATT.heartRate])
+    peripheral.discoverServices([
+      GATT.battery, GATT.heartRate, GATT.power, GATT.speedAndCadence, GATT.trainer,
+    ])
   }
 
   func centralManager(
@@ -100,11 +103,18 @@ extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
 
 extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
   func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
+    guard error == nil else { return }
     for service in peripheral.services ?? [] {
       switch service.uuid {
       case GATT.battery: peripheral.discoverCharacteristics([GATT.batteryLevel], for: service)
       case GATT.heartRate:
         peripheral.discoverCharacteristics([GATT.heartRateMeasurement], for: service)
+      case GATT.power:
+        peripheral.discoverCharacteristics([GATT.cyclingPowerMeasurement], for: service)
+      case GATT.speedAndCadence:
+        peripheral.discoverCharacteristics([GATT.cyclingSpeedCadenceMeasurement], for: service)
+      case GATT.trainer:
+        peripheral.discoverCharacteristics([GATT.indoorBikeData], for: service)
       default: break
       }
     }
@@ -114,6 +124,7 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
     _ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService,
     error: (any Error)?
   ) {
+    guard error == nil else { return }
     for characteristic in service.characteristics ?? [] {
       switch characteristic.uuid {
       case GATT.batteryLevel:
@@ -121,7 +132,8 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
         if characteristic.properties.contains(.notify) {
           peripheral.setNotifyValue(true, for: characteristic)
         }
-      case GATT.heartRateMeasurement:
+      case GATT.heartRateMeasurement, GATT.cyclingPowerMeasurement,
+        GATT.cyclingSpeedCadenceMeasurement, GATT.indoorBikeData:
         peripheral.setNotifyValue(true, for: characteristic)
       default: break
       }
@@ -132,7 +144,9 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
     _ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic,
     error: (any Error)?
   ) {
-    guard let value = characteristic.value else { return }
+    guard error == nil, let value = characteristic.value,
+      peripherals[peripheral.identifier] === peripheral, peripheral.state == .connected
+    else { return }
     switch characteristic.uuid {
     case GATT.batteryLevel:
       if let level = value.first { onBattery?(peripheral.identifier, min(Int(level), 100)) }
@@ -140,7 +154,10 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
       if let measurement = HeartRateMeasurement(value) {
         onHeartRate?(peripheral.identifier, measurement)
       }
-    default: break
+    default:
+      if let cycling = CyclingCharacteristic(rawValue: characteristic.uuid.uuidString) {
+        onCyclingMeasurement?(peripheral.identifier, cycling, value)
+      }
     }
   }
 }

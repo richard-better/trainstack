@@ -265,6 +265,69 @@ struct BluetoothDevicesTests {
     #expect(devices.heartRate == nil)
   }
 
+  @Test func readsEachCyclingSensorAndSwitchesTheSelectedMetricImmediately() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), name: "KICKR", services: [.trainer])
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    devices.pair(trainer)
+    devices.pair(meter)
+    transport.onConnect?(trainer.id)
+    transport.onConnect?(meter.id)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 200, 0]))
+    transport.onCyclingMeasurement?(meter.id, .power, Data([0, 0, 210, 0]))
+    #expect(devices.power == 210)
+    #expect(devices.cadence == nil)
+    #expect(devices.reading(for: .power, from: trainer.id) == 200)
+    #expect(devices.reading(for: .cadence, from: trainer.id) == 90)
+    devices.select(trainer, for: .power)
+    devices.select(trainer, for: .cadence)
+    #expect(devices.power == 200)
+    #expect(devices.cadence == 90)
+    transport.onDisconnect?(trainer.id)
+    #expect(devices.power == 210)
+    #expect(devices.reading(for: .power, from: trainer.id) == nil)
+    transport.onConnect?(trainer.id)
+    #expect(devices.power == nil)
+    #expect(devices.cadence == nil)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 0, 0, 0, 0]))
+    #expect(devices.power == 0)
+    #expect(devices.cadence == 0)
+  }
+
+  @Test func clearsCyclingReadingsWhenForgottenOrBluetoothGoesOff() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), services: [.trainer])
+    devices.pair(trainer)
+    transport.onConnect?(trainer.id)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 200, 0]))
+    #expect(devices.power == 200)
+    transport.onAvailability?(.poweredOff)
+    transport.onAvailability?(.ready)
+    transport.onConnect?(trainer.id)
+    #expect(devices.power == nil)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 200, 0]))
+    devices.forget(trainer.id)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 200, 0]))
+    #expect(devices.power == nil)
+    #expect(devices.reading(for: .cadence, from: trainer.id) == nil)
+  }
+
+  @Test func cyclingReadingsExpireAndUnpairedNotificationsAreIgnored() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), services: [.trainer])
+    let now = Date.now
+    let packet = Data([0x45, 0, 180, 0, 200, 0])
+    devices.pair(trainer)
+    devices.receiveCycling(packet, from: trainer.id, characteristic: .indoorBike, at: now)
+    #expect(devices.power == nil)
+    transport.onConnect?(trainer.id)
+    devices.receiveCycling(packet, from: trainer.id, characteristic: .indoorBike, at: now)
+    #expect(devices.reading(for: .power, at: now) == 200)
+    #expect(devices.reading(for: .power, at: now.addingTimeInterval(6)) == nil)
+    devices.receiveCycling(packet, from: UUID(), characteristic: .indoorBike, at: now)
+    #expect(devices.reading(for: .power, at: now) == 200)
+  }
+
   @Test func passesOnEachHeartRateFromThePairedStrapOnly() {
     let (devices, transport) = scanningDevices()
     let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
@@ -335,6 +398,7 @@ private final class FakeTransport: BluetoothTransport {
   var onConnectFailure: ((UUID) -> Void)?
   var onBattery: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
+  var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var started = false
   var scans = 0
   var stops = 0
