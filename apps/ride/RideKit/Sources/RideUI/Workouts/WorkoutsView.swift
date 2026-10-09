@@ -19,8 +19,12 @@ struct WorkoutsView: View {
           .safeAreaBar(edge: .top) { WorkoutFilterBar(state: $state, count: shown.count) }
           .toolbar {
             ToolbarItem(placement: .primaryAction) {
-              StartButton(template: shown.first { $0.id == state.selection })
-                .buttonStyle(.borderedProminent)
+              let selected = shown.first { $0.id == state.selection }
+              StartButton(
+                template: selected, title: selected.map { "Start \($0.name)" } ?? "Start"
+              )
+              .labelStyle(.titleAndIcon)
+              .buttonStyle(.borderedProminent)
             }
             #if os(iOS)
               .visibilityPriority(.high)

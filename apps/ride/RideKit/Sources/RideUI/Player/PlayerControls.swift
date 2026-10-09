@@ -23,15 +23,15 @@ struct PlayerControls: View {
         .keyboardShortcut(.rightArrow, modifiers: .command)
         .help("Skip to the next interval (⌘→)")
     }
-    #if os(iOS)
-      .controlSize(.large)
+    .controlSize(.large)
+    #if os(macOS)
+      .buttonBorderShape(.circle)
     #endif
     .fixedSize()
-    let mode = Picker("Trainer mode", selection: $controller.mode) {
-      ForEach(TrainerMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-    }
-    .pickerStyle(.segmented)
-    .labelsHidden()
+    let mode = SegmentedPicker(
+      title: "Trainer mode", options: TrainerMode.allCases, selection: $controller.mode,
+      label: \.rawValue
+    )
     .fixedSize()
     let stepper = SettingStepper(label: settingLabel, decrease: decrease, increase: increase)
       .fixedSize()

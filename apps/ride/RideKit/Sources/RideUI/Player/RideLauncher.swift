@@ -14,8 +14,7 @@ final class RideLauncher {
   private(set) var ride: RideController?
   /// A ride the app was closed on without ending, until the rider decides what to do with it.
   private(set) var interrupted: RideJournal.Interrupted?
-  /// Whether the player is showing. On iOS the rider can minimise it to the tab bar while the
-  /// ride carries on.
+  /// Whether the player is showing. The rider can minimise it while the ride carries on.
   var isPlayerPresented = false
   /// The rider's devices, which stay connected between rides.
   let devices: BluetoothDevices

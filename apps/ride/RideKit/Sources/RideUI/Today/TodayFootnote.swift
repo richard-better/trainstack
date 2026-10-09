@@ -23,9 +23,9 @@ struct TodayFootnote: View {
 
   private var startHint: String {
     #if os(macOS)
-      "Double-click a card to start it."
+      "Click a card to feature it, double-click to open it."
     #else
-      "Double-tap a card to start it."
+      "Tap a card to feature it, double-tap to open it."
     #endif
   }
 }

@@ -9,6 +9,7 @@ struct WorkoutDetailView: View {
   let template: WorkoutTemplate
   @Environment(RiderSettingsStore.self) private var settings
   @State private var isShowingDevices = false
+  @Environment(RideLauncher.self) private var launcher
 
   var body: some View {
     let ftp = settings.ftp
@@ -51,8 +52,19 @@ struct WorkoutDetailView: View {
       .toolbarVisibility(.hidden, for: .tabBar)
       .navigationBarTitleDisplayMode(.large)
     #endif
+    #if os(macOS)
+      .frame(maxWidth: Design.ridePageWidth)
+      .frame(maxWidth: .infinity)
+    #endif
     .navigationTitle(template.name)
-    .safeAreaBar(edge: .bottom) { startBar }
+    .safeAreaBar(edge: .bottom) {
+      #if os(macOS)
+        // A ride in progress has its own bar there, and nothing else can start meanwhile.
+        if launcher.ride == nil { startBar }
+      #else
+        startBar
+      #endif
+    }
     .sheet(isPresented: $isShowingDevices) { DevicesSheet() }
   }
 
@@ -72,6 +84,9 @@ struct WorkoutDetailView: View {
           .font(.headline)
       }
     }
+    #if os(macOS)
+      .frame(maxWidth: 560)
+    #endif
     .padding(.horizontal, 16)
     .padding(.bottom, 8)
   }

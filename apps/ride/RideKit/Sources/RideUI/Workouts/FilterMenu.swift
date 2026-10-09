@@ -22,6 +22,7 @@ struct FilterMenu<Value: Hashable, Choices: View>: View {
           .foregroundStyle(.secondary)
       }
     }
+    .menuIndicator(.hidden)
     .buttonStyle(.glass)
     .buttonBorderShape(.capsule)
     .font(.subheadline.weight(.semibold))
