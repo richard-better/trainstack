@@ -23,26 +23,36 @@ public enum FITDecoder {
     let end = headerSize + dataSize
     guard bytes.count >= end + 2 else { throw FITError.truncated }
     let storedChecksum = UInt16(readInteger(bytes, at: end, size: 2, bigEndian: false))
-    guard checksum(bytes[0..<end]) == storedChecksum else { throw FITError.badChecksum }
+    guard fitChecksum(bytes[0..<end]) == storedChecksum else { throw FITError.badChecksum }
 
     var reader = MessageReader(bytes: bytes, position: headerSize, end: end)
     var records: [Message] = []
     var session: Message?
     var workoutName: String?
+    var targetPowerField: DeveloperField?
     while let message = try reader.next() {
       switch message.kind {
       case .record: records.append(message)
       case .session: session = session ?? message
       case .workout: workoutName = workoutName ?? message.string(8)
+      case .fieldDescription:
+        if message.string(3) == FITTargetPower.name, let index = message.integer(0),
+          let number = message.integer(1)
+        {
+          targetPowerField = DeveloperField(index: index, number: number)
+        }
       case .other: break
       }
     }
     guard !records.isEmpty else { throw FITError.noRecords }
-    return recording(records: records, session: session, workoutName: workoutName)
+    return recording(
+      records: records, session: session, workoutName: workoutName,
+      targetPowerField: targetPowerField)
   }
 
   private static func recording(
-    records: [Message], session: Message?, workoutName: String?
+    records: [Message], session: Message?, workoutName: String?,
+    targetPowerField: DeveloperField?
   ) -> RideRecording {
     let startTimestamp =
       session?.integer(2) ?? records.compactMap { $0.integer(253) }.first ?? 0
@@ -51,6 +61,7 @@ public enum FITDecoder {
       return RideRecording.Sample(
         elapsed: TimeInterval(timestamp - startTimestamp),
         power: record.integer(7),
+        targetPower: targetPowerField.flatMap { record.developer[$0] },
         heartRate: record.integer(3),
         cadence: record.integer(4),
         speed: record.integer(6).map { Double($0) / 1000 },
@@ -87,10 +98,12 @@ public enum FITDecoder {
 // MARK: - Message stream
 
 private struct Message {
-  enum Kind { case record, session, workout, other }
+  enum Kind { case record, session, workout, fieldDescription, other }
 
   let kind: Kind
   let fields: [Int: Field]
+  /// The integer developer fields the message carries.
+  var developer: [DeveloperField: Int] = [:]
 
   enum Field {
     case integer(Int)
@@ -112,11 +125,22 @@ private struct FieldDefinition {
   let baseType: Int
 }
 
+/// A field an application defined for itself, named by a `field_description` message.
+private struct DeveloperField: Hashable {
+  let index: Int
+  let number: Int
+}
+
+private struct DeveloperFieldDefinition {
+  let field: DeveloperField
+  let size: Int
+}
+
 private struct Definition {
   let globalNumber: Int
   let bigEndian: Bool
   let fields: [FieldDefinition]
-  let developerFieldsSize: Int
+  let developerFields: [DeveloperFieldDefinition]
 }
 
 private struct MessageReader {
@@ -173,18 +197,19 @@ private struct MessageReader {
         FieldDefinition(
           number: Int(try byte()), size: Int(try byte()), baseType: Int(try byte() & 0x1F)))
     }
-    var developerFieldsSize = 0
+    var developerFields: [DeveloperFieldDefinition] = []
     if hasDeveloperFields {
       for _ in 0..<Int(try byte()) {
-        position += 1  // field number
-        developerFieldsSize += Int(try byte())
-        position += 1  // developer data index
+        let number = Int(try byte())
+        let size = Int(try byte())
+        let index = Int(try byte())
+        developerFields.append(
+          DeveloperFieldDefinition(field: DeveloperField(index: index, number: number), size: size))
       }
     }
-    guard position <= end else { throw FITError.truncated }
     return Definition(
       globalNumber: globalNumber, bigEndian: bigEndian, fields: fields,
-      developerFieldsSize: developerFieldsSize)
+      developerFields: developerFields)
   }
 
   private mutating func data(_ definition: Definition) throws -> Message {
@@ -199,16 +224,26 @@ private struct MessageReader {
       }
       position += field.size
     }
-    position += definition.developerFieldsSize
-    guard position <= end else { throw FITError.truncated }
+    var developer: [DeveloperField: Int] = [:]
+    for field in definition.developerFields {
+      guard position + field.size <= end else { throw FITError.truncated }
+      if (1...4).contains(field.size) {
+        let raw = readInteger(
+          bytes, at: position, size: field.size, bigEndian: definition.bigEndian)
+        // All ones marks a value as invalid.
+        if raw != (UInt64(1) << UInt64(field.size * 8)) - 1 { developer[field.field] = Int(raw) }
+      }
+      position += field.size
+    }
     let kind: Message.Kind =
       switch definition.globalNumber {
       case 20: .record
       case 18: .session
       case 26: .workout
+      case 206: .fieldDescription
       default: .other
       }
-    return Message(kind: kind, fields: fields)
+    return Message(kind: kind, fields: fields, developer: developer)
   }
 
   private mutating func byte() throws -> UInt8 {
@@ -228,7 +263,7 @@ extension Message {
   fileprivate func settingTimestamp(_ timestamp: Int) -> Message {
     var fields = fields
     fields[253] = .integer(timestamp)
-    return Message(kind: kind, fields: fields)
+    return Message(kind: kind, fields: fields, developer: developer)
   }
 }
 
@@ -281,7 +316,7 @@ private func readInteger(_ bytes: [UInt8], at position: Int, size: Int, bigEndia
   return value
 }
 
-private func checksum(_ bytes: ArraySlice<UInt8>) -> UInt16 {
+func fitChecksum(_ bytes: ArraySlice<UInt8>) -> UInt16 {
   let table: [UInt16] = [
     0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
     0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400,

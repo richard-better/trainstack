@@ -17,22 +17,28 @@ final class RideController {
   @ObservationIgnored var onTick: (() -> Void)?
   @ObservationIgnored private let heartRate: HeartRateFeed?
   @ObservationIgnored private let devices: BluetoothDevices?
+  /// Records the ride as it goes, so it survives a crash.
+  @ObservationIgnored let journal: RideJournal?
   @ObservationIgnored private var simulator: SimulatedTrainer?
   @ObservationIgnored private var clock: Task<Void, Never>?
 
   /// With `simulated` a pretend trainer supplies the readings, for previews and debug builds.
   /// Real power and cadence come from the selected connected sensors in `devices`, and heart
   /// rate from `heartRate`. Live readings take precedence over the simulator.
+  ///
+  /// A ride starts afresh unless given the `session` of one to carry on.
   init(
     template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet? = nil,
-    heartRate: HeartRateFeed? = nil, devices: BluetoothDevices? = nil, simulated: Bool
+    heartRate: HeartRateFeed? = nil, devices: BluetoothDevices? = nil,
+    session: RideSession? = nil, journal: RideJournal? = nil, simulated: Bool
   ) {
     self.template = template
     self.ftp = ftp
     self.heartRateZones = heartRateZones
     self.heartRate = heartRate
     self.devices = devices
-    session = RideSession(workout: template.workout(ftp: ftp))
+    self.journal = journal
+    self.session = session ?? RideSession(workout: template.workout(ftp: ftp))
     simulator = simulated ? SimulatedTrainer() : nil
   }
 
@@ -72,7 +78,12 @@ final class RideController {
       reading.heartRate = live.bpm
       reading.heartRateSource = live.source
     }
+    let recorded = session.samples.count
     session.advance(by: seconds, reading: reading)
+    journal?.append(
+      .init(
+        state: session.state, sample: session.samples.count > recorded ? session.samples.last : nil)
+    )
     updateTrainer(at: date)
     onTick?()
   }

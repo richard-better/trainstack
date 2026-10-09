@@ -6,7 +6,8 @@ import SwiftUI
 struct PlayerView: View {
   let controller: RideController
   var onMinimize: () -> Void
-  var onEnd: () -> Void
+  /// Called once the rider has ended the ride, with whether to keep it in History.
+  var onEnd: (_ save: Bool) -> Void
   @State private var isConfirmingEnd = false
 
   var body: some View {
@@ -32,10 +33,11 @@ struct PlayerView: View {
       ToolbarItem(placement: .primaryAction) {
         Button("End Ride", systemImage: "stop.fill", action: confirmEnd)
           .confirmationDialog("End this ride?", isPresented: $isConfirmingEnd) {
-            Button("End Ride", role: .destructive, action: onEnd)
+            Button("Save Ride") { onEnd(true) }
+            Button("Discard Ride", role: .destructive) { onEnd(false) }
             Button("Keep Riding", role: .cancel) {}
           } message: {
-            Text("Rides aren't saved to History yet.")
+            Text("A saved ride goes to History as a FIT file.")
           }
       }
     }
@@ -55,6 +57,7 @@ struct PlayerView: View {
 #Preview("Riding") {
   NavigationStack {
     PlayerView(controller: .preview(.named("Threshold classic 60")!, minutes: 21), onMinimize: {}) {
+      _ in
     }
   }
   .frame(width: 1100, height: 760)
@@ -64,7 +67,7 @@ struct PlayerView: View {
   let controller = RideController.preview()
   controller.togglePause()
   return NavigationStack {
-    PlayerView(controller: controller, onMinimize: {}) {}
+    PlayerView(controller: controller, onMinimize: {}) { _ in }
   }
   .frame(width: 800, height: 700)
 }

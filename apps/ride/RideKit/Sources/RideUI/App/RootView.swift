@@ -35,11 +35,30 @@ public struct RootView: View {
           player: player)
       }
     }
-    .modifier(PlayerPresentation(launcher: launcher, namespace: player))
+    .modifier(PlayerPresentation(launcher: launcher, library: library, namespace: player))
     .environment(settings)
     .environment(launcher)
     .environment(launcher.devices)
-    .task { launcher.devices.connectPaired() }
+    .task {
+      launcher.checkForInterruptedRide()
+      launcher.devices.connectPaired()
+    }
+    .alert(
+      "Pick Up Your Ride?", isPresented: interruptedShown, presenting: launcher.interrupted
+    ) { _ in
+      Button("Resume") { launcher.resumeInterrupted(heartRateZones: settings.heartRateZones) }
+      Button("Save What I Rode") { launcher.saveInterrupted(to: library) }
+      Button("Discard", role: .destructive, action: launcher.discardInterrupted)
+    } message: { interrupted in
+      Text(
+        "\(interrupted.name) stopped after \(interrupted.state.elapsed.clockString) of riding. Resume it where you left off, or save what you rode."
+      )
+    }
+    .alert("Couldn't Save the Ride", isPresented: storageProblemShown) {
+      Button("OK") {}
+    } message: {
+      Text(library.storageProblem ?? "")
+    }
     .onChange(of: destination) { _, destination in
       if destination != .settings { appDestination = destination }
     }
@@ -60,6 +79,17 @@ public struct RootView: View {
   }
 
   private func backToApp() { destination = appDestination }
+
+  /// Shown while an interrupted ride waits; the buttons are what end it.
+  private var interruptedShown: Binding<Bool> {
+    Binding(get: { launcher.interrupted != nil }, set: { _ in })
+  }
+
+  private var storageProblemShown: Binding<Bool> {
+    Binding(
+      get: { library.storageProblem != nil },
+      set: { if !$0 { library.storageProblem = nil } })
+  }
 }
 
 #Preview {

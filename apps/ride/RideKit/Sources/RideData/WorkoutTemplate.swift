@@ -1,8 +1,8 @@
 import Foundation
 
 /// A workout written against FTP rather than in watts, so one template suits every rider.
-public struct WorkoutTemplate: Identifiable, Hashable, Sendable {
-  public struct Step: Hashable, Sendable {
+public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
+  public struct Step: Hashable, Codable, Sendable {
     public var duration: TimeInterval
     /// Target power as a fraction of FTP.
     public var intensity: Double
@@ -157,6 +157,12 @@ extension WorkoutTemplate {
       steps: minutes([(4, 55), (3, 66)] + repeated(8, [(2, 70), (0.5, 98)]) + [(3, 55)]),
       about:
         "Eight short surges over an endurance base. Playful enough to pass the time, easy enough to recover from."
+    ),
+    .init(
+      name: "Quick test 45s", category: .vo2Max,
+      steps: minutes([(0.25, 50), (0.25, 75), (0.25, 120)]),
+      about:
+        "Fifteen seconds each at easy, medium and hard. Too short to train anything; it is here to check a trainer and the ride from start to finish."
     ),
   ]
 

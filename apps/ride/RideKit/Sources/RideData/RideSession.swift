@@ -47,7 +47,7 @@ public struct RideSession: Sendable {
   }
 
   /// A recorded sample and where in the workout it was taken.
-  public struct LiveSample: Equatable, Sendable {
+  public struct LiveSample: Equatable, Codable, Sendable {
     public var position: TimeInterval
     public var sample: RideRecording.Sample
   }
@@ -75,6 +75,19 @@ public struct RideSession: Sendable {
   /// Metres.
   public private(set) var distance: Double = 0
 
+  /// Where the rider is and how the trainer is set: all of a session that is not its samples,
+  /// which is what a ride needs saved to be picked up again.
+  public struct State: Equatable, Codable, Sendable {
+    public var elapsed: TimeInterval
+    public var position: TimeInterval
+    public var isPaused: Bool
+    public var mode: TrainerMode
+    public var ergPercent: Int
+    public var grade: Double
+    public var level: Int
+    public var distance: Double
+  }
+
   public init(workout: Workout, startDate: Date = .now) {
     self.workout = workout
     self.startDate = startDate
@@ -84,6 +97,26 @@ public struct RideSession: Sendable {
       return Interval(
         index: index, start: start, end: start + step.duration, plannedPower: step.targetPower)
     }
+  }
+
+  /// A session carried on from `state`, with the `samples` already recorded.
+  public init(workout: Workout, startDate: Date, state: State, samples: [LiveSample]) {
+    self.init(workout: workout, startDate: startDate)
+    elapsed = state.elapsed
+    position = min(state.position, duration)
+    isPaused = state.isPaused
+    mode = state.mode
+    ergPercent = state.ergPercent.clamped(to: Self.ergPercentRange)
+    grade = state.grade.clamped(to: Self.gradeRange)
+    level = state.level.clamped(to: Self.levelRange)
+    distance = state.distance
+    self.samples = samples
+  }
+
+  public var state: State {
+    State(
+      elapsed: elapsed, position: position, isPaused: isPaused, mode: mode,
+      ergPercent: ergPercent, grade: grade, level: level, distance: distance)
   }
 
   public var duration: TimeInterval { intervals.last?.end ?? 0 }
@@ -158,7 +191,7 @@ public struct RideSession: Sendable {
       values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
     }
     return RideRecording(
-      startDate: startDate, workoutName: workout.name, samples: recorded,
+      startDate: startDate, workoutName: workout.name, sport: .cycling, samples: recorded,
       summary: .init(
         duration: elapsed, distance: distance > 0 ? distance : nil,
         averagePower: average(powers), maxPower: powers.max(),

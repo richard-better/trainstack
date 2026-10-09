@@ -34,6 +34,18 @@ public enum Sport: String, CaseIterable, Codable, Sendable {
     }
   }
 
+  /// The FIT `sport` and `sub_sport` a ride of this sport is saved with. Indoor cycling and
+  /// rowing name their sub-sport; the others use the generic one.
+  var fitSport: (sport: Int, subSport: Int) {
+    switch self {
+    case .cycling: (2, 6)
+    case .running: (1, 0)
+    case .swimming: (5, 0)
+    case .rowing: (15, 14)
+    case .strength: (10, 20)
+    }
+  }
+
   /// The sport of a FIT session's `sport` and `sub_sport` fields, or nil for one Ride does not
   /// keep zones for.
   init?(fitSport: Int, subSport: Int?) {

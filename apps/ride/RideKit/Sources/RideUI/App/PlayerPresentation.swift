@@ -5,6 +5,8 @@ import SwiftUI
 /// the ride carries on.
 struct PlayerPresentation: ViewModifier {
   @Bindable var launcher: RideLauncher
+  /// Where a saved ride goes.
+  let library: RideLibrary
   /// Where the player zooms from and back to when it opens and minimises.
   let namespace: Namespace.ID
 
@@ -14,7 +16,7 @@ struct PlayerPresentation: ViewModifier {
         .fullScreenCover(isPresented: $launcher.isPlayerPresented) {
           if let ride = launcher.ride {
             NavigationStack {
-              PlayerView(controller: ride, onMinimize: minimize, onEnd: launcher.end)
+              PlayerView(controller: ride, onMinimize: minimize, onEnd: end)
             }
             .navigationTransition(.zoom(sourceID: "player", in: namespace))
           }
@@ -22,7 +24,7 @@ struct PlayerPresentation: ViewModifier {
     #else
       if let ride = launcher.ride, launcher.isPlayerPresented {
         NavigationStack {
-          PlayerView(controller: ride, onMinimize: minimize, onEnd: launcher.end)
+          PlayerView(controller: ride, onMinimize: minimize, onEnd: end)
         }
       } else {
         content
@@ -34,6 +36,11 @@ struct PlayerPresentation: ViewModifier {
           }
       }
     #endif
+  }
+
+  /// Ends the ride, and saves it unless it was thrown away or never got going.
+  private func end(saving: Bool) {
+    launcher.end(saveTo: saving ? library : nil)
   }
 
   private func minimize() { launcher.isPlayerPresented = false }
