@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1172c579-38fe-49ba-b3c2-cb3f1983acdd",
+  "id": "6465db76-d651-4f90-84d6-65350623bff1",
   "prevIds": ["ab6659b7-720c-41e2-9675-13e235c6f722"],
   "ddl": [
     {
@@ -18,6 +18,10 @@
     },
     {
       "name": "verification",
+      "entityType": "tables"
+    },
+    {
+      "name": "strava_budget",
       "entityType": "tables"
     },
     {
@@ -374,6 +378,36 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "key",
+      "entityType": "columns",
+      "table": "strava_budget"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "window_start",
+      "entityType": "columns",
+      "table": "strava_budget"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "used",
+      "entityType": "columns",
+      "table": "strava_budget"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "user_id",
       "entityType": "columns",
       "table": "strava_connection"
@@ -425,26 +459,6 @@
       "default": null,
       "generated": null,
       "name": "expires_at",
-      "entityType": "columns",
-      "table": "strava_connection"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "budget_window",
-      "entityType": "columns",
-      "table": "strava_connection"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "budget_used",
       "entityType": "columns",
       "table": "strava_connection"
     },
@@ -591,6 +605,13 @@
       "entityType": "pks"
     },
     {
+      "columns": ["key"],
+      "nameExplicit": false,
+      "name": "strava_budget_pk",
+      "table": "strava_budget",
+      "entityType": "pks"
+    },
+    {
       "columns": ["user_id"],
       "nameExplicit": false,
       "name": "strava_connection_pk",
@@ -645,6 +666,20 @@
       "name": "verification_identifier_idx",
       "entityType": "indexes",
       "table": "verification"
+    },
+    {
+      "columns": [
+        {
+          "value": "athlete_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "strava_connection_athlete_idx",
+      "entityType": "indexes",
+      "table": "strava_connection"
     },
     {
       "columns": [

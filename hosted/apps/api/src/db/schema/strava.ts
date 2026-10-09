@@ -1,34 +1,48 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 
-/** A rider's Strava sign-in. Rides are uploaded to Strava with it, on the server. */
-export const stravaConnection = sqliteTable("strava_connection", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => user.id, { onDelete: "cascade" }),
-  athleteId: integer("athlete_id").notNull(),
-  athleteName: text("athlete_name"),
-  /** Encrypted: see `strava/crypto.ts`. */
-  accessToken: text("access_token").notNull(),
-  /** Encrypted: see `strava/crypto.ts`. */
-  refreshToken: text("refresh_token").notNull(),
-  /** When the access token runs out, in seconds since the epoch. */
-  expiresAt: integer("expires_at").notNull(),
-  /**
-   * How many calls to Strava the rider has caused since `budgetWindow` (seconds since the epoch),
-   * so one rider cannot use up the request limits Strava gives every rider together.
-   */
-  budgetWindow: integer("budget_window").default(0).notNull(),
-  budgetUsed: integer("budget_used").default(0).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
+/**
+ * A rider's Strava sign-in. Rides are uploaded to Strava with it, on the server. A Strava athlete
+ * is connected to one account at a time, so connecting again elsewhere moves it.
+ */
+export const stravaConnection = sqliteTable(
+  "strava_connection",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    athleteId: integer("athlete_id").notNull(),
+    athleteName: text("athlete_name"),
+    /** Encrypted: see `strava/crypto.ts`. */
+    accessToken: text("access_token").notNull(),
+    /** Encrypted: see `strava/crypto.ts`. */
+    refreshToken: text("refresh_token").notNull(),
+    /** When the access token runs out, in seconds since the epoch. */
+    expiresAt: integer("expires_at").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("strava_connection_athlete_idx").on(table.athleteId)],
+);
+
+/**
+ * How much of a Strava request limit has been used. Strava limits the app as a whole, and counts
+ * by athlete, so the keys are `athlete:<id>` (not the account, which anyone can make more of),
+ * `user:<id>` for starting to connect, and one for the whole app. They outlive the connections
+ * they count, so disconnecting and connecting again does not start a fresh budget.
+ */
+export const stravaBudget = sqliteTable("strava_budget", {
+  key: text("key").primaryKey(),
+  /** When the current window began, in seconds since the epoch. */
+  windowStart: integer("window_start").notNull(),
+  used: integer("used").notNull(),
 });
 
 /**
