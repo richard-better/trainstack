@@ -59,11 +59,14 @@ To enter a token without putting it into a command argument, use GitHub's secret
 
 These optional credentials let the API Worker sign Ride in to Strava so it can upload rides. Register **TrainStack Ride** at [Strava API settings](https://www.strava.com/settings/api) with authorization callback domain `api.trainstackhq.com` (no scheme or path). Use a square PNG rendered from `hosted/apps/marketing/public/trainstack-logo.svg` as the icon. A Strava subscription is currently required to create an app, and an account can have only one API application.
 
-The Worker holds only the client secret and stores nothing. `hosted/apps/api/src/strava.ts` serves three routes:
+The Worker holds only the client secret and stores nothing. `hosted/apps/api/src/strava.ts` serves four routes:
 
-- `GET /strava/authorize?state=<random>` redirects the rider to Strava, asking for the `activity:write` scope. The app opens it in a web authentication session.
-- `GET /strava/callback` swaps Strava's code for tokens and redirects to `trainstackride://strava` with `state`, `access_token`, `refresh_token`, `expires_at` and the athlete's ID and name, or with `error` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`). The app keeps the tokens in its Keychain and checks `state` is the one it sent.
+- `GET /strava/authorize?state=<random>&code_challenge=<S256 challenge>` redirects the rider to Strava, asking for the `activity:write` scope. The app opens it in a web authentication session.
+- `GET /strava/callback` swaps Strava's code for tokens and redirects to `trainstackride://strava` with `state` and a `ticket`, or with `error` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`).
+- `POST /strava/redeem` takes `{ "ticket": "...", "code_verifier": "..." }` and returns the tokens and athlete name.
 - `POST /strava/refresh` takes `{ "refresh_token": "..." }` and returns a fresh token set. It answers 401 `invalid_refresh_token` when the rider has revoked access, and 502 when Strava is unavailable.
+
+Any app can claim the `trainstackride` scheme, so the redirect does not carry the tokens. The ticket is the tokens encrypted with AES-GCM under a key derived from the client secret, tied to the challenge the app sent and valid for five minutes. Only the app that holds the verifier behind the challenge can redeem it. Rotating the client secret invalidates tickets in flight, which is harmless.
 
 The workflow passes the GitHub `production` variable and secret to Alchemy through `hosted/infra/.env.schema`. The API receives a plain ID binding and a redacted secret binding, accessed through `ENV.STRAVA_CLIENT_ID` and `ENV.STRAVA_CLIENT_SECRET` from `hosted/apps/api/src/env.server.ts`. Missing values default to empty strings so deployment works before registration. Configure both before enabling Strava features.
 

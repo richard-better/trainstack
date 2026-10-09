@@ -185,7 +185,7 @@ test("OpenAPI reference describes contract outputs and authentication errors", a
 
 test("the Strava sign-in is served by the Worker", async () => {
   const response = await runtime.dispatchFetch(
-    `${api}/strava/authorize?state=abcdefghijklmnopqrstuvwxyz012345`,
+    `${api}/strava/authorize?state=abcdefghijklmnopqrstuvwxyz012345&code_challenge=${"c".repeat(43)}`,
     { redirect: "manual" },
   );
   assert.equal(response.status, 302);
