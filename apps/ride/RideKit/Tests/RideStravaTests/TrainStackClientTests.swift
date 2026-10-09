@@ -211,6 +211,23 @@ struct StravaConnectionTests {
     }
   }
 
+  @Test func explainsWhyStravaCouldNotBeConnected() async throws {
+    let (notApple, _, _) = client([json(#"{"error":"apple_account_required"}"#, status: 403)])
+    await #expect(throws: StravaError.appleAccountRequired) {
+      try await notApple.startStravaConnection()
+    }
+
+    let (taken, _, _) = client([
+      json(#"{"url":"https://www.strava.com/oauth/authorize"}"#),
+      json(#"{"error":"athlete_in_use"}"#, status: 409),
+    ])
+    let attempt = try await taken.startStravaConnection()
+    await #expect(throws: StravaError.athleteInUse) {
+      try await taken.finishStravaConnection(
+        attempt, callback: URL(string: "trainstackride://strava?connected=1")!)
+    }
+  }
+
   @Test func readsHowConnectingStravaEnded() throws {
     try TrainStackClient.checkConnectCallback(URL(string: "trainstackride://strava?connected=1")!)
     func failure(_ query: String) -> StravaError? {

@@ -10,6 +10,10 @@ public enum StravaError: Error, Equatable, Sendable {
   /// Apple or the server did not accept the sign-in.
   case signInFailed
   case connectFailed
+  /// That Strava account is connected to another TrainStack account.
+  case athleteInUse
+  /// Only accounts made with Sign in with Apple can connect Strava.
+  case appleAccountRequired
   /// There is no TrainStack account signed in, or the server no longer accepts its session.
   case signedOut
   /// The account has not connected Strava, or the rider revoked Ride in Strava.
@@ -33,6 +37,9 @@ extension StravaError: LocalizedError {
     case .notConfigured: "Strava isn't set up on the server yet."
     case .signInFailed: "Sign in didn't work. Try again."
     case .connectFailed: "Couldn't connect Strava. Try again."
+    case .athleteInUse:
+      "That Strava account is already connected to another TrainStack account. Disconnect it there first."
+    case .appleAccountRequired: "Sign in with Apple to connect Strava."
     case .signedOut: "Sign in to your TrainStack account in Settings first."
     case .notConnected: "Connect Strava in Settings first."
     case .rateLimited: "Strava is asking Ride to slow down. Try again in a few minutes."

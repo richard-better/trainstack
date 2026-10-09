@@ -126,6 +126,7 @@ public actor TrainStackClient {
     let challenge = Self.base64URL(Data(SHA256.hash(data: Data(verifier.utf8))))
     let (data, response) = try await send(
       "POST", "strava/connect", json: ["code_challenge": challenge], signedIn: true)
+    if response.statusCode == 403 { throw StravaError.appleAccountRequired }
     try check(response, data)
     struct Connect: Decodable { let url: URL }
     guard let connect = try? Self.decoder.decode(Connect.self, from: data) else {
@@ -144,6 +145,7 @@ public actor TrainStackClient {
       "POST", "strava/connect/complete", json: ["code_verifier": attempt.verifier],
       signedIn: true)
     if response.statusCode == 400 { throw StravaError.connectFailed }
+    if response.statusCode == 409 { throw StravaError.athleteInUse }
     try check(response, data)
     return try Self.status(from: data)
   }
