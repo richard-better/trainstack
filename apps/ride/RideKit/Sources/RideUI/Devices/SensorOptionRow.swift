@@ -36,6 +36,9 @@ struct SensorOptionRow: View {
       .accessibilityAddTraits(isInUse ? .isSelected : [])
       .accessibilityHint(isConnected ? "Uses this sensor for \(metric.name.lowercased())." : "")
 
+      if isConnected, metric != .heartRate || isInUse {
+        SensorReadingValue(metric: metric, device: device)
+      }
       SensorConnectionStatus(device: device)
     }
     .swipeActions { forgetButton }

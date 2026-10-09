@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import RideBluetooth
 import RideData
 import RideLink
 
@@ -14,20 +15,22 @@ final class RideController {
   /// Called after each second of the ride, to keep the watch up to date.
   @ObservationIgnored var onTick: (() -> Void)?
   @ObservationIgnored private let heartRate: HeartRateFeed?
+  @ObservationIgnored private let devices: BluetoothDevices?
   @ObservationIgnored private var simulator: SimulatedTrainer?
   @ObservationIgnored private var clock: Task<Void, Never>?
 
   /// With `simulated` a pretend trainer supplies the readings, for previews and debug builds.
-  /// Without it readings are empty until trainers can be connected. Heart rate comes from
-  /// `heartRate` whenever a real sensor is sending it.
+  /// Real power and cadence come from the selected connected sensors in `devices`, and heart
+  /// rate from `heartRate`. Live readings take precedence over the simulator.
   init(
     template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet? = nil,
-    heartRate: HeartRateFeed? = nil, simulated: Bool
+    heartRate: HeartRateFeed? = nil, devices: BluetoothDevices? = nil, simulated: Bool
   ) {
     self.template = template
     self.ftp = ftp
     self.heartRateZones = heartRateZones
     self.heartRate = heartRate
+    self.devices = devices
     session = RideSession(workout: template.workout(ftp: ftp))
     simulator = simulated ? SimulatedTrainer() : nil
   }
@@ -53,6 +56,8 @@ final class RideController {
   /// Moves the ride on by `seconds`, as the clock does each second.
   func tick(seconds: TimeInterval, at date: Date = .now) {
     var reading = simulator?.reading(for: session, after: seconds) ?? TrainerReading()
+    if let power = devices?.reading(for: .power, at: date) { reading.power = power }
+    if let cadence = devices?.reading(for: .cadence, at: date) { reading.cadence = cadence }
     if let live = heartRate?.current(at: date) {
       reading.heartRate = live.bpm
       reading.heartRateSource = live.source

@@ -4,7 +4,8 @@ import RideData
 
 /// Starts and ends rides. Held by the root view, which shows the player while a ride is on.
 ///
-/// A ride takes heart rate from the rider's paired strap, and from an Apple Watch: on iPhone
+/// A ride takes power and cadence from its selected sensors, and heart rate from the rider's
+/// paired strap and from an Apple Watch: on iPhone
 /// directly, as the watch starts its workout with the ride, and on the Mac through an iPhone
 /// relaying it.
 @Observable
@@ -36,7 +37,7 @@ final class RideLauncher {
     guard ride == nil else { return }
     let ride = RideController(
       template: template, ftp: ftp, heartRateZones: heartRateZones, heartRate: heartRate,
-      simulated: simulated)
+      devices: devices, simulated: simulated)
     #if os(iOS)
       let watch = WatchLink.shared
       watch.onHeartRate = { [heartRate] bpm in heartRate.record(bpm, from: .watch) }

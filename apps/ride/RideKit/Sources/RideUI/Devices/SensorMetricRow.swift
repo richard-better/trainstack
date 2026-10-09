@@ -1,7 +1,7 @@
 import RideBluetooth
 import SwiftUI
 
-/// A reading the ride takes, with the sensor it comes from and that sensor's live heart rate.
+/// A reading the ride takes, with the sensor it comes from and that sensor's live value.
 /// Where several connected sensors can supply the reading, the row has a chevron that opens them
 /// so the rider can pick one, and says how many are connected and which one is in use. With one
 /// connected sensor, or none, there is nothing to pick: the row shows that sensor's status with
@@ -104,24 +104,10 @@ struct SensorMetricRow: View {
   }
 
   @ViewBuilder private var reading: some View {
-    if devices.source(of: metric) == nil {
+    if let source = devices.source(of: metric) {
+      SensorReadingValue(metric: metric, device: source)
+    } else {
       Text("None").foregroundStyle(.secondary)
-    } else if metric == .heartRate {
-      if let bpm = devices.heartRate {
-        HStack(spacing: 4) {
-          Image(systemName: "heart.fill")
-            .foregroundStyle(.red)
-            .symbolEffect(.pulse)
-            .accessibilityHidden(true)
-          Text("\(bpm) bpm")
-            .monospacedDigit()
-            .contentTransition(.numericText(value: Double(bpm)))
-        }
-        .font(.callout)
-        .animation(.default, value: bpm)
-      } else {
-        Text("Put the strap on").foregroundStyle(.secondary)
-      }
     }
   }
 
