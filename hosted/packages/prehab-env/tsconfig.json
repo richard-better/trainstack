@@ -1,0 +1,3 @@
+{
+  "extends": "@trainstack/prehab-config/tsconfig.base.json"
+}

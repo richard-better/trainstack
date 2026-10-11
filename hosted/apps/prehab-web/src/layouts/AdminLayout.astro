@@ -1,0 +1,82 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  active?: "users" | "flagged" | "llm" | "playground";
+}
+
+const { title = "Admin", active } = Astro.props;
+
+const navItems: { href: string; label: string; key: Props["active"] }[] = [
+  { href: "/admin", label: "Users", key: "users" },
+  { href: "/admin/flagged", label: "Flagged threads", key: "flagged" },
+  { href: "/admin/llm", label: "LLM usage", key: "llm" },
+  { href: "/admin/playground", label: "Playground", key: "playground" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} · Pre Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <!-- `!` (Tailwind important) is needed because global.css has an *unlayered*
+       `body { background-color: var(--color-bg) }` rule (the marketing parchment
+       theme), and unlayered styles beat Tailwind's @layer utilities. -->
+  <body class="min-h-screen bg-neutral-950! text-neutral-100! antialiased">
+    <header class="border-b border-neutral-800 bg-neutral-900/60">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <a href="/admin" class="font-semibold tracking-tight text-white">Pre Admin</a>
+        <nav class="flex flex-wrap items-center gap-1 text-sm">
+          {
+            navItems.map((item) => (
+              <a
+                href={item.href}
+                class:list={[
+                  "rounded-md px-3 py-1.5 transition-colors",
+                  active === item.key
+                    ? "bg-neutral-800 text-white"
+                    : "text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-100",
+                ]}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+        <span id="admin-whoami" class="ml-auto text-xs text-neutral-500"></span>
+      </div>
+    </header>
+
+    <div id="admin-loading" class="mx-auto max-w-6xl px-4 py-16 text-neutral-400">
+      Checking access…
+    </div>
+
+    <div id="admin-denied" class="mx-auto hidden max-w-6xl px-4 py-16">
+      <div class="rounded-lg border border-red-900/50 bg-red-950/30 p-6">
+        <h1 class="text-lg font-semibold text-red-200">Not authorized</h1>
+        <p class="mt-2 text-sm text-red-300/80">
+          Your account isn't on the admin allowlist. If this is a mistake, ask for your email to be
+          added to <code class="font-mono">ADMIN_EMAILS</code>.
+        </p>
+        <a href="/dashboard" class="mt-4 inline-block text-sm text-neutral-400 underline"
+          >Back to dashboard</a
+        >
+      </div>
+    </div>
+
+    <main id="admin-content" class="mx-auto hidden max-w-6xl px-4 py-6">
+      <slot />
+    </main>
+  </body>
+</html>

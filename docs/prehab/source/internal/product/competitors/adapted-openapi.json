@@ -1,0 +1,3208 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Adapted API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v0/access/validate": {
+      "post": {
+        "summary": "Validate Access Code",
+        "description": "Validate an access code and grant access to the user.\n\n- Checks if code exists and is unused\n- If valid, marks code as used and grants user access\n- Returns success status and message",
+        "operationId": "validate_access_code_v0_access_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateAccessCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateAccessCodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/chat/": {
+      "get": {
+        "summary": "Get Messages",
+        "operationId": "get_messages_v0_chat__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Message"
+                  },
+                  "title": "Response Get Messages V0 Chat  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/chat/stream": {
+      "post": {
+        "summary": "Send Message Stream",
+        "operationId": "send_message_stream_v0_chat_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/concierge/next-question-v2": {
+      "post": {
+        "summary": "Get Next Question V2",
+        "description": "Generate the next onboarding question (v2).\n\nReads user profile from DB via user_id. Regions and goal passed explicitly\nas they belong to the program being created, not the profile.",
+        "operationId": "get_next_question_v2_v0_concierge_next_question_v2_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetNextQuestionRequestV2"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetNextQuestionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/concierge/generate-summary": {
+      "post": {
+        "summary": "Generate Summary",
+        "description": "Generate markdown athlete context summary from conversation history.\n\nArgs:\n    request: Contains user context and complete Q&A history with reasoning\n\nReturns:\n    GenerateSummaryResponse: Markdown-formatted athlete profile summary",
+        "operationId": "generate_summary_v0_concierge_generate_summary_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateSummaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/config/": {
+      "get": {
+        "summary": "Get Config",
+        "description": "Get app configuration settings.\n\nReturns feature flags and configuration values that control app behavior.",
+        "operationId": "get_config_v0_config__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/exercises/": {
+      "get": {
+        "tags": ["exercises"],
+        "summary": "Get Exercises",
+        "description": "Get all exercises.",
+        "operationId": "get_exercises_v0_exercises__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Exercise"
+                  },
+                  "type": "array",
+                  "title": "Response Get Exercises V0 Exercises  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/jobs/{job_id}": {
+      "get": {
+        "summary": "Get Job",
+        "operationId": "get_job_v0_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/jobs/": {
+      "get": {
+        "summary": "Get Jobs",
+        "operationId": "get_jobs_v0_jobs__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Job"
+                  },
+                  "title": "Response Get Jobs V0 Jobs  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/programs/": {
+      "get": {
+        "summary": "Get Programs",
+        "operationId": "get_programs_v0_programs__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProgramResponse"
+                  },
+                  "title": "Response Get Programs V0 Programs  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Generate Program",
+        "operationId": "generate_program_v0_programs__post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateProgramRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/programs/{program_id}": {
+      "get": {
+        "summary": "Get Program",
+        "operationId": "get_program_v0_programs__program_id__get",
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Program Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Program",
+        "description": "Update program fields like scheduled_days, start_date, etc.",
+        "operationId": "update_program_v0_programs__program_id__patch",
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Program Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/programs/async": {
+      "post": {
+        "summary": "Generate Program Async",
+        "operationId": "generate_program_async_v0_programs_async_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/programs/{program_id}/sessions": {
+      "post": {
+        "summary": "Generate Next Session",
+        "description": "Trigger generation of the next session for a program.",
+        "operationId": "generate_next_session_v0_programs__program_id__sessions_post",
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Program Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/regions/": {
+      "post": {
+        "summary": "Create Region",
+        "description": "Add a region to track for a user.",
+        "operationId": "create_region_v0_regions__post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackedRegionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackedRegion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Regions",
+        "description": "DEPRECATED: Get all tracked regions for a user. Use /regions/distinct instead.",
+        "operationId": "get_regions_v0_regions__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackedRegion"
+                  },
+                  "title": "Response Get Regions V0 Regions  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/regions/distinct": {
+      "get": {
+        "summary": "Get Distinct Regions",
+        "description": "Get distinct regions from user's check-in history.",
+        "operationId": "get_distinct_regions_v0_regions_distinct_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackedRegion"
+                  },
+                  "title": "Response Get Distinct Regions V0 Regions Distinct Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/regions/{region_id}": {
+      "delete": {
+        "summary": "Delete Region",
+        "description": "Remove a tracked region.",
+        "operationId": "delete_region_v0_regions__region_id__delete",
+        "parameters": [
+          {
+            "name": "region_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Region Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/regions/checkins": {
+      "post": {
+        "summary": "Create Checkin",
+        "description": "Record a check-in for any region without pre-registration.",
+        "operationId": "create_checkin_v0_regions_checkins_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionCheckInResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Checkins",
+        "description": "Get check-in history for a user, optionally filtered by region and side.",
+        "operationId": "get_checkins_v0_regions_checkins_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BodyRegion"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "side",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RegionSide"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Side"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegionCheckInResponse"
+                  },
+                  "title": "Response Get Checkins V0 Regions Checkins Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/on-demand": {
+      "post": {
+        "summary": "Create On Demand Session",
+        "description": "Generate and persist a standalone on-demand session.",
+        "operationId": "create_on_demand_session_v0_sessions_on_demand_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnDemandSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/models__session__SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/": {
+      "get": {
+        "summary": "Get Sessions",
+        "description": "Get all sessions for a user.",
+        "operationId": "get_sessions_v0_sessions__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/models__session__SessionResponse"
+                  },
+                  "title": "Response Get Sessions V0 Sessions  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}": {
+      "get": {
+        "summary": "Get Session",
+        "description": "Get any session by ID.",
+        "operationId": "get_session_v0_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/models__session__SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}/start": {
+      "patch": {
+        "summary": "Start Session",
+        "description": "Mark a session as started.",
+        "operationId": "start_session_v0_sessions__session_id__start_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}/cancel": {
+      "patch": {
+        "summary": "Cancel Session",
+        "description": "Cancel a session (clears started_at).",
+        "operationId": "cancel_session_v0_sessions__session_id__cancel_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/models__session__SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}/complete": {
+      "patch": {
+        "summary": "Complete Session",
+        "description": "Complete a session with optional feedback and exercise logs.",
+        "operationId": "complete_session_v0_sessions__session_id__complete_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CompleteSessionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}/exercise/{exercise_id}/complete": {
+      "patch": {
+        "summary": "Complete Exercise",
+        "operationId": "complete_exercise_v0_sessions__session_id__exercise__exercise_id__complete_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Exercise Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}/exercise/{exercise_id}/skip": {
+      "patch": {
+        "summary": "Skip Exercise",
+        "operationId": "skip_exercise_v0_sessions__session_id__exercise__exercise_id__skip_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Exercise Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}/exercise/{exercise_id}/remove": {
+      "patch": {
+        "summary": "Remove Exercise",
+        "operationId": "remove_exercise_v0_sessions__session_id__exercise__exercise_id__remove_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Exercise Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v0/sessions/{session_id}/regenerate": {
+      "post": {
+        "summary": "Regenerate Session",
+        "description": "Regenerate a session with feedback and optional duration override.",
+        "operationId": "regenerate_session_v0_sessions__session_id__regenerate_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/models__session__SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AppConfig": {
+        "properties": {
+          "access_code_enabled": {
+            "type": "boolean",
+            "title": "Access Code Enabled"
+          }
+        },
+        "type": "object",
+        "required": ["access_code_enabled"],
+        "title": "AppConfig"
+      },
+      "BodyRegion": {
+        "type": "string",
+        "enum": [
+          "foot_ankle",
+          "knee",
+          "hip_groin",
+          "low_back",
+          "mid_back",
+          "neck",
+          "shoulder",
+          "elbow",
+          "wrist"
+        ],
+        "title": "BodyRegion"
+      },
+      "CheckInRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "region": {
+            "$ref": "#/components/schemas/BodyRegion"
+          },
+          "side": {
+            "$ref": "#/components/schemas/RegionSide"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckInStatus"
+          },
+          "checkin_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkin Date"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": ["user_id", "region", "side", "status"],
+        "title": "CheckInRequest",
+        "description": "Request body for creating a check-in."
+      },
+      "CheckInStatus": {
+        "type": "integer",
+        "enum": [0, 1, 2, 3, 4],
+        "title": "CheckInStatus",
+        "description": "5-point scale for region check-in status.\n\nCaptures perceived capacity/trust, not pain."
+      },
+      "CompleteSessionRequest": {
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "exercise_logs": {
+            "items": {
+              "$ref": "#/components/schemas/ExerciseLogsInput"
+            },
+            "type": "array",
+            "title": "Exercise Logs",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "CompleteSessionRequest"
+      },
+      "ConversationTurn": {
+        "properties": {
+          "question_text": {
+            "type": "string",
+            "title": "Question Text"
+          },
+          "answer_options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Answer Options"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": ["question_text"],
+        "title": "ConversationTurn",
+        "description": "A single question-answer turn in the onboarding conversation."
+      },
+      "Exercise": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "thumbnail_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Path"
+          },
+          "video_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Path"
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Url"
+          },
+          "regions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regions"
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"],
+            "title": "Status",
+            "default": "active"
+          },
+          "load_type": {
+            "type": "string",
+            "enum": ["bodyweight_only", "loaded_only", "bodyweight_or_loaded"],
+            "title": "Load Type",
+            "default": "bodyweight_only"
+          },
+          "unit_type": {
+            "type": "string",
+            "enum": ["reps_only", "seconds_only"],
+            "title": "Unit Type",
+            "default": "reps_only"
+          },
+          "exercise_videos": {
+            "items": {
+              "$ref": "#/components/schemas/ExerciseVideo"
+            },
+            "type": "array",
+            "title": "Exercise Videos",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["id", "name", "instructions", "purpose", "category"],
+        "title": "Exercise"
+      },
+      "ExerciseLogsInput": {
+        "properties": {
+          "exercise_id": {
+            "type": "string",
+            "title": "Exercise Id"
+          },
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped",
+            "default": false
+          },
+          "set_logs": {
+            "items": {
+              "$ref": "#/components/schemas/SetLog"
+            },
+            "type": "array",
+            "title": "Set Logs"
+          }
+        },
+        "type": "object",
+        "required": ["exercise_id"],
+        "title": "ExerciseLogsInput"
+      },
+      "ExercisePrescription": {
+        "properties": {
+          "exercise_id": {
+            "type": "string",
+            "title": "Exercise Id"
+          },
+          "sets": {
+            "type": "integer",
+            "title": "Sets"
+          },
+          "reps_value": {
+            "type": "integer",
+            "title": "Reps Value"
+          },
+          "reps_unit": {
+            "type": "string",
+            "title": "Reps Unit"
+          },
+          "rest_secs": {
+            "type": "integer",
+            "title": "Rest Secs"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "estimated_duration_min": {
+            "type": "integer",
+            "title": "Estimated Duration Min"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "skipped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped At"
+          },
+          "removed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Removed At"
+          },
+          "set_logs": {
+            "items": {
+              "$ref": "#/components/schemas/SetLog"
+            },
+            "type": "array",
+            "title": "Set Logs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise_id",
+          "sets",
+          "reps_value",
+          "reps_unit",
+          "rest_secs",
+          "estimated_duration_min"
+        ],
+        "title": "ExercisePrescription"
+      },
+      "ExerciseVideo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "exercise_id": {
+            "type": "string",
+            "title": "Exercise Id"
+          },
+          "video_path": {
+            "type": "string",
+            "title": "Video Path"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": ["id", "exercise_id", "video_path"],
+        "title": "ExerciseVideo"
+      },
+      "GenerateProgramRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "athlete_context": {
+            "type": "string",
+            "title": "Athlete Context"
+          },
+          "program_name": {
+            "type": "string",
+            "title": "Program Name"
+          },
+          "duration_in_weeks": {
+            "type": "integer",
+            "title": "Duration In Weeks"
+          },
+          "num_sessions_per_week": {
+            "type": "integer",
+            "title": "Num Sessions Per Week"
+          },
+          "session_duration_min": {
+            "type": "integer",
+            "title": "Session Duration Min"
+          },
+          "scheduled_days": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Days"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/BodyRegion"
+            },
+            "type": "array",
+            "title": "Regions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "athlete_context",
+          "program_name",
+          "duration_in_weeks",
+          "num_sessions_per_week",
+          "session_duration_min"
+        ],
+        "title": "GenerateProgramRequest"
+      },
+      "GenerateSummaryRequest": {
+        "properties": {
+          "user_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Context",
+            "description": "User context (name, age, gender, sports, goal, regions)."
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionAnswerPair"
+            },
+            "type": "array",
+            "title": "History",
+            "description": "Complete Q&A history with reasoning"
+          }
+        },
+        "type": "object",
+        "required": ["history"],
+        "title": "GenerateSummaryRequest",
+        "description": "Request body for generating athlete context summary."
+      },
+      "GenerateSummaryResponse": {
+        "properties": {
+          "athlete_context": {
+            "type": "string",
+            "title": "Athlete Context",
+            "description": "Markdown-formatted athlete profile summary"
+          }
+        },
+        "type": "object",
+        "required": ["athlete_context"],
+        "title": "GenerateSummaryResponse",
+        "description": "Response body for generating athlete context summary."
+      },
+      "GetNextQuestionRequestV2": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id",
+            "description": "User UUID \u2014 server reads profile for name, age, gender, sport"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Regions",
+            "description": "Body regions selected during program setup"
+          },
+          "goal": {
+            "type": "string",
+            "title": "Goal",
+            "description": "Primary goal selected during program setup"
+          },
+          "conversation": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationTurn"
+            },
+            "type": "array",
+            "title": "Conversation",
+            "description": "Full conversation history (empty on first call)"
+          }
+        },
+        "type": "object",
+        "required": ["user_id", "regions", "goal"],
+        "title": "GetNextQuestionRequestV2",
+        "description": "Request body for v2 next-question endpoint."
+      },
+      "GetNextQuestionResponse": {
+        "properties": {
+          "question": {
+            "$ref": "#/components/schemas/OnboardingQuestion"
+          }
+        },
+        "type": "object",
+        "required": ["question"],
+        "title": "GetNextQuestionResponse",
+        "description": "Response body for getting the next onboarding question."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Job": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/JobType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "user_id", "type", "status", "created_at", "updated_at"],
+        "title": "Job"
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": ["pending", "running", "completed", "failed"],
+        "title": "JobStatus"
+      },
+      "JobType": {
+        "type": "string",
+        "enum": ["program_generation"],
+        "title": "JobType"
+      },
+      "Message": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MessageRole"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "user_id", "role", "content", "created_at"],
+        "title": "Message"
+      },
+      "MessageCreate": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MessageRole"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": ["user_id", "role", "content"],
+        "title": "MessageCreate"
+      },
+      "MessageRole": {
+        "type": "string",
+        "enum": ["assistant", "user"],
+        "title": "MessageRole"
+      },
+      "OnDemandSessionRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "objective": {
+            "type": "string",
+            "enum": ["activation", "mobility", "recovery"],
+            "title": "Objective"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/BodyRegion"
+            },
+            "type": "array",
+            "title": "Regions"
+          },
+          "duration_min": {
+            "type": "integer",
+            "title": "Duration Min",
+            "default": 15
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["user_id", "objective", "regions"],
+        "title": "OnDemandSessionRequest"
+      },
+      "OnboardingQuestion": {
+        "properties": {
+          "response": {
+            "type": "string",
+            "title": "Response"
+          },
+          "answer_options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Answer Options"
+          },
+          "phase": {
+            "type": "string",
+            "enum": ["clinical_assessment", "training_background", "complete"],
+            "title": "Phase"
+          },
+          "reasoning": {
+            "type": "string",
+            "title": "Reasoning"
+          }
+        },
+        "type": "object",
+        "required": ["response", "phase", "reasoning"],
+        "title": "OnboardingQuestion",
+        "description": "Question model returned by concierge service."
+      },
+      "ProgramResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "duration_in_weeks": {
+            "type": "integer",
+            "title": "Duration In Weeks"
+          },
+          "num_sessions_per_week": {
+            "type": "integer",
+            "title": "Num Sessions Per Week"
+          },
+          "session_duration_min": {
+            "type": "integer",
+            "title": "Session Duration Min"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/models__program__SessionResponse"
+            },
+            "type": "array",
+            "title": "Sessions"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "scheduled_days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Scheduled Days"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/BodyRegion"
+            },
+            "type": "array",
+            "title": "Regions"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "next_session_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["generating", "failed"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Session Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "duration_in_weeks",
+          "num_sessions_per_week",
+          "session_duration_min",
+          "sessions",
+          "start_date",
+          "scheduled_days",
+          "metadata",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProgramResponse"
+      },
+      "ProgramUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "duration_in_weeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration In Weeks"
+          },
+          "num_sessions_per_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Sessions Per Week"
+          },
+          "session_duration_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Duration Min"
+          },
+          "sessions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Session"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessions"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "scheduled_days": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Days"
+          },
+          "regions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BodyRegion"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regions"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "title": "ProgramUpdate"
+      },
+      "QuestionAnswerPair": {
+        "properties": {
+          "question": {
+            "$ref": "#/components/schemas/OnboardingQuestion"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": ["question"],
+        "title": "QuestionAnswerPair",
+        "description": "Pairs a question with its answer for summary generation."
+      },
+      "RegenerateSessionRequest": {
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "duration_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Min"
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "RegenerateSessionRequest"
+      },
+      "RegionCheckInResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "region": {
+            "$ref": "#/components/schemas/BodyRegion"
+          },
+          "side": {
+            "$ref": "#/components/schemas/RegionSide"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckInStatus"
+          },
+          "checkin_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Checkin Date"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "user_id", "region", "side", "status", "checkin_date", "created_at"],
+        "title": "RegionCheckInResponse",
+        "description": "API response model for check-ins."
+      },
+      "RegionSide": {
+        "type": "string",
+        "enum": ["left", "right", "bilateral"],
+        "title": "RegionSide"
+      },
+      "Session": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "week": {
+            "type": "integer",
+            "title": "Week"
+          },
+          "session_number": {
+            "type": "integer",
+            "title": "Session Number"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/ExercisePrescription"
+            },
+            "type": "array",
+            "title": "Exercises"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning",
+            "description": "Internal clinical reasoning for the session"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback",
+            "description": "User feedback about the session upon completion"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": ["name", "week", "session_number", "exercises", "description"],
+        "title": "Session"
+      },
+      "SetLog": {
+        "properties": {
+          "reps_value": {
+            "type": "integer",
+            "title": "Reps Value"
+          },
+          "reps_unit": {
+            "type": "string",
+            "enum": ["reps", "seconds"],
+            "title": "Reps Unit"
+          },
+          "weight_lbs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Lbs"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": ["reps_value", "reps_unit"],
+        "title": "SetLog"
+      },
+      "TrackedRegion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "region": {
+            "$ref": "#/components/schemas/BodyRegion"
+          },
+          "side": {
+            "$ref": "#/components/schemas/RegionSide"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "user_id", "region", "side", "display_name", "created_at"],
+        "title": "TrackedRegion",
+        "description": "Full model for a tracked region from the database."
+      },
+      "TrackedRegionCreate": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "region": {
+            "$ref": "#/components/schemas/BodyRegion"
+          },
+          "side": {
+            "$ref": "#/components/schemas/RegionSide"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          }
+        },
+        "type": "object",
+        "required": ["user_id", "region", "side", "display_name"],
+        "title": "TrackedRegionCreate",
+        "description": "For creating tracked regions - excludes auto-generated fields."
+      },
+      "ValidateAccessCodeRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": ["user_id", "code"],
+        "title": "ValidateAccessCodeRequest"
+      },
+      "ValidateAccessCodeResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "has_access": {
+            "type": "boolean",
+            "title": "Has Access"
+          }
+        },
+        "type": "object",
+        "required": ["success", "message", "has_access"],
+        "title": "ValidateAccessCodeResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      },
+      "models__program__ExercisePrescriptionResponse": {
+        "properties": {
+          "exercise": {
+            "$ref": "#/components/schemas/Exercise"
+          },
+          "sets": {
+            "type": "integer",
+            "title": "Sets"
+          },
+          "reps_value": {
+            "type": "integer",
+            "title": "Reps Value"
+          },
+          "reps_unit": {
+            "type": "string",
+            "title": "Reps Unit"
+          },
+          "rest_secs": {
+            "type": "integer",
+            "title": "Rest Secs"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "estimated_duration_min": {
+            "type": "integer",
+            "title": "Estimated Duration Min"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "skipped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped At"
+          },
+          "set_logs": {
+            "items": {
+              "$ref": "#/components/schemas/SetLog"
+            },
+            "type": "array",
+            "title": "Set Logs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise",
+          "sets",
+          "reps_value",
+          "reps_unit",
+          "rest_secs",
+          "estimated_duration_min"
+        ],
+        "title": "ExercisePrescriptionResponse"
+      },
+      "models__program__SessionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "week": {
+            "type": "integer",
+            "title": "Week"
+          },
+          "session_number": {
+            "type": "integer",
+            "title": "Session Number"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/models__program__ExercisePrescriptionResponse"
+            },
+            "type": "array",
+            "title": "Exercises"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          }
+        },
+        "type": "object",
+        "required": ["id", "name", "week", "session_number", "exercises", "description"],
+        "title": "SessionResponse"
+      },
+      "models__session__ExercisePrescriptionResponse": {
+        "properties": {
+          "exercise": {
+            "$ref": "#/components/schemas/Exercise"
+          },
+          "sets": {
+            "type": "integer",
+            "title": "Sets"
+          },
+          "reps_value": {
+            "type": "integer",
+            "title": "Reps Value"
+          },
+          "reps_unit": {
+            "type": "string",
+            "title": "Reps Unit"
+          },
+          "rest_secs": {
+            "type": "integer",
+            "title": "Rest Secs"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "estimated_duration_min": {
+            "type": "integer",
+            "title": "Estimated Duration Min"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "skipped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped At"
+          },
+          "removed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Removed At"
+          },
+          "set_logs": {
+            "items": {
+              "$ref": "#/components/schemas/SetLog"
+            },
+            "type": "array",
+            "title": "Set Logs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise",
+          "sets",
+          "reps_value",
+          "reps_unit",
+          "rest_secs",
+          "estimated_duration_min"
+        ],
+        "title": "ExercisePrescriptionResponse",
+        "description": "Exercise prescription with full exercise details for API response."
+      },
+      "models__session__SessionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "program_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Id"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/models__session__ExercisePrescriptionResponse"
+            },
+            "type": "array",
+            "title": "Exercises"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week"
+          },
+          "session_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Number"
+          }
+        },
+        "type": "object",
+        "required": ["id", "user_id", "name", "description", "exercises", "created_at"],
+        "title": "SessionResponse",
+        "description": "API response model for sessions."
+      }
+    }
+  }
+}

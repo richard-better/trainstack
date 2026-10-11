@@ -1,0 +1,25 @@
+{
+  "name": "@trainstack/prehab-docs",
+  "version": "0.0.1",
+  "private": true,
+  "license": "FSL-1.1-ALv2",
+  "type": "module",
+  "scripts": {
+    "check-types": "astro check",
+    "dev": "astro dev --port 4323",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "with-env": "dotenv -e ../../.env.prehab --"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.38.3",
+    "astro": "^6.0.1",
+    "sharp": "^0.34.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "dotenv-cli": "^11.0.0"
+  }
+}

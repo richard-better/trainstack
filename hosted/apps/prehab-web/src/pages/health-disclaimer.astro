@@ -1,0 +1,168 @@
+---
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout
+  title="Health Disclaimer — Pre"
+  description="Health and medical disclaimer for Pre, the sport-specific prehab app."
+>
+  <main style="background-color: var(--color-bg); min-height: 100svh;">
+    <article class="mx-auto max-w-2xl px-6 py-16 md:py-24">
+      <header class="mb-12">
+        <a
+          href="/"
+          class="mb-8 inline-block text-sm font-medium"
+          style="color: var(--color-muted); font-family: var(--font-body);"
+        >&larr; Back to Pre</a>
+        <h1
+          class="mb-4 font-sans text-2xl font-bold leading-tight md:text-3xl"
+          style="color: var(--color-text);"
+        >Health Disclaimer</h1>
+        <p class="text-sm" style="color: var(--color-muted); font-family: var(--font-body);">
+          Effective date: May 21, 2026
+        </p>
+      </header>
+
+      <div class="legal-prose" style="font-family: var(--font-body); color: var(--color-text);">
+
+        <p>
+          Pre helps you move better and prepare for training. But there's a hard line we want to be
+          completely clear about, because it matters for your safety: Pre is a fitness and prehab tool,
+          not a clinician. This page explains what that means before you start using it.
+        </p>
+        <p>
+          Pre is intended only for general fitness, movement preparation, and educational exercise
+          guidance. It is not intended to diagnose, treat, cure, or prevent any disease or injury, or to
+          make medical decisions.
+        </p>
+
+        <h2>Pre is not medical advice</h2>
+        <p>
+          <strong>Pre is not a medical device, and nothing in it is medical advice.</strong> The
+          sessions, exercises, ratings, Coach replies, and recommendations Pre generates are general
+          fitness and educational information. They are not a diagnosis, not a treatment plan, and not a
+          substitute for the judgment of a qualified healthcare professional who can actually examine
+          you.
+        </p>
+
+        <h2>Talk to a professional first</h2>
+        <p>
+          Before you start Pre — or any new exercise program — talk to a physician, physical therapist,
+          or other qualified healthcare provider. This is especially important if you:
+        </p>
+        <ul>
+          <li>Have a current or past injury</li>
+          <li>Have a medical condition, including heart, joint, bone, or neurological conditions</li>
+          <li>Are pregnant, recently gave birth, or recently had surgery</li>
+          <li>Are recovering from illness</li>
+          <li>Take medication that affects exercise, balance, or heart rate</li>
+        </ul>
+        <p>
+          A professional who knows your history can tell you whether the kind of movement Pre suggests is
+          right for you. Pre can't do that.
+        </p>
+
+        <h2>It can't diagnose or treat an injury</h2>
+        <p>
+          Pre's body-region capacity ratings are your own self-assessments, not a clinical evaluation.
+          Pre uses them to shape general prehab guidance — it does not diagnose injuries, identify their
+          cause, or treat them. If you think you're injured, see a healthcare professional. Don't use
+          Pre to figure out what's wrong or to decide whether you need care.
+        </p>
+
+        <h2>If something hurts, stop</h2>
+        <p>
+          Listen to your body. If you feel pain, sharp discomfort, dizziness, shortness of breath, or
+          anything that doesn't feel right during a session, stop immediately. Don't push through it.
+          Rest, and if it continues or concerns you, get it checked out by a professional. Pain is a
+          signal, not an obstacle to power through.
+        </p>
+
+        <h2>In an emergency</h2>
+        <p>
+          <strong>Pre is not for emergencies.</strong> If you're having a medical emergency — chest
+          pain, trouble breathing, a serious injury, or anything else that feels urgent — call your
+          local emergency number (911 in the United States) or go to the nearest emergency room right
+          away. Do not rely on Pre, and do not wait.
+        </p>
+
+        <h2>You're taking on the risk</h2>
+        <p>
+          Physical activity carries inherent risk, including the risk of injury. By using Pre and
+          following its guidance, you accept that risk and take full responsibility for your own health
+          and safety. To the fullest extent permitted by law, TrainStack is not liable for any injury,
+          harm, or loss that results from your use of the app or from following its sessions. Nothing
+          here excludes or limits liability that can't be excluded under applicable law. Always use your
+          own judgment, work within your limits, and stop when you need to.
+        </p>
+
+        <h2>A note on the AI</h2>
+        <p>
+          Pre's sessions are generated by an AI system from the information you give it. AI can be wrong,
+          incomplete, or simply not right for your situation. Treat what Pre produces as a starting point
+          for general fitness — not as instructions from a healthcare provider who has assessed you.
+        </p>
+
+        <h2>How this fits with our other policies</h2>
+        <p>
+          This disclaimer is part of, and should be read alongside, our
+          <a href="/terms" style="color: var(--color-accent);">Terms of Service</a> and
+          <a href="/privacy" style="color: var(--color-accent);">Privacy Policy</a>.
+        </p>
+
+        <h2>Questions</h2>
+        <p>
+          If anything here is unclear, write to us at
+          <a href="mailto:support@trypre.app" style="color: var(--color-accent);">support@trypre.app</a>.
+          When it comes to your health, though, the right person to ask is a qualified professional.
+        </p>
+
+      </div>
+    </article>
+  </main>
+</MarketingLayout>
+
+<style>
+  .legal-prose h2 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 1.125rem;
+    line-height: 1.3;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+  }
+
+  .legal-prose h3 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.3;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+  }
+
+  .legal-prose p {
+    font-size: 1rem;
+    line-height: 1.65;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+  }
+
+  .legal-prose ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .legal-prose li {
+    font-size: 1rem;
+    line-height: 1.65;
+    margin-bottom: 0.25rem;
+  }
+
+  .legal-prose a:hover {
+    text-decoration: underline;
+  }
+</style>

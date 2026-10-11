@@ -57,3 +57,14 @@ coverage
 .cache
 tmp
 temp
+
+# Prehab local services and native builds
+hosted/.env.prehab
+.prehab-agents/
+**/.prehab-agents/
+**/.build/
+**/.swiftpm/
+**/.astro/
+**/xcuserdata/
+**/.prehab-media/
+**/.tmp/

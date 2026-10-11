@@ -1,0 +1,35 @@
+{
+  "name": "@trainstack/prehab-web",
+  "version": "0.0.1",
+  "private": true,
+  "license": "FSL-1.1-ALv2",
+  "type": "module",
+  "scripts": {
+    "with-env": "dotenv -e ../../.env.prehab --",
+    "check-types": "bun run with-env astro check",
+    "dev": "bun run with-env astro dev --port 4322",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^10.0.0-beta.9",
+    "@chenglou/pretext": "^0.0.5",
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@trainstack/prehab-contract": "workspace:*",
+    "@trainstack/prehab-env": "workspace:*",
+    "astro": "^6.0.1",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@tailwindcss/vite": "^4.1.18",
+    "@trainstack/prehab-config": "workspace:*",
+    "dotenv-cli": "^11.0.0",
+    "tailwindcss": "^4.1.18",
+    "typescript": "catalog:"
+  }
+}

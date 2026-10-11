@@ -1,0 +1,27 @@
+{
+  "name": "@trainstack/prehab-contract",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./onboarding": {
+      "types": "./src/onboarding.ts",
+      "default": "./src/onboarding.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/contract": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@trainstack/prehab-config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

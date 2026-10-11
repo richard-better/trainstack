@@ -1,0 +1,262 @@
+---
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout title="Pre — Sport-specific prehab">
+  <main
+    class="relative"
+    style="background-color: var(--color-bg); min-height: 100svh;"
+  >
+    <div class="flex min-h-svh flex-col md:flex-row md:items-stretch">
+
+      <!-- ─── Content column — left on desktop, first on mobile ─── -->
+      <section
+        id="content-col"
+        aria-label="Waitlist signup"
+        class="flex w-full flex-col justify-center px-8 py-12 opacity-0 md:w-[45%] md:min-h-screen md:py-20 md:px-14 lg:px-20 xl:px-24"
+        style="background-color: var(--color-bg);"
+      >
+        <!-- Wordmark -->
+        <div class="mb-10" aria-label="Pre">
+          <span
+            class="relative inline-block font-sans text-2xl font-black italic leading-none"
+            style="color: var(--color-text);"
+          >
+            Pre
+            <!-- Velocity mark: terracotta rectangle extending from terminal of 'e' -->
+            <span
+              aria-hidden="true"
+              class="absolute"
+              style="width:3px;height:2px;background-color:var(--color-accent);bottom:0.18em;right:-0.05em;"
+            ></span>
+          </span>
+        </div>
+
+        <!-- Headline -->
+        <h1
+          class="mb-6 font-sans font-black italic leading-none"
+          style="font-size: clamp(44px, 5.5vw, 64px); color: var(--color-text);"
+        >
+          Do your Pre.
+        </h1>
+
+        <!-- Subhead -->
+        <p
+          class="mb-10 max-w-xs text-lg leading-relaxed"
+          style="color: var(--color-muted); font-family: var(--font-body);"
+        >
+          Sport-specific prehab that actually fits your training.
+        </p>
+
+        <!-- Waitlist form -->
+        <form
+          id="waitlist-form"
+          novalidate
+          aria-label="Join the waitlist"
+          style="max-width: 380px;"
+        >
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <div class="flex-1">
+              <label for="waitlist-email" class="sr-only">Email address</label>
+              <input
+                id="waitlist-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+                aria-required="true"
+                aria-describedby="waitlist-note waitlist-error"
+                placeholder="your@email.com"
+                class="w-full rounded-full px-5 py-3 text-base outline-none"
+                style="background-color: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); font-family: var(--font-body); transition: border-color 150ms ease, box-shadow 150ms ease;"
+              />
+            </div>
+            <button
+              type="submit"
+              id="waitlist-submit"
+              class="rounded-full px-6 py-3 text-base font-medium"
+              style="background-color: var(--color-accent); color: #ffffff; font-family: var(--font-body); white-space: nowrap; transition: background-color 150ms ease, box-shadow 150ms ease;"
+            >
+              Join waitlist
+            </button>
+          </div>
+
+          <p
+            id="waitlist-error"
+            role="alert"
+            class="mt-2 hidden text-sm"
+            style="color: var(--color-error); font-family: var(--font-body);"
+          ></p>
+        </form>
+
+        <!-- Success state (replaces form) -->
+        <p
+          id="waitlist-success"
+          class="hidden text-lg"
+          style="color: var(--color-success); font-family: var(--font-body);"
+          aria-live="polite"
+        >
+          You're on the list.
+        </p>
+
+        <!-- Fine print -->
+        <p
+          id="waitlist-note"
+          class="mt-4 text-sm"
+          style="color: var(--color-muted); font-family: var(--font-body);"
+        >
+          Launching on iOS. No spam.
+        </p>
+
+        <!-- Legal links -->
+        <nav class="mt-8 flex flex-wrap gap-x-4 gap-y-2 text-xs" style="color: var(--color-muted); font-family: var(--font-body);" aria-label="Legal">
+          <a href="/terms" class="hover:underline" style="color: var(--color-muted);">Terms of Service</a>
+          <a href="/privacy" class="hover:underline" style="color: var(--color-muted);">Privacy Policy</a>
+          <a href="/health-disclaimer" class="hover:underline" style="color: var(--color-muted);">Health Disclaimer</a>
+          <a href="/refunds" class="hover:underline" style="color: var(--color-muted);">Subscriptions &amp; Refunds</a>
+        </nav>
+      </section>
+
+      <!-- ─── Illustration column — right on desktop, below fold on mobile ─── -->
+      <div
+        id="illustration-col"
+        class="relative w-full overflow-hidden md:w-[55%]"
+        aria-hidden="true"
+      >
+        <!-- Warm parchment placeholder while image loads -->
+        <div
+          class="absolute inset-0"
+          style="background: linear-gradient(170deg, #f0d9a8 0%, #d4a85a 40%, #c9623f 70%, #6b3f28 100%);"
+        ></div>
+        <picture class="absolute inset-0 h-full w-full">
+          <source srcset="/illustrations/hero-colonnaded-garden.webp" type="image/webp" />
+          <img
+            id="hero-img"
+            src="/illustrations/hero-colonnaded-garden.jpg"
+            alt="Classical illustration of a male athlete in warrior lunge pose within an ancient colonnaded courtyard at golden hour, amber flowering vines overhead"
+            class="absolute inset-0 h-full w-full object-cover"
+            style="opacity: 0; object-position: center 70%; will-change: transform; transition: opacity 0.5s ease;"
+            onload="this.style.opacity='1'"
+          />
+        </picture>
+      </div>
+
+    </div>
+  </main>
+</MarketingLayout>
+
+<style>
+  /* ── Desktop: illustration column fills full viewport height ── */
+  @media (min-width: 768px) {
+    #illustration-col {
+      min-height: 100svh;
+      position: sticky;
+      top: 0;
+      height: 100svh;
+    }
+  }
+
+  /* ── Mobile: illustration fills remaining viewport height ── */
+  @media (max-width: 767px) {
+    #illustration-col {
+      flex: 1 1 0;
+      min-height: 280px;
+    }
+  }
+
+  /* ── Input focus ── */
+  #waitlist-email:focus {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 3px var(--color-accent-bg);
+    outline: none;
+  }
+
+  /* ── CTA hover pulse (terracotta glow, 150ms) ── */
+  #waitlist-submit:hover:not(:disabled) {
+    background-color: var(--color-accent-hover) !important;
+    box-shadow: 0 0 0 4px var(--color-accent-bg);
+  }
+
+  #waitlist-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* ── Hero entrance: content fades up 400ms ease-out ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+
+  #content-col.animate-in {
+    animation: fadeUp 400ms ease-out forwards;
+  }
+</style>
+
+<script>
+  import { orpc } from "../lib/orpc";
+
+  // ── Entrance animation ──
+  const contentCol = document.getElementById("content-col")!;
+  requestAnimationFrame(() => {
+    contentCol.classList.add("animate-in");
+  });
+
+  // ── Illustration parallax ──
+  const heroImg = document.getElementById("hero-img") as HTMLImageElement | null;
+  const illustrationCol = document.getElementById("illustration-col")!;
+
+  if (heroImg) {
+    // Mobile: scroll-based parallax — illustration moves at 0.15× scroll speed
+    let scrollRaf = 0;
+    window.addEventListener("scroll", () => {
+      if (window.innerWidth >= 768) return;
+      cancelAnimationFrame(scrollRaf);
+      scrollRaf = requestAnimationFrame(() => {
+        const rect = illustrationCol.getBoundingClientRect();
+        const scrolled = window.innerHeight - rect.top;
+        if (scrolled > 0) {
+          heroImg.style.transform = `translateY(${scrolled * 0.15}px)`;
+        }
+      });
+    }, { passive: true });
+  }
+
+  // ── Waitlist form ──
+  const form       = document.getElementById("waitlist-form") as HTMLFormElement;
+  const emailInput = document.getElementById("waitlist-email") as HTMLInputElement;
+  const submitBtn  = document.getElementById("waitlist-submit") as HTMLButtonElement;
+  const errorEl    = document.getElementById("waitlist-error")!;
+  const successEl  = document.getElementById("waitlist-success")!;
+  const noteEl     = document.getElementById("waitlist-note")!;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = emailInput.value.trim();
+    errorEl.textContent = "";
+    errorEl.classList.add("hidden");
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errorEl.textContent = "Please enter a valid email address.";
+      errorEl.classList.remove("hidden");
+      emailInput.focus();
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Joining…";
+
+    try {
+      await orpc.waitlist.subscribe({ email });
+      form.classList.add("hidden");
+      noteEl.classList.add("hidden");
+      successEl.classList.remove("hidden");
+    } catch {
+      errorEl.textContent = "Something went wrong. Please try again.";
+      errorEl.classList.remove("hidden");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Join waitlist";
+    }
+  });
+</script>

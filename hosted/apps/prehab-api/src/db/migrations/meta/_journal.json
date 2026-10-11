@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776151251134,
+      "tag": "0000_fine_morg",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777759090281,
+      "tag": "0001_funny_titanium_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777789178282,
+      "tag": "0002_fixed_lifeguard",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777799017610,
+      "tag": "0003_slippery_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779342732297,
+      "tag": "0004_handy_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779384723643,
+      "tag": "0005_huge_mathemanic",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779872998931,
+      "tag": "0006_fresh_odin",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779873552643,
+      "tag": "0007_worthless_captain_universe",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780061201627,
+      "tag": "0008_adorable_mantis",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791751500000,
+      "tag": "0009_session_lifecycle",
+      "breakpoints": true
+    }
+  ]
+}

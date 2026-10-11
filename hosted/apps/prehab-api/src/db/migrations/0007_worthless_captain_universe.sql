@@ -1,0 +1,1 @@
+ALTER TABLE "sport_profiles" ADD COLUMN "plan_reveal_seen_at" timestamp;

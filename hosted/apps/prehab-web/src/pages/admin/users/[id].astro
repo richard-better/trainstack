@@ -1,0 +1,304 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+
+const { id } = Astro.params;
+---
+
+<AdminLayout title="User" active="users">
+  <a href="/admin" class="mb-4 inline-block text-sm text-neutral-400 hover:underline">← All users</a>
+  <div id="user-detail" data-user-id={id}>
+    <p class="text-neutral-500">Loading user…</p>
+  </div>
+</AdminLayout>
+
+<script>
+  import {
+    ensureAdmin,
+    section,
+    table,
+    kv,
+    badge,
+    pre,
+    mount,
+    h,
+    fmtDateTime,
+    fmtCost,
+    fmtInt,
+    fmtJson,
+  } from "../../../lib/admin";
+  import { orpc } from "../../../lib/orpc";
+
+  const me = await ensureAdmin();
+  if (me) {
+    const root = document.getElementById("user-detail")!;
+    const userId = root.dataset.userId!;
+
+    type Detail = Awaited<ReturnType<typeof orpc.admin.getUser>>;
+
+    function regenerateForm(): HTMLElement {
+      const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD local
+      const dateInput = h("input", {
+        type: "date",
+        value: today,
+        class: "rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-sm",
+      }) as HTMLInputElement;
+      const readiness = h(
+        "select",
+        { class: "rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-sm" },
+        h("option", { value: "normal" }, "readiness: normal"),
+        h("option", { value: "low" }, "readiness: low"),
+        h("option", { value: "high" }, "readiness: high"),
+      ) as HTMLSelectElement;
+      const type = h(
+        "select",
+        { class: "rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-sm" },
+        h("option", { value: "" }, "type: daily (auto)"),
+        h("option", { value: "prehab" }, "type: prehab"),
+        h("option", { value: "recovery" }, "type: recovery"),
+        h("option", { value: "mobility" }, "type: mobility"),
+        h("option", { value: "activation" }, "type: activation"),
+      ) as HTMLSelectElement;
+      const result = h("span", { class: "text-sm text-neutral-400" });
+      const btn = h(
+        "button",
+        {
+          class:
+            "rounded-md bg-sky-700 px-3 py-1 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-50",
+        },
+        "Re-trigger generation",
+      ) as HTMLButtonElement;
+
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        result.textContent = "Enqueuing…";
+        try {
+          const res = await orpc.admin.regenerateUserSession({
+            userId,
+            sessionDate: dateInput.value,
+            readiness: readiness.value as "low" | "normal" | "high",
+            sessionType: (type.value || undefined) as
+              | "prehab"
+              | "recovery"
+              | "mobility"
+              | "activation"
+              | undefined,
+          });
+          result.textContent = `Enqueued session ${res.id} (${res.status}). Reloading…`;
+          setTimeout(load, 1200);
+        } catch (e) {
+          result.textContent = `Failed: ${(e as { message?: string }).message ?? "error"}`;
+          btn.disabled = false;
+        }
+      });
+
+      return h(
+        "div",
+        { class: "flex flex-wrap items-center gap-2" },
+        dateInput,
+        readiness,
+        type,
+        btn,
+        result,
+      );
+    }
+
+    function render(d: Detail) {
+      const u = d.user;
+      const header = h(
+        "div",
+        { class: "mb-6" },
+        h(
+          "div",
+          { class: "flex flex-wrap items-center gap-2" },
+          h("h1", { class: "text-xl font-semibold text-white" }, u.name || u.email),
+          u.emailVerified ? badge("verified", "green") : badge("unverified", "amber"),
+          u.deletionScheduledAt ? badge("deletion scheduled", "red") : null,
+        ),
+        h("p", { class: "mt-1 font-mono text-xs text-neutral-500" }, `${u.email} · ${u.id}`),
+      );
+
+      const account = section(
+        "Account",
+        kv("Created", fmtDateTime(u.createdAt)),
+        kv("Updated", fmtDateTime(u.updatedAt)),
+        kv("Email verified", String(u.emailVerified)),
+        kv("Deletion scheduled", fmtDateTime(u.deletionScheduledAt)),
+      );
+
+      const llm = section(
+        "AI usage (PRE-131)",
+        kv("Total calls", fmtInt(d.llm.totalCalls)),
+        kv("Estimated cost", fmtCost(d.llm.totalCostUsd)),
+        kv("Input tokens", fmtInt(d.llm.totalInputTokens)),
+        kv("Output tokens", fmtInt(d.llm.totalOutputTokens)),
+        h(
+          "div",
+          { class: "mt-2 flex flex-wrap gap-4" },
+          h(
+            "a",
+            { href: `/admin/llm?user=${u.id}`, class: "text-xs text-sky-400 hover:underline" },
+            "View this user's LLM calls →",
+          ),
+          h(
+            "a",
+            { href: `/admin/playground?user=${u.id}`, class: "text-xs text-sky-400 hover:underline" },
+            "Open in generator playground →",
+          ),
+        ),
+      );
+
+      const sp = d.sportProfile;
+      const profile = section(
+        "Sport profile",
+        sp
+          ? h(
+              "div",
+              null,
+              kv("Primary sport", sp.primarySport || "—"),
+              kv("Preferred time", sp.preferredSessionTime),
+              kv("Onboarding completed", fmtDateTime(sp.onboardingCompletedAt)),
+              kv("Plan reveal seen", fmtDateTime(sp.planRevealSeenAt)),
+            )
+          : h("p", { class: "text-sm text-neutral-500" }, "No sport profile."),
+      );
+
+      const sub = d.subscription;
+      const subscription = section(
+        "Subscription",
+        sub
+          ? h(
+              "div",
+              null,
+              kv("Trial started", fmtDateTime(sub.trialStartedAt)),
+              kv("Subscribed", fmtDateTime(sub.subscribedAt)),
+              kv("RevenueCat id", sub.revenueCatCustomerId || "—"),
+            )
+          : h("p", { class: "text-sm text-neutral-500" }, "No subscription row."),
+      );
+
+      const np = d.notificationPreferences;
+      const notifications = section(
+        "Notifications",
+        np
+          ? h(
+              "div",
+              null,
+              kv("Enabled", String(np.enabled)),
+              kv("Preferred time", np.preferredTime),
+              kv("Timezone", np.timezone),
+            )
+          : h("p", { class: "text-sm text-neutral-500" }, "No notification preferences."),
+      );
+
+      const plans = section(
+        "Plans",
+        table(
+          ["Source", "Status", "Generation", "Start", "End", "Headline", "Created"],
+          d.plans.map((p) => [
+            p.source,
+            p.status,
+            p.generationStatus,
+            p.startDate,
+            p.endDate,
+            p.headline ?? "—",
+            fmtDateTime(p.createdAt),
+          ]),
+        ),
+      );
+
+      const sessions = section(
+        `Sessions (latest ${d.sessions.length})`,
+        table(
+          ["Date", "Status", "Source", "Title", "Completed", "Archived"],
+          d.sessions.map((s) => [
+            s.sessionDate,
+            s.status === "failed" ? badge("failed", "red") : s.status,
+            s.source,
+            s.isRestDay ? badge("rest", "neutral") : s.title,
+            fmtDateTime(s.completedAt),
+            s.archivedAt ? badge("archived", "neutral") : "—",
+          ]),
+        ),
+      );
+
+      const checkIns = section(
+        "Check-ins (latest)",
+        table(
+          ["Date", "Readiness", "Note"],
+          d.checkIns.map((c) => [c.checkInDate, c.readiness, c.note ?? "—"]),
+        ),
+      );
+
+      const threads = section(
+        "Coach threads",
+        table(
+          ["Type", "Status", "Flagged", "Reason", "Messages", "Started"],
+          d.threads.map((t) => [
+            t.type,
+            t.status,
+            t.flaggedForReviewAt ? badge("⚑ flagged", "amber") : "—",
+            t.flagReason ?? "—",
+            String(t.messageCount),
+            fmtDateTime(t.startedAt),
+          ]),
+        ),
+      );
+
+      const intake = section(
+        "Intake summary",
+        d.intakeSummary
+          ? pre(fmtJson(d.intakeSummary.summary))
+          : h("p", { class: "text-sm text-neutral-500" }, "No intake summary."),
+      );
+
+      const answers = section(
+        `Profile answers (${d.profileAnswers.length})`,
+        table(
+          ["Question", "Status", "v", "Value", "Recorded"],
+          d.profileAnswers.map((a) => [
+            a.questionId,
+            a.status,
+            String(a.version),
+            a.value == null ? "—" : pre(fmtJson(a.value)),
+            fmtDateTime(a.recordedAt),
+          ]),
+        ),
+      );
+
+      mount(
+        root,
+        header,
+        section("Re-trigger session generation", regenerateForm()),
+        account,
+        llm,
+        profile,
+        subscription,
+        notifications,
+        plans,
+        sessions,
+        checkIns,
+        threads,
+        intake,
+        answers,
+      );
+    }
+
+    async function load() {
+      try {
+        const d = await orpc.admin.getUser({ userId });
+        render(d);
+      } catch (e) {
+        mount(
+          root,
+          h(
+            "p",
+            { class: "text-red-400" },
+            `Failed to load user: ${(e as { message?: string }).message ?? "error"}`,
+          ),
+        );
+      }
+    }
+
+    void load();
+  }
+</script>

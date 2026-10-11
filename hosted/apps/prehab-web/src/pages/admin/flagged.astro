@@ -1,0 +1,41 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Flagged threads" active="flagged">
+  <div class="mb-4 flex items-center justify-between gap-4">
+    <h1 class="text-xl font-semibold text-white">Flagged Coach threads</h1>
+    <span id="flagged-status" class="text-xs text-neutral-500"></span>
+  </div>
+  <p class="mb-4 text-sm text-neutral-500">
+    Threads where the Coach's <code class="font-mono">flagRedFlag</code> tool fired — a soft audit
+    tag for symptoms that warrant a human look. Flagging never ends the chat.
+  </p>
+  <div id="flagged-table"></div>
+</AdminLayout>
+
+<script>
+  import { ensureAdmin, table, link, badge, mount, fmtDateTime } from "../../lib/admin";
+  import { orpc } from "../../lib/orpc";
+
+  const me = await ensureAdmin();
+  if (me) {
+    const container = document.getElementById("flagged-table")!;
+    const status = document.getElementById("flagged-status")!;
+    try {
+      const res = await orpc.admin.listFlaggedThreads();
+      const rows = res.threads.map((t) => [
+        link(`/admin/users/${t.userId}`, t.userEmail),
+        t.userName,
+        t.status,
+        t.flagReason ?? "—",
+        fmtDateTime(t.flaggedForReviewAt),
+      ]);
+      mount(container, table(["User", "Name", "Thread status", "Reason", "Flagged at"], rows));
+      status.textContent = `${res.threads.length} flagged`;
+    } catch {
+      status.textContent = "Failed to load.";
+      mount(container, badge("Error loading flagged threads", "red"));
+    }
+  }
+</script>

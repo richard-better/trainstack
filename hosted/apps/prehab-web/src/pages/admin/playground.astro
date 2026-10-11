@@ -1,0 +1,151 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Playground" active="playground">
+  <h1 class="mb-1 text-xl font-semibold text-white">Session generator playground</h1>
+  <p class="mb-4 text-sm text-neutral-500">
+    Replay daily-session generation against a real user's context. Override the system prompt to
+    iterate without a deploy. Each run is metered as a <code class="font-mono">playground</code> LLM
+    call.
+  </p>
+
+  <div class="mb-4 grid gap-3 sm:grid-cols-2">
+    <label class="flex flex-col gap-1 text-xs text-neutral-400">
+      User id
+      <input
+        id="pg-user"
+        type="text"
+        placeholder="paste a user id (from /admin)"
+        class="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 font-mono text-sm text-neutral-100"
+      />
+    </label>
+    <label class="flex flex-col gap-1 text-xs text-neutral-400">
+      Session date
+      <input
+        id="pg-date"
+        type="date"
+        class="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+      />
+    </label>
+  </div>
+
+  <div class="mb-4 flex flex-wrap items-center gap-3">
+    <select
+      id="pg-readiness"
+      class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm"
+    >
+      <option value="normal">readiness: normal</option>
+      <option value="low">readiness: low</option>
+      <option value="high">readiness: high</option>
+    </select>
+    <select id="pg-type" class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm">
+      <option value="">type: from plan</option>
+      <option value="prehab">type: prehab</option>
+      <option value="recovery">type: recovery</option>
+      <option value="mobility">type: mobility</option>
+      <option value="activation">type: activation</option>
+    </select>
+    <label class="flex items-center gap-2 text-sm text-neutral-300">
+      <input id="pg-lean" type="checkbox" checked class="accent-sky-600" />
+      lean (tap-through) — uncheck for the full regenerate prompt
+    </label>
+  </div>
+
+  <label class="mb-4 flex flex-col gap-1 text-xs text-neutral-400">
+    System prompt override (optional — leave blank to use the assembled prompt)
+    <textarea
+      id="pg-prompt"
+      rows="4"
+      placeholder="Paste an edited system prompt here to A/B a wording change…"
+      class="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100"
+    ></textarea>
+  </label>
+
+  <div class="mb-6 flex items-center gap-3">
+    <button
+      id="pg-run"
+      class="rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-50"
+      >Run generation</button
+    >
+    <span id="pg-status" class="text-sm text-neutral-400"></span>
+  </div>
+
+  <div id="pg-results"></div>
+</AdminLayout>
+
+<script>
+  import { ensureAdmin, section, pre, badge, mount, h, fmtCost, fmtInt, fmtJson } from "../../lib/admin";
+  import { orpc } from "../../lib/orpc";
+
+  const me = await ensureAdmin();
+  if (me) {
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const userInput = $<HTMLInputElement>("pg-user");
+    const dateInput = $<HTMLInputElement>("pg-date");
+    const readiness = $<HTMLSelectElement>("pg-readiness");
+    const type = $<HTMLSelectElement>("pg-type");
+    const lean = $<HTMLInputElement>("pg-lean");
+    const promptOverride = $<HTMLTextAreaElement>("pg-prompt");
+    const runBtn = $<HTMLButtonElement>("pg-run");
+    const statusEl = $("pg-status");
+    const results = $("pg-results");
+
+    // Prefill from ?user= (e.g. linked from the user detail page) + today's date.
+    const qpUser = new URLSearchParams(window.location.search).get("user");
+    if (qpUser) userInput.value = qpUser;
+    dateInput.value = new Date().toLocaleDateString("en-CA");
+
+    async function run() {
+      const userId = userInput.value.trim();
+      if (!userId) {
+        statusEl.textContent = "Enter a user id.";
+        return;
+      }
+      runBtn.disabled = true;
+      statusEl.textContent = "Running…";
+      mount(results);
+      try {
+        const res = await orpc.admin.playground.runDailyGeneration({
+          userId,
+          sessionDate: dateInput.value || undefined,
+          readiness: readiness.value as "low" | "normal" | "high",
+          sessionType: (type.value || undefined) as
+            | "prehab"
+            | "recovery"
+            | "mobility"
+            | "activation"
+            | undefined,
+          lean: lean.checked,
+          systemPromptOverride: promptOverride.value.trim() || undefined,
+        });
+
+        const meta = h(
+          "div",
+          { class: "flex flex-wrap items-center gap-2 text-sm text-neutral-300" },
+          res.status === "error" ? badge("error", "red") : badge("ok", "green"),
+          h("span", { class: "font-mono text-xs text-neutral-500" }, res.model),
+          h("span", null, `${fmtInt(res.inputTokens)} in / ${fmtInt(res.outputTokens)} out`),
+          h("span", null, `cost ${fmtCost(res.costUsd)}`),
+          h("span", null, `${fmtInt(res.latencyMs)} ms`),
+        );
+
+        mount(
+          results,
+          section("Result", meta),
+          res.error ? section("Error", h("p", { class: "text-red-400" }, res.error)) : null,
+          section("Raw output", pre(fmtJson(res.output))),
+          section("System prompt", pre(res.systemPrompt)),
+          section(`Assembled inputs · ${res.exerciseNames.length} catalogue exercises`, pre(fmtJson(res.inputs))),
+        );
+        statusEl.textContent = "Done.";
+      } catch (e) {
+        statusEl.textContent = `Failed: ${(e as { message?: string }).message ?? "error"}`;
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    runBtn.addEventListener("click", run);
+  }
+</script>

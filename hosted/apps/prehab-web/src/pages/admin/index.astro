@@ -1,0 +1,77 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Users" active="users">
+  <div class="mb-4 flex items-center justify-between gap-4">
+    <h1 class="text-xl font-semibold text-white">Users</h1>
+    <span id="users-status" class="text-xs text-neutral-500"></span>
+  </div>
+
+  <input
+    id="q"
+    type="search"
+    placeholder="Search by email, name, or paste a user id…"
+    autocomplete="off"
+    class="mb-4 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+  />
+
+  <div id="users-table"></div>
+</AdminLayout>
+
+<script>
+  import { ensureAdmin, table, link, badge, mount, fmtDateTime, h } from "../../lib/admin";
+  import { orpc } from "../../lib/orpc";
+
+  const me = await ensureAdmin();
+  if (me) {
+    const input = document.getElementById("q") as HTMLInputElement;
+    const container = document.getElementById("users-table")!;
+    const status = document.getElementById("users-status")!;
+
+    type UserRow = Awaited<ReturnType<typeof orpc.admin.listUsers>>["users"][number];
+
+    function statusCell(u: UserRow): HTMLElement {
+      const items = [
+        u.subscribed ? badge("subscribed", "green") : badge("free", "neutral"),
+        u.deletionScheduledAt ? badge("deleting", "red") : null,
+        u.flaggedThreadCount > 0 ? badge(`⚑ ${u.flaggedThreadCount}`, "amber") : null,
+      ].filter(Boolean) as HTMLElement[];
+      return h("div", { class: "flex flex-wrap gap-1" }, ...items);
+    }
+
+    async function load(query?: string) {
+      status.textContent = "Loading…";
+      try {
+        const res = await orpc.admin.listUsers({
+          query: query || undefined,
+          limit: 50,
+          offset: 0,
+        });
+        const rows = res.users.map((u) => [
+          link(`/admin/users/${u.id}`, u.email),
+          u.name,
+          u.primarySport ?? "—",
+          u.onboardingCompletedAt ? fmtDateTime(u.onboardingCompletedAt) : badge("incomplete", "neutral"),
+          statusCell(u),
+          fmtDateTime(u.createdAt),
+        ]);
+        mount(
+          container,
+          table(["Email", "Name", "Sport", "Onboarded", "Status", "Joined"], rows),
+        );
+        status.textContent = `${res.users.length} of ${res.total} user(s)`;
+      } catch {
+        status.textContent = "Failed to load users.";
+      }
+    }
+
+    let timer: ReturnType<typeof setTimeout>;
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => load(input.value.trim()), 250);
+    });
+
+    void load();
+  }
+</script>
