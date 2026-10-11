@@ -56,11 +56,26 @@ const resumed = await rpc("sessions/getById", { id: session.id });
 assert.deepEqual(resumed.skippedExercises, [0]);
 assert.equal(resumed.dropOffExerciseIndex, 0);
 await rpc("checkIn/save", { date: day, readiness: "normal", note: "Local migration smoke test" });
+const completed = await rpc("sessionTemplates/start", {
+  templateId: template.id,
+  sessionDate: day,
+});
+await rpc("sessions/updateProgress", {
+  sessionId: completed.id,
+  dropOffExerciseIndex: detail.exercises.length - 1,
+});
+await rpc("sessions/complete", {
+  sessionId: completed.id,
+  feedbackRating: "good",
+  feedbackTags: [],
+  feedbackComment: "Local completion verification",
+});
+assert((await rpc("sessions/getById", { id: completed.id })).completedAt);
 const media = await fetch(detail.exercises[0].videoUrl, { headers: { Range: "bytes=0-1" } });
 assert.equal(media.status, 206, "Import local media first");
 assert.equal((await media.arrayBuffer()).byteLength, 2);
 const invalid = await fetch(detail.exercises[0].videoUrl, { headers: { Range: "bytes=2-1" } });
 assert.equal(invalid.status, 416);
 console.log(
-  `Passed: onboarding, ${exercises.length} exercises, session start/resume, check-in, AVPlayer ranges.`,
+  `Passed: onboarding, ${exercises.length} exercises, session start/resume/completion, check-in, AVPlayer ranges.`,
 );

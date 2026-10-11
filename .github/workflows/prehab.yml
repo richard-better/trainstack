@@ -1,0 +1,50 @@
+name: Prehab
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      [
+        "apps/prehab/**",
+        "hosted/**",
+        "packages/prehab-*/**",
+        "scripts/generate-prehab-contract.ts",
+        ".github/workflows/prehab.yml",
+        "bun.lock",
+      ]
+  push:
+    branches: [main]
+    paths:
+      [
+        "apps/prehab/**",
+        "hosted/**",
+        "packages/prehab-*/**",
+        "scripts/generate-prehab-contract.ts",
+        ".github/workflows/prehab.yml",
+        "bun.lock",
+      ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: swift format lint --strict --recursive apps/prehab
+      - run: swift test --package-path apps/prehab/PrehabKit
+      - run: xcodebuild build -project apps/prehab/Prehab.xcodeproj -scheme PrehabiOS -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+      - run: xcodebuild build -project apps/prehab/Prehab.xcodeproj -scheme PrehabmacOS -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd hosted/apps/prehab-api test
+      - run: bun run --cwd hosted/apps/prehab-api check-types

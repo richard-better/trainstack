@@ -28,7 +28,8 @@ mise exec -- bun run prehab:docs
 
 The API uses port 3002, the website/admin 4322, docs 4323, and Postgres 25432.
 Sign in with `test1@trypre.app` / `12341234` after seeding. These are local
-fixtures, never production credentials. Add a working Google AI key to the ignored
+fixtures, never production credentials. Set `ADMIN_EMAILS=test1@trypre.app` in the
+local environment to access the web admin screens with that fixture account. Add a working Google AI key to the ignored
 `hosted/.env.prehab` for Coach and generation. The Anthropic key is optional for
 flows configured to use that provider. Email delivery and Apple sign-in also
 require their corresponding service configuration.
