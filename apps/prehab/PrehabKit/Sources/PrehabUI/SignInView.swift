@@ -63,10 +63,16 @@ struct SignInView: View {
         DisclosureGroup("Server") { TextField("Server URL", text: $server).textContentType(.URL) }
       }.textFieldStyle(.roundedBorder).padding(24).frame(maxWidth: 520)
     }.frame(maxWidth: .infinity).onAppear { server = model.server }
-      .task {
-        if let config = try? await model.api.configuration() {
-          appleAvailable = config["auth"]["apple"].bool
-        }
+      .task(id: server) {
+        appleAvailable = false
+        guard (try? model.configureServer(server)) != nil else { return }
+        #if os(macOS) && DEBUG
+          // Local ad-hoc Mac builds cannot carry the Apple sign-in entitlement.
+        #else
+          if let config = try? await model.api.configuration(), !Task.isCancelled {
+            appleAvailable = config["auth"]["apple"].bool
+          }
+        #endif
       }
   }
 }

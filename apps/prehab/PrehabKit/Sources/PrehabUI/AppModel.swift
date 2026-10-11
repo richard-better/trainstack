@@ -32,13 +32,16 @@ public final class AppModel {
       if signedIn { try await refreshProfile() }
     } catch { self.error = error.localizedDescription }
   }
-  func authenticate(email: String, password: String, name: String?, server: String) async throws {
+  func configureServer(_ server: String) throws {
     guard let url = URL(string: server), let host = url.host,
       url.scheme == "https"
         || (url.scheme == "http" && ["localhost", "127.0.0.1", "::1"].contains(host))
     else { throw APIError(message: "Use an HTTPS server URL, or localhost for development.") }
     self.server = server
     api = APIClient(baseURL: url)
+  }
+  func authenticate(email: String, password: String, name: String?, server: String) async throws {
+    try configureServer(server)
     var body: [String: JSONValue] = ["email": .string(email), "password": .string(password)]
     if let name { body["name"] = .string(name) }
     let response = try await api.auth(
