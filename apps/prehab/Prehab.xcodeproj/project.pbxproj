@@ -1,0 +1,296 @@
+// !$*UTF8*$!
+{
+"archiveVersion" = 1;
+"classes" = {
+};
+"objectVersion" = 77;
+"objects" = {
+"A23F46B05EF836E78C807219" = { "isa" = "PBXFileSystemSynchronizedBuildFileExceptionSet"; "membershipExceptions" = ("Info.plist", "Prehab.entitlements", "PrehabRelease.entitlements"); "target" = "3274242E49A1AAE43C58AE2C"; };
+"84B090A7382D377E02EB25D6" = { "isa" = "PBXFileSystemSynchronizedBuildFileExceptionSet"; "membershipExceptions" = ("Info.plist", "Prehab.entitlements", "PrehabRelease.entitlements"); "target" = "DB66F5B094A1FDD2B12C16FD"; };
+"582681C2EAE02B3F3D399C0C" = {
+"isa" = "XCLocalSwiftPackageReference";
+"relativePath" = "PrehabKit";
+};
+"A7382F282684B5AC45E63601" = {
+"isa" = "PBXFileSystemSynchronizedRootGroup";
+"exceptions" = ("84B090A7382D377E02EB25D6");
+"path" = "PrehabiOS";
+"sourceTree" = "<group>";
+};
+"ECE41BC8A0288DE9B86EC98A" = {
+"isa" = "PBXFileReference";
+"explicitFileType" = "wrapper.application";
+"path" = "PrehabiOS.app";
+"sourceTree" = "BUILT_PRODUCTS_DIR";
+};
+"EC91747995AF4199C5383F03" = {
+"isa" = "XCSwiftPackageProductDependency";
+"productName" = "PrehabUI";
+};
+"DD4489F0817D88F8750BE257" = {
+"isa" = "PBXBuildFile";
+"productRef" = "EC91747995AF4199C5383F03";
+};
+"21B2A5E931404E6C1F85D88D" = {
+"isa" = "PBXFrameworksBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ("DD4489F0817D88F8750BE257");
+"runOnlyForDeploymentPostprocessing" = 0;
+};
+"A49F80D20F430608F4E2FC49" = {
+"isa" = "PBXSourcesBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ();
+"runOnlyForDeploymentPostprocessing" = 0;
+};
+"DE412259EFEA1927E1E0A516" = {
+"isa" = "PBXResourcesBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ();
+"runOnlyForDeploymentPostprocessing" = 0;
+};
+"4897E9EDF5490A8908207EC5" = {
+"isa" = "XCBuildConfiguration";
+"buildSettings" = {
+"PRODUCT_BUNDLE_IDENTIFIER" = "com.trainstack.prehab";
+"INFOPLIST_FILE" = "PrehabiOS/Info.plist";
+"CODE_SIGN_ENTITLEMENTS" = "PrehabiOS/Prehab.entitlements";
+"PRODUCT_NAME" = "$(TARGET_NAME)";
+"GENERATE_INFOPLIST_FILE" = "YES";
+"INFOPLIST_KEY_CFBundleDisplayName" = "TrainStack Prehab";
+"INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking" = "YES";
+"SWIFT_VERSION" = "6.0";
+"SWIFT_STRICT_CONCURRENCY" = "complete";
+"CODE_SIGN_STYLE" = "Automatic";
+"CURRENT_PROJECT_VERSION" = "1";
+"MARKETING_VERSION" = "1.0";
+"SDKROOT" = "iphoneos";
+"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+"MACOSX_DEPLOYMENT_TARGET" = "26.0";
+"IPHONEOS_DEPLOYMENT_TARGET" = "27.0";
+"ENABLE_APP_SANDBOX" = "YES";
+"ENABLE_OUTGOING_NETWORK_CONNECTIONS" = "YES";
+"SWIFT_EMIT_LOC_STRINGS" = "YES";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
+"TARGETED_DEVICE_FAMILY" = "1,2";
+"INFOPLIST_KEY_UILaunchScreen_Generation" = "YES";
+"INFOPLIST_KEY_UIApplicationSceneManifest_Generation" = "YES";
+"SUPPORTS_MACCATALYST" = "NO";
+"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+"ONLY_ACTIVE_ARCH" = "YES";
+"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+};
+"name" = "Debug";
+};
+"132FF5DB1B07D33AA0A7312E" = {
+"isa" = "XCBuildConfiguration";
+"buildSettings" = {
+"PRODUCT_BUNDLE_IDENTIFIER" = "com.trainstack.prehab";
+"INFOPLIST_FILE" = "PrehabiOS/Info.plist";
+"CODE_SIGN_ENTITLEMENTS" = "PrehabiOS/Prehab.entitlements";
+"PRODUCT_NAME" = "$(TARGET_NAME)";
+"GENERATE_INFOPLIST_FILE" = "YES";
+"INFOPLIST_KEY_CFBundleDisplayName" = "TrainStack Prehab";
+"INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking" = "YES";
+"SWIFT_VERSION" = "6.0";
+"SWIFT_STRICT_CONCURRENCY" = "complete";
+"CODE_SIGN_STYLE" = "Automatic";
+"CURRENT_PROJECT_VERSION" = "1";
+"MARKETING_VERSION" = "1.0";
+"SDKROOT" = "iphoneos";
+"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+"MACOSX_DEPLOYMENT_TARGET" = "26.0";
+"IPHONEOS_DEPLOYMENT_TARGET" = "27.0";
+"ENABLE_APP_SANDBOX" = "YES";
+"ENABLE_OUTGOING_NETWORK_CONNECTIONS" = "YES";
+"SWIFT_EMIT_LOC_STRINGS" = "YES";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
+"TARGETED_DEVICE_FAMILY" = "1,2";
+"INFOPLIST_KEY_UILaunchScreen_Generation" = "YES";
+"INFOPLIST_KEY_UIApplicationSceneManifest_Generation" = "YES";
+"SUPPORTS_MACCATALYST" = "NO";
+};
+"name" = "Release";
+};
+"28154A2BB417C917B99AFB1D" = {
+"isa" = "XCConfigurationList";
+"buildConfigurations" = ("4897E9EDF5490A8908207EC5","132FF5DB1B07D33AA0A7312E");
+"defaultConfigurationIsVisible" = 0;
+"defaultConfigurationName" = "Release";
+};
+"DB66F5B094A1FDD2B12C16FD" = {
+"isa" = "PBXNativeTarget";
+"buildConfigurationList" = "28154A2BB417C917B99AFB1D";
+"buildPhases" = ("A49F80D20F430608F4E2FC49","21B2A5E931404E6C1F85D88D","DE412259EFEA1927E1E0A516");
+"buildRules" = ();
+"dependencies" = ();
+"fileSystemSynchronizedGroups" = ("A7382F282684B5AC45E63601");
+"name" = "PrehabiOS";
+"packageProductDependencies" = ("EC91747995AF4199C5383F03");
+"productName" = "PrehabiOS";
+"productReference" = "ECE41BC8A0288DE9B86EC98A";
+"productType" = "com.apple.product-type.application";
+};
+"EF2D553CE9ABEAA235DCC2B9" = {
+"isa" = "PBXFileSystemSynchronizedRootGroup";
+"exceptions" = ("A23F46B05EF836E78C807219");
+"path" = "PrehabmacOS";
+"sourceTree" = "<group>";
+};
+"B3E855371D81859E0CBFE9F3" = {
+"isa" = "PBXFileReference";
+"explicitFileType" = "wrapper.application";
+"path" = "PrehabmacOS.app";
+"sourceTree" = "BUILT_PRODUCTS_DIR";
+};
+"A7DF27F23DD83FE9DAF5E4E1" = {
+"isa" = "XCSwiftPackageProductDependency";
+"productName" = "PrehabUI";
+};
+"46041D96C195005A9854C936" = {
+"isa" = "PBXBuildFile";
+"productRef" = "A7DF27F23DD83FE9DAF5E4E1";
+};
+"DAA7284A36C7540E0FBB8553" = {
+"isa" = "PBXFrameworksBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ("46041D96C195005A9854C936");
+"runOnlyForDeploymentPostprocessing" = 0;
+};
+"8D3759C8147A889572E9EBF6" = {
+"isa" = "PBXSourcesBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ();
+"runOnlyForDeploymentPostprocessing" = 0;
+};
+"41B7EFAEC03418748F4D9F59" = {
+"isa" = "PBXResourcesBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ();
+"runOnlyForDeploymentPostprocessing" = 0;
+};
+"E290639AB1C923DC2ABBE6FD" = {
+"isa" = "XCBuildConfiguration";
+"buildSettings" = {
+"PRODUCT_BUNDLE_IDENTIFIER" = "com.trainstack.prehab.mac";
+"INFOPLIST_FILE" = "PrehabmacOS/Info.plist";
+"CODE_SIGN_ENTITLEMENTS" = "PrehabmacOS/Prehab.entitlements";
+"PRODUCT_NAME" = "$(TARGET_NAME)";
+"GENERATE_INFOPLIST_FILE" = "YES";
+"INFOPLIST_KEY_CFBundleDisplayName" = "TrainStack Prehab";
+"INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking" = "YES";
+"SWIFT_VERSION" = "6.0";
+"SWIFT_STRICT_CONCURRENCY" = "complete";
+"CODE_SIGN_STYLE" = "Automatic";
+"CURRENT_PROJECT_VERSION" = "1";
+"MARKETING_VERSION" = "1.0";
+"SDKROOT" = "macosx";
+"SUPPORTED_PLATFORMS" = "macosx";
+"MACOSX_DEPLOYMENT_TARGET" = "26.0";
+"IPHONEOS_DEPLOYMENT_TARGET" = "27.0";
+"ENABLE_APP_SANDBOX" = "YES";
+"ENABLE_OUTGOING_NETWORK_CONNECTIONS" = "YES";
+"SWIFT_EMIT_LOC_STRINGS" = "YES";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
+"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+"ONLY_ACTIVE_ARCH" = "YES";
+"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+};
+"name" = "Debug";
+};
+"306A521740581121CA3CAC65" = {
+"isa" = "XCBuildConfiguration";
+"buildSettings" = {
+"PRODUCT_BUNDLE_IDENTIFIER" = "com.trainstack.prehab.mac";
+"INFOPLIST_FILE" = "PrehabmacOS/Info.plist";
+"CODE_SIGN_ENTITLEMENTS" = "PrehabmacOS/PrehabRelease.entitlements";
+"PRODUCT_NAME" = "$(TARGET_NAME)";
+"GENERATE_INFOPLIST_FILE" = "YES";
+"INFOPLIST_KEY_CFBundleDisplayName" = "TrainStack Prehab";
+"INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking" = "YES";
+"SWIFT_VERSION" = "6.0";
+"SWIFT_STRICT_CONCURRENCY" = "complete";
+"CODE_SIGN_STYLE" = "Automatic";
+"CURRENT_PROJECT_VERSION" = "1";
+"MARKETING_VERSION" = "1.0";
+"SDKROOT" = "macosx";
+"SUPPORTED_PLATFORMS" = "macosx";
+"MACOSX_DEPLOYMENT_TARGET" = "26.0";
+"IPHONEOS_DEPLOYMENT_TARGET" = "27.0";
+"ENABLE_APP_SANDBOX" = "YES";
+"ENABLE_OUTGOING_NETWORK_CONNECTIONS" = "YES";
+"SWIFT_EMIT_LOC_STRINGS" = "YES";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
+};
+"name" = "Release";
+};
+"FFEC1F773FC087A69D4AEAD5" = {
+"isa" = "XCConfigurationList";
+"buildConfigurations" = ("E290639AB1C923DC2ABBE6FD","306A521740581121CA3CAC65");
+"defaultConfigurationIsVisible" = 0;
+"defaultConfigurationName" = "Release";
+};
+"3274242E49A1AAE43C58AE2C" = {
+"isa" = "PBXNativeTarget";
+"buildConfigurationList" = "FFEC1F773FC087A69D4AEAD5";
+"buildPhases" = ("8D3759C8147A889572E9EBF6","DAA7284A36C7540E0FBB8553","41B7EFAEC03418748F4D9F59");
+"buildRules" = ();
+"dependencies" = ();
+"fileSystemSynchronizedGroups" = ("EF2D553CE9ABEAA235DCC2B9");
+"name" = "PrehabmacOS";
+"packageProductDependencies" = ("A7DF27F23DD83FE9DAF5E4E1");
+"productName" = "PrehabmacOS";
+"productReference" = "B3E855371D81859E0CBFE9F3";
+"productType" = "com.apple.product-type.application";
+};
+"FBDC4F23F93125BBEEAE800C" = {
+"isa" = "PBXGroup";
+"children" = ("ECE41BC8A0288DE9B86EC98A","B3E855371D81859E0CBFE9F3");
+"name" = "Products";
+"sourceTree" = "<group>";
+};
+"B28B7AF69320201D1CF206EB" = {
+"isa" = "PBXGroup";
+"children" = ("A7382F282684B5AC45E63601","EF2D553CE9ABEAA235DCC2B9","FBDC4F23F93125BBEEAE800C");
+"sourceTree" = "<group>";
+};
+"89E1FD6268CC0F221A2BE178" = {
+"isa" = "XCBuildConfiguration";
+"buildSettings" = {
+"CLANG_ENABLE_MODULES" = "YES";
+};
+"name" = "Debug";
+};
+"E6DE6C99132752C914FEF632" = {
+"isa" = "XCBuildConfiguration";
+"buildSettings" = {
+"CLANG_ENABLE_MODULES" = "YES";
+};
+"name" = "Release";
+};
+"862894B703A6DEDF96A9DD6C" = {
+"isa" = "XCConfigurationList";
+"buildConfigurations" = ("89E1FD6268CC0F221A2BE178","E6DE6C99132752C914FEF632");
+"defaultConfigurationIsVisible" = 0;
+"defaultConfigurationName" = "Release";
+};
+"98F54143AB4E86B28C3AFEE0" = {
+"isa" = "PBXProject";
+"attributes" = {
+"LastUpgradeCheck" = "2710";
+};
+"buildConfigurationList" = "862894B703A6DEDF96A9DD6C";
+"compatibilityVersion" = "Xcode 16.0";
+"developmentRegion" = "en";
+"hasScannedForEncodings" = 0;
+"knownRegions" = ("en","Base");
+"mainGroup" = "B28B7AF69320201D1CF206EB";
+"packageReferences" = ("582681C2EAE02B3F3D399C0C");
+"productRefGroup" = "FBDC4F23F93125BBEEAE800C";
+"projectDirPath" = "";
+"projectRoot" = "";
+"targets" = ("DB66F5B094A1FDD2B12C16FD","3274242E49A1AAE43C58AE2C");
+};
+};
+"rootObject" = "98F54143AB4E86B28C3AFEE0";
+}

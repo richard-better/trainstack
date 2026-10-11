@@ -1,0 +1,78 @@
+{
+  "identifier": "PrehabLocal",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_applicationInternalID": "",
+    "_developerTeamID": "",
+    "_failTransactionsEnabled": false,
+    "_lastSynchronizedDate": 0,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": [],
+    "_timeRate": 0
+  },
+  "subscriptionGroups": [
+    {
+      "id": "prehab-pro",
+      "localizations": [
+        {
+          "description": "Your daily practice",
+          "displayName": "Prehab Pro",
+          "locale": "en_US"
+        }
+      ],
+      "name": "Prehab Pro",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "9.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "prehab-monthly",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Personalized plans, guided sessions, and Coach.",
+              "displayName": "Prehab Pro Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.trainstack.prehab.pro.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Prehab Pro Monthly",
+          "subscriptionGroupID": "prehab-pro",
+          "type": "RecurringSubscription",
+          "winBackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "79.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "prehab-yearly",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Personalized plans, guided sessions, and Coach.",
+              "displayName": "Prehab Pro Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.trainstack.prehab.pro.yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Prehab Pro Yearly",
+          "subscriptionGroupID": "prehab-pro",
+          "type": "RecurringSubscription",
+          "winBackOffers": []
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

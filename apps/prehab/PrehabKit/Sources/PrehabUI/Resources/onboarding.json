@@ -1,0 +1,262 @@
+[
+  {
+    "id": "welcome",
+    "title": "A 3-minute setup so your sessions actually fit you.",
+    "skippable": false,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "id": "demographics",
+    "title": "Tell us about you",
+    "skippable": false,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "dateOfBirth": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gender": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": ["male", "female", "other", "prefer-not-to-say"]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["name", "dateOfBirth", "gender"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "id": "sports",
+    "title": "What do you train for?",
+    "skippable": true,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "american-football",
+          "basketball",
+          "bouldering-climbing",
+          "boxing",
+          "bjj",
+          "calisthenics",
+          "crossfit",
+          "cycling",
+          "golf",
+          "gymnastics",
+          "hiking",
+          "hockey",
+          "hyrox",
+          "mma-martial-arts",
+          "pickleball",
+          "pilates",
+          "rowing",
+          "rugby",
+          "running",
+          "skiing-snowboarding",
+          "soccer",
+          "strength-training",
+          "surfing",
+          "swimming",
+          "tennis",
+          "triathlon",
+          "volleyball",
+          "wrestling",
+          "yoga",
+          "other"
+        ]
+      }
+    }
+  },
+  {
+    "id": "sport-time",
+    "title": "How much per week?",
+    "skippable": false,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "enum": [
+          "american-football",
+          "basketball",
+          "bouldering-climbing",
+          "boxing",
+          "bjj",
+          "calisthenics",
+          "crossfit",
+          "cycling",
+          "golf",
+          "gymnastics",
+          "hiking",
+          "hockey",
+          "hyrox",
+          "mma-martial-arts",
+          "pickleball",
+          "pilates",
+          "rowing",
+          "rugby",
+          "running",
+          "skiing-snowboarding",
+          "soccer",
+          "strength-training",
+          "surfing",
+          "swimming",
+          "tennis",
+          "triathlon",
+          "volleyball",
+          "wrestling",
+          "yoga",
+          "other"
+        ]
+      },
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["<1", "1-3", "3-5", "5-10", "10+"]
+      }
+    }
+  },
+  {
+    "id": "goals",
+    "title": "What are you here for?",
+    "skippable": false,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "recover-from-injury",
+          "stay-ahead-recurring",
+          "prevent-future",
+          "improve-performance",
+          "improve-mobility",
+          "reduce-pain",
+          "build-durability"
+        ]
+      }
+    }
+  },
+  {
+    "id": "focus-areas",
+    "title": "Anywhere to focus?",
+    "skippable": true,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "neck",
+          "shoulders",
+          "upper-back",
+          "wrists-elbows",
+          "core",
+          "lower-back",
+          "glutes",
+          "hips",
+          "thighs",
+          "knees",
+          "ankles-calves",
+          "feet"
+        ]
+      }
+    }
+  },
+  {
+    "id": "equipment",
+    "title": "What do you have?",
+    "skippable": true,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "resistance-bands",
+          "foam-roller",
+          "yoga-mat",
+          "dumbbells",
+          "kettlebell",
+          "pull-up-bar",
+          "bench",
+          "massage-ball"
+        ]
+      }
+    }
+  },
+  {
+    "id": "daily-time",
+    "title": "How long per day?",
+    "skippable": false,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "enum": ["5", "10", "15", "20"]
+    }
+  },
+  {
+    "id": "preferred-time",
+    "title": "When do you train?",
+    "skippable": true,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?$"
+    }
+  },
+  {
+    "id": "notifications",
+    "title": "Make durability a habit",
+    "skippable": true,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "optedIn": {
+          "type": "boolean"
+        }
+      },
+      "required": ["optedIn"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "id": "disclaimer",
+    "title": "Important health notice",
+    "skippable": false,
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  }
+]

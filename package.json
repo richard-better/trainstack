@@ -49,7 +49,8 @@
     "prehab:worker": "bun run --cwd hosted/apps/prehab-api dev:worker",
     "prehab:web": "bun run --cwd hosted/apps/prehab-web dev",
     "prehab:docs": "bun run --cwd hosted/apps/prehab-docs dev",
-    "prehab:test": "bun run --cwd hosted/apps/prehab-api test"
+    "prehab:test": "bun run --cwd hosted/apps/prehab-api test && swift test --package-path apps/prehab/PrehabKit",
+    "prehab:contract": "bun scripts/generate-prehab-contract.ts"
   },
   "dependencies": {
     "zod": "catalog:"
