@@ -95,6 +95,10 @@ public final class BluetoothDevices {
   /// Called with each heart rate the strap sends, so a ride can record every beat rather than
   /// only the latest.
   @ObservationIgnored public var onHeartRate: ((Int) -> Void)?
+  /// Called whenever a connected power meter, cadence sensor or trainer sends a measurement. iOS
+  /// wakes a backgrounded app for these, which makes them a clock for a ride while the app's own
+  /// timers are not running.
+  @ObservationIgnored public var onCyclingActivity: (() -> Void)?
 
   private var discovered: [UUID: DiscoveredDevice] = [:]
   private var connections: [UUID: ConnectionState] = [:]
@@ -383,6 +387,7 @@ public final class BluetoothDevices {
     cyclingReadings[id, default: CyclingSensorReadings()].receive(
       data, from: characteristic, at: date)
     startExpiringReadings()
+    onCyclingActivity?()
   }
 
   /// Applies `change` to the control of trainer `id`, and writes the command it returns.

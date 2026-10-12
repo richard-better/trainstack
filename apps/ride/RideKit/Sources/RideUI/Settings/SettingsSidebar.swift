@@ -32,6 +32,8 @@ struct SettingsSidebar: View {
         .padding(.leading, 24)
         Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           .tag(SettingsPage.devices)
+        Label("Account", systemImage: "person.crop.circle")
+          .tag(SettingsPage.account)
       } header: {
         Text("Settings").font(.title3).bold().foregroundStyle(.primary)
       }

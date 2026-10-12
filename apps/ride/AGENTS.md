@@ -15,7 +15,9 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
   (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`) and
   `Shared` for what several use, with one type per file. `RideWatchUI` is the watch app,
-  `RideLink` what the phone and watch send each other, and `RideStyle` the zone colours both
+  `RideLink` what the phone and watch send each other, `RideStrava` the TrainStack account (Sign in with Apple)
+  and sending rides to Strava through the hosted API, which holds Strava's tokens (see
+  `docs/deployment.md`), and `RideStyle` the zone colours both
   apps share.
 
 The watch runs a HealthKit workout session mirrored to the iPhone: it sends heart rate, and
@@ -23,6 +25,12 @@ the phone sends back a `RideGlance` each second. The iPhone passes watch heart r
 standard Bluetooth heart rate sensor (`HeartRateRelay`) with a Ride service beside it. Ride
 on the Mac connects to that service during a ride (`WatchRelayReceiver`) without pairing. A
 paired chest strap (`BluetoothDevices`) wins over the watch while it keeps reporting.
+
+While a ride is on, `KeepAwake` stops the screen locking (and App Nap on the Mac). The
+`bluetooth-central` background mode keeps the trainer connected with the app in the background,
+and iOS stops timers there, so the trainer's measurements also move `RideController` on. If a
+paired trainer disconnects mid ride the ride pauses, and the rider resumes it once the trainer is
+back.
 
 `Ride/` is a folder-synchronized group, so adding or removing files there does not touch
 `project.pbxproj`. Edit the project file only for target-level changes (capabilities,

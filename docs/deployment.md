@@ -40,6 +40,8 @@ Open [GitHub's environment settings](https://github.com/richard-better/trainstac
 | Variable           | `CLOUDFLARE_ACCOUNT_ID` | `01cc6559c6f0e531712c9262c70af1b1`                                            |
 | Secret             | `CLOUDFLARE_API_TOKEN`  | The account-owned token                                                       |
 | Secret             | `BETTER_AUTH_SECRET`    | A stable random secret of at least 32 characters                              |
+| Variable, optional | `STRAVA_CLIENT_ID`      | The client ID of the TrainStack Ride Strava API application                   |
+| Secret, optional   | `STRAVA_CLIENT_SECRET`  | The client secret of the same Strava API application                          |
 | Secret, optional   | `AXIOM_TOKEN`           | An Axiom provisioning token with dataset and API-token management permissions |
 | Variable, optional | `AXIOM_ORG_ID`          | The target Axiom organization ID, if the token requires one                   |
 
@@ -52,6 +54,37 @@ openssl rand -base64 48 | gh secret set BETTER_AUTH_SECRET --env production --re
 ```
 
 To enter a token without putting it into a command argument, use GitHub's secret form or `gh secret set CLOUDFLARE_API_TOKEN --env production --repo richard-better/trainstack` and its interactive input.
+
+### Strava application
+
+These optional credentials let the API Worker sign Ride in to Strava so it can upload rides. Register **TrainStack Ride** at [Strava API settings](https://www.strava.com/settings/api) with authorization callback domain `api.trainstackhq.com` (no scheme or path). Use a square PNG rendered from `hosted/apps/marketing/public/trainstack-logo.svg` as the icon. A Strava subscription is currently required to create an app, and an account can have only one API application.
+
+Riders connect Strava to their TrainStack account, and the API uploads their rides for them. Everything but the callback needs the rider's session token as `Authorization: Bearer <token>`; the app gets that token by signing in (Sign in with Apple, or email and password), and `hosted/apps/api/src/strava/index.ts` serves:
+
+- `POST /strava/connect` takes `{ "code_challenge": "<SHA-256 of a secret verifier, base64url>" }` and returns the Strava address to open in a web authentication session, with signed state. It asks only for the `activity:write` scope.
+- `GET /strava/callback` (called by Strava's page) keeps the rider's tokens, encrypted, against that sign-in and redirects to `trainstackride://strava?connected=1`, or `?error=` (`access_denied`, `insufficient_scope`, `exchange_failed` or `strava_not_configured`). Nothing secret is in the redirect, and it connects nothing by itself.
+- `POST /strava/connect/complete` takes `{ "code_verifier": "..." }`, the verifier behind the challenge, and turns the finished sign-in into the account's connection. Only the app that started the sign-in has the verifier, so a state that leaks cannot be used to link someone else's Strava to an account.
+- `GET /strava` returns `{ connected, athleteName }`, and `DELETE /strava` tells Strava and forgets the tokens.
+- `POST /strava/uploads?name=&fileName=` takes the FIT file as the body (up to 10 MB, read as a stream and never buffered past the limit), hands it to Strava as an indoor trainer ride and returns `{ id, status }`. `GET /strava/uploads/:id` returns `status` `processing`, `ready` (with `activityId`) or `error` (with `error`, and `duplicateOf` when Strava already has the ride).
+
+Strava allows the whole app 200 requests per 15 minutes and counts them by athlete, so the API keeps its own budgets in the `strava_budget` table: 30 requests per athlete (each request to Strava counts, including a token refresh and a retry behind a single call), 10 starts of connecting per account, and 60 code exchanges for the whole app. They are taken in one statement, so requests that arrive together cannot exceed them, and they belong to the Strava athlete rather than the account, so extra accounts do not add budget. A Strava athlete is connected to one account at a time. Another account that connects the same athlete gets `409 athlete_in_use` while Strava still accepts the first one's tokens (checked with a refresh), so a rider cannot be evicted by someone who tricked them into approving. The rider can always take the athlete back by removing Ride in Strava's settings, which makes Strava refuse the holder's tokens, and then connecting again. Only accounts made with Sign in with Apple can start connecting (`403 apple_account_required` otherwise), because email accounts are free to make in bulk and every sign-in costs Strava's shared limits. A sign-in gets one try with Strava, whatever its callback carries. Anything over a budget gets `429 rate_limited`. The app checks an upload every three seconds at most.
+
+Failures are `409 not_connected` (no connection, or the rider revoked Ride in Strava, which also forgets it), `429 rate_limited` and `502 strava_unavailable`.
+
+Tokens are stored in the `strava_connection` table, encrypted with AES-GCM under a key derived from `BETTER_AUTH_SECRET`, so a copy of the database is no use on its own. Changing that secret signs everyone out and makes riders connect Strava again; the stored tokens become unreadable, and the API keeps such a connection rather than hand its athlete to anyone, so clear it with `DELETE FROM strava_connection` in D1 after a rotation. Deleting an account deletes its connection.
+
+Automatic account linking is off, so signing in with Apple never joins an existing email account, which could have been registered by someone else without verifying the address. Sign in with Apple needs no secret: the app sends the identity token Apple gives it and the API checks it against Apple's keys, with the bundle ID `com.trainstackhq.ride` as the audience. Enable the Sign in with Apple capability on that App ID. Revoking a rider's Apple tokens on account deletion, which App Review also expects once Ride ships on the App Store, is not done yet.
+
+The workflow passes the GitHub `production` variable and secret to Alchemy through `hosted/infra/.env.schema`. The API receives a plain ID binding and a redacted secret binding, accessed through `ENV.STRAVA_CLIENT_ID` and `ENV.STRAVA_CLIENT_SECRET` from `hosted/apps/api/src/env.server.ts`. Missing values default to empty strings so deployment works before registration. Configure both before enabling Strava features.
+
+```bash
+gh variable set STRAVA_CLIENT_ID --env production --repo richard-better/trainstack --body '<CLIENT_ID>'
+gh secret set STRAVA_CLIENT_SECRET --env production --repo richard-better/trainstack
+```
+
+The second command prompts for the client secret without putting it in shell history. For rotation, rotate the secret in Strava's API settings, replace the GitHub secret, and redeploy the current `main` revision. Update the ID too if replacing the application. For local deployment, use the ignored `hosted/apps/api/.env`.
+
+New apps start with only their owner's athlete account and default overall limits of 200 requests per 15 minutes and 2,000 per day. Strava now offers a self-service dashboard upgrade to 10 athletes, with overall limits of 400 per 15 minutes and 4,000 per day. Further capacity requires the [Developer Program review form](https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8), including screenshots of every place Strava data appears and the **Connect with Strava** button. Follow the [brand guidelines](https://developers.strava.com/guidelines/) for the button and **Powered by Strava** attribution (the guidelines also allow **Compatible with Strava**). Capacity and rate increases are subject to review and are not guaranteed; see [rate limits](https://developers.strava.com/docs/rate-limits/) and [getting started](https://developers.strava.com/docs/getting-started/). Uploads need the OAuth scope [`activity:write`](https://developers.strava.com/docs/authentication/).
 
 ## First deployment
 

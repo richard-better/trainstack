@@ -1,4 +1,5 @@
 import RideData
+import RideStrava
 import SwiftUI
 
 /// A finished ride: when it happened, the headline numbers, the effort over time, and zones.
@@ -9,7 +10,12 @@ struct ActivityDetailView: View {
   @State private var isConfirmingRemove = false
   /// Why the last export failed, while it is shown.
   @State private var exportError: String?
+  /// How sending the ride to Strava ended, while it is shown.
+  @State private var stravaOutcome: StravaOutcome?
+  @State private var isSendingToStrava = false
   @Environment(RiderSettingsStore.self) private var store
+  @Environment(TrainStackAccount.self) private var account
+  @Environment(\.openURL) private var openURL
 
   private var recording: RideRecording { ride.recording }
 
@@ -60,15 +66,54 @@ struct ActivityDetailView: View {
     } message: { error in
       Text(error)
     }
+    .alert(
+      stravaOutcome?.title ?? "", isPresented: stravaOutcomeShown, presenting: stravaOutcome
+    ) { outcome in
+      if let url = outcome.activityURL {
+        Button("View on Strava") { openURL(url) }
+      }
+      Button("OK") {}
+    } message: { outcome in
+      Text(outcome.message)
+    }
   }
 
   @ViewBuilder private var moreActions: some View {
+    Button("Send to Strava", systemImage: "arrow.up.forward.app", action: sendToStrava)
+      .disabled(isSendingToStrava)
     Button("Export FIT…", systemImage: "square.and.arrow.down", action: export)
     Divider()
     Button("Remove from History", systemImage: "trash", role: .destructive, action: confirmRemove)
   }
 
   private func export() { isExporting = true }
+
+  private var stravaOutcomeShown: Binding<Bool> {
+    Binding(get: { stravaOutcome != nil }, set: { if !$0 { stravaOutcome = nil } })
+  }
+
+  /// Sends the ride to Strava, if the rider has set that up in Settings.
+  private func sendToStrava() {
+    guard account.isSignedIn, account.isStravaConnected else {
+      stravaOutcome = .failed(
+        account.isSignedIn
+          ? StravaError.notConnected.localizedDescription
+          : StravaError.signedOut.localizedDescription)
+      return
+    }
+    Task {
+      isSendingToStrava = true
+      defer { isSendingToStrava = false }
+      do {
+        stravaOutcome = .sent(try await account.upload(ride).url)
+      } catch StravaError.duplicate(let activityID) {
+        stravaOutcome = .alreadyThere(
+          activityID.flatMap { URL(string: "https://www.strava.com/activities/\($0)") })
+      } catch {
+        stravaOutcome = .failed(error.localizedDescription)
+      }
+    }
+  }
 
   private func confirmRemove() { isConfirmingRemove = true }
 
@@ -105,5 +150,6 @@ struct ActivityDetailView: View {
     }
   }
   .environment(RiderSettingsStore.sample)
+  .environment(TrainStackAccount.sample)
   .frame(width: 800, height: 760)
 }

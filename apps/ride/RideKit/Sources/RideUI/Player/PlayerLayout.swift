@@ -11,7 +11,13 @@ struct PlayerLayout: View {
       VStack(alignment: .leading, spacing: 8) {
         PlayerChartHeader(controller: controller)
         WorkoutProgressChart(session: session)
-          .overlay { if session.isPaused { PausedBadge() } }
+          .overlay {
+            if let message = controller.trainerNotice
+              ?? (session.isPaused ? PlayerBadge.paused : nil)
+            {
+              PlayerBadge(message: message)
+            }
+          }
       }
       .padding(.horizontal, Design.wideContentMargin)
       .padding(.top, 16)

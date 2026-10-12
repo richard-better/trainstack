@@ -9,6 +9,7 @@ struct SettingsPageView: View {
     case .zones(let scope): ZonesPage(scope: scope)
     case .ftpTests(let scope): FTPTestsView(scope: scope)
     case .devices: DevicesView()
+    case .account: AccountSettingsView()
     }
   }
 }

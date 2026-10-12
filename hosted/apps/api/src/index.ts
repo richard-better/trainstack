@@ -13,7 +13,8 @@ import { cors } from "hono/cors";
 import { createContext } from "./context";
 import { ENV } from "./env.server";
 import { appRouter } from "./router";
-import { createAuth } from "./services";
+import { createAuth, getDb } from "./services";
+import { stravaRoutes } from "./strava";
 
 initLogger({
   env: { service: "trainstack-api" },
@@ -63,6 +64,16 @@ app.get("/health", async (c) => {
     return c.json({ status: "unavailable" }, 503);
   }
 });
+
+app.route(
+  "/strava",
+  stravaRoutes({
+    env: ENV,
+    database: getDb,
+    userId: async (request) =>
+      (await (await createAuth()).api.getSession({ headers: request.headers }))?.user.id,
+  }),
+);
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 

@@ -4,7 +4,7 @@ import * as Output from "alchemy/Output";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
-import type * as Redacted from "effect/Redacted";
+import * as Redacted from "effect/Redacted";
 import "varlock/auto-load";
 
 import { Observability } from "./observability";
@@ -56,6 +56,12 @@ export const server = Cloudflare.Worker("server", {
       ),
     ),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
+    STRAVA_CLIENT_ID: Output.fromEffect(
+      Config.String("STRAVA_CLIENT_ID").pipe(Config.withDefault(""), Effect.orDie),
+    ),
+    STRAVA_CLIENT_SECRET: Config.Redacted("STRAVA_CLIENT_SECRET").pipe(
+      Config.withDefault(Redacted.make("")),
+    ),
     BETTER_AUTH_URL: Cloudflare.Worker.URL,
     ...observabilityBindings,
   },

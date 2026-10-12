@@ -2,6 +2,10 @@
 
 This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Astro, Hono, ORPC, and more.
 
+## TrainStack Ride
+
+Ride is the native app for iPhone, iPad, Mac and Apple Watch, in [`apps/ride`](apps/ride). It controls a smart trainer through structured workouts and records the ride as a `.fit` file. It is in early alpha: see [the alpha guide](docs/ride-alpha.md) for what works, [`apps/ride/AGENTS.md`](apps/ride/AGENTS.md) to build it, and [the release guide](docs/ride-release.md) to ship a TestFlight build. The rest of this README covers the hosted website, API and account app.
+
 ## Features
 
 - **TypeScript** - For type safety and improved developer experience

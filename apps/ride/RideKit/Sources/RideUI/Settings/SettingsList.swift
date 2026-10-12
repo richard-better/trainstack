@@ -21,6 +21,9 @@ struct SettingsList: View {
           NavigationLink(value: SettingsPage.devices) {
             Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           }
+          NavigationLink(value: SettingsPage.account) {
+            Label("Account", systemImage: "person.crop.circle")
+          }
         }
       }
       .navigationTitle("Settings")

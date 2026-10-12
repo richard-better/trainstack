@@ -1,17 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import { Miniflare } from "miniflare";
-import { rolldown } from "rolldown";
+import { api, migrate, origin, startWorker } from "./helpers/worker.mjs";
 
+let worker;
 let runtime;
-let directory;
-const origin = "https://trainstackhq.com";
-const api = "https://api.trainstackhq.com";
 
 function rpcClient(cookie) {
   return createORPCClient(
@@ -33,47 +27,14 @@ function rpcClient(cookie) {
 
 before(
   async () => {
-    directory = await mkdtemp(join(tmpdir(), "trainstack-worker-"));
-    const bundle = await rolldown({
-      input: "hosted/apps/api/src/index.ts",
-      platform: "node",
-      external: ["cloudflare:workers", /^node:/],
-      resolve: { conditionNames: ["workerd", "worker", "browser", "import", "default"] },
-    });
-    try {
-      await bundle.write({
-        file: join(directory, "worker.mjs"),
-        format: "esm",
-        codeSplitting: false,
-      });
-    } finally {
-      await bundle.close();
-    }
-    runtime = new Miniflare({
-      modulesRoot: directory,
-      modules: [{ type: "ESModule", path: join(directory, "worker.mjs") }],
-      compatibilityDate: "2026-07-30",
-      compatibilityFlags: ["nodejs_compat"],
-      cf: false,
-      d1Databases: ["DB"],
-      bindings: {
-        NODE_ENV: "test",
-        BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
-        BETTER_AUTH_URL: api,
-        CORS_ORIGIN: origin,
-        AXIOM_API_KEY: "",
-        AXIOM_DATASET: "",
-        AXIOM_EDGE_URL: "",
-      },
-    });
-    await runtime.ready;
+    worker = await startWorker();
+    runtime = worker.runtime;
   },
   { timeout: 60_000 },
 );
 
 after(async () => {
-  await runtime?.dispose();
-  if (directory) await rm(directory, { recursive: true, force: true });
+  await worker?.dispose();
 });
 
 test("health fails before migrations, without exposing database errors", async () => {
@@ -84,19 +45,7 @@ test("health fails before migrations, without exposing database errors", async (
 });
 
 test("committed migrations support health and authentication on D1 without Axiom", async () => {
-  const db = await runtime.getD1Database("DB");
-  const migrations = "hosted/apps/api/src/db/migrations";
-  for (const entry of (await readdir(migrations, { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory())
-    .sort((a, b) => a.name.localeCompare(b.name))) {
-    const sql = await readFile(join(migrations, entry.name, "migration.sql"), "utf8");
-    await db.batch(
-      sql
-        .split("--> statement-breakpoint")
-        .filter((sql) => sql.trim())
-        .map((sql) => db.prepare(sql)),
-    );
-  }
+  await migrate(runtime);
 
   const health = await runtime.dispatchFetch(`${api}/health`, { headers: { Origin: origin } });
   assert.equal(health.status, 200);
@@ -179,4 +128,49 @@ test("OpenAPI reference describes contract outputs and authentication errors", a
   const schema = privateData[200].content["application/json"].schema;
   assert.deepEqual(schema.required, ["message", "user"]);
   assert.equal(schema.properties.user.properties.email.type, "string");
+});
+
+test("a native app signs in with a bearer token and can delete its account", async () => {
+  const signup = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: origin },
+    body: JSON.stringify({
+      name: "Native User",
+      email: "native@example.com",
+      password: "native-test-password-123",
+    }),
+  });
+  assert.equal(signup.status, 200, await signup.clone().text());
+  const token = signup.headers.get("set-auth-token");
+  assert.ok(token, "the session token is exposed for the app to keep");
+
+  const session = await runtime.dispatchFetch(`${api}/api/auth/get-session`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  assert.equal((await session.json()).user.email, "native@example.com");
+  const anonymous = await runtime.dispatchFetch(`${api}/api/auth/get-session`);
+  assert.equal(await anonymous.json(), null);
+
+  const deleted = await runtime.dispatchFetch(`${api}/api/auth/delete-user`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ password: "native-test-password-123" }),
+  });
+  assert.equal(deleted.status, 200, await deleted.clone().text());
+  const after = await runtime.dispatchFetch(`${api}/api/auth/get-session`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  assert.equal(await after.json(), null);
+});
+
+test("Sign in with Apple is offered to the app and refuses a token that is not Apple's", async () => {
+  const response = await runtime.dispatchFetch(`${api}/api/auth/sign-in/social`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider: "apple", idToken: { token: "not-a-jwt" } }),
+  });
+  assert.ok(response.status >= 400 && response.status < 500, `status ${response.status}`);
+  const body = await response.json();
+  assert.notEqual(body.code, "PROVIDER_NOT_FOUND");
+  assert.ok(!response.headers.get("set-auth-token"));
 });
