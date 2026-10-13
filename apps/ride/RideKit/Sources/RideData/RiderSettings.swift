@@ -35,15 +35,34 @@ public struct FTPTest: Codable, Equatable, Identifiable, Sendable {
   }
 }
 
-/// Everything a rider has set about their zones, as saved on this device.
+/// Everything a rider has set about themselves and their zones, as saved on this device.
 public struct RiderSettings: Codable, Equatable, Sendable {
   public var history: ZoneHistory
   /// Oldest first.
   public private(set) var ftpTests: [FTPTest]
+  /// Kilograms, which sets how fast the rider goes for their power.
+  public private(set) var weight = Self.defaultWeight
+
+  public static let defaultWeight = 75.0
+  public static let weightRange = 30.0...200.0
 
   public init(history: ZoneHistory = ZoneHistory(), ftpTests: [FTPTest] = []) {
     self.history = history
     self.ftpTests = ftpTests.sorted { $0.date < $1.date }
+  }
+
+  /// Settings saved before rider weight have the default weight.
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    history = try container.decode(ZoneHistory.self, forKey: .history)
+    ftpTests = try container.decode([FTPTest].self, forKey: .ftpTests)
+    weight = try container.decodeIfPresent(Double.self, forKey: .weight) ?? Self.defaultWeight
+  }
+
+  /// Sets the rider's weight, unless it is outside `weightRange`.
+  public mutating func setWeight(_ weight: Double) {
+    guard Self.weightRange.contains(weight) else { return }
+    self.weight = weight
   }
 
   public func ftpTests(in scope: ZoneScope) -> [FTPTest] {

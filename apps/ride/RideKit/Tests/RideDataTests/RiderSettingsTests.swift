@@ -23,8 +23,30 @@ struct RiderSettingsTests {
     settings.history.record([.threshold(.ftp, scope: .all, value: 220)], on: .now)
     settings.add(
       FTPTest(date: .now, kind: .ramp, ftp: 230, scope: .all), updatesFTP: false)
+    settings.setWeight(68.5)
     settings.save(to: defaults)
     #expect(RiderSettings.load(from: defaults) == settings)
+  }
+
+  @Test func weighsTheDefaultUntilSet() {
+    var settings = RiderSettings()
+    #expect(settings.weight == 75)
+    settings.setWeight(82)
+    settings.setWeight(5)
+    #expect(settings.weight == 82)
+  }
+
+  @Test func loadsSettingsSavedBeforeRiderWeightWithTheDefault() throws {
+    let defaults = try freshDefaults()
+    var settings = RiderSettings()
+    settings.history.record([.threshold(.ftp, scope: .all, value: 220)], on: .now)
+    var saved = try #require(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(settings)) as? [String: Any])
+    saved["weight"] = nil
+    defaults.set(try JSONSerialization.data(withJSONObject: saved), forKey: "riderSettings")
+    let loaded = RiderSettings.load(from: defaults)
+    #expect(loaded.weight == 75)
+    #expect(loaded.history.current.value(of: .ftp, in: .all) == 220)
   }
 
   @Test func bringsOverTheValuesSavedBeforeZoneHistory() throws {
