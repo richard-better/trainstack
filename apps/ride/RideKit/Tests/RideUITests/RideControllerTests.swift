@@ -201,6 +201,29 @@ struct RideControllerTests {
     #expect(glances.first?.workoutName == "Recovery 30")
   }
 
+  @Test func keepsTheTotalsUpToDateAsTheRideMovesOn() throws {
+    let controller = RideController(template: template, ftp: 200, simulated: true)
+    for _ in 0..<90 { controller.tick(seconds: 1) }
+    #expect(controller.totals == RideTotals(session: controller.session, ftp: 200))
+    #expect(controller.totals.normalizedPower != nil)
+    #expect(controller.totals.intervalAveragePower != nil)
+
+    controller.togglePause()
+    let paused = controller.totals
+    for _ in 0..<5 { controller.tick(seconds: 1) }
+    #expect(controller.totals == paused)
+    controller.togglePause()
+
+    controller.skipInterval()
+    #expect(controller.totals.intervalAveragePower == nil)
+    #expect(controller.totals.averagePower == paused.averagePower)
+
+    // A ride carried on starts with what it had added up to.
+    let resumed = RideController(
+      template: template, ftp: 200, session: controller.session, simulated: true)
+    #expect(resumed.totals == controller.totals)
+  }
+
   @Test func recordsLivePowerAndCadenceAndRefreshesThemWhilePaused() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(

@@ -15,6 +15,9 @@ final class RideController {
   let heartRateZones: ZoneSet?
   /// How power is shown, here and on the watch.
   var powerDisplay = PowerDisplay.standard
+  /// The ride's totals so far, worked out as the ride moves on rather than each time the player
+  /// draws.
+  private(set) var totals = RideTotals()
   /// Called after each second of the ride, to keep the watch up to date.
   @ObservationIgnored var onTick: (() -> Void)?
   @ObservationIgnored private let heartRate: HeartRateFeed?
@@ -45,6 +48,7 @@ final class RideController {
     self.session = session ?? RideSession(workout: template.workout(ftp: ftp))
     simulator = simulated ? SimulatedTrainer() : nil
     trainerWasConnected = isTrainerConnected == true
+    updateTotals()
   }
 
   isolated deinit { clock?.cancel() }
@@ -99,10 +103,9 @@ final class RideController {
     }
     let recorded = session.samples.count
     session.advance(by: seconds, reading: reading)
-    journal?.append(
-      .init(
-        state: session.state, sample: session.samples.count > recorded ? session.samples.last : nil)
-    )
+    let sample = session.samples.count > recorded ? session.samples.last : nil
+    if sample != nil { updateTotals() }
+    journal?.append(.init(state: session.state, sample: sample))
     updateTrainer(at: date)
     onTick?()
   }
@@ -167,7 +170,12 @@ final class RideController {
 
   func skipInterval() {
     session.skipInterval()
+    updateTotals()
     updateTrainer()
+  }
+
+  private func updateTotals() {
+    totals = RideTotals(session: session, ftp: ftp)
   }
 
   func adjust(by steps: Int) {
