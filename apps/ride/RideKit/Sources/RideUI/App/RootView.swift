@@ -48,7 +48,10 @@ public struct RootView: View {
     .alert(
       "Pick Up Your Ride?", isPresented: interruptedShown, presenting: launcher.interrupted
     ) { _ in
-      Button("Resume") { launcher.resumeInterrupted(heartRateZones: settings.heartRateZones) }
+      Button("Resume") {
+        launcher.resumeInterrupted(
+          heartRateZones: settings.heartRateZones, riderWeight: settings.weight)
+      }
       Button("Save What I Rode") { launcher.saveInterrupted(to: library) }
       Button("Discard", role: .destructive, action: launcher.discardInterrupted)
     } message: { interrupted in
@@ -66,7 +69,8 @@ public struct RootView: View {
     }
     #if DEBUG
       .task {
-        launcher.startLaunchRide(ftp: settings.ftp, heartRateZones: settings.heartRateZones)
+        launcher.startLaunchRide(
+          ftp: settings.ftp, heartRateZones: settings.heartRateZones, riderWeight: settings.weight)
       }
     #endif
   }

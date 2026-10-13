@@ -18,7 +18,11 @@ struct WorkoutGrid: View {
             select: { state.selection = template.id },
             open: { openWorkout(template) },
             start: settings.ftp.map { ftp in
-              { launcher.start(template, ftp: ftp, heartRateZones: settings.heartRateZones) }
+              {
+                launcher.start(
+                  template, ftp: ftp, heartRateZones: settings.heartRateZones,
+                  riderWeight: settings.weight)
+              }
             })
         }
       }
