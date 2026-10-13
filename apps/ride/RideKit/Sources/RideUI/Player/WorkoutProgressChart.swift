@@ -2,11 +2,13 @@ import Charts
 import RideData
 import SwiftUI
 
-/// The workout's intervals shaded as done, current and still to come, with power and heart
-/// rate drawn over the part already ridden. Watts read off the leading axis and heart rate off
-/// the trailing one.
+/// The workout's intervals in their zone colours, shaded as done, current and still to come,
+/// with power and heart rate drawn over the part already ridden. Watts read off the leading
+/// axis and heart rate off the trailing one.
 struct WorkoutProgressChart: View {
   let session: RideSession
+  /// The FTP the workout's targets were set from, which places them in zones.
+  let ftp: Int?
   /// The rider's heart rate zones, which steady the heart rate axis before much is recorded.
   let heartRateZones: ZoneSet?
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -21,7 +23,8 @@ struct WorkoutProgressChart: View {
           yStart: .value("Floor", 0),
           yEnd: .value("Target", session.adjusted(interval.plannedPower))
         )
-        .foregroundStyle(Color.primary.opacity(opacity(of: interval)))
+        .foregroundStyle(
+          WorkoutTargetShade(interval: interval, position: session.position, ftp: ftp).color)
       }
       ForEach(trace) { point in
         if let power = point.sample.power {
@@ -88,13 +91,6 @@ struct WorkoutProgressChart: View {
     .accessibilityLabel("Workout progress")
     .accessibilityValue(
       "\(session.position.spokenString) of \(session.duration.spokenString) done")
-  }
-
-  /// Intervals already ridden are shaded darker than those to come, and the current one
-  /// darker still.
-  private func opacity(of interval: RideSession.Interval) -> Double {
-    if interval.end <= session.position { return 0.16 }
-    return interval.start <= session.position ? 0.32 : 0.08
   }
 
   /// The recorded samples, thinned to about one every few seconds on long rides so the chart
