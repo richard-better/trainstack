@@ -24,7 +24,7 @@ struct PlayerPrimaryStats: View {
       value: session.latest.heartRate.map(String.init) ?? "—", unit: "bpm",
       detail: session.latest.heartRate == nil ? "" : session.latest.heartRateSource?.name ?? ""
     ) {
-      LegendSwatch(title: "Heart rate", color: .red, height: 2)
+      PlayerHeartRateLabel(zone: controller.heartRateZone)
     }
     if dynamicTypeSize.isAccessibilitySize {
       VStack(alignment: .leading, spacing: 16) {

@@ -157,6 +157,39 @@ struct RideControllerTests {
     #expect(controller.session.latest.heartRateSource == .chestStrap)
   }
 
+  @Test func placesHeartRateInTheRidersZones() throws {
+    // Percent of a 186 bpm max: zone 2 ends at 129 and zone 3 starts at 130.
+    let zones = try #require(RiderSettingsStore.sample.heartRateZones)
+    let feed = HeartRateFeed()
+    let controller = RideController(
+      template: template, ftp: 200, heartRateZones: zones, heartRate: feed, simulated: false)
+    let now = Date.now
+    controller.tick(seconds: 1, at: now)
+    #expect(controller.heartRateZone == nil)
+    feed.record(129, from: .chestStrap, at: now)
+    controller.tick(seconds: 1, at: now)
+    #expect(controller.heartRateZone?.label == "2")
+    #expect(controller.heartRateZone?.name == "Aerobic")
+    feed.record(130, from: .chestStrap, at: now)
+    controller.tick(seconds: 1, at: now)
+    #expect(controller.heartRateZone?.label == "3")
+    #expect(controller.heartRateZone?.name == "Tempo")
+  }
+
+  @Test func showsNoHeartRateZoneWithoutThresholds() {
+    let settings = RiderSettingsStore(settings: RiderSettings())
+    #expect(settings.heartRateZones == nil)
+    let feed = HeartRateFeed()
+    let controller = RideController(
+      template: template, ftp: 200, heartRateZones: settings.heartRateZones, heartRate: feed,
+      simulated: false)
+    let now = Date.now
+    feed.record(150, from: .chestStrap, at: now)
+    controller.tick(seconds: 1, at: now)
+    #expect(controller.session.latest.heartRate == 150)
+    #expect(controller.heartRateZone == nil)
+  }
+
   @Test func reportsEachSecondForTheWatch() {
     let controller = RideController(template: template, ftp: 200, simulated: true)
     var glances: [RideGlance] = []
