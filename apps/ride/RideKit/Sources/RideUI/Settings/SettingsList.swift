@@ -18,6 +18,9 @@ struct SettingsList: View {
           AddSportMenu { path.append(.zones(.sport($0))) }
         }
         Section {
+          NavigationLink(value: SettingsPage.rider) {
+            Label("Rider", systemImage: "figure.outdoor.cycle")
+          }
           NavigationLink(value: SettingsPage.devices) {
             Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           }

@@ -11,24 +11,24 @@ public enum TrainerMode: String, CaseIterable, Codable, Sendable {
 }
 
 /// One moment of live data from the trainer and sensors. Any of it can be missing.
+///
+/// There is no speed: what a trainer reports depends on its gear in ERG mode, and many do not
+/// report it at all, so the session works it out from power instead.
 public struct TrainerReading: Equatable, Sendable {
   public var power: Int?
   public var cadence: Int?
   public var heartRate: Int?
   /// Where `heartRate` came from.
   public var heartRateSource: HeartRateSource?
-  /// Metres per second.
-  public var speed: Double?
 
   public init(
     power: Int? = nil, cadence: Int? = nil, heartRate: Int? = nil,
-    heartRateSource: HeartRateSource? = nil, speed: Double? = nil
+    heartRateSource: HeartRateSource? = nil
   ) {
     self.power = power
     self.cadence = cadence
     self.heartRate = heartRate
     self.heartRateSource = heartRateSource
-    self.speed = speed
   }
 }
 
@@ -74,6 +74,8 @@ public struct RideSession: Sendable {
   public private(set) var samples: [LiveSample] = []
   /// Metres.
   public private(set) var distance: Double = 0
+  /// The rider on the virtual road, which their power moves along.
+  private var bike: VirtualBike
 
   /// Where the rider is and how the trainer is set: all of a session that is not its samples,
   /// which is what a ride needs saved to be picked up again.
@@ -88,9 +90,13 @@ public struct RideSession: Sendable {
     public var distance: Double
   }
 
-  public init(workout: Workout, startDate: Date = .now) {
+  /// A session for a rider of `riderWeight` kilograms, which sets their speed for their power.
+  public init(
+    workout: Workout, startDate: Date = .now, riderWeight: Double = RiderSettings.defaultWeight
+  ) {
     self.workout = workout
     self.startDate = startDate
+    bike = VirtualBike(riderWeight: riderWeight)
     var start: TimeInterval = 0
     intervals = workout.steps.enumerated().map { index, step in
       defer { start += step.duration }
@@ -99,9 +105,13 @@ public struct RideSession: Sendable {
     }
   }
 
-  /// A session carried on from `state`, with the `samples` already recorded.
-  public init(workout: Workout, startDate: Date, state: State, samples: [LiveSample]) {
-    self.init(workout: workout, startDate: startDate)
+  /// A session carried on from `state`, with the `samples` already recorded. The bike starts
+  /// from rest.
+  public init(
+    workout: Workout, startDate: Date, riderWeight: Double = RiderSettings.defaultWeight,
+    state: State, samples: [LiveSample]
+  ) {
+    self.init(workout: workout, startDate: startDate, riderWeight: riderWeight)
     elapsed = state.elapsed
     position = min(state.position, duration)
     isPaused = state.isPaused
@@ -120,6 +130,13 @@ public struct RideSession: Sendable {
   }
 
   public var duration: TimeInterval { intervals.last?.end ?? 0 }
+
+  /// Metres per second along the virtual road.
+  public var speed: Double { bike.speed }
+
+  /// The gradient of the virtual road, as a fraction: the set grade in slope mode, and flat
+  /// otherwise.
+  private var roadGrade: Double { mode == .slope ? grade / 100 : 0 }
 
   /// The interval being ridden, or nil once the workout is done.
   public var currentInterval: Interval? {
@@ -162,13 +179,13 @@ public struct RideSession: Sendable {
     let target = targetPower
     elapsed += duration
     position = min(position + duration, self.duration)
-    distance += (reading.speed ?? 0) * duration
+    distance += bike.ride(power: Double(reading.power ?? 0), grade: roadGrade, for: duration)
     samples.append(
       LiveSample(
         position: position,
         sample: .init(
           elapsed: elapsed, power: reading.power, targetPower: target,
-          heartRate: reading.heartRate, cadence: reading.cadence, speed: reading.speed,
+          heartRate: reading.heartRate, cadence: reading.cadence, speed: speed,
           distance: distance)))
   }
 

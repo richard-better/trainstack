@@ -41,10 +41,12 @@ final class RideLauncher {
   }
 
   /// Starts `template` with targets from `ftp`, unless a ride is already on or one is waiting
-  /// to be dealt with.
-  func start(_ template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet?) {
+  /// to be dealt with. `riderWeight` sets the rider's speed for their power.
+  func start(
+    _ template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet?, riderWeight: Double
+  ) {
     guard ride == nil, interrupted == nil else { return }
-    let session = RideSession(workout: template.workout(ftp: ftp))
+    let session = RideSession(workout: template.workout(ftp: ftp), riderWeight: riderWeight)
     let journal = RideJournal(
       directory: journalDirectory,
       header: .init(template: template, ftp: ftp, startDate: session.startDate))
@@ -99,14 +101,15 @@ final class RideLauncher {
   }
 
   /// Carries on the interrupted ride, paused where it stopped.
-  func resumeInterrupted(heartRateZones: ZoneSet?) {
+  func resumeInterrupted(heartRateZones: ZoneSet?, riderWeight: Double) {
     guard ride == nil, let interrupted else { return }
     self.interrupted = nil
     begin(
       RideController(
         template: interrupted.header.template, ftp: interrupted.header.ftp,
         heartRateZones: heartRateZones, heartRate: heartRate, devices: devices,
-        session: interrupted.session(), journal: RideJournal(resuming: journalDirectory),
+        session: interrupted.session(riderWeight: riderWeight),
+        journal: RideJournal(resuming: journalDirectory),
         simulated: simulated))
   }
 

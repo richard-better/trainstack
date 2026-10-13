@@ -107,7 +107,7 @@ struct InterruptedRideTests {
       try crashedRide(10, in: directory)
       let launcher = launcher(journalDirectory: directory)
       launcher.checkForInterruptedRide()
-      launcher.start(template, ftp: 200, heartRateZones: nil)
+      launcher.start(template, ftp: 200, heartRateZones: nil, riderWeight: 75)
       #expect(launcher.ride == nil)
       #expect(RideJournal.recover(from: directory)?.samples.count == 10)
     }

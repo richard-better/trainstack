@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import RideData
 
-/// The rider's zone settings as the app reads and edits them. Edits take effect today, are saved
+/// The rider's settings as the app reads and edits them. Edits take effect today, are saved
 /// as they are made, and a threshold outside its allowed range is ignored.
 @Observable
 final class RiderSettingsStore {
@@ -29,6 +29,15 @@ final class RiderSettingsStore {
 
   /// The heart rate zones an indoor ride is shown in today.
   var heartRateZones: ZoneSet? { current.zones(for: .heartRate, in: .cycling) }
+
+  /// The rider's weight in kilograms. A weight outside `RiderSettings.weightRange` is ignored.
+  var weight: Double {
+    get { settings.weight }
+    set {
+      settings.setWeight(newValue)
+      save()
+    }
+  }
 
   var historyEntries: [ZoneHistory.Entry] { settings.history.entries }
 

@@ -39,13 +39,14 @@ public final class RideJournal {
 
     public var name: String { header.template.name }
 
-    /// The ride as it stood, paused so the rider can pick it up when ready.
-    public func session() -> RideSession {
+    /// The ride as it stood, paused so the rider can pick it up when ready, for a rider of
+    /// `riderWeight` kilograms.
+    public func session(riderWeight: Double = RiderSettings.defaultWeight) -> RideSession {
       var state = state
       state.isPaused = true
       return RideSession(
         workout: header.template.workout(ftp: header.ftp), startDate: header.startDate,
-        state: state, samples: samples)
+        riderWeight: riderWeight, state: state, samples: samples)
     }
   }
 

@@ -30,6 +30,8 @@ struct SettingsSidebar: View {
             .foregroundStyle(.secondary)
         }
         .padding(.leading, 24)
+        Label("Rider", systemImage: "figure.outdoor.cycle")
+          .tag(SettingsPage.rider)
         Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           .tag(SettingsPage.devices)
         Label("Account", systemImage: "person.crop.circle")

@@ -17,7 +17,7 @@ struct PlayerSecondaryStats: View {
         ? "/ \(session.duration.clockString)" : "· \(session.remaining.clockString) left")
     let speed = SmallStat(
       label: "Speed",
-      value: session.latest.speed.map { ($0 * 3.6).formatted(.oneDecimal) } ?? "—",
+      value: (session.speed * 3.6).formatted(.oneDecimal),
       unit: "km/h")
     let distance = SmallStat(
       label: "Distance", value: (session.distance / 1000).formatted(.oneDecimal), unit: "km")

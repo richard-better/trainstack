@@ -85,7 +85,7 @@ struct FITEncoderTests {
       workout: .init(name: "Pair", steps: [.init(duration: 3, targetPower: 150)]), startDate: start)
     for second in 1...3 {
       session.advance(
-        by: 1, reading: .init(power: 140 + second, cadence: 90, heartRate: 120, speed: 8))
+        by: 1, reading: .init(power: 140 + second, cadence: 90, heartRate: 120))
     }
     let decoded = try FITDecoder.decode(FITEncoder.encode(session.recording()))
     #expect(decoded.workoutName == "Pair")
@@ -93,5 +93,9 @@ struct FITEncoderTests {
     #expect(decoded.samples.map(\.power) == [141, 142, 143])
     #expect(decoded.samples.map(\.targetPower) == [150, 150, 150])
     #expect(decoded.summary.duration == 3)
+    // Speed and distance come from power, since the trainer reports none.
+    #expect(abs((decoded.samples.last?.speed ?? 0) - session.speed) < 0.001)
+    #expect(abs((decoded.summary.distance ?? 0) - session.distance) < 0.01)
+    #expect(session.distance > 0)
   }
 }
