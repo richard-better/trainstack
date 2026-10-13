@@ -14,11 +14,24 @@ extension RideRecording {
     return Int(pow(meanOfFourthPowers, 0.25).rounded())
   }
 
+  /// Intensity factor: normalized power as a share of FTP, 1 for riding at FTP. Nil for rides
+  /// under 30 seconds.
+  public func intensityFactor(ftp: Int) -> Double? {
+    guard ftp > 0, let normalized = normalizedPower() else { return nil }
+    return Double(normalized) / Double(ftp)
+  }
+
   /// Training stress score: 100 for an hour at FTP. Nil for rides under 30 seconds.
   public func trainingStressScore(ftp: Int) -> Int? {
-    guard ftp > 0, let normalized = normalizedPower() else { return nil }
-    let intensity = Double(normalized) / Double(ftp)
-    return Int(
-      (summary.duration * Double(normalized) * intensity / (Double(ftp) * 3600) * 100).rounded())
+    guard let intensity = intensityFactor(ftp: ftp) else { return nil }
+    return Int((summary.duration * intensity * intensity / 3600 * 100).rounded())
+  }
+
+  /// The work done, in kilojoules: power over each second of the ride added up. Nil for a ride
+  /// without power.
+  public func work() -> Int? {
+    let perSecond = powerPerSecond()
+    guard !perSecond.isEmpty else { return nil }
+    return Int((Double(perSecond.reduce(0, +)) / 1000).rounded())
   }
 }

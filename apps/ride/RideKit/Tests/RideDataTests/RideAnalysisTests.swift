@@ -88,11 +88,27 @@ struct RideAnalysisTests {
     #expect(try #require(ride.trainingStressScore(ftp: 150)) > 24)
   }
 
+  @Test func anHourAtFTPIsAnIntensityOfOneAndAScoreOfAHundred() {
+    let ride = recording((0..<3600).map { .init(elapsed: Double($0), power: 250) })
+    #expect(ride.normalizedPower() == 250)
+    #expect(ride.intensityFactor(ftp: 250) == 1)
+    #expect(ride.trainingStressScore(ftp: 250) == 100)
+    #expect(ride.intensityFactor(ftp: 0) == nil)
+  }
+
+  @Test func addsUpWorkSecondBySecond() {
+    // A minute at 100 W, then a minute at 300 W: 6 kJ and 18 kJ.
+    let ride = recording((0..<120).map { .init(elapsed: Double($0), power: $0 < 60 ? 100 : 300) })
+    #expect(ride.work() == 24)
+    #expect(recording([.init(elapsed: 0, heartRate: 120)]).work() == nil)
+  }
+
   @Test func hasNoStressForAVeryShortRide() {
     let samples = (0..<10).map { RideRecording.Sample(elapsed: Double($0), power: 200) }
     let ride = RideRecording(startDate: .now, samples: samples, summary: .init(duration: 9))
     #expect(ride.normalizedPower() == nil)
     #expect(ride.trainingStressScore(ftp: 200) == nil)
+    #expect(ride.intensityFactor(ftp: 200) == nil)
   }
 
   private func recording(_ samples: [RideRecording.Sample]) -> RideRecording {
