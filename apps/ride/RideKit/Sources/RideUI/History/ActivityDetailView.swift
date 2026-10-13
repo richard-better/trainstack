@@ -29,9 +29,12 @@ struct ActivityDetailView: View {
           .foregroundStyle(.secondary)
           Text(ride.title).font(.largeTitle).bold()
         }
+        if let template = recording.workoutName.flatMap(WorkoutTemplate.named) {
+          RideWorkoutCard(template: template)
+        }
         RideStatsRow(stats: stats)
         if recording.hasPower || recording.hasHeartRate {
-          ActivityChart(recording: recording)
+          ActivityChart(recording: recording, ftp: store.ftp(for: recording))
         }
         RideBreakdownSection(recording: recording)
       }

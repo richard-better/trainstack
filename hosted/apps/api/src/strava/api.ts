@@ -67,6 +67,7 @@ export function createUpload(
   const form = new FormData();
   form.set("data_type", "fit");
   form.set("name", name);
+  form.set("description", "Recorded with TrainStack Ride");
   form.set("trainer", "1");
   form.set("file", new Blob([fit]), fileName);
   return fetcher(`${API}/uploads`, {
