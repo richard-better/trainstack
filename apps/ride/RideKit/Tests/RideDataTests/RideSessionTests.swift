@@ -10,7 +10,7 @@ struct RideSessionTests {
 
   private func ride(_ session: inout RideSession, seconds: Int, power: Int = 150) {
     for _ in 0..<seconds {
-      session.advance(by: 1, reading: .init(power: power, heartRate: 140, speed: 8))
+      session.advance(by: 1, reading: .init(power: power, heartRate: 140))
     }
   }
 
@@ -134,8 +134,43 @@ struct RideSessionTests {
     #expect(recording.summary.duration == 60)
     #expect(recording.summary.averagePower == 150)
     #expect(recording.summary.maxPower == 200)
-    #expect(recording.summary.distance == 480)
-    #expect(recording.samples.last?.distance == 480)
+    #expect(recording.summary.distance == session.distance)
+    #expect(recording.samples.last?.distance == session.distance)
+    #expect(recording.samples.last?.speed == session.speed)
+  }
+
+  @Test func ridesAsFastAsThePowerMovesTheRider() {
+    var session = RideSession(workout: workout)
+    #expect(session.speed == 0)
+    ride(&session, seconds: 120, power: 115)
+    #expect((26...29).contains(session.speed * 3.6))
+    let distance = session.distance
+    ride(&session, seconds: 60, power: 115)
+    #expect(abs(session.distance - distance - session.speed * 60) < 5)
+  }
+
+  @Test func ridesSlowerUpTheSetGradeInSlopeModeOnly() {
+    var flat = RideSession(workout: workout)
+    var climbing = RideSession(workout: workout)
+    climbing.mode = .slope
+    #expect(climbing.grade == 2)
+    ride(&flat, seconds: 120)
+    ride(&climbing, seconds: 120)
+    #expect(climbing.speed < flat.speed * 0.8)
+    var level = RideSession(workout: workout)
+    level.mode = .level
+    ride(&level, seconds: 120)
+    #expect(level.speed == flat.speed)
+  }
+
+  @Test func aHeavierRiderRidesSlowerUphill() {
+    var light = RideSession(workout: workout, riderWeight: 60)
+    var heavy = RideSession(workout: workout, riderWeight: 90)
+    light.mode = .slope
+    heavy.mode = .slope
+    ride(&light, seconds: 120)
+    ride(&heavy, seconds: 120)
+    #expect(heavy.speed < light.speed)
   }
 
   @Test func simulatedTrainerHoldsTheERGTarget() {
