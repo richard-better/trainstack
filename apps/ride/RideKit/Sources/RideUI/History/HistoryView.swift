@@ -39,7 +39,7 @@ struct HistoryView: View {
             #endif
             .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
         }
-        .environment(\.openWorkout) { workoutPath.append($0) }
+        .environment(\.openWorkout, OpenWorkoutAction { workoutPath.append($0) })
       } else {
         ContentUnavailableView("Select a ride", systemImage: "chart.xyaxis.line")
       }
