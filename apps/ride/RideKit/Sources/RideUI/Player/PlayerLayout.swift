@@ -10,7 +10,7 @@ struct PlayerLayout: View {
     VStack(spacing: 0) {
       VStack(alignment: .leading, spacing: 8) {
         PlayerChartHeader(controller: controller)
-        WorkoutProgressChart(session: session)
+        WorkoutProgressChart(session: session, heartRateZones: controller.heartRateZones)
           .overlay {
             if let message = controller.trainerNotice
               ?? (session.isPaused ? PlayerBadge.paused : nil)

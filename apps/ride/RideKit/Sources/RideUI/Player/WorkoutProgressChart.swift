@@ -3,12 +3,17 @@ import RideData
 import SwiftUI
 
 /// The workout's intervals shaded as done, current and still to come, with power and heart
-/// rate drawn over the part already ridden.
+/// rate drawn over the part already ridden. Watts read off the leading axis and heart rate off
+/// the trailing one.
 struct WorkoutProgressChart: View {
   let session: RideSession
+  /// The rider's heart rate zones, which steady the heart rate axis before much is recorded.
+  let heartRateZones: ZoneSet?
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
+    let scale = scale
+    let hasHeartRate = session.samples.contains { $0.sample.heartRate != nil }
     Chart {
       ForEach(session.intervals) { interval in
         RectangleMark(
@@ -29,7 +34,8 @@ struct WorkoutProgressChart: View {
         }
         if let heartRate = point.sample.heartRate {
           LineMark(
-            x: .value("Time", point.position), y: .value("Value", heartRate),
+            x: .value("Time", point.position),
+            y: .value("Value", scale.position(ofHeartRate: Double(heartRate))),
             series: .value("Series", "Heart rate \(point.run)")
           )
           .foregroundStyle(.red)
@@ -41,10 +47,29 @@ struct WorkoutProgressChart: View {
         .lineStyle(StrokeStyle(lineWidth: 1))
     }
     .chartXScale(domain: 0...max(session.duration, 1))
-    .chartYScale(domain: 0...yMaximum)
+    .chartYScale(domain: 0...scale.powerMaximum)
     .chartYAxis {
-      AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+      AxisMarks(position: .leading, values: scale.gridlines) { value in
         AxisGridLine().foregroundStyle(.quaternary)
+        if !dynamicTypeSize.isAccessibilitySize, let watts = value.as(Double.self) {
+          AxisValueLabel {
+            Text(label(Int(watts), unit: "W", isTop: watts == scale.powerMaximum))
+              .monospacedDigit()
+          }
+          .foregroundStyle(.secondary)
+        }
+      }
+      if hasHeartRate, !dynamicTypeSize.isAccessibilitySize {
+        AxisMarks(position: .trailing, values: scale.gridlines) { value in
+          if let watts = value.as(Double.self) {
+            let bpm = Int(scale.heartRate(at: watts).rounded())
+            AxisValueLabel {
+              Text(label(bpm, unit: "bpm", isTop: watts == scale.powerMaximum))
+                .monospacedDigit()
+            }
+            .foregroundStyle(.red)
+          }
+        }
       }
     }
     .chartXAxis {
@@ -89,12 +114,21 @@ struct WorkoutProgressChart: View {
     return points
   }
 
-  private var yMaximum: Double {
+  /// Room above the hardest target and the highest power so far, with heart rate on the same
+  /// gridlines.
+  private var scale: WorkoutChartScale {
     let planned = session.intervals.map { session.adjusted($0.plannedPower) }.max() ?? 100
-    let recorded = session.samples.lazy
-      .flatMap { [$0.sample.power, $0.sample.heartRate].compactMap { $0 } }.max()
-    let peak = max(Double(planned) * 1.4, Double(recorded ?? 0) * 1.05)
-    return (peak / 50).rounded(.up) * 50
+    let recorded = session.samples.compactMap(\.sample.power).max()
+    return WorkoutChartScale(
+      peakPower: max(Double(planned) * 1.4, Double(recorded ?? 0) * 1.05),
+      heartRates: WorkoutChartScale.heartRateRange(
+        recorded: session.samples.compactMap(\.sample.heartRate),
+        zoneLimits: heartRateZones?.limits ?? []))
+  }
+
+  /// An axis value, with its unit on the top gridline only so the axis stays narrow.
+  private func label(_ value: Int, unit: String, isTop: Bool) -> String {
+    isTop ? "\(value) \(unit)" : "\(value)"
   }
 
   private var xStride: Double {
