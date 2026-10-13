@@ -11,5 +11,6 @@ struct RideApp: App {
     WindowGroup {
       RootView()
     }
+    .commands { RideCommands() }
   }
 }

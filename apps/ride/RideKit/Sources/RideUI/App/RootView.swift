@@ -41,6 +41,7 @@ public struct RootView: View {
     .environment(launcher)
     .environment(launcher.devices)
     .environment(account)
+    .focusedSceneValue(\.rideLauncher, launcher)
     .task {
       launcher.checkForInterruptedRide()
       launcher.devices.connectPaired()

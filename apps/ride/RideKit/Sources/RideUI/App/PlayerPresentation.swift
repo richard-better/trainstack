@@ -16,7 +16,9 @@ struct PlayerPresentation: ViewModifier {
         .fullScreenCover(isPresented: $launcher.isPlayerPresented) {
           if let ride = launcher.ride {
             NavigationStack {
-              PlayerView(controller: ride, onMinimize: minimize, onEnd: end)
+              PlayerView(
+                controller: ride, isConfirmingEnd: $launcher.isConfirmingEnd,
+                onMinimize: minimize, onEnd: end)
             }
             .navigationTransition(.zoom(sourceID: "player", in: namespace))
           }
@@ -24,7 +26,9 @@ struct PlayerPresentation: ViewModifier {
     #else
       if let ride = launcher.ride, launcher.isPlayerPresented {
         NavigationStack {
-          PlayerView(controller: ride, onMinimize: minimize, onEnd: end)
+          PlayerView(
+            controller: ride, isConfirmingEnd: $launcher.isConfirmingEnd, onMinimize: minimize,
+            onEnd: end)
         }
       } else {
         content

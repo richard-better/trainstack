@@ -5,10 +5,12 @@ import SwiftUI
 /// a rider checks most underneath it, big enough to read from the saddle.
 struct PlayerView: View {
   let controller: RideController
+  /// Whether to ask the rider to confirm ending the ride, as the End Ride button and the
+  /// Controls menu do.
+  @Binding var isConfirmingEnd: Bool
   var onMinimize: () -> Void
   /// Called once the rider has ended the ride, with whether to keep it in History.
   var onEnd: (_ save: Bool) -> Void
-  @State private var isConfirmingEnd = false
 
   var body: some View {
     // Everything on one screen when it fits; otherwise, such as in landscape or with large
@@ -61,9 +63,10 @@ struct PlayerView: View {
 
 #Preview("Riding") {
   NavigationStack {
-    PlayerView(controller: .preview(.named("Threshold classic 60")!, minutes: 21), onMinimize: {}) {
-      _ in
-    }
+    PlayerView(
+      controller: .preview(.named("Threshold classic 60")!, minutes: 21),
+      isConfirmingEnd: .constant(false), onMinimize: {}
+    ) { _ in }
   }
   .frame(width: 1100, height: 760)
 }
@@ -72,7 +75,7 @@ struct PlayerView: View {
   let controller = RideController.preview()
   controller.togglePause()
   return NavigationStack {
-    PlayerView(controller: controller, onMinimize: {}) { _ in }
+    PlayerView(controller: controller, isConfirmingEnd: .constant(false), onMinimize: {}) { _ in }
   }
   .frame(width: 800, height: 700)
 }
