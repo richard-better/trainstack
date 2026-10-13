@@ -40,6 +40,9 @@ struct WorkoutChartScale: Equatable {
   /// Where the gridlines are, in watts from the floor to the top.
   var gridlines: [Double] { (0...steps).map { Double($0 * powerStep) } }
 
+  /// Whether `watts` falls on the chart, above the floor and no higher than the top.
+  func shows(watts: Double) -> Bool { watts > 0 && watts <= powerMaximum }
+
   /// The height of `bpm` on the chart, in watts.
   func position(ofHeartRate bpm: Double) -> Double {
     (bpm - Double(heartRateFloor)) / Double(heartRateStep) * Double(powerStep)

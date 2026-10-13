@@ -3,8 +3,8 @@ import RideData
 import SwiftUI
 
 /// The workout's intervals in their zone colours, shaded as done, current and still to come,
-/// with power and heart rate drawn over the part already ridden. Watts read off the leading
-/// axis and heart rate off the trailing one.
+/// with power and heart rate drawn over the part already ridden and a line at the rider's FTP.
+/// Watts read off the leading axis and heart rate off the trailing one.
 struct WorkoutProgressChart: View {
   let session: RideSession
   /// The FTP the workout's targets were set from, which places them in zones.
@@ -25,6 +25,14 @@ struct WorkoutProgressChart: View {
         )
         .foregroundStyle(
           WorkoutTargetShade(interval: interval, position: session.position, ftp: ftp).color)
+      }
+      if let ftp, scale.shows(watts: Double(ftp)) {
+        RuleMark(y: .value("FTP", ftp))
+          .foregroundStyle(Color.primary.opacity(0.45))
+          .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+          .annotation(position: .top, alignment: .trailing, spacing: 2) {
+            Text("FTP").font(.caption2).foregroundStyle(Color.secondary)
+          }
       }
       ForEach(trace) { point in
         if let power = point.sample.power {

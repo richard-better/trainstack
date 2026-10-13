@@ -36,6 +36,13 @@ struct WorkoutChartScaleTests {
     }
   }
 
+  @Test(arguments: [(250.0, true), (300, true), (301, false), (0, false), (-20, false)])
+  func showsOnlyWattsBetweenTheFloorAndTheTop(watts: Double, isShown: Bool) {
+    let scale = WorkoutChartScale(peakPower: 280, heartRates: 100...180)
+    #expect(scale.powerMaximum == 300)
+    #expect(scale.shows(watts: watts) == isShown)
+  }
+
   @Test func fitsRecordedHeartRateWithTheZoneLimits() {
     let range = WorkoutChartScale.heartRateRange(recorded: [92, 150], zoneLimits: [138, 178])
     #expect(range == 92...178)
