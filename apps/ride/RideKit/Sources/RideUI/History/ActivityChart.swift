@@ -4,9 +4,10 @@ import SwiftUI
 
 /// Power and heart rate over the ride. Both share one unlabeled scale, so the chart shows
 /// the shape of the effort rather than exact values; hover to read them. Each entry in the
-/// legend switches its series on and off.
+/// legend switches its series on and off. With an FTP, each target step is tinted by its zone.
 struct ActivityChart: View {
   let recording: RideRecording
+  var ftp: Int?
   @State private var selectedTime: Double?
   @State private var hidden: Set<ActivityChartSeries> = []
 
@@ -20,7 +21,7 @@ struct ActivityChart: View {
               xStart: .value("Start", segment.start), xEnd: .value("End", segment.end),
               yStart: .value("Floor", 0), yEnd: .value("Target", segment.power)
             )
-            .foregroundStyle(ActivityChartSeries.target.color)
+            .foregroundStyle(targetColor(segment.power))
           }
         }
         ForEach(recording.samples) { sample in
@@ -103,6 +104,13 @@ struct ActivityChart: View {
     }
   }
 
+  /// The target step's zone colour, faint enough to read the lines over, or plain grey without
+  /// an FTP to place it in a zone.
+  private func targetColor(_ power: Int) -> Color {
+    guard let ftp, ftp > 0 else { return ActivityChartSeries.target.color }
+    return PowerZone.zone(power: power, ftp: ftp).color.opacity(0.3)
+  }
+
   private func shows(_ series: ActivityChartSeries) -> Bool { !hidden.contains(series) }
 
   private func toggle(_ series: ActivityChartSeries) {
@@ -145,6 +153,6 @@ struct ActivityChart: View {
 
 #Preview {
   if let ride = try? RideRecording.sample() {
-    ActivityChart(recording: ride).padding()
+    ActivityChart(recording: ride, ftp: 200).padding()
   }
 }

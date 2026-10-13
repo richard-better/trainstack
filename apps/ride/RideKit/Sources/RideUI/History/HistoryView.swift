@@ -6,6 +6,8 @@ import SwiftUI
 struct HistoryView: View {
   let library: RideLibrary
   @Binding var selection: Ride.ID?
+  /// Workouts opened from the selected ride.
+  @State private var workoutPath: [WorkoutTemplate] = []
   @State private var isImporting = false
   /// What went wrong opening the last files, while it is shown.
   @State private var failures: [String]?
@@ -29,15 +31,20 @@ struct HistoryView: View {
         .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
     } detail: {
       if let ride = library[selection] {
-        ActivityDetailView(ride: ride) { remove(ride) }
-          .navigationTitle(ride.title)
-          #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-          #endif
+        NavigationStack(path: $workoutPath) {
+          ActivityDetailView(ride: ride) { remove(ride) }
+            .navigationTitle(ride.title)
+            #if os(iOS)
+              .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
+        }
+        .environment(\.openWorkout) { workoutPath.append($0) }
       } else {
         ContentUnavailableView("Select a ride", systemImage: "chart.xyaxis.line")
       }
     }
+    .onChange(of: selection) { workoutPath = [] }
     // The split view always has a ride to show, like Mail's. On a phone, selecting one would
     // push it, so there the rider chooses.
     .onChange(of: library.rides.first?.id, initial: true) { _, newest in
