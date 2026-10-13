@@ -1,8 +1,8 @@
 import RideData
 import SwiftUI
 
-/// Time left in the interval, time elapsed, speed and distance. One row when it fits,
-/// otherwise two.
+/// Time left in the interval, time ridden and left in the workout, speed and distance. One row
+/// when it fits, otherwise two.
 struct PlayerSecondaryStats: View {
   let session: RideSession
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -10,9 +10,11 @@ struct PlayerSecondaryStats: View {
   var body: some View {
     let intervalLeft = SmallStat(
       label: "Interval left", value: session.intervalRemaining?.clockString ?? "—")
+    // The workout's length is in the title; what is left of it is what the rider counts down.
     let elapsed = SmallStat(
       label: "Elapsed", value: session.elapsed.clockString,
-      unit: "/ \(session.duration.clockString)")
+      unit: session.isComplete
+        ? "/ \(session.duration.clockString)" : "· \(session.remaining.clockString) left")
     let speed = SmallStat(
       label: "Speed",
       value: session.latest.speed.map { ($0 * 3.6).formatted(.oneDecimal) } ?? "—",
