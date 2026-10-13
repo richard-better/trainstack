@@ -7,6 +7,7 @@ enum SettingsPage: Hashable {
   /// Reached from a zones page rather than the sidebar.
   case ftpTests(ZoneScope)
   case rider
+  case player
   case devices
   case account
 }
