@@ -44,4 +44,13 @@ struct RiderSettingsStoreTests {
     store[usesDefault: .power, in: .cycling] = false
     #expect(!store[usesDefault: .power, in: .cycling])
   }
+
+  @Test func savesHowPowerIsShown() throws {
+    let name = "RiderSettingsStoreTests-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: name))
+    defer { defaults.removePersistentDomain(forName: name) }
+    #expect(RiderSettingsStore(defaults: defaults).powerDisplay == .threeSeconds)
+    RiderSettingsStore(defaults: defaults).powerDisplay = .instant
+    #expect(RiderSettingsStore(defaults: defaults).powerDisplay == .instant)
+  }
 }

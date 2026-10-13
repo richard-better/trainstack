@@ -7,18 +7,24 @@ import RideData
 @Observable
 final class RiderSettingsStore {
   private(set) var settings: RiderSettings
+  /// How the player shows power.
+  var powerDisplay: PowerDisplay {
+    didSet { if let defaults { powerDisplay.save(to: defaults) } }
+  }
   @ObservationIgnored private let defaults: UserDefaults?
 
   /// Loads from `defaults` and saves back to it.
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
     settings = RiderSettings.load(from: defaults)
+    powerDisplay = PowerDisplay.load(from: defaults)
   }
 
   /// Holds `settings` in memory only, for previews and sample rides.
   init(settings: RiderSettings) {
     self.defaults = nil
     self.settings = settings
+    powerDisplay = .standard
   }
 
   /// The zones in effect today.
