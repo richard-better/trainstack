@@ -11,7 +11,7 @@ final class RideController {
   private(set) var session: RideSession
   let template: WorkoutTemplate
   let ftp: Int
-  /// The zones the watch shows heart rate in.
+  /// The zones the player and the watch show heart rate in.
   let heartRateZones: ZoneSet?
   /// Called after each second of the ride, to keep the watch up to date.
   @ObservationIgnored var onTick: (() -> Void)?
@@ -199,6 +199,12 @@ final class RideController {
 
   func zone(of interval: RideSession.Interval) -> PowerZone {
     PowerZone.zone(power: interval.plannedPower, ftp: ftp)
+  }
+
+  /// The zone the latest heart rate is in, or nil without heart rate or without zones.
+  var heartRateZone: Zone? {
+    guard let bpm = session.latest.heartRate else { return nil }
+    return heartRateZones?.zone(containing: bpm)
   }
 
   /// The ride as the watch shows it.
