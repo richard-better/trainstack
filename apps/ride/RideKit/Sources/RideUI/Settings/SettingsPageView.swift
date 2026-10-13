@@ -8,6 +8,7 @@ struct SettingsPageView: View {
     switch page {
     case .zones(let scope): ZonesPage(scope: scope)
     case .ftpTests(let scope): FTPTestsView(scope: scope)
+    case .rider: RiderPage()
     case .devices: DevicesView()
     case .account: AccountSettingsView()
     }

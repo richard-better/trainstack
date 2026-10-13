@@ -14,6 +14,14 @@ struct RiderSettingsStoreTests {
     #expect(store[.ftp, .all] == 250)
   }
 
+  @Test func editsWeightAndIgnoresValuesOutOfRange() {
+    #expect(store.weight == 75)
+    store.weight = 68.5
+    #expect(store.weight == 68.5)
+    store.weight = 0
+    #expect(store.weight == 68.5)
+  }
+
   @Test func movingAZoneEndMakesTheZonesCustomUntilAModelIsChosen() throws {
     store[.ftp, .all] = 200
     let model = try #require(store[modelFor: .power, in: .all])

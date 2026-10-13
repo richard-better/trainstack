@@ -6,6 +6,7 @@ enum SettingsPage: Hashable {
   case zones(ZoneScope)
   /// Reached from a zones page rather than the sidebar.
   case ftpTests(ZoneScope)
+  case rider
   case devices
   case account
 }
