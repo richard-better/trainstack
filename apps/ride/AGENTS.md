@@ -52,10 +52,28 @@ xcodebuild build -project apps/ride/Ride.xcodeproj -scheme Ride \
 ```
 
 The iOS build also builds the watch app. To try the watch alone, run the `RideWatch` scheme
-on a watch simulator. Builds with `CODE_SIGNING_ALLOWED=NO` lose the HealthKit entitlement, so
-sign ad hoc instead (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=`). Debug
-builds take `-ride "<workout name>"` (and `-ride-minutes`, `-always-on` on the watch) to play
-a simulated ride without hardware or a paired phone.
+on a watch simulator.
+
+Builds with `CODE_SIGNING_ALLOWED=NO` carry no entitlements at all: no HealthKit, Sign in with
+Apple or (on the Mac) App Sandbox. To keep them:
+
+- Without overrides, the project signs automatically with the team in `DEVELOPMENT_TEAM`. That
+  needs an Xcode account in that team, and keeps every entitlement on every platform.
+- For the iOS and watch simulators, sign ad hoc
+  (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=`). That keeps HealthKit and
+  Sign in with Apple.
+- On the Mac, ad hoc alone fails with `"Ride" requires a provisioning profile`, because Sign in
+  with Apple needs one. Add `CODE_SIGN_ENTITLEMENTS=` to drop it: the app keeps the sandbox,
+  Bluetooth, network and file entitlements, but cannot sign in to TrainStack.
+
+Debug builds take launch arguments to try the app without hardware:
+
+- `-ride "<workout name>"` opens straight into that ride (needs an FTP).
+- `-simulated-trainer` rides with a pretend trainer, and `-sample-devices` shows pretend
+  Bluetooth devices, since the simulator has none.
+- `-sample-rides` uses a sample profile, the sample ride in History and a pretend trainer.
+- On the watch, `-ride "<workout name>"` plays a ride as if the phone ran it, `-ride-minutes
+  <minutes>` starts that far in, and `-always-on` shows the wrist-down screen.
 
 Format with `swift format --in-place --recursive apps/ride/Ride apps/ride/RideKit`.
 CI runs `swift format lint --strict`.
