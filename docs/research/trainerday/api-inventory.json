@@ -1,0 +1,1422 @@
+{
+  "verifiedDate": "2026-10-13",
+  "source": "https://api.trainerday.com/api/v1/spec",
+  "sourceSha256": "073bdf53ae8077d9371aedba8ac2e4e79db4fa6bba71fac9304ac3d3712006b5",
+  "openapi": "3.0.1",
+  "apiVersion": "2.0.0",
+  "evidenceType": "published-contract, not tested responses",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/athlete",
+      "parameters": [],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/Athlete"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/activities",
+      "parameters": [
+        {
+          "name": "page",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "pageSize",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "startDate",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "endDate",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/json": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              },
+              "page": {
+                "type": "number"
+              },
+              "pageSize": {
+                "type": "number"
+              },
+              "pages": {
+                "type": "number"
+              },
+              "pageNext": {
+                "type": "number"
+              },
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Activity"
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/activities/{activityId}",
+      "parameters": [
+        {
+          "name": "activityId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/Activity"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/activities/{activityId}/tcx",
+      "parameters": [
+        {
+          "name": "activityId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/octet-stream": {
+            "type": "string"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/activities/{activityId}/fit",
+      "parameters": [
+        {
+          "name": "activityId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/octet-stream": {
+            "type": "string",
+            "format": "binary"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/activities/upload",
+      "parameters": [],
+      "request": {
+        "application/json": {
+          "type": "object",
+          "required": [
+            "name",
+            "dataType",
+            "data"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "externalId": {
+              "type": "string"
+            },
+            "workoutId": {
+              "type": "number"
+            },
+            "sportType": {
+              "type": "string",
+              "enum": [
+                "bike",
+                "swim"
+              ]
+            },
+            "dataType": {
+              "type": "string",
+              "enum": [
+                "tcx",
+                "gpx",
+                "fit"
+              ]
+            },
+            "data": {
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "application/json": {
+            "type": "object",
+            "properties": {
+              "activityId": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/calendar",
+      "parameters": [
+        {
+          "name": "startDate",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "endDate",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/json": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Calendar_workout_v2"
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/calendar/events",
+      "parameters": [],
+      "request": {
+        "application/json": {
+          "type": "object",
+          "required": [
+            "calendarDate"
+          ],
+          "properties": {
+            "calendarDate": {
+              "type": "string"
+            },
+            "workoutId": {
+              "type": "string"
+            },
+            "embedWorkout": {
+              "$ref": "#/components/schemas/EmbedWorkoutV2"
+            },
+            "calendarId": {
+              "type": "string"
+            },
+            "percentOfHR": {
+              "type": "boolean",
+              "default": false
+            },
+            "isOutdoorWorkout": {
+              "type": "boolean",
+              "default": false
+            },
+            "note": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "default",
+                    "run",
+                    "skiing",
+                    "hiking",
+                    "walk",
+                    "strength",
+                    "yoga"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 8
+                },
+                "durationDays": {
+                  "type": "integer"
+                },
+                "duration": {
+                  "type": "number"
+                },
+                "distance": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "application/json": {
+            "type": "object"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v2/calendar/events/{id}",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {
+        "application/json": {
+          "type": "object",
+          "properties": {
+            "calendarDate": {
+              "type": "string"
+            },
+            "workoutId": {
+              "type": "string"
+            },
+            "embedWorkout": {
+              "$ref": "#/components/schemas/EmbedWorkoutV2"
+            },
+            "note": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "percentOfHR": {
+              "type": "boolean"
+            },
+            "isOutdoorWorkout": {
+              "type": "boolean"
+            },
+            "isMarkedAsCompleted": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "application/json": {
+            "type": "object"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v2/calendar/events/{id}",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/json": {
+            "type": "object",
+            "properties": {
+              "msg": {
+                "type": "string"
+              },
+              "eventId": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/workouts",
+      "parameters": [],
+      "request": {
+        "application/json": {
+          "$ref": "#/components/schemas/CreateWorkoutFromZwo"
+        }
+      },
+      "responses": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/CreatedWorkout"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/activities",
+      "parameters": [
+        {
+          "name": "page",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "pageSize",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "startDate",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "endDate",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/json": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              },
+              "page": {
+                "type": "number"
+              },
+              "pageSize": {
+                "type": "number"
+              },
+              "pages": {
+                "type": "number"
+              },
+              "pageNext": {
+                "type": "number"
+              },
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Activity_v2"
+                }
+              }
+            }
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/activities/upload",
+      "parameters": [],
+      "request": {
+        "application/json": {
+          "type": "object",
+          "required": [
+            "name",
+            "dataType",
+            "data"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "externalId": {
+              "type": "string"
+            },
+            "workoutId": {
+              "type": "number"
+            },
+            "sportType": {
+              "type": "string",
+              "enum": [
+                "bike",
+                "swim"
+              ]
+            },
+            "dataType": {
+              "type": "string",
+              "enum": [
+                "tcx",
+                "gpx",
+                "fit"
+              ]
+            },
+            "data": {
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "application/json": {
+            "type": "object",
+            "properties": {
+              "mongoId": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/activities/{activityId}",
+      "parameters": [
+        {
+          "name": "activityId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/Activity_v2"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/activities/{activityId}/tcx",
+      "parameters": [
+        {
+          "name": "activityId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/octet-stream": {
+            "type": "string"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/activities/{activityId}/fit",
+      "parameters": [
+        {
+          "name": "activityId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "request": {},
+      "responses": {
+        "200": {
+          "application/octet-stream": {
+            "type": "string",
+            "format": "binary"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ]
+    }
+  ],
+  "schemas": {
+    "Athlete": {
+      "type": "object",
+      "properties": {
+        "athleteId": {
+          "type": "number"
+        },
+        "userId": {
+          "type": "number"
+        },
+        "username": {
+          "type": "string"
+        },
+        "activeSportProfile": {
+          "type": "string",
+          "enum": [
+            "bike",
+            "swim",
+            "rowing",
+            "run"
+          ]
+        },
+        "ftp": {
+          "type": "number"
+        },
+        "criticalPower": {
+          "type": "number"
+        },
+        "thresholdHR": {
+          "type": "number"
+        },
+        "hasProFeatures": {
+          "type": "number"
+        }
+      }
+    },
+    "Time_in_zones": {
+      "type": "object",
+      "properties": {
+        "z1": {
+          "type": "number"
+        },
+        "z2": {
+          "type": "number"
+        },
+        "z3": {
+          "type": "number"
+        },
+        "z4": {
+          "type": "number"
+        },
+        "z5": {
+          "type": "number"
+        },
+        "z6": {
+          "type": "number"
+        }
+      }
+    },
+    "SegmentTarget": {
+      "type": "object",
+      "required": [
+        "min",
+        "type"
+      ],
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number",
+          "nullable": true
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "cadence",
+            "slope",
+            "heart_rate"
+          ]
+        }
+      }
+    },
+    "SegmentNote": {
+      "type": "object",
+      "required": [
+        "timeOffset",
+        "text"
+      ],
+      "properties": {
+        "timeOffset": {
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "BlockSegment": {
+      "type": "object",
+      "required": [
+        "durationValue"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "controlMode": {
+          "type": "string",
+          "nullable": true,
+          "enum": [
+            "slope",
+            "hr",
+            "erg",
+            "resistance"
+          ]
+        },
+        "segmentType": {
+          "type": "string",
+          "nullable": true,
+          "enum": [
+            "warm-up",
+            "active",
+            "cooldown",
+            "interval",
+            "rest",
+            "free-ride",
+            "open-ended",
+            "sfr",
+            "lap",
+            "climb",
+            "slope",
+            "hr",
+            "erg"
+          ]
+        },
+        "durationType": {
+          "type": "string",
+          "enum": [
+            "second",
+            "meter"
+          ],
+          "default": "second"
+        },
+        "durationValue": {
+          "type": "number"
+        },
+        "pressLapButton": {
+          "type": "boolean",
+          "default": false
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SegmentTarget"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SegmentNote"
+          }
+        }
+      }
+    },
+    "WorkoutBlock": {
+      "type": "object",
+      "required": [
+        "segments",
+        "type"
+      ],
+      "properties": {
+        "start": {
+          "type": "number"
+        },
+        "end": {
+          "type": "number"
+        },
+        "segments": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/components/schemas/BlockSegment"
+          }
+        },
+        "reps": {
+          "type": "number",
+          "nullable": true
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "segment",
+            "repetition",
+            "set"
+          ]
+        }
+      }
+    },
+    "Calendar_workout_v2": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "workoutId": {
+          "type": "number"
+        },
+        "date": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "author": {
+          "type": "string"
+        },
+        "bikeStress": {
+          "type": "number"
+        },
+        "intensity": {
+          "type": "number"
+        },
+        "timeInZones": {
+          "$ref": "#/components/schemas/Time_in_zones"
+        },
+        "workoutBlocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkoutBlock"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workoutType": {
+          "type": "string",
+          "enum": [
+            "bike",
+            "swim",
+            "rowing",
+            "run"
+          ]
+        },
+        "intensityMetric": {
+          "type": "string",
+          "enum": [
+            "percentOfFtp",
+            "percentOfHr"
+          ]
+        },
+        "lengthUnit": {
+          "type": "string"
+        },
+        "intensityUnit": {
+          "type": "string"
+        }
+      }
+    },
+    "Activity": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "workoutType": {
+          "type": "string",
+          "enum": [
+            "bike",
+            "swim",
+            "rowing",
+            "run"
+          ]
+        },
+        "startDateUTC": {
+          "type": "string"
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "averageSpeed": {
+          "type": "number"
+        },
+        "averageWatts": {
+          "type": "number"
+        },
+        "averageBpm": {
+          "type": "number"
+        },
+        "averageRpm": {
+          "type": "number"
+        },
+        "maximumBpm": {
+          "type": "number"
+        },
+        "totalDistanceMeters": {
+          "type": "number"
+        },
+        "ftp": {
+          "type": "number"
+        },
+        "hr": {
+          "type": "number"
+        },
+        "trainingStress": {
+          "type": "number"
+        },
+        "intensity": {
+          "type": "number"
+        },
+        "dominantZone": {
+          "type": "string",
+          "enum": [
+            "Recovery",
+            "Endurance",
+            "Tempo",
+            "Threshold",
+            "VO2Max",
+            "Anaerobic"
+          ]
+        },
+        "isOutdoor": {
+          "type": "boolean"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      }
+    },
+    "Activity_v2": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "mongoId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "workoutType": {
+          "type": "string"
+        },
+        "sportType": {
+          "type": "string"
+        },
+        "startDateUTC": {
+          "type": "string"
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "averageSpeed": {
+          "type": "number"
+        },
+        "averageWatts": {
+          "type": "number"
+        },
+        "averageBpm": {
+          "type": "number"
+        },
+        "averageRpm": {
+          "type": "number"
+        },
+        "maximumBpm": {
+          "type": "number"
+        },
+        "totalDistanceMeters": {
+          "type": "number"
+        },
+        "ftp": {
+          "type": "number"
+        },
+        "hr": {
+          "type": "number"
+        },
+        "trainingStress": {
+          "type": "number"
+        },
+        "intensity": {
+          "type": "number"
+        },
+        "dominantZone": {
+          "type": "string",
+          "enum": [
+            "",
+            "Z1",
+            "Z2",
+            "Z3",
+            "Z4",
+            "Z5",
+            "Z6"
+          ]
+        },
+        "isOutdoor": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "timezone": {
+          "type": "string"
+        }
+      }
+    },
+    "EmbedWorkoutV2": {
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "workoutBlocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkoutBlock"
+          }
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "bikeStress": {
+          "type": "number"
+        },
+        "intensity": {
+          "type": "number"
+        },
+        "timeInZones": {
+          "$ref": "#/components/schemas/Time_in_zones"
+        },
+        "dominantZone": {
+          "type": "string",
+          "enum": [
+            "recovery",
+            "endurance",
+            "tempo",
+            "threshold",
+            "vo2max",
+            "anaerobic"
+          ]
+        },
+        "workoutType": {
+          "type": "string",
+          "enum": [
+            "bike",
+            "swim",
+            "rowing",
+            "run"
+          ],
+          "default": "bike"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CreateWorkoutFromZwo": {
+      "type": "object",
+      "required": [
+        "zwo"
+      ],
+      "properties": {
+        "zwo": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          }
+        },
+        "listName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      }
+    },
+    "CreatedWorkout": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "_id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "dominantZone": {
+          "type": "string"
+        },
+        "bikeStress": {
+          "type": "number"
+        },
+        "intensity": {
+          "type": "number"
+        },
+        "timeInZones": {
+          "$ref": "#/components/schemas/Time_in_zones"
+        },
+        "workoutType": {
+          "type": "string"
+        },
+        "workoutStatus": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workoutBlocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkoutBlock"
+          }
+        },
+        "list": {
+          "type": "object",
+          "properties": {
+            "listId": {
+              "type": "string"
+            },
+            "listName": {
+              "type": "string"
+            },
+            "created": {
+              "type": "boolean"
+            }
+          }
+        },
+        "listError": {
+          "type": "string"
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "msg": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "constraints": [
+    "Documented rate: 100 requests per 15 minutes.",
+    "V2 FIT/TCX downloads accept PostgreSQL UUIDs; external-provider source files are excluded.",
+    "V2 ZWO creation is private and paid; optional listName creates or matches a list.",
+    "V2 isOutdoor is a string, unlike V1 boolean.",
+    "Landing page V1 calendar examples differ from inspected V2 calendar specification."
+  ]
+}

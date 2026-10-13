@@ -1,0 +1,331 @@
+{
+  "verifiedDate": "2026-10-13",
+  "target": "TrainerDay",
+  "method": "Signed-in Chrome via computer/browser tools, official public sources, unauthenticated published API schema, REA static JavaScript analysis.",
+  "evidenceIdNote": "UI and API IDs refer to curated observations from this investigation. They are not REA Evidence IDs. REA IDs are retained separately in technical.json.",
+  "observations": [
+    {
+      "id": "UI-001",
+      "area": "Navigation",
+      "url": "https://app.trainerday.com/",
+      "findings": [
+        "Activities: calendar, activities, progress.",
+        "Workouts: Today, search, library, creator.",
+        "Plans: builders, catalog, personal plans.",
+        "Links: blog, forums, API/MCP, Event Finder."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-005-007",
+      "area": "Workout search",
+      "url": "https://app.trainerday.com/search?forceLoadData=true",
+      "findings": [
+        "Text query; popularity/date/duration/stress/intensity sort.",
+        "Library/descriptions/cadence/comment filters and min/max ranges.",
+        "Cards show category, duration, stress, intensity, popularity, author/date, graph and actions."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-008-014",
+      "area": "Workout detail",
+      "url": "https://app.trainerday.com/workouts/vo2-max-1-8x4min-120",
+      "findings": [
+        "Power interval graph, outdoor description, author content, comments, six-zone composition.",
+        "Send destination picker includes calendar, Zwift, COROS, Garmin, Intervals.icu, TrainingPeaks, Wahoo.",
+        "Copy workout/link and download action visible; download format dialog not confirmed."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-015-017",
+      "area": "Workout editor",
+      "url": "https://app.trainerday.com/workouts/create",
+      "findings": [
+        "Table editor, FTP percentage/watts/zones, optional cadence/control/notes/type.",
+        "Live stress/intensity/zone previews, repeat/duplicate keyboard hints, W balance controls."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-018",
+      "area": "File import",
+      "url": "https://app.trainerday.com/workouts/create",
+      "findings": [
+        "Routes: GPX, TCX, FIT to ERG/slope.",
+        "Structured workouts: ZWO, ERG, MRC.",
+        "Only controls inspected; no file uploaded."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-019",
+      "area": "AI workouts",
+      "url": "https://app.trainerday.com/workouts/create",
+      "findings": [
+        "Prompt field, eight sample prompts, Pro gating copy, Generate action.",
+        "No generation or entitlement behavior tested."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-020",
+      "area": "Library",
+      "url": "https://app.trainerday.com/library?forceLoadData=true",
+      "findings": [
+        "Favorites/list selector, list-scoped search, sort, List Manager, empty-list ramp test."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-021",
+      "area": "Today",
+      "url": "https://app.trainerday.com/today",
+      "findings": [
+        "Duration presets 30/45/60/75/90/120 minutes; scheduled slot; refresh.",
+        "Fun, intensity and endurance/recovery recommendation cards."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-022-024",
+      "area": "Calendar",
+      "url": "https://app.trainerday.com/calendar",
+      "findings": [
+        "Weekly grid includes planned workouts and completed imported activities.",
+        "Date-ranged ZIP export with CSV and ERG/ZWO/MRC/PLAN files.",
+        "ICS external subscription; personal URL excluded.",
+        "Mobile calendar activation warning visible."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-025",
+      "area": "Activity list",
+      "url": "https://app.trainerday.com/activities",
+      "findings": [
+        "Yearly weekly-hours graph, ride/current-week totals, search, Strava re-sync.",
+        "Cycling and running metrics, other sports, provider badges.",
+        "Individual names, times, values and UUIDs excluded."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-026-027",
+      "area": "Progress",
+      "url": "https://app.trainerday.com/analytics",
+      "findings": [
+        "FitScore/Classic controls, intensity distribution, time in power/HR zones, stress balance.",
+        "Power duration curve, 90-day and one-year comparisons.",
+        "Classic alternate calculation not confirmed."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-028",
+      "area": "Premium plans",
+      "url": "https://app.trainerday.com/training-plans",
+      "findings": [
+        "Andrea Morelli plans, phase explanation, six visible families with 3/4/5 days per week."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-029-030",
+      "area": "Community plans",
+      "url": "https://app.trainerday.com/training-plans",
+      "findings": [
+        "Days-per-week/daily-minutes query, popularity sort, 180 plans shown across 18 pages.",
+        "Phase/composition/statistics/example workouts; catalog describes frequency conversion."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-031",
+      "area": "Personal plans",
+      "url": "https://app.trainerday.com/plans?forceLoadData=true",
+      "findings": [
+        "Search, More filters, new-plan entry and personal collection."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-032-042",
+      "area": "Plan builders",
+      "url": "https://app.trainerday.com/coach-jack",
+      "findings": [
+        "Coach Jack and AI Beta choice.",
+        "Both enter 12-question wizard; goal/event/date/duration/recovery questions observed.",
+        "Example selections reset; no health answer or plan generation."
+      ],
+      "evidenceType": "observed-partial"
+    },
+    {
+      "id": "UI-043",
+      "area": "Connections",
+      "url": "https://app.trainerday.com/apps-and-devices",
+      "findings": [
+        "Ten named integrations with direction/feature-specific descriptions.",
+        "TrainingPeaks WOD and today/tomorrow calendar toggles.",
+        "Garmin no-completed-activity caveat, MyWhoosh paid requirement, Google paid plan send.",
+        "Connection statuses are omitted; no connect/disconnect/toggle action."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-045-047",
+      "area": "Sports settings",
+      "url": "https://app.trainerday.com/account/profile",
+      "findings": [
+        "Cycling, Swim-Erg, Row-Erg, Running selectable.",
+        "FTP history, threshold HR/global reuse, configurable power zones.",
+        "Form-only selection discarded through navigation without Save."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-048",
+      "area": "Account settings",
+      "url": "https://app.trainerday.com/account/settings",
+      "findings": [
+        "Time zone, language, units, speed estimate parameters, subscription link.",
+        "Classic blue charts and account-wide dark theme.",
+        "Identity, email, weight, thresholds, timezone selection and other personal values excluded."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-049-050",
+      "area": "Activity detail",
+      "url": "https://app.trainerday.com/activities",
+      "findings": [
+        "Rename/RPE controls; W balance; Watts/RPM/HR; zones; custom ranges with averages and download.",
+        "Generic layout recorded without activity identifier or measurements."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-051",
+      "area": "Live privacy policy",
+      "url": "https://trainerday.com/privacy-policy",
+      "findings": [
+        "October 9 2026 update supersedes cached old text.",
+        "Infrastructure, AI text-only handling and removed FitScore leaderboard testing disclosed.",
+        "Older third-party analytics and retention wording coexists."
+      ],
+      "evidenceType": "published-live-page"
+    },
+    {
+      "id": "UI-052",
+      "area": "Community plan detail",
+      "url": "https://app.trainerday.com/plans/vo2max-booster",
+      "findings": [
+        "Week/day structure; weekly duration/stress; composition; Duration/Intensity/Stress views.",
+        "Add to personal plans action not used."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "UI-053-054",
+      "area": "Live viewer entry",
+      "url": "https://app.trainerday.com/",
+      "findings": [
+        "Mobile live viewing advertised; entry clicked without confirmed viewer or new tab."
+      ],
+      "evidenceType": "observed-unresolved"
+    },
+    {
+      "id": "UI-055",
+      "area": "Event Finder",
+      "url": "https://trainerday.com/events",
+      "findings": [
+        "Map; sport/date filters; home city; saved events; week/month grouping; reporting links.",
+        "Duplicate-looking results and inconsistent location labels visible; accuracy untested."
+      ],
+      "evidenceType": "observed"
+    },
+    {
+      "id": "API-001",
+      "area": "API documentation and explorer",
+      "url": "https://api.trainerday.com/api-explorer/",
+      "findings": [
+        "Live explorer lists 16 operations, typed V2 schemas, bearer auth and rate limit.",
+        "Public schema retrieved without credentials through ordinary HTTP; YAML parsed locally.",
+        "No API try-it-out, key, OAuth or MCP authorization used."
+      ],
+      "evidenceType": "published-contract"
+    }
+  ],
+  "coverageChecklist": [
+    {
+      "question": "Navigation and feature inventory",
+      "status": "answered",
+      "scope": "Observed core web surfaces."
+    },
+    {
+      "question": "Workout discovery/detail/editor",
+      "status": "partially answered",
+      "scope": "UI and static fields collected; save/import/generation/export execution untested."
+    },
+    {
+      "question": "Plans and calendar",
+      "status": "partially answered",
+      "scope": "Catalog/detail/initial wizard/export controls mapped; full planner output and dated editing untested."
+    },
+    {
+      "question": "Activity analysis and progress",
+      "status": "partially answered",
+      "scope": "Visible metrics/layout mapped; model calculations and alternate Classic rendering untested."
+    },
+    {
+      "question": "Integration inventory and direction",
+      "status": "partially answered",
+      "scope": "Current descriptions collected; no sync delivery/error handling test."
+    },
+    {
+      "question": "Account/sports/settings",
+      "status": "partially answered",
+      "scope": "Fields and sport choices mapped; changes not submitted."
+    },
+    {
+      "question": "Pricing/native platforms/device support",
+      "status": "partially answered",
+      "scope": "Official published capabilities collected; no native or hardware run."
+    },
+    {
+      "question": "Public API and MCP",
+      "status": "partially answered",
+      "scope": "Public contracts collected; authenticated responses and connector tool inventory untested."
+    },
+    {
+      "question": "Frontend architecture and data model",
+      "status": "partially answered",
+      "scope": "Entry/editor/detail plus vendor inspected; other chunks and backend not examined."
+    },
+    {
+      "question": "Privacy/company/support",
+      "status": "answered",
+      "scope": "Current live policy and public company/support information collected; policy is not a security audit."
+    },
+    {
+      "question": "Live ride broadcast",
+      "status": "unresolved",
+      "scope": "Advertised entry did not expose a viewer."
+    },
+    {
+      "question": "Events and calculators",
+      "status": "partially answered",
+      "scope": "Event surface inspected; accuracy and calculator formulas untested."
+    }
+  ],
+  "excludedPrivateData": [
+    "Account identity and contact details",
+    "Personal sensor data and activity identifiers",
+    "Authentication/storage values",
+    "Private calendar ICS subscription address",
+    "Connection status and personal subscription details"
+  ],
+  "localProvenanceArchive": "/Users/richard/Downloads/trainerday-research-2026-10-13",
+  "reaCoverage": "Complete application graph within entry and two focused chunks; semantic graphs partial due to 100000-node limit. Vendor inspected manually."
+}

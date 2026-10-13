@@ -1,0 +1,3688 @@
+{
+  "scope": "Inert static inspection of signed-in-page-discovered public application assets; no authenticated API calls, browser storage, backend or native app examined.",
+  "evidence": {
+    "entry": "ev_00033c66594ee3226dc2d5c1df14ab774894227f434cc273a19860f75ad20f10",
+    "entry_summary": "ev_82d697061d09e7fb42ec46c3d910aa4f4331f87d4c3b19379cdb319ab08eb2fd",
+    "focused": "ev_93b1a93692eb5d8306a23d3518c66b671a640ed25f266d2f45daaaace029050a",
+    "entry_root_sha256": "70bac0855e4a48d05551b3f31588533b65952bd461112dfa7686487a1964bf8a",
+    "focused_root_sha256": "45f1bd173d64816c564c88a15c1f7dfbaf19695cf4655cd72b6da7c66b83bcfd"
+  },
+  "artifacts": [
+    {
+      "url": "https://app.trainerday.com/assets/index-CjwVpe-L.js",
+      "bytes": 205810,
+      "sha256": "9848669ecc29dadf01f17c6371c56ae142413d4a8707ccbc743f6b230570145f"
+    },
+    {
+      "url": "https://app.trainerday.com/assets/vendor-BvdN2VcP.js",
+      "bytes": 2796056,
+      "sha256": "73c46f6d61907bfe8fbe4da9569850e99059ed0b8f7c049c6c9bcae855615377"
+    },
+    {
+      "url": "https://app.trainerday.com/assets/Details-DBrnA6r9.js",
+      "bytes": 28979,
+      "sha256": "89d5efd07abb53fb0cfef2935ffeece159e1482bce1d41ba03ea6fbc138424df"
+    },
+    {
+      "url": "https://app.trainerday.com/assets/Create-rXv4vTwY.js",
+      "bytes": 123688,
+      "sha256": "44efec572b6d7ed625dbb36d627f44e22bf908fbc3f1372c57696bcddedb581b"
+    }
+  ],
+  "framework": {
+    "release": "trainerday-webapp@4.6.241",
+    "bundler_inference": "Vite from __vite__mapDeps and modulepreload machinery",
+    "versions_observed_in_vendor": [
+      "Vue 3.5.28",
+      "Vue Router 4.6.4",
+      "Vuex 4.1.0",
+      "vue-i18n 10.0.8",
+      "Axios 1.13.5"
+    ],
+    "vendor_was_manually_inspected_only": true
+  },
+  "production_hosts": {
+    "main": "https://app.api.trainerday.com",
+    "activities": "https://api.data.trainerday.com",
+    "coach_jack": "https://app.api.trainerday.com/api/v1/cj",
+    "intervals_icu": "https://intervals.api.trainerday.com",
+    "garmin": "https://garmin.api.trainerday.com",
+    "training_peaks": "https://tp.api.trainerday.com",
+    "wahoo": "https://wahoo.api.trainerday.com",
+    "billing": "https://billing.prod.trainerday.com/api",
+    "strava_dropbox_google": "https://sdg.prod.trainerday.com",
+    "events": "https://events-tracker.trainerday.com/webhook"
+  },
+  "route_count": 49,
+  "routes": [
+    {
+      "endpoint_kind": "route",
+      "value": "/apps-and-devices",
+      "mechanism": "property:path",
+      "node_id": "jag_node_0f2eb2acc9d27664a0b69816a814374ac9c7e26c8ba99d6f609cb96a8931fbe9",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15918
+        },
+        "end": {
+          "line": 2,
+          "column": 15942
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/running-plan-builder",
+      "mechanism": "property:path",
+      "node_id": "jag_node_137b2b6d40ae8bd5361f1b7f1f0ea5ce18682818a9010d5750de7531dd9bcc70",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15350
+        },
+        "end": {
+          "line": 2,
+          "column": 15378
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/community-plans",
+      "mechanism": "property:path",
+      "node_id": "jag_node_1861fd5ddaebf6c6205b0f86323c0c4af1e220fbee6570e01daf9ddafddf16b6",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15558
+        },
+        "end": {
+          "line": 2,
+          "column": 15581
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/today",
+      "mechanism": "property:path",
+      "node_id": "jag_node_236af8f2c14ff9c8341b1c79b7d02aae2245a47f25fd592a036db2ce8d99cc5a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15795
+        },
+        "end": {
+          "line": 2,
+          "column": 15808
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/coach-jack/questioning",
+      "mechanism": "property:path",
+      "node_id": "jag_node_29455cbad62c9fcc1fc37bfed02edaa6bf3f63d1fbba87b8321f2cee2dbde5e6",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18120
+        },
+        "end": {
+          "line": 2,
+          "column": 18156
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/checkout",
+      "mechanism": "property:path",
+      "node_id": "jag_node_2ab50e29ecc88a7536a005cd7f3e04a3ae85f5fffc3d8e79f02041151c32d7aa",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19679
+        },
+        "end": {
+          "line": 2,
+          "column": 19703
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/activities/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_35c4c349ef4889875445f0ce637be5c810b764a486a03b57ea5633f96103f9cb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12923
+        },
+        "end": {
+          "line": 2,
+          "column": 12945
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/pricing",
+      "mechanism": "property:path",
+      "node_id": "jag_node_392be1ba1ed1d78b40462f8c1d00a118b2779a5ca9db30e5348e6e1af7a5fe69",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19544
+        },
+        "end": {
+          "line": 2,
+          "column": 19559
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/training-plans/:slug",
+      "mechanism": "property:path",
+      "node_id": "jag_node_479270e3bd8df37625a5032f797c524f1b326fc0ecb1f4d65e01212cb6fac583",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15089
+        },
+        "end": {
+          "line": 2,
+          "column": 15117
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/plans/:slug",
+      "mechanism": "property:path",
+      "node_id": "jag_node_47a46c891e4af989dc4376271ad51d8adc410498615e23389e85e349072a6400",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14595
+        },
+        "end": {
+          "line": 2,
+          "column": 14614
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/create",
+      "mechanism": "property:path",
+      "node_id": "jag_node_4d93c2a814c4dc3992166de6fe3b47c65e129e4edb2850ed386573da936cfb4b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13194
+        },
+        "end": {
+          "line": 2,
+          "column": 13217
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/:id/edit",
+      "mechanism": "property:path",
+      "node_id": "jag_node_4ea5b55faed1f618faa01d425306a4a37ae5d4e9b369b2a4323c884504aede56",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13337
+        },
+        "end": {
+          "line": 2,
+          "column": 13362
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/analytics",
+      "mechanism": "property:path",
+      "node_id": "jag_node_553f5ee090d2b93f71bfd4e06b28ebdb8260dbf0b07779fa072a1a3073f1e396",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 16065
+        },
+        "end": {
+          "line": 2,
+          "column": 16082
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/event-plans/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_5f29cce1f2c5e4cc8669b1e1b246b0632f149d91f599f6fcc027e26b18e57f5d",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14909
+        },
+        "end": {
+          "line": 2,
+          "column": 14932
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/calendar/share/:shareId",
+      "mechanism": "property:path",
+      "node_id": "jag_node_61d8e12d1789003678668510adfab22487f2a3950f415558b785a130cd743ce8",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14051
+        },
+        "end": {
+          "line": 2,
+          "column": 14082
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/library/:listSlug",
+      "mechanism": "property:path",
+      "node_id": "jag_node_6299573f15730e40319a5eac685b3035494c10ae9e78ddf7d0617cc6ba310976",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14224
+        },
+        "end": {
+          "line": 2,
+          "column": 14249
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/subscription",
+      "mechanism": "property:path",
+      "node_id": "jag_node_62c940a00dc2b28cb5a0b62d9ecd56c5936ed7d99c8ddc840910b57cdd76d44b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12600
+        },
+        "end": {
+          "line": 2,
+          "column": 12628
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/profile",
+      "mechanism": "property:path",
+      "node_id": "jag_node_660b72aea769732ec659c7bfea1336f5afb6a2de63942fe0287a136a1ad29367",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12210
+        },
+        "end": {
+          "line": 2,
+          "column": 12233
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/:pathMatch(.*)*",
+      "mechanism": "property:path",
+      "node_id": "jag_node_69df820a10109a49c7265698bf0784981371f34585de4305ab032b8d64e1572a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19930
+        },
+        "end": {
+          "line": 2,
+          "column": 19953
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/library",
+      "mechanism": "property:path",
+      "node_id": "jag_node_6e2c0f93d13023a93050caa52e9a45fa8d47484367b0949661aa817124cdc202",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14353
+        },
+        "end": {
+          "line": 2,
+          "column": 14368
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/coach-jack",
+      "mechanism": "property:path",
+      "node_id": "jag_node_70b198942a327ac6001d47e80bf9ed11c00f6789ea27e4e584cdf47993b1c594",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17789
+        },
+        "end": {
+          "line": 2,
+          "column": 17813
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/llm-plan-creator",
+      "mechanism": "property:path",
+      "node_id": "jag_node_70c1c9d892adb04fa6192625cd8f7556f4660651c56582925e3c9f2f4638c0b3",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18855
+        },
+        "end": {
+          "line": 2,
+          "column": 18879
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/activities",
+      "mechanism": "property:path",
+      "node_id": "jag_node_73b3e936ebb481f5558c58f5b53b684f4837aa4f6d204049a94f3a7879e11df2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13059
+        },
+        "end": {
+          "line": 2,
+          "column": 13077
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/",
+      "mechanism": "property:path",
+      "node_id": "jag_node_78727a93b3a6fb9e1751bb891c249a29edc55f2b4415fa4caec4e05314bdecfc",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18760
+        },
+        "end": {
+          "line": 2,
+          "column": 18768
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack/plan/:mode",
+      "mechanism": "property:path",
+      "node_id": "jag_node_7a1228aa98022f9f241f93632670ba2126618e4425586ad81f2df22ad0891eb1",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17407
+        },
+        "end": {
+          "line": 2,
+          "column": 17436
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed",
+      "mechanism": "property:path",
+      "node_id": "jag_node_7a95f8e26a5cf5f8b895d4d65442561d07668ace8b2ab28b0aecb454d5f25e11",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18518
+        },
+        "end": {
+          "line": 2,
+          "column": 18531
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/workouts/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_7eec999723fc3c5411ad44c3ba2900494cf14d90023829099376bb62b4f53f68",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 11916
+        },
+        "end": {
+          "line": 2,
+          "column": 11942
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/calendar",
+      "mechanism": "property:path",
+      "node_id": "jag_node_801d2274a45610d43617d94ccf999acf59c87d26a8aba76804759ebc44a6b8c2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13877
+        },
+        "end": {
+          "line": 2,
+          "column": 13899
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/:id/copy",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8060739106474e634ea7d88911806ec9c6f2989fb3dcb39ca9ff12d1d81386cc",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13493
+        },
+        "end": {
+          "line": 2,
+          "column": 13518
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/turbo/workouts/:slug/:version?",
+      "mechanism": "property:path",
+      "node_id": "jag_node_80f044778a407879804de05b74a4aaba641fe0ad285dedc66d14ecf088fe5a7a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 11755
+        },
+        "end": {
+          "line": 2,
+          "column": 11793
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/:slug/:version?",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8a62575bf1b03c9b7ca135c78d8f74622987e1ff6086d16bc4ae13af4ad9471e",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13630
+        },
+        "end": {
+          "line": 2,
+          "column": 13662
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/apps-and-devices",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8a92a7012e7b1daf439e2b9e3213b16741644b3b0fbe1154cbb87027167230fb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 16303
+        },
+        "end": {
+          "line": 2,
+          "column": 16333
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/register",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8f8adf7dbd7fe672469da2217f709d5d6a691453f7243cd7a7603d298fbc2159",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19409
+        },
+        "end": {
+          "line": 2,
+          "column": 19425
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack",
+      "mechanism": "property:path",
+      "node_id": "jag_node_9331d425d17217f3f0c6b802447c8e269cf8f22400f799a6ea3992a9717eb860",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17277
+        },
+        "end": {
+          "line": 2,
+          "column": 17295
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/search",
+      "mechanism": "property:path",
+      "node_id": "jag_node_9b45dfab36a456f3914fbe7ec91087376bd3189e2b4478a0477a9c256a1ebbf2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15686
+        },
+        "end": {
+          "line": 2,
+          "column": 15700
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/events/questionaire/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_a85b23e2a3cd8a89b77e46372c4400f679db950a771cc6ea979b731e5b68f804",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14713
+        },
+        "end": {
+          "line": 2,
+          "column": 14744
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/login",
+      "mechanism": "property:path",
+      "node_id": "jag_node_aa668fa1da4f503375acf204e807585c9318b3d64445b1c78096b3e58a1a27b6",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19157
+        },
+        "end": {
+          "line": 2,
+          "column": 19170
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/plans",
+      "mechanism": "property:path",
+      "node_id": "jag_node_ae59b27c55586a417dcfb65dee0512385260120e4f91a675000236790aeba182",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14481
+        },
+        "end": {
+          "line": 2,
+          "column": 14494
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/coach-jack/plan/:mode",
+      "mechanism": "property:path",
+      "node_id": "jag_node_b66522e285530329abec96f281fd24711d343d10b95b107892ae01a9a4f6a2f8",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17948
+        },
+        "end": {
+          "line": 2,
+          "column": 17983
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/lthr-history",
+      "mechanism": "property:path",
+      "node_id": "jag_node_bbc0d8a95016e073aa5883279bb21614239c54e8377f81e5e364c2d6bebd7931",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12472
+        },
+        "end": {
+          "line": 2,
+          "column": 12500
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack/questioning",
+      "mechanism": "property:path",
+      "node_id": "jag_node_bf44de38c0894a97ffb9f310945a481cf5675f713c030bddde412d40c66d4fdf",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17550
+        },
+        "end": {
+          "line": 2,
+          "column": 17580
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/activities/vo2max-test-page",
+      "mechanism": "property:path",
+      "node_id": "jag_node_c7214b1f03962386c05d2e60a6f0cc6a3929e84fcc32858d8e47cefcbcd6e4e2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12769
+        },
+        "end": {
+          "line": 2,
+          "column": 12804
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/settings",
+      "mechanism": "property:path",
+      "node_id": "jag_node_d779e8f55042cc9e59c23f6ae61ad084ce8d5651c8b6f5cd4447f8827645fda4",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12063
+        },
+        "end": {
+          "line": 2,
+          "column": 12087
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/ftp-history",
+      "mechanism": "property:path",
+      "node_id": "jag_node_e2dac202fdd6d4b860b5abcca0beab211b1c67abd22b98d0da8625b7029c0aa7",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12355
+        },
+        "end": {
+          "line": 2,
+          "column": 12382
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/analytics",
+      "mechanism": "property:path",
+      "node_id": "jag_node_e6c98d06df8b020b8d1733d3f27ed1848d765b9cd33fc3b3d8d96e1ef13b41e8",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 16160
+        },
+        "end": {
+          "line": 2,
+          "column": 16183
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/training-plans",
+      "mechanism": "property:path",
+      "node_id": "jag_node_ef759a5323639a5f3648c1a3a65bfddeaf0a576823cd3e0aa8ae1575c0670a51",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15225
+        },
+        "end": {
+          "line": 2,
+          "column": 15247
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/llm-plan-creator",
+      "mechanism": "property:path",
+      "node_id": "jag_node_f73901bd9bf3366c079f51e48a19173dffa6d86af19989a01fc7009be68f6882",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18991
+        },
+        "end": {
+          "line": 2,
+          "column": 19021
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/calendar",
+      "mechanism": "property:path",
+      "node_id": "jag_node_fa2152149955de6af4607d56cd117de4fd9b85e2e0b80a78fa1204a46d52371a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13751
+        },
+        "end": {
+          "line": 2,
+          "column": 13767
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack/strava-callback",
+      "mechanism": "property:path",
+      "node_id": "jag_node_ff2c5a69607351bcf922080743c2f0445132f7fd436d49e0d971afa5144e4288",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17693
+        },
+        "end": {
+          "line": 2,
+          "column": 17727
+        }
+      }
+    }
+  ],
+  "entry_static_endpoint_candidates": [
+    {
+      "endpoint_kind": "network",
+      "value": "/api/activities/vo2max-activity-best-segments-test",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_02d2d8a9950475d603a2edfeb0ddc445d39cf1219376ba49f80fe109b5e94209",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 23751
+        },
+        "end": {
+          "line": 2,
+          "column": 23852
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/activities/update",
+      "mechanism": "call:A.patch",
+      "node_id": "jag_node_0322fdc9ef69273a99e7c1569c05fe25c4f64937d85eb728d0cf7cf72b898629",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 24402
+        },
+        "end": {
+          "line": 2,
+          "column": 24447
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/plans/search",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_05e7b9d8a1e54b05fc60e9fa4f5140943a9977f0a5d51863b34d5cb2e51c72ea",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 28361
+        },
+        "end": {
+          "line": 4,
+          "column": 28397
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/plans",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_0be55b150f06bc00eb9a35eb1a610ffcfb852496ea3ec7b2ce296878659ba70b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 27871
+        },
+        "end": {
+          "line": 4,
+          "column": 27892
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/recurrence",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_0dee2f57d780801bf7a49c2273c53b70a376445e7a32051811a4345ba3e8fecd",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 56610
+        },
+        "end": {
+          "line": 4,
+          "column": 56644
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/apps-and-devices",
+      "mechanism": "property:path",
+      "node_id": "jag_node_0f2eb2acc9d27664a0b69816a814374ac9c7e26c8ba99d6f609cb96a8931fbe9",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15918
+        },
+        "end": {
+          "line": 2,
+          "column": 15942
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workout/today",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_102a480fad33af39b21ed2825ed1b2349ab503998d6adffc6728ce206bb34b02",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 32321
+        },
+        "end": {
+          "line": 4,
+          "column": 32408
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/running-plan-builder",
+      "mechanism": "property:path",
+      "node_id": "jag_node_137b2b6d40ae8bd5361f1b7f1f0ea5ce18682818a9010d5750de7531dd9bcc70",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15350
+        },
+        "end": {
+          "line": 2,
+          "column": 15378
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/values",
+      "mechanism": "call:ve.get",
+      "node_id": "jag_node_1395e6139c80a62fbc33c60a179de2179628ae6b0b3a52ada692c5ae21012023",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 47432
+        },
+        "end": {
+          "line": 4,
+          "column": 47449
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/turbo/activities/missing?provider=dropbox",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_16b5ddf40babab185bbac4d695c4b2c3dbd0e108ccb721dffbd7396383a3a959",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 3,
+          "column": 88
+        },
+        "end": {
+          "line": 3,
+          "column": 142
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/community-plans",
+      "mechanism": "property:path",
+      "node_id": "jag_node_1861fd5ddaebf6c6205b0f86323c0c4af1e220fbee6570e01daf9ddafddf16b6",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15558
+        },
+        "end": {
+          "line": 2,
+          "column": 15581
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/profile/facts",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_1a22758c0ca716ac49a41b21002a506a04d3952d3d92db4b46566147e6a56260",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 36919
+        },
+        "end": {
+          "line": 4,
+          "column": 36947
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/bulk-push",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_1b87a8451014e332f98f286a0f3adb8a0871e4d3e18fd2df686b4fecfd124eeb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 58165
+        },
+        "end": {
+          "line": 4,
+          "column": 58208
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/shift-week",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_1d351f217622b909993632c5ffd0179e97dc9c612afa974e52eebdbb1edf8346",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57015
+        },
+        "end": {
+          "line": 4,
+          "column": 57073
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/llm",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_1d9ed398e7bf4661fe4d1bb2466d3dc4fbdc00b2e007189bb66c42b22cd2d112",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 61319
+        },
+        "end": {
+          "line": 4,
+          "column": 61337
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/today",
+      "mechanism": "property:path",
+      "node_id": "jag_node_236af8f2c14ff9c8341b1c79b7d02aae2245a47f25fd592a036db2ce8d99cc5a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15795
+        },
+        "end": {
+          "line": 2,
+          "column": 15808
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/coach-jack/questioning",
+      "mechanism": "property:path",
+      "node_id": "jag_node_29455cbad62c9fcc1fc37bfed02edaa6bf3f63d1fbba87b8321f2cee2dbde5e6",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18120
+        },
+        "end": {
+          "line": 2,
+          "column": 18156
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/status",
+      "mechanism": "call:sa.get",
+      "node_id": "jag_node_294e46f2a82aaa66c18f63870309db86d557ab29023f65e17c286aaea751f093",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 27601
+        },
+        "end": {
+          "line": 2,
+          "column": 27621
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/checkout",
+      "mechanism": "property:path",
+      "node_id": "jag_node_2ab50e29ecc88a7536a005cd7f3e04a3ae85f5fffc3d8e79f02041151c32d7aa",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19679
+        },
+        "end": {
+          "line": 2,
+          "column": 19703
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "strava/auth/disconnect",
+      "mechanism": "call:_e.delete",
+      "node_id": "jag_node_2b815fdcca5a64acb5f844c6aa49ff57268e6c9f095473c38998ec5bae2c8aad",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28103
+        },
+        "end": {
+          "line": 2,
+          "column": 28138
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/profile/strava",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_32fbe257bd469e8f3e7c8df53b02a34f2764724f32055190cd44236245b6c811",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 36999
+        },
+        "end": {
+          "line": 4,
+          "column": 37028
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/activities/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_35c4c349ef4889875445f0ce637be5c810b764a486a03b57ea5633f96103f9cb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12923
+        },
+        "end": {
+          "line": 2,
+          "column": 12945
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "strava/auth/status",
+      "mechanism": "call:_e.get",
+      "node_id": "jag_node_36fd99bc843a62889660cb5c926ae5318ef5612050aea161fceea53313081039",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 27854
+        },
+        "end": {
+          "line": 2,
+          "column": 27882
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/llm/generate",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_3913f4bf1a42f136453dec8a598108a137b271b2c6a8ed53c446ad032189a76d",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 61485
+        },
+        "end": {
+          "line": 4,
+          "column": 61514
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/pricing",
+      "mechanism": "property:path",
+      "node_id": "jag_node_392be1ba1ed1d78b40462f8c1d00a118b2779a5ca9db30e5348e6e1af7a5fe69",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19544
+        },
+        "end": {
+          "line": 2,
+          "column": 19559
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/llm/active",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_3d3c41694d4f75d2b49c5f28526406d2390fb05c527cbdeb2781ff0b5d65bb0b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 61374
+        },
+        "end": {
+          "line": 4,
+          "column": 61398
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "coros/auth/status",
+      "mechanism": "call:_e.get",
+      "node_id": "jag_node_409710fe973626462b15a1c0479e58d06da38810be1f54b2831d9b6edac1125d",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28054
+        },
+        "end": {
+          "line": 2,
+          "column": 28081
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "dropbox/auth/status",
+      "mechanism": "call:_e.get",
+      "node_id": "jag_node_40a96e501651dde79f940d84a15fd35e04fd326779fb3fcb86eec2d7d89a4e6e",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 27904
+        },
+        "end": {
+          "line": 2,
+          "column": 27933
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/activities/re-sync",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_421ed7686a56186ab5b34f3ea04ab5bcf659bfcf846517d89ca5faf54bf95f92",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 24512
+        },
+        "end": {
+          "line": 2,
+          "column": 24561
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/llm/list",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_438df33cec625e1bf8ad101e3a8c54bccc5d6748c5088e7bcfde67a3ef51c05d",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 61655
+        },
+        "end": {
+          "line": 4,
+          "column": 61688
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/training-plans/:slug",
+      "mechanism": "property:path",
+      "node_id": "jag_node_479270e3bd8df37625a5032f797c524f1b326fc0ecb1f4d65e01212cb6fac583",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15089
+        },
+        "end": {
+          "line": 2,
+          "column": 15117
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/plans/:slug",
+      "mechanism": "property:path",
+      "node_id": "jag_node_47a46c891e4af989dc4376271ad51d8adc410498615e23389e85e349072a6400",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14595
+        },
+        "end": {
+          "line": 2,
+          "column": 14614
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/v1/web/activities/trash",
+      "mechanism": "call:ke.get",
+      "node_id": "jag_node_4b4880e30652f59d46c906f056834cf86f073d983f0e7e7de6e555c80012717a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 24806
+        },
+        "end": {
+          "line": 2,
+          "column": 24862
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/create",
+      "mechanism": "property:path",
+      "node_id": "jag_node_4d93c2a814c4dc3992166de6fe3b47c65e129e4edb2850ed386573da936cfb4b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13194
+        },
+        "end": {
+          "line": 2,
+          "column": 13217
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/:id/edit",
+      "mechanism": "property:path",
+      "node_id": "jag_node_4ea5b55faed1f618faa01d425306a4a37ae5d4e9b369b2a4323c884504aede56",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13337
+        },
+        "end": {
+          "line": 2,
+          "column": 13362
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/list/update",
+      "mechanism": "call:A.put",
+      "node_id": "jag_node_527353c31ee8a3005519c8fe2490b4e37acd3ddcb4b492e8ec2a756fb319b1bd",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 21298
+        },
+        "end": {
+          "line": 4,
+          "column": 21433
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/analytics",
+      "mechanism": "property:path",
+      "node_id": "jag_node_553f5ee090d2b93f71bfd4e06b28ebdb8260dbf0b07779fa072a1a3073f1e396",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 16065
+        },
+        "end": {
+          "line": 2,
+          "column": 16082
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "google/auth/status",
+      "mechanism": "call:_e.get",
+      "node_id": "jag_node_593c295e68e6f69974e857e216878524d90bfbd39eb2dd243eb598da36878b4e",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 27955
+        },
+        "end": {
+          "line": 2,
+          "column": 27983
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/users/alerts",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_5a40b2c8080606b09401707fd45423adc801aae07c604b925123329dbfce400b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28492
+        },
+        "end": {
+          "line": 2,
+          "column": 28517
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/plan/send",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_5a65cb252b289d0b1c951360758d4176500d6f6b4288f5a537dc5dd9b8bc227b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 47270
+        },
+        "end": {
+          "line": 4,
+          "column": 47305
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/event-plans/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_5f29cce1f2c5e4cc8669b1e1b246b0632f149d91f599f6fcc027e26b18e57f5d",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14909
+        },
+        "end": {
+          "line": 2,
+          "column": 14932
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/bulk-update-percent-of-hr",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_60eff19843f4cc8f0127e983ddfcd2e944045de3e80a637bf2e8b7fcaa1d4cb9",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 58309
+        },
+        "end": {
+          "line": 4,
+          "column": 58368
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/lists/workouts/full",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_61a3db258bea5fd3aa9d758656fcb75d5f764e00f59dc97c4804ebacd17304cb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 20142
+        },
+        "end": {
+          "line": 4,
+          "column": 20211
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/calendar/share/:shareId",
+      "mechanism": "property:path",
+      "node_id": "jag_node_61d8e12d1789003678668510adfab22487f2a3950f415558b785a130cd743ce8",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14051
+        },
+        "end": {
+          "line": 2,
+          "column": 14082
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/activities/vo2max-stats-test",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_621346fad32d1bbfbb4aef67384f073e5d50872631e7bc5ad27772ba9b3bbc5e",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 23652
+        },
+        "end": {
+          "line": 2,
+          "column": 23724
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/list_workout",
+      "mechanism": "call:A.delete",
+      "node_id": "jag_node_623641d52b0bb162a26db5f567f0547f9f0da5290b17b6e8a9fe3ecb168665cb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 21000
+        },
+        "end": {
+          "line": 4,
+          "column": 21044
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/library/:listSlug",
+      "mechanism": "property:path",
+      "node_id": "jag_node_6299573f15730e40319a5eac685b3035494c10ae9e78ddf7d0617cc6ba310976",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14224
+        },
+        "end": {
+          "line": 2,
+          "column": 14249
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/subscription",
+      "mechanism": "property:path",
+      "node_id": "jag_node_62c940a00dc2b28cb5a0b62d9ecd56c5936ed7d99c8ddc840910b57cdd76d44b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12600
+        },
+        "end": {
+          "line": 2,
+          "column": 12628
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/assessment/next-question",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_651e98e5268d0be596edf6bef2d1b2c5dc0ccef123a558515675074595dbfae3",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 41573
+        },
+        "end": {
+          "line": 4,
+          "column": 41611
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/profile",
+      "mechanism": "property:path",
+      "node_id": "jag_node_660b72aea769732ec659c7bfea1336f5afb6a2de63942fe0287a136a1ad29367",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12210
+        },
+        "end": {
+          "line": 2,
+          "column": 12233
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/list/delete",
+      "mechanism": "call:A.delete",
+      "node_id": "jag_node_674b7cb32b347f518aa3af3cc8b3e8de8c4322ab5ac7ed0c93faef2186427b9e",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 21511
+        },
+        "end": {
+          "line": 4,
+          "column": 21563
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workouts/make-private",
+      "mechanism": "call:A.put",
+      "node_id": "jag_node_67f5918e34cc221349e41071ce83debf21a90f5b6fa0cdad0a393cf6fa757484",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 32205
+        },
+        "end": {
+          "line": 4,
+          "column": 32254
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/:pathMatch(.*)*",
+      "mechanism": "property:path",
+      "node_id": "jag_node_69df820a10109a49c7265698bf0784981371f34585de4305ab032b8d64e1572a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19930
+        },
+        "end": {
+          "line": 2,
+          "column": 19953
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/library",
+      "mechanism": "property:path",
+      "node_id": "jag_node_6e2c0f93d13023a93050caa52e9a45fa8d47484367b0949661aa817124cdc202",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14353
+        },
+        "end": {
+          "line": 2,
+          "column": 14368
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/coach-jack",
+      "mechanism": "property:path",
+      "node_id": "jag_node_70b198942a327ac6001d47e80bf9ed11c00f6789ea27e4e584cdf47993b1c594",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17789
+        },
+        "end": {
+          "line": 2,
+          "column": 17813
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/llm-plan-creator",
+      "mechanism": "property:path",
+      "node_id": "jag_node_70c1c9d892adb04fa6192625cd8f7556f4660651c56582925e3c9f2f4638c0b3",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18855
+        },
+        "end": {
+          "line": 2,
+          "column": 18879
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/activities",
+      "mechanism": "property:path",
+      "node_id": "jag_node_73b3e936ebb481f5558c58f5b53b684f4837aa4f6d204049a94f3a7879e11df2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13059
+        },
+        "end": {
+          "line": 2,
+          "column": 13077
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/",
+      "mechanism": "property:path",
+      "node_id": "jag_node_78727a93b3a6fb9e1751bb891c249a29edc55f2b4415fa4caec4e05314bdecfc",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18760
+        },
+        "end": {
+          "line": 2,
+          "column": 18768
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/users/get_me",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_79666bdf6b1faacdf4a67a58248a99245e174b3e1f61f78bafc77b6054a7e9ba",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28445
+        },
+        "end": {
+          "line": 2,
+          "column": 28470
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/users/update-active-sport-profile",
+      "mechanism": "call:A.put",
+      "node_id": "jag_node_7981619db65ecb85e0e1804476eb656301d8fedd5aa5f0eee9146ed281d7d7fc",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28590
+        },
+        "end": {
+          "line": 2,
+          "column": 28659
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/push",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_79ad85cd61a5f2681b3acef832a8ea86b644477192489100523300b33a71a8a2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57195
+        },
+        "end": {
+          "line": 4,
+          "column": 57233
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack/plan/:mode",
+      "mechanism": "property:path",
+      "node_id": "jag_node_7a1228aa98022f9f241f93632670ba2126618e4425586ad81f2df22ad0891eb1",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17407
+        },
+        "end": {
+          "line": 2,
+          "column": 17436
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/userList/myLists/true",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_7a4a929f34b7ad543c137ad0033318d30c9bb20f7327bdcb449bb0face1b7d7b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 25784
+        },
+        "end": {
+          "line": 4,
+          "column": 25818
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed",
+      "mechanism": "property:path",
+      "node_id": "jag_node_7a95f8e26a5cf5f8b895d4d65442561d07668ace8b2ab28b0aecb454d5f25e11",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18518
+        },
+        "end": {
+          "line": 2,
+          "column": 18531
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/workouts/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_7eec999723fc3c5411ad44c3ba2900494cf14d90023829099376bb62b4f53f68",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 11916
+        },
+        "end": {
+          "line": 2,
+          "column": 11942
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "td_embedded",
+      "mechanism": "call:le.get",
+      "node_id": "jag_node_7f6d10e6855764d8cf10db97f3a5e56a4dc9e99ff65d5d00a748c8d5a9f9de23",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 21274
+        },
+        "end": {
+          "line": 2,
+          "column": 21295
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/calendar",
+      "mechanism": "property:path",
+      "node_id": "jag_node_801d2274a45610d43617d94ccf999acf59c87d26a8aba76804759ebc44a6b8c2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13877
+        },
+        "end": {
+          "line": 2,
+          "column": 13899
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/:id/copy",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8060739106474e634ea7d88911806ec9c6f2989fb3dcb39ca9ff12d1d81386cc",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13493
+        },
+        "end": {
+          "line": 2,
+          "column": 13518
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workouts",
+      "mechanism": "call:A.delete",
+      "node_id": "jag_node_806af48e48ee3e32e195304eadf8bf916dab69d8b45cdc918d77f0958f78955d",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 20910
+        },
+        "end": {
+          "line": 4,
+          "column": 20944
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/turbo/workouts/:slug/:version?",
+      "mechanism": "property:path",
+      "node_id": "jag_node_80f044778a407879804de05b74a4aaba641fe0ad285dedc66d14ecf088fe5a7a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 11755
+        },
+        "end": {
+          "line": 2,
+          "column": 11793
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/list/create",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_84e1f84b7a651687fc6fb9466521d93a6339174fc63007870ddea2e79ccd2bf5",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 21118
+        },
+        "end": {
+          "line": 4,
+          "column": 21203
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/v1/web/activities/bulk-data",
+      "mechanism": "call:ke.post",
+      "node_id": "jag_node_874e804132bf37ef6d31c31827f70a657162dd3683b7ea4687d1fb495b2aef16",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 23875
+        },
+        "end": {
+          "line": 2,
+          "column": 23920
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/sync",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_875c74dcc11ab038c51a5f7e726182afa5c35935c645ab25f59a1d869b1fb48a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 58394
+        },
+        "end": {
+          "line": 4,
+          "column": 58425
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/workouts/:slug/:version?",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8a62575bf1b03c9b7ca135c78d8f74622987e1ff6086d16bc4ae13af4ad9471e",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13630
+        },
+        "end": {
+          "line": 2,
+          "column": 13662
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/apps-and-devices",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8a92a7012e7b1daf439e2b9e3213b16741644b3b0fbe1154cbb87027167230fb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 16303
+        },
+        "end": {
+          "line": 2,
+          "column": 16333
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/plan",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_8ab3f2d8c848657d6566228658081c0dbd5741576ef63135e016ee092f3dc4e2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 47340
+        },
+        "end": {
+          "line": 4,
+          "column": 47363
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/assessment/restore-questions-and-answers",
+      "mechanism": "call:ve.get",
+      "node_id": "jag_node_8cd1631b8f7bf6bb29e28c5612b8cb4b8b69ba26f424569f86d7fef284eb0fce",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 41476
+        },
+        "end": {
+          "line": 4,
+          "column": 41566
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/register",
+      "mechanism": "property:path",
+      "node_id": "jag_node_8f8adf7dbd7fe672469da2217f709d5d6a691453f7243cd7a7603d298fbc2159",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19409
+        },
+        "end": {
+          "line": 2,
+          "column": 19425
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/recurrence/create",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_8f99643f8cd4d40427a24ede8df86196f9e15efc8e4afe31ae8bb782f40ebb4b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57319
+        },
+        "end": {
+          "line": 4,
+          "column": 57390
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "zwift/auth/status",
+      "mechanism": "call:_e.get",
+      "node_id": "jag_node_92c2fe7f1e76732b1b17e87417faf08bf47621732501cde866ab426f7e6e7f87",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28005
+        },
+        "end": {
+          "line": 2,
+          "column": 28032
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/lists_workout",
+      "mechanism": "call:A.delete",
+      "node_id": "jag_node_9312762a99abcbba8bb0eb35de2ca776d2bf6a27351609f7e040fff044ccc710",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 20820
+        },
+        "end": {
+          "line": 4,
+          "column": 20865
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack",
+      "mechanism": "property:path",
+      "node_id": "jag_node_9331d425d17217f3f0c6b802447c8e269cf8f22400f799a6ea3992a9717eb860",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17277
+        },
+        "end": {
+          "line": 2,
+          "column": 17295
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "dropbox/auth/disconnect",
+      "mechanism": "call:_e.delete",
+      "node_id": "jag_node_9644ed10e07634bb5c60d647007db744300010dc69c4f4aadefd8767fca08795",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28160
+        },
+        "end": {
+          "line": 2,
+          "column": 28196
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/llm/generate-description",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_96fb9ecb733bda6f8b17a5232e79ed8be24c281bdb0be7dded005853e9f9fb48",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 61521
+        },
+        "end": {
+          "line": 4,
+          "column": 61562
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "auth/disconnect",
+      "mechanism": "call:gs.delete",
+      "node_id": "jag_node_986965d8cd3ab33c0c94f2788a79808e0fd4930894547d34fbcfcf9d24a7334f",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 16262
+        },
+        "end": {
+          "line": 4,
+          "column": 16290
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/workout/search",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_9990c0da4a51757ec072ba1258d58d3fd5426c48d43bd642d3b90c4b63edfce2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 31599
+        },
+        "end": {
+          "line": 4,
+          "column": 31922
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/search",
+      "mechanism": "property:path",
+      "node_id": "jag_node_9b45dfab36a456f3914fbe7ec91087376bd3189e2b4478a0477a9c256a1ebbf2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15686
+        },
+        "end": {
+          "line": 2,
+          "column": 15700
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/plan/calc-workout-stats",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_a017169bda942524b880afff001713a9f8025a152fe940c9efb9050e233b5b80",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 47370
+        },
+        "end": {
+          "line": 4,
+          "column": 47424
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_a15b1ebb21dca060d4562e408c0afc005ac9be6114078f79a8504d39e612131a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 56565
+        },
+        "end": {
+          "line": 4,
+          "column": 56588
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "zwift/auth/disconnect",
+      "mechanism": "call:_e.delete",
+      "node_id": "jag_node_a1e4392322de22705cde489849e8f70bab6be78f6a48e634dfde840d25d89b74",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28275
+        },
+        "end": {
+          "line": 2,
+          "column": 28309
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/profile/check-premium",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_a1e87fca2ed37c7419d4b3004b764aa71c3df10c535c649941e066a8e5262353",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 36955
+        },
+        "end": {
+          "line": 4,
+          "column": 36991
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/notifications/read",
+      "mechanism": "call:A.put",
+      "node_id": "jag_node_a4f25bd7172017d4f3968bfa9938d7aced12a82b953ac827cda2baab80898b5d",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28682
+        },
+        "end": {
+          "line": 2,
+          "column": 28721
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/list/workout",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_a507b6c5db5661dd3e4766e32e6492a158357a62663e0be564d6f635e8749b30",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 20719
+        },
+        "end": {
+          "line": 4,
+          "column": 20775
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/bulk-delete",
+      "mechanism": "call:A.delete",
+      "node_id": "jag_node_a547ef1ae7acc57acbc8502ee5927e243655b41a6e29dbcab682d273d17c4944",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 58088
+        },
+        "end": {
+          "line": 4,
+          "column": 58142
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/events/questionaire/:id",
+      "mechanism": "property:path",
+      "node_id": "jag_node_a85b23e2a3cd8a89b77e46372c4400f679db950a771cc6ea979b731e5b68f804",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14713
+        },
+        "end": {
+          "line": 2,
+          "column": 14744
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "disconnect",
+      "mechanism": "call:ea.get",
+      "node_id": "jag_node_a940b3e9e6eeebb313485e90827719d76ed3e75a5990193a856cc6a271144cfb",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 27811
+        },
+        "end": {
+          "line": 2,
+          "column": 27831
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/profile/fill-default-facts",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_a9b05c98bde24995ed8920a5b2d8c0ed8227c80bd1cdd455a575e4c9b2d0ac0a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 36870
+        },
+        "end": {
+          "line": 4,
+          "column": 36911
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/get-sync-progress-status",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_a9ed5a6c577cb2cc696dec669cc1f6f8d9ecff4cc77190d95e54773dbb9156a3",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 58447
+        },
+        "end": {
+          "line": 4,
+          "column": 58495
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/login",
+      "mechanism": "property:path",
+      "node_id": "jag_node_aa668fa1da4f503375acf204e807585c9318b3d64445b1c78096b3e58a1a27b6",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 19157
+        },
+        "end": {
+          "line": 2,
+          "column": 19170
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/rollback-event",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_adbe839f2b5545c3a255b702c3967241c512d758a549d0113b137951033ed4fc",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57905
+        },
+        "end": {
+          "line": 4,
+          "column": 57963
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/plans",
+      "mechanism": "property:path",
+      "node_id": "jag_node_ae59b27c55586a417dcfb65dee0512385260120e4f91a675000236790aeba182",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 14481
+        },
+        "end": {
+          "line": 2,
+          "column": 14494
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/delete",
+      "mechanism": "call:A.delete",
+      "node_id": "jag_node_b30a517bd92d21a31ef1f8cbeb38c026356b98f228e86f6fa02a3519d49e3996",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57720
+        },
+        "end": {
+          "line": 4,
+          "column": 57769
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/turbo/activities/missing?provider=strava",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_b576d7848b34a667a74213b101cdee9f045b1f8487a8e6e63dd22607cab15a4f",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28743
+        },
+        "end": {
+          "line": 2,
+          "column": 28796
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/coach-jack/plan/:mode",
+      "mechanism": "property:path",
+      "node_id": "jag_node_b66522e285530329abec96f281fd24711d343d10b95b107892ae01a9a4f6a2f8",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17948
+        },
+        "end": {
+          "line": 2,
+          "column": 17983
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/lthr-history",
+      "mechanism": "property:path",
+      "node_id": "jag_node_bbc0d8a95016e073aa5883279bb21614239c54e8377f81e5e364c2d6bebd7931",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12472
+        },
+        "end": {
+          "line": 2,
+          "column": 12500
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack/questioning",
+      "mechanism": "property:path",
+      "node_id": "jag_node_bf44de38c0894a97ffb9f310945a481cf5675f713c030bddde412d40c66d4fdf",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17550
+        },
+        "end": {
+          "line": 2,
+          "column": 17580
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/activities/vo2max-test-page",
+      "mechanism": "property:path",
+      "node_id": "jag_node_c7214b1f03962386c05d2e60a6f0cc6a3929e84fcc32858d8e47cefcbcd6e4e2",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12769
+        },
+        "end": {
+          "line": 2,
+          "column": 12804
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/users/tags/add",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_ca3e12d080be079d2abab5c8bd6dd1a8863bd820b369631ea4b77fe4323ee974",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 91
+        },
+        "end": {
+          "line": 4,
+          "column": 140
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/list_new/workout",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_ca702ea780ad715cb0ccb7628ba3f78e168906274dd98fc23ff65c4fe2f0c1ed",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 20604
+        },
+        "end": {
+          "line": 4,
+          "column": 20675
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/v1/web/activities/stats",
+      "mechanism": "call:ke.get",
+      "node_id": "jag_node_caa9b03c76dc8d9ba441c855e7e17527a400bf839820bdee93758e3d9cd0ef95",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 23554
+        },
+        "end": {
+          "line": 2,
+          "column": 23627
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/profile",
+      "mechanism": "call:ve.post",
+      "node_id": "jag_node_d38d017bedac84670cf6f351c48680296e019c241394618dc7e661f97d95406b",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 36841
+        },
+        "end": {
+          "line": 4,
+          "column": 36862
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/update",
+      "mechanism": "call:A.put",
+      "node_id": "jag_node_d48b1a0f3da97391dc90086c7a0826a82986d337b386499fa98dde7f4491fb65",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57440
+        },
+        "end": {
+          "line": 4,
+          "column": 57479
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/settings",
+      "mechanism": "property:path",
+      "node_id": "jag_node_d779e8f55042cc9e59c23f6ae61ad084ce8d5651c8b6f5cd4447f8827645fda4",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12063
+        },
+        "end": {
+          "line": 2,
+          "column": 12087
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/export/file",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_d876a92c7c0f06b575a3dc70bb3a27c9d377c2edb1ac0862ee7cb62e34813413",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 58522
+        },
+        "end": {
+          "line": 4,
+          "column": 58613
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/v1/web/activities",
+      "mechanism": "call:ke.get",
+      "node_id": "jag_node_db903e4ea3872f5c0a1e71205a8092b89117d46cb584268a748fec2b4fda7d09",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 23440
+        },
+        "end": {
+          "line": 2,
+          "column": 23531
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "referrers",
+      "mechanism": "call:le.get",
+      "node_id": "jag_node_db9f2120fbb3fd154b9afba9ddf8dea87ee4fb1a630ca5568b9686c2d692b6df",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 136886
+        },
+        "end": {
+          "line": 4,
+          "column": 136905
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/activities/update-rpe",
+      "mechanism": "call:A.patch",
+      "node_id": "jag_node_df2e8ab4021c5496f054699675c363e8643ca1dbb6c1d9f1aeab2328db2cb20a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 24191
+        },
+        "end": {
+          "line": 2,
+          "column": 24249
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "auth/status",
+      "mechanism": "call:gs.get",
+      "node_id": "jag_node_df381d15c1267ebafcbe969dabac4666376bd87b5f91a17c409a4e0640e8e85e",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 12731
+        },
+        "end": {
+          "line": 4,
+          "column": 12752
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "google/auth/disconnect",
+      "mechanism": "call:_e.delete",
+      "node_id": "jag_node_e04222ae4c9d9d6fa0bb4638a1889635f4484ccd1bca8ea24fe405b3211f36d3",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28218
+        },
+        "end": {
+          "line": 2,
+          "column": 28253
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/account/ftp-history",
+      "mechanism": "property:path",
+      "node_id": "jag_node_e2dac202fdd6d4b860b5abcca0beab211b1c67abd22b98d0da8625b7029c0aa7",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 12355
+        },
+        "end": {
+          "line": 2,
+          "column": 12382
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/users/oauth-connections",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_e345b3dd26ffcd82e45b2ecfe3b659a43bfd91e03b910e21278b7a0ea9fce29a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28387
+        },
+        "end": {
+          "line": 2,
+          "column": 28423
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/lists",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_e67ce7b9ea9d96c707c9cec3b06e687426e8d187984eb09c2de350814c788511",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 20524
+        },
+        "end": {
+          "line": 4,
+          "column": 20549
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/events/re-sync-event",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_e6a1a57ecbbc4fe02a94522cea0c91000cec20719ea9c414eb628e5862882970",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57986
+        },
+        "end": {
+          "line": 4,
+          "column": 58043
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/analytics",
+      "mechanism": "property:path",
+      "node_id": "jag_node_e6c98d06df8b020b8d1733d3f27ed1848d765b9cd33fc3b3d8d96e1ef13b41e8",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 16160
+        },
+        "end": {
+          "line": 2,
+          "column": 16183
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/services/status",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_ea829e61aa183298a0b4926f294d3ff491bc039147179a9791823cca42ce2618",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 68014
+        },
+        "end": {
+          "line": 4,
+          "column": 68056
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/llm/generate-change-summary",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_eab1fb2239fcb21de9596ea11c92f10ab4226d0a6c08f0f9bfe91269b692ef1c",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 61569
+        },
+        "end": {
+          "line": 4,
+          "column": 61613
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/calendars/recurrence/delete",
+      "mechanism": "call:A.delete",
+      "node_id": "jag_node_ef254a612f2301693d007c368763df07c49315180b2219b19cc261a6d4e007dc",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 57829
+        },
+        "end": {
+          "line": 4,
+          "column": 57882
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/training-plans",
+      "mechanism": "property:path",
+      "node_id": "jag_node_ef759a5323639a5f3648c1a3a65bfddeaf0a576823cd3e0aa8ae1575c0670a51",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 15225
+        },
+        "end": {
+          "line": 2,
+          "column": 15247
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/users/update",
+      "mechanism": "call:A.put",
+      "node_id": "jag_node_eff46a679eb5ff5b8fdc1df56820ba3baa5489f4c9b2ab32cafc965221e8b0a4",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28540
+        },
+        "end": {
+          "line": 2,
+          "column": 28567
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/translations",
+      "mechanism": "call:A.post",
+      "node_id": "jag_node_f4f8d0fbab53a5b15b0f9d9a1a170a0a9d1c44e5b2d7f0486c84f722d4df5318",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 27748
+        },
+        "end": {
+          "line": 4,
+          "column": 27805
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "api/config",
+      "mechanism": "call:A.get",
+      "node_id": "jag_node_f6600e3f893a285e4a9a8ef1a3f264022011d27e10f61e69592a91657cbda0ad",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 28419
+        },
+        "end": {
+          "line": 4,
+          "column": 28438
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/embed/llm-plan-creator",
+      "mechanism": "property:path",
+      "node_id": "jag_node_f73901bd9bf3366c079f51e48a19173dffa6d86af19989a01fc7009be68f6882",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 18991
+        },
+        "end": {
+          "line": 2,
+          "column": 19021
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/calendar",
+      "mechanism": "property:path",
+      "node_id": "jag_node_fa2152149955de6af4607d56cd117de4fd9b85e2e0b80a78fa1204a46d52371a",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 13751
+        },
+        "end": {
+          "line": 2,
+          "column": 13767
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/users/list/share",
+      "mechanism": "call:A.put",
+      "node_id": "jag_node_faab740376ae56ae8b6cde841297947e9fc4fe5c69e264ef32b11c02f1932f35",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 4,
+          "column": 21456
+        },
+        "end": {
+          "line": 4,
+          "column": 21488
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "coros/auth/disconnect",
+      "mechanism": "call:_e.delete",
+      "node_id": "jag_node_fbf901678762e081db713e2223581034722cca9271f8de9a6ebdc9ac5a99a77f",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 28331
+        },
+        "end": {
+          "line": 2,
+          "column": 28365
+        }
+      }
+    },
+    {
+      "endpoint_kind": "route",
+      "value": "/coach-jack/strava-callback",
+      "mechanism": "property:path",
+      "node_id": "jag_node_ff2c5a69607351bcf922080743c2f0445132f7fd436d49e0d971afa5144e4288",
+      "location": {
+        "kind": "source-range",
+        "source": "index-CjwVpe-L.js",
+        "start": {
+          "line": 2,
+          "column": 17693
+        },
+        "end": {
+          "line": 2,
+          "column": 17727
+        }
+      }
+    }
+  ],
+  "focused_static_endpoint_candidates": [
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workout-builder/generate-cached?structure=blocks",
+      "mechanism": "call:It.post",
+      "node_id": "jag_node_02c1734376032a6fc6eaa8f9181225edc56d0f83c57f4e38c6abedba6bb98014",
+      "location": {
+        "kind": "source-range",
+        "source": "Create-rXv4vTwY.js",
+        "start": {
+          "line": 3,
+          "column": 31421
+        },
+        "end": {
+          "line": 3,
+          "column": 31507
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workouts/create",
+      "mechanism": "call:It.post",
+      "node_id": "jag_node_5c07adf86308947181c4037efb082d586eae450b353e7ca477a46d58bca70d03",
+      "location": {
+        "kind": "source-range",
+        "source": "Create-rXv4vTwY.js",
+        "start": {
+          "line": 1,
+          "column": 7023
+        },
+        "end": {
+          "line": 1,
+          "column": 7056
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "create-settings",
+      "mechanism": "call:y.get",
+      "node_id": "jag_node_9d98cbb50817bd5cbaeecbe0bf55c8403076fd65990bc9ec80dc6510832bc2cb",
+      "location": {
+        "kind": "source-range",
+        "source": "Create-rXv4vTwY.js",
+        "start": {
+          "line": 3,
+          "column": 65475
+        },
+        "end": {
+          "line": 3,
+          "column": 65499
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "create-show-example",
+      "mechanism": "call:y.get",
+      "node_id": "jag_node_c533313357695d4882b5c847ee5566454cea3f05326186b8a8cabb5438f7a48e",
+      "location": {
+        "kind": "source-range",
+        "source": "Create-rXv4vTwY.js",
+        "start": {
+          "line": 3,
+          "column": 75730
+        },
+        "end": {
+          "line": 3,
+          "column": 75758
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workouts/update/admin",
+      "mechanism": "call:It.put",
+      "node_id": "jag_node_ca66568677207d03931a88cf98071e8942ed67a82564bcea3d1f4363465bd128",
+      "location": {
+        "kind": "source-range",
+        "source": "Create-rXv4vTwY.js",
+        "start": {
+          "line": 1,
+          "column": 7134
+        },
+        "end": {
+          "line": 1,
+          "column": 7172
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workouts/update",
+      "mechanism": "call:It.put",
+      "node_id": "jag_node_f1bc501282e7ecb69a56f091985a2323bd82e54682bea4d0e38b54ddb6101fbf",
+      "location": {
+        "kind": "source-range",
+        "source": "Create-rXv4vTwY.js",
+        "start": {
+          "line": 1,
+          "column": 7079
+        },
+        "end": {
+          "line": 1,
+          "column": 7111
+        }
+      }
+    },
+    {
+      "endpoint_kind": "network",
+      "value": "/api/workout-builder/edit",
+      "mechanism": "call:It.post",
+      "node_id": "jag_node_fba31c2b59b27712ab016e9abac0521cb948f9188733280ca41ee5477e65244a",
+      "location": {
+        "kind": "source-range",
+        "source": "Create-rXv4vTwY.js",
+        "start": {
+          "line": 3,
+          "column": 32005
+        },
+        "end": {
+          "line": 3,
+          "column": 32092
+        }
+      }
+    }
+  ],
+  "search_parameters": [
+    "s",
+    "pageNumber",
+    "pageSize",
+    "type",
+    "myLibrary",
+    "textDescriptions",
+    "authorDescriptions",
+    "hasCadence",
+    "hasIntervalComments",
+    "minutesBetween",
+    "metersBetween",
+    "stressBetween",
+    "intensityBetween",
+    "sortBy",
+    "sessionType",
+    "lengthUnit",
+    "structure"
+  ],
+  "workout_write_fields": [
+    "author",
+    "title",
+    "description",
+    "durationMinutes",
+    "totalMeters",
+    "dominantZone",
+    "workoutStatus",
+    "timeType",
+    "workoutGroup",
+    "workoutType",
+    "bikeStress",
+    "intensity",
+    "timeInZones",
+    "workoutBlocks",
+    "intensityUnit",
+    "lengthUnit",
+    "hasTextDescription",
+    "tags",
+    "sessionType",
+    "targetDistance",
+    "anchorMode",
+    "id",
+    "originalWorkoutId"
+  ],
+  "workout_shape": {
+    "block": [
+      "start",
+      "end",
+      "type",
+      "reps",
+      "segments"
+    ],
+    "block_types": [
+      "segment",
+      "set",
+      "repetition"
+    ],
+    "segment": [
+      "name",
+      "controlMode",
+      "segmentType",
+      "durationType",
+      "durationValue",
+      "pressLapButton",
+      "targets",
+      "notes"
+    ],
+    "target": [
+      "type",
+      "min",
+      "max"
+    ],
+    "target_types": [
+      "primary",
+      "cadence",
+      "slope",
+      "heart_rate"
+    ],
+    "duration_types": [
+      "second",
+      "meter"
+    ],
+    "control_modes": [
+      "erg",
+      "slope",
+      "hr",
+      "resistance"
+    ],
+    "intensity_units": [
+      "watts",
+      "percentOfFtp",
+      "percentOfMaxHr",
+      "percentOfThresholdHr",
+      "percentOfThresholdPace",
+      "percentOfThresholdSpeed",
+      "percentOfRacePace",
+      "vdotZone"
+    ],
+    "length_units": [
+      "duration",
+      "distance"
+    ]
+  },
+  "locations": {
+    "production_config": {
+      "source": "index-CjwVpe-L.js",
+      "line": 2,
+      "column": 7426
+    },
+    "api_client": {
+      "source": "index-CjwVpe-L.js",
+      "line": 2,
+      "column": 22478
+    },
+    "workout_normalization": {
+      "source": "index-CjwVpe-L.js",
+      "line": 4,
+      "column": 17579
+    },
+    "write_payload": {
+      "source": "Create-rXv4vTwY.js",
+      "line": 1,
+      "column": 18595
+    },
+    "segment_factory": {
+      "source": "Create-rXv4vTwY.js",
+      "line": 3,
+      "column": 48156
+    },
+    "block_factory": {
+      "source": "Create-rXv4vTwY.js",
+      "line": 3,
+      "column": 48407
+    }
+  },
+  "coverage": {
+    "entry_statistics": {
+      "relevant_files": 1,
+      "nested_asar_containers": 0,
+      "text_bytes_read": 205810,
+      "invalid_utf8_files": 0,
+      "parsed_javascript_files": 1,
+      "visited_ast_nodes": 51705,
+      "findings": 973,
+      "modules": 0,
+      "parse_failures": 0
+    },
+    "focused_statistics": {
+      "relevant_files": 2,
+      "nested_asar_containers": 0,
+      "text_bytes_read": 152667,
+      "invalid_utf8_files": 0,
+      "parsed_javascript_files": 2,
+      "visited_ast_nodes": 40919,
+      "findings": 229,
+      "modules": 0,
+      "parse_failures": 0
+    },
+    "application_graph": "complete within inventoried files",
+    "semantic_graph": "partial in both analyses due to semantic_graph_node_ceiling=100000; no cross-function completeness claimed",
+    "imports": "Most public chunks were not downloaded and entry imports are therefore unresolved in its one-file analysis."
+  },
+  "unknowns": [
+    "Backend implementation, schemas, authorization enforcement and algorithms not established by browser bundle",
+    "No live API response or successful integration behavior established",
+    "No exact package lock or Vite version established",
+    "No complete code-split chunk or feature coverage",
+    "Computed URLs are not included in the 136 literal endpoint-node count; some reported network candidates are cookie helper calls, not confirmed HTTP calls"
+  ]
+}
