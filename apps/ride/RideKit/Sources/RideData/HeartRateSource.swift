@@ -41,6 +41,11 @@ public struct HeartRateSelector: Sendable {
     latest[reading.source] = reading
   }
 
+  /// The latest reading from `source`, however old, or nil if it has sent none.
+  public func latest(from source: HeartRateSource) -> Reading? {
+    latest[source]
+  }
+
   /// The reading to use at `date`, or nil when no source has reported lately.
   public func current(at date: Date) -> Reading? {
     HeartRateSource.allCases.lazy
