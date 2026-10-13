@@ -60,6 +60,11 @@ struct FITEncoderTests {
     #expect(try FITDecoder.decode(FITEncoder.encode(recording(sport: nil))).sport == nil)
   }
 
+  @Test func savesCyclingAsAVirtualRide() {
+    #expect(Sport.cycling.fitSport.sport == 2)
+    #expect(Sport.cycling.fitSport.subSport == 58)
+  }
+
   @Test func dropsASampleThatSharesASecondWithTheLast() throws {
     var ride = recording()
     ride.samples.insert(

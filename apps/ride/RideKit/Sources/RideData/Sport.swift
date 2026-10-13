@@ -34,11 +34,12 @@ public enum Sport: String, CaseIterable, Codable, Sendable {
     }
   }
 
-  /// The FIT `sport` and `sub_sport` a ride of this sport is saved with. Indoor cycling and
-  /// rowing name their sub-sport; the others use the generic one.
+  /// The FIT `sport` and `sub_sport` a ride of this sport is saved with. Cycling is a virtual
+  /// activity, which Strava shows as a virtual ride, and indoor rowing names its sub-sport; the
+  /// others use the generic one.
   var fitSport: (sport: Int, subSport: Int) {
     switch self {
-    case .cycling: (2, 6)
+    case .cycling: (2, 58)
     case .running: (1, 0)
     case .swimming: (5, 0)
     case .rowing: (15, 14)
