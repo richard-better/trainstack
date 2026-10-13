@@ -16,6 +16,8 @@ final class RideLauncher {
   private(set) var interrupted: RideJournal.Interrupted?
   /// Whether the player is showing. The rider can minimise it while the ride carries on.
   var isPlayerPresented = false
+  /// Whether the player is asking the rider to confirm ending the ride.
+  var isConfirmingEnd = false
   /// The rider's devices, which stay connected between rides.
   let devices: BluetoothDevices
   /// How rides show power, passed on to the ride as the rider changes it.
@@ -88,6 +90,7 @@ final class RideLauncher {
     ride?.journal?.finish()
     ride = nil
     isPlayerPresented = false
+    isConfirmingEnd = false
     keepAwake.end()
     #if os(macOS)
       watchRelay.stop()

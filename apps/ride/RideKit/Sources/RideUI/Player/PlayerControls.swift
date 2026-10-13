@@ -15,13 +15,14 @@ struct PlayerControls: View {
       )
       .labelStyle(.iconOnly)
       .buttonStyle(.glass)
-      .keyboardShortcut(.space, modifiers: [])
+      .keyboardShortcut(pause)
+      .help(session.isPaused ? "Resume the ride" : "Pause the ride", shortcut: pause)
       Button("Skip interval", systemImage: "forward.end.fill", action: controller.skipInterval)
         .labelStyle(.iconOnly)
         .buttonStyle(.glass)
         .disabled(session.isComplete)
-        .keyboardShortcut(.rightArrow, modifiers: .command)
-        .help("Skip to the next interval (⌘→)")
+        .keyboardShortcut(skip)
+        .help("Skip to the next interval", shortcut: skip)
     }
     .controlSize(.large)
     #if os(macOS)
@@ -33,6 +34,7 @@ struct PlayerControls: View {
       label: \.rawValue
     )
     .fixedSize()
+    .help(modeHelp)
     let stepper = SettingStepper(label: settingLabel, decrease: decrease, increase: increase)
       .fixedSize()
     GlassEffectContainer(spacing: 12) {
@@ -69,6 +71,20 @@ struct PlayerControls: View {
     case .slope: "\(session.grade.formatted(.oneDecimal))%"
     case .level: "Level \(session.level)"
     }
+  }
+
+  private var pause: KeyboardShortcut? { RideCommand.togglePause.shortcut(playerPresented: true) }
+
+  private var skip: KeyboardShortcut? { RideCommand.skipInterval.shortcut(playerPresented: true) }
+
+  /// Such as "Trainer mode (⌘1 ERG, ⌘2 Slope, ⌘3 Level)".
+  private var modeHelp: String {
+    let keys = TrainerMode.allCases.compactMap { mode in
+      RideCommand.mode(mode).shortcut(playerPresented: true).map {
+        "\($0.symbols) \(mode.rawValue)"
+      }
+    }
+    return "Trainer mode (\(keys.joined(separator: ", ")))"
   }
 
   private func decrease() { controller.adjust(by: -1) }
