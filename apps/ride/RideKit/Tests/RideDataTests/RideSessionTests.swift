@@ -173,6 +173,17 @@ struct RideSessionTests {
     #expect(heavy.speed < light.speed)
   }
 
+  @Test func showsPowerSmoothedButRecordsEveryReading() {
+    var session = RideSession(workout: workout)
+    for power in [210, 0, 240] { session.advance(by: 1, reading: .init(power: power)) }
+    #expect(session.power(.instant) == 240)
+    #expect(session.power(.threeSeconds) == 150)
+    #expect(session.samples.map(\.sample.power) == [210, 0, 240])
+    session.pause()
+    session.advance(by: 1, reading: .init(power: 0))
+    #expect(session.power(.threeSeconds) == 80)
+  }
+
   @Test func simulatedTrainerHoldsTheERGTarget() {
     var session = RideSession(workout: workout)
     var trainer = SimulatedTrainer()
