@@ -280,6 +280,26 @@ struct RideControllerTests {
     #expect(transport.trainerWrites.last == FitnessMachineCommand.reset.data)
   }
 
+  @Test func showsTheRidersSensorsAndTheWatchOnceItSendsDuringTheRide() {
+    let (devices, transport, trainer) = cyclingDevices()
+    let heartRate = HeartRateFeed()
+    let session = RideSession(workout: template.workout(ftp: 200))
+    // From an earlier ride, so not this one's.
+    heartRate.record(140, from: .watch, at: session.startDate - 60)
+    let controller = RideController(
+      template: template, ftp: 200, heartRate: heartRate, devices: devices, session: session,
+      simulated: false)
+    let now = Date.now
+    #expect(controller.hasSensors)
+    #expect(controller.sensorStatuses(at: now).map(\.source) == [.trainer])
+    #expect(controller.sensorStatuses(at: now + 6).map(\.health) == [.quiet])
+    heartRate.record(140, from: .watch, at: now)
+    #expect(controller.sensorStatuses(at: now).map(\.source) == [.trainer, .watch])
+    transport.onDisconnect?(trainer.id)
+    #expect(controller.sensorStatuses(at: now).first?.health == .connecting)
+    #expect(!RideController(template: template, ftp: 200, simulated: true).hasSensors)
+  }
+
   private func cyclingDevices() -> (BluetoothDevices, CyclingTestTransport, DiscoveredDevice) {
     let transport = CyclingTestTransport()
     let defaults = UserDefaults(suiteName: "RideControllerTests.\(UUID().uuidString)")!

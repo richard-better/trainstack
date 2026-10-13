@@ -30,6 +30,11 @@ struct PlayerView: View {
         Button("Minimize", systemImage: "chevron.down", action: onMinimize)
           .help("Back to the app while the ride carries on")
       }
+      if controller.hasSensors {
+        ToolbarItem(placement: .primaryAction) {
+          SensorStatusButton(controller: controller)
+        }
+      }
       ToolbarItem(placement: .primaryAction) {
         Button("End Ride", systemImage: "stop.fill", action: confirmEnd)
           .confirmationDialog("End this ride?", isPresented: $isConfirmingEnd) {
