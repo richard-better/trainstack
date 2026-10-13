@@ -51,6 +51,15 @@ struct RideGlanceTests {
     #expect(glance.next?.targetPower == 200)
   }
 
+  @Test func showsPowerAsTheRiderChose() {
+    var ride = session(at: 10)
+    ride.advance(by: 1, reading: .init(power: 0))
+    ride.advance(by: 1, reading: .init(power: 0))
+    #expect(RideGlance(session: ride, ftp: 200, heartRateZones: nil).power == 63)
+    #expect(
+      RideGlance(session: ride, ftp: 200, heartRateZones: nil, powerDisplay: .instant).power == 0)
+  }
+
   @Test func hasNoTargetsOutsideErg() {
     var ride = session(at: 10)
     ride.mode = .slope
