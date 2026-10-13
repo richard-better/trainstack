@@ -126,11 +126,22 @@ public struct RideSession: Sendable {
     intervals.first { position < $0.end }
   }
 
+  /// The interval after the current one, or nil on the last interval and once the workout is
+  /// done.
+  public var nextInterval: Interval? {
+    currentInterval.flatMap {
+      intervals.indices.contains($0.index + 1) ? intervals[$0.index + 1] : nil
+    }
+  }
+
   public var isComplete: Bool { currentInterval == nil }
 
   public var intervalRemaining: TimeInterval? {
     currentInterval.map { $0.end - position }
   }
+
+  /// Workout time still to ride. Skipping an interval takes its time off.
+  public var remaining: TimeInterval { duration - position }
 
   /// The power the trainer is asked to hold, in ERG mode while the workout lasts.
   public var targetPower: Int? {

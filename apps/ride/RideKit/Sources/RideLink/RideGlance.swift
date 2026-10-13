@@ -114,12 +114,8 @@ extension RideGlance {
         targetPower: ergTarget(interval), remaining: interval.end - session.position,
         duration: interval.end - interval.start)
     }
-    let next = interval.flatMap { interval in
-      session.intervals.indices.contains(interval.index + 1)
-        ? Next(
-          zone: zones[interval.index + 1],
-          targetPower: ergTarget(session.intervals[interval.index + 1]))
-        : nil
+    let next = session.nextInterval.map {
+      Next(zone: zones[$0.index], targetPower: ergTarget($0))
     }
     let reading = session.latest
     self.init(

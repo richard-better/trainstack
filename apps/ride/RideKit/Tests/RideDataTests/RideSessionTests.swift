@@ -51,6 +51,57 @@ struct RideSessionTests {
     #expect(session.isComplete)
   }
 
+  @Test func looksAheadToTheNextInterval() {
+    var session = RideSession(workout: workout)
+    #expect(session.nextInterval?.index == 1)
+    #expect(session.nextInterval?.plannedPower == 200)
+    #expect(session.nextInterval.map { $0.end - $0.start } == 120)
+    ride(&session, seconds: 60)
+    // On the last interval nothing follows.
+    #expect(session.currentInterval?.index == 1)
+    #expect(session.nextInterval == nil)
+    ride(&session, seconds: 120)
+    #expect(session.nextInterval == nil)
+  }
+
+  @Test func looksAheadThroughRepeats() throws {
+    // Four 40-second sprints at 340 W with 20 seconds at 80 W between, after 24 minutes of
+    // warm-up and before 5 minutes at 100 W.
+    let tabata = try #require(WorkoutTemplate.named("Tabata 4×40/20")).workout(ftp: 200)
+    var session = RideSession(workout: tabata)
+    ride(&session, seconds: 1_490)
+    #expect(session.currentInterval?.index == 5)
+    #expect(session.nextInterval?.index == 6)
+    #expect(session.nextInterval?.plannedPower == 340)
+    #expect(session.nextInterval.map { $0.end - $0.start } == 40)
+    ride(&session, seconds: 170)
+    // The last rest leads into the cool-down, which is the last interval.
+    #expect(session.currentInterval?.index == 11)
+    #expect(session.nextInterval?.index == 12)
+    #expect(session.nextInterval?.plannedPower == 100)
+    ride(&session, seconds: 20)
+    #expect(session.currentInterval?.index == 12)
+    #expect(session.nextInterval == nil)
+  }
+
+  @Test func countsDownTheWorkoutTimeLeft() {
+    var session = RideSession(workout: workout)
+    #expect(session.remaining == 180)
+    ride(&session, seconds: 10)
+    #expect(session.remaining == 170)
+    // Pausing stops the countdown with the ride clock.
+    session.togglePause()
+    session.advance(by: 5, reading: .init())
+    #expect(session.remaining == 170)
+    session.togglePause()
+    // Skipping takes the rest of the interval off.
+    session.skipInterval()
+    #expect(session.remaining == 120)
+    #expect(session.elapsed == 10)
+    session.skipInterval()
+    #expect(session.remaining == 0)
+  }
+
   @Test func adjustsTheSettingOfTheCurrentMode() {
     var session = RideSession(workout: workout)
     session.adjust(by: -5)
