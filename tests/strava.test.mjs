@@ -54,6 +54,7 @@ async function stravaServer(request) {
       data_type: form.get("data_type"),
       trainer: form.get("trainer"),
       name: form.get("name"),
+      description: form.get("description"),
       fileName: file.name,
       bytes: [...new Uint8Array(await file.arrayBuffer())],
     };
@@ -340,6 +341,7 @@ test("a ride goes to Strava with the rider's token, and the app can ask how it i
     data_type: "fit",
     trainer: "1",
     name: "Threshold 3x12",
+    description: "Recorded with TrainStack Ride",
     fileName: "ride.fit",
     bytes: [...fit],
   });
