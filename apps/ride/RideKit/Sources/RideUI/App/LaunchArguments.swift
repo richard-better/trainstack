@@ -1,3 +1,4 @@
+import Foundation
 import RideBluetooth
 import RideData
 
@@ -16,14 +17,34 @@ extension RideLauncher {
   /// trainer, so the player can be tried without hardware.
   static func launchLauncher() -> RideLauncher {
     let devices = BluetoothDevices.launchDevices()
+    let journalDirectory = launchJournalDirectory()
     #if DEBUG
       let arguments = CommandLine.arguments
       if arguments.contains("-sample-rides") || arguments.contains("-simulated-trainer") {
-        return RideLauncher(simulated: true, devices: devices)
+        return RideLauncher(simulated: true, devices: devices, journalDirectory: journalDirectory)
       }
     #endif
-    return RideLauncher(devices: devices)
+    return RideLauncher(devices: devices, journalDirectory: journalDirectory)
   }
+
+  /// Where rides are journalled, except that debug builds started with any flag that rides
+  /// with pretend data journal in a folder of their own that no other launch looks in, so they
+  /// neither leave the rider a ride to pick up nor find one.
+  static func launchJournalDirectory(
+    arguments: [String] = CommandLine.arguments
+  ) -> URL {
+    #if DEBUG
+      let flags = ["-ride", "-sample-rides", "-simulated-trainer", "-sample-devices"]
+      if flags.contains(where: arguments.contains) { return throwawayJournalDirectory }
+    #endif
+    return RideJournal.defaultDirectory
+  }
+
+  #if DEBUG
+    /// A journal folder for this launch only, in the temporary folder.
+    static let throwawayJournalDirectory = URL.temporaryDirectory.appending(
+      path: "Ride in progress \(UUID().uuidString)", directoryHint: .isDirectory)
+  #endif
 
   #if DEBUG
     /// Debug builds started with `-ride "<workout name>"` open straight into that ride.

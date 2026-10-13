@@ -102,6 +102,25 @@ struct InterruptedRideTests {
     }
   }
 
+  @Test func aRealLaunchJournalsWhereItPicksUpRides() {
+    #expect(
+      RideLauncher.launchJournalDirectory(arguments: ["Ride"]) == RideJournal.defaultDirectory)
+    #expect(
+      RideLauncher.launchJournalDirectory(arguments: ["Ride", "-NSDocumentRevisionsDebugMode"])
+        == RideJournal.defaultDirectory)
+  }
+
+  @Test(arguments: [
+    ["Ride", "-ride", "Quick test 45s"], ["Ride", "-sample-rides"],
+    ["Ride", "-simulated-trainer"], ["Ride", "-sample-devices"],
+  ])
+  func aPretendLaunchJournalsInAFolderOfItsOwn(arguments: [String]) {
+    let directory = RideLauncher.launchJournalDirectory(arguments: arguments)
+    #expect(directory != RideJournal.defaultDirectory)
+    #expect(directory.path.hasPrefix(URL.temporaryDirectory.path))
+    #expect(!directory.path.hasPrefix(RideJournal.defaultDirectory.path))
+  }
+
   @Test func aRideCannotStartWhileOneWaits() throws {
     try withDirectory { directory in
       try crashedRide(10, in: directory)
