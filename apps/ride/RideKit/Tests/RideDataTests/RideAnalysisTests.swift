@@ -88,11 +88,57 @@ struct RideAnalysisTests {
     #expect(try #require(ride.trainingStressScore(ftp: 150)) > 24)
   }
 
+  @Test func anHourAtFTPIsAnIntensityOfOneAndAScoreOfAHundred() {
+    let ride = recording((0..<3600).map { .init(elapsed: Double($0), power: 250) })
+    #expect(ride.normalizedPower() == 250)
+    #expect(ride.intensityFactor(ftp: 250) == 1)
+    #expect(ride.trainingStressScore(ftp: 250) == 100)
+    #expect(ride.intensityFactor(ftp: 0) == nil)
+  }
+
+  @Test func addsUpWorkSecondBySecond() {
+    // A minute at 100 W, then a minute at 300 W: 6 kJ and 18 kJ.
+    let ride = recording((0..<120).map { .init(elapsed: Double($0), power: $0 < 60 ? 100 : 300) })
+    #expect(ride.work() == 24)
+    #expect(recording([.init(elapsed: 0, heartRate: 120)]).work() == nil)
+  }
+
+  @Test(arguments: [1.0, 1.2, 2.0])
+  func addsUpTheSameWorkWhateverTheTimeBetweenSamples(interval: TimeInterval) {
+    // Two minutes at 200 W is 24 kJ, however often the trainer reported.
+    let count = Int((120 / interval).rounded()) + 1
+    let ride = recording((0..<count).map { .init(elapsed: Double($0) * interval, power: 200) })
+    #expect(ride.work() == 24)
+  }
+
+  @Test(arguments: [1.0, 1.2, 2.0])
+  func findsTheSamePowerWhateverTheTimeBetweenSamples(interval: TimeInterval) {
+    // Two minutes at 200 W, however often the trainer reported.
+    let count = Int((120 / interval).rounded()) + 1
+    let ride = recording((0..<count).map { .init(elapsed: Double($0) * interval, power: 200) })
+    #expect(ride.normalizedPower() == 200)
+    #expect(ride.powerCurve(durations: [5, 60]).map(\.power) == [200, 200])
+  }
+
+  @Test func leavesPausesOutOfThePowerPerSecond() {
+    // Paused for a minute between two readings: the seconds between count as zero.
+    let ride = recording([.init(elapsed: 0, power: 300), .init(elapsed: 60, power: 300)])
+    #expect(ride.powerPerSecond().filter { $0 > 0 }.count == 2)
+  }
+
+  @Test func leavesPausesOutOfTheWork() {
+    // A minute at 300 W, paused for a minute, then the samples carry on.
+    var samples = (0...60).map { RideRecording.Sample(elapsed: Double($0), power: 300) }
+    samples.append(.init(elapsed: 120, power: 300))
+    #expect(recording(samples).work() == 18)
+  }
+
   @Test func hasNoStressForAVeryShortRide() {
     let samples = (0..<10).map { RideRecording.Sample(elapsed: Double($0), power: 200) }
     let ride = RideRecording(startDate: .now, samples: samples, summary: .init(duration: 9))
     #expect(ride.normalizedPower() == nil)
     #expect(ride.trainingStressScore(ftp: 200) == nil)
+    #expect(ride.intensityFactor(ftp: 200) == nil)
   }
 
   private func recording(_ samples: [RideRecording.Sample]) -> RideRecording {

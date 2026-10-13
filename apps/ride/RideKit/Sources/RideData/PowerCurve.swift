@@ -27,13 +27,21 @@ extension RideRecording {
     }
   }
 
-  /// Power for each whole second of the ride. Seconds without a reading count as zero.
-  func powerPerSecond() -> [Int] {
+  /// Power for each whole second of the ride. Each sample holds until the next one, so samples
+  /// further apart than a second fill the seconds between. A gap longer than `maxSampleGap` is a
+  /// pause, as in `timeInZones`, and seconds without a reading count as zero.
+  func powerPerSecond(maxSampleGap: TimeInterval = 5) -> [Int] {
     guard hasPower, let last = samples.last else { return [] }
     var result = [Int](repeating: 0, count: max(Int(last.elapsed) + 1, 0))
-    for sample in samples {
-      let index = Int(sample.elapsed)
-      if index >= 0, index < result.count { result[index] = sample.power ?? 0 }
+    for (index, sample) in samples.enumerated() {
+      let first = Int(sample.elapsed)
+      guard first >= 0, first < result.count else { continue }
+      var end = first + 1
+      if index + 1 < samples.count {
+        let next = samples[index + 1].elapsed
+        if next - sample.elapsed <= maxSampleGap { end = max(Int(next), end) }
+      }
+      for second in first..<min(end, result.count) { result[second] = sample.power ?? 0 }
     }
     return result
   }

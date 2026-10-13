@@ -14,11 +14,31 @@ extension RideRecording {
     return Int(pow(meanOfFourthPowers, 0.25).rounded())
   }
 
+  /// Intensity factor: normalized power as a share of FTP, 1 for riding at FTP. Nil for rides
+  /// under 30 seconds.
+  public func intensityFactor(ftp: Int) -> Double? {
+    guard ftp > 0, let normalized = normalizedPower() else { return nil }
+    return Double(normalized) / Double(ftp)
+  }
+
   /// Training stress score: 100 for an hour at FTP. Nil for rides under 30 seconds.
   public func trainingStressScore(ftp: Int) -> Int? {
-    guard ftp > 0, let normalized = normalizedPower() else { return nil }
-    let intensity = Double(normalized) / Double(ftp)
-    return Int(
-      (summary.duration * Double(normalized) * intensity / (Double(ftp) * 3600) * 100).rounded())
+    guard let intensity = intensityFactor(ftp: ftp) else { return nil }
+    return Int((summary.duration * intensity * intensity / 3600 * 100).rounded())
+  }
+
+  /// The work done, in kilojoules: each sample's power over the time until the next one. A gap
+  /// longer than `maxSampleGap` is a pause and does not count, as in `timeInZones`. Nil for a
+  /// ride without power.
+  public func work(maxSampleGap: TimeInterval = 5) -> Int? {
+    guard hasPower else { return nil }
+    var joules = 0.0
+    for (sample, next) in zip(samples, samples.dropFirst()) {
+      guard let power = sample.power else { continue }
+      let duration = next.elapsed - sample.elapsed
+      guard duration > 0, duration <= maxSampleGap else { continue }
+      joules += Double(power) * duration
+    }
+    return Int((joules / 1000).rounded())
   }
 }
