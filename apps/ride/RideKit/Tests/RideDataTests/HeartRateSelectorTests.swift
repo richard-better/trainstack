@@ -23,6 +23,16 @@ struct HeartRateSelectorTests {
     #expect(selector.current(at: start + 19) == nil)
   }
 
+  @Test func keepsTheLatestReadingFromEachSourceAfterItGoesQuiet() {
+    var selector = HeartRateSelector()
+    #expect(selector.latest(from: .watch) == nil)
+    selector.record(.init(bpm: 150, source: .watch, date: start))
+    selector.record(.init(bpm: 154, source: .chestStrap, date: start + 1))
+    #expect(selector.latest(from: .watch)?.date == start)
+    #expect(selector.current(at: start + 60) == nil)
+    #expect(selector.latest(from: .chestStrap)?.bpm == 154)
+  }
+
   @Test func prefersRealSensorsOverASimulatedOne() {
     var selector = HeartRateSelector()
     selector.record(.init(bpm: 120, source: .simulated, date: start))

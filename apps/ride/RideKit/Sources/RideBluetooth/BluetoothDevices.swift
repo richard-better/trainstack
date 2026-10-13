@@ -105,6 +105,9 @@ public final class BluetoothDevices {
   private var batteryLevels: [UUID: Int] = [:]
   private var heartRateReadings: [UUID: (bpm: Int, date: Date)] = [:]
   private var cyclingReadings: [UUID: CyclingSensorReadings] = [:]
+  /// When each connected device connected or last sent a reading. Not observed, since it changes
+  /// with every measurement; whoever shows it checks it on a timer.
+  @ObservationIgnored private var lastHeard: [UUID: Date] = [:]
   /// The sensor the rider picked for each metric, keyed by `RideMetric.rawValue`.
   private var sourcePicks: [String: UUID] = [:]
   @ObservationIgnored private let transport: any BluetoothTransport
@@ -160,6 +163,14 @@ public final class BluetoothDevices {
   }
 
   public func batteryLevel(of id: UUID) -> Int? { batteryLevels[id] }
+
+  /// When the connected device `id` was last heard from: when it connected, or the last reading
+  /// it sent since. Nil while it is not connected. A heart rate strap that has lost contact
+  /// with the rider sends nothing to go by, so it counts as quiet.
+  public func lastHeard(from id: UUID) -> Date? {
+    guard connectionState(of: id) == .connected else { return nil }
+    return lastHeard[id]
+  }
 
   /// The selected sensor's recent reading, in watts, rpm or bpm. Zero is a valid reading.
   public func reading(for metric: RideMetric, at date: Date = .now) -> Int? {
@@ -264,6 +275,7 @@ public final class BluetoothDevices {
     saveSourcePicks()
     connections[id] = nil
     batteryLevels[id] = nil
+    lastHeard[id] = nil
     cyclingReadings[id] = nil
     trainerControls[id] = nil
     heartRateReadings[id] = nil
@@ -339,6 +351,7 @@ public final class BluetoothDevices {
       discovered.removeAll()
       connections.removeAll()
       batteryLevels.removeAll()
+      lastHeard.removeAll()
       cyclingReadings.removeAll()
       trainerControls.removeAll()
       heartRateReadings.removeAll()
@@ -352,12 +365,14 @@ public final class BluetoothDevices {
       return
     }
     connections[id] = .connected
+    lastHeard[id] = .now
   }
 
   /// A paired device that drops, such as one switched off or carried out of range, is
   /// reconnected as soon as it is back.
   private func didDisconnect(_ id: UUID) {
     batteryLevels[id] = nil
+    lastHeard[id] = nil
     cyclingReadings[id] = nil
     // Control lasts only as long as the connection.
     trainerControls[id] = nil
@@ -376,6 +391,7 @@ public final class BluetoothDevices {
     guard isPaired(id), connectionState(of: id) == .connected else { return }
     let bpm = measurement.reading
     heartRateReadings[id] = bpm.map { ($0, .now) }
+    if bpm != nil { lastHeard[id] = .now }
     if let bpm, source(of: .heartRate)?.id == id { onHeartRate?(bpm) }
     startExpiringReadings()
   }
@@ -386,6 +402,7 @@ public final class BluetoothDevices {
     guard isPaired(id), connectionState(of: id) == .connected else { return }
     cyclingReadings[id, default: CyclingSensorReadings()].receive(
       data, from: characteristic, at: date)
+    lastHeard[id] = date
     startExpiringReadings()
     onCyclingActivity?()
   }

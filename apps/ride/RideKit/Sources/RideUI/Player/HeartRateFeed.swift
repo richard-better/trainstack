@@ -13,4 +13,8 @@ final class HeartRateFeed {
   func current(at date: Date = .now) -> HeartRateSelector.Reading? {
     selector.current(at: date)
   }
+
+  func latest(from source: HeartRateSource) -> HeartRateSelector.Reading? {
+    selector.latest(from: source)
+  }
 }

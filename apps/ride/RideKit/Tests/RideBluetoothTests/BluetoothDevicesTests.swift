@@ -370,6 +370,33 @@ struct BluetoothDevicesTests {
     #expect(devices.reading(for: .power, at: now) == 200)
   }
 
+  @Test func remembersWhenEachConnectedDeviceWasLastHeardFrom() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), services: [.trainer])
+    let strap = DiscoveredDevice(id: UUID(), services: [.heartRate])
+    devices.pair(trainer)
+    devices.pair(strap)
+    #expect(devices.lastHeard(from: trainer.id) == nil)
+    let connected = Date.now
+    transport.onConnect?(trainer.id)
+    transport.onConnect?(strap.id)
+    #expect(devices.lastHeard(from: trainer.id).map { $0 >= connected } == true)
+    let later = connected.addingTimeInterval(30)
+    devices.receiveCycling(
+      Data([0x45, 0, 180, 0, 200, 0]), from: trainer.id, characteristic: .indoorBike, at: later)
+    #expect(devices.lastHeard(from: trainer.id) == later)
+
+    // A strap without contact sends no reading, so it is not heard from.
+    let heard = devices.lastHeard(from: strap.id)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128, hasContact: false))
+    #expect(devices.lastHeard(from: strap.id) == heard)
+
+    transport.onDisconnect?(trainer.id)
+    #expect(devices.lastHeard(from: trainer.id) == nil)
+    devices.forget(strap.id)
+    #expect(devices.lastHeard(from: strap.id) == nil)
+  }
+
   @Test func passesOnEachHeartRateFromThePairedStrapOnly() {
     let (devices, transport) = scanningDevices()
     let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])

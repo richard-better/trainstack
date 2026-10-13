@@ -132,6 +132,27 @@ final class RideController {
     }
   }
 
+  /// Whether the ride takes readings from the rider's devices, so has their status to show.
+  var hasSensors: Bool { devices != nil }
+
+  /// The rider's paired devices and the watch, and whether each is sending. The watch counts
+  /// once it has sent heart rate during this ride.
+  func sensorStatuses(at date: Date = .now) -> [SensorStatus] {
+    let paired =
+      devices.map { devices in
+        devices.paired.map {
+          SensorStatus.Device(
+            device: $0, connection: devices.connectionState(of: $0.id),
+            lastHeard: devices.lastHeard(from: $0.id), batteryLevel: devices.batteryLevel(of: $0.id)
+          )
+        }
+      } ?? []
+    let watch = heartRate?.latest(from: .watch).map(\.date).flatMap {
+      $0 >= session.startDate ? $0 : nil
+    }
+    return SensorStatus.all(paired: paired, watchLastHeard: watch, at: date)
+  }
+
   /// Pauses the ride when a trainer that was connected is not any more, so the workout does not
   /// carry on without anything holding the resistance.
   private func pauseIfTrainerDropped() {
