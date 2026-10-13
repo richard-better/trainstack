@@ -30,7 +30,9 @@ struct PlayerView: View {
     .toolbar {
       ToolbarItem(placement: minimizePlacement) {
         Button("Minimize", systemImage: "chevron.down", action: onMinimize)
-          .help("Back to the app while the ride carries on")
+          .help(
+            "Back to the app while the ride carries on",
+            shortcut: RideCommand.togglePlayer.shortcut(playerPresented: true))
       }
       if controller.hasSensors {
         ToolbarItem(placement: .primaryAction) {
@@ -39,6 +41,7 @@ struct PlayerView: View {
       }
       ToolbarItem(placement: .primaryAction) {
         Button("End Ride", systemImage: "stop.fill", action: confirmEnd)
+          .help("End the ride", shortcut: RideCommand.end.shortcut(playerPresented: true))
           .confirmationDialog("End this ride?", isPresented: $isConfirmingEnd) {
             Button("Save Ride") { onEnd(true) }
             Button("Discard Ride", role: .destructive) { onEnd(false) }
