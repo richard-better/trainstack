@@ -1,4 +1,5 @@
 import RideData
+import RideStyle
 import SwiftUI
 
 /// The chart's legend and where the ride is in the workout. Side by side when they fit,
@@ -8,7 +9,7 @@ struct PlayerChartHeader: View {
 
   var body: some View {
     let entries = Group {
-      LegendSwatch(title: "Target", color: .primary.opacity(0.3), height: 10)
+      LegendSwatch(title: "Target", color: targetSwatch, height: 10)
       LegendSwatch(title: "Power", color: .primary.opacity(0.85), height: 2)
       LegendSwatch(title: "Heart rate", color: .red, height: 2)
     }
@@ -29,6 +30,15 @@ struct PlayerChartHeader: View {
     }
     .font(.caption)
     .foregroundStyle(.secondary)
+  }
+
+  /// The run of zone colours the targets are drawn in, or grey without an FTP to place them.
+  private var targetSwatch: AnyShapeStyle {
+    guard controller.ftp > 0 else { return AnyShapeStyle(.primary.opacity(0.3)) }
+    return AnyShapeStyle(
+      LinearGradient(
+        colors: PowerZone.allCases.map { $0.color.opacity(0.6) }, startPoint: .leading,
+        endPoint: .trailing))
   }
 
   private var intervalLine: String {
