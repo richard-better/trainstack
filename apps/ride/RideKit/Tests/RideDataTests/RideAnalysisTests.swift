@@ -111,6 +111,21 @@ struct RideAnalysisTests {
     #expect(ride.work() == 24)
   }
 
+  @Test(arguments: [1.0, 1.2, 2.0])
+  func findsTheSamePowerWhateverTheTimeBetweenSamples(interval: TimeInterval) {
+    // Two minutes at 200 W, however often the trainer reported.
+    let count = Int((120 / interval).rounded()) + 1
+    let ride = recording((0..<count).map { .init(elapsed: Double($0) * interval, power: 200) })
+    #expect(ride.normalizedPower() == 200)
+    #expect(ride.powerCurve(durations: [5, 60]).map(\.power) == [200, 200])
+  }
+
+  @Test func leavesPausesOutOfThePowerPerSecond() {
+    // Paused for a minute between two readings: the seconds between count as zero.
+    let ride = recording([.init(elapsed: 0, power: 300), .init(elapsed: 60, power: 300)])
+    #expect(ride.powerPerSecond().filter { $0 > 0 }.count == 2)
+  }
+
   @Test func leavesPausesOutOfTheWork() {
     // A minute at 300 W, paused for a minute, then the samples carry on.
     var samples = (0...60).map { RideRecording.Sample(elapsed: Double($0), power: 300) }
