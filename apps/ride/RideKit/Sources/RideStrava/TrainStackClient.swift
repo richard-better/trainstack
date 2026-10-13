@@ -16,6 +16,9 @@ public actor TrainStackClient {
   private let pollInterval: Duration
   private let pollLimit: Int
   private var session: AccountSession?
+  /// Reading the session kept from an earlier launch, until it is read or a new one saved.
+  private var restoring: Task<AccountSession?, Never>?
+  private var isRestored = false
 
   public init(
     server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
@@ -27,11 +30,35 @@ public actor TrainStackClient {
     self.transport = transport
     self.pollInterval = pollInterval
     self.pollLimit = pollLimit
-    session = store.load()
   }
 
-  public var accountName: String? { session?.name }
-  public var isSignedIn: Bool { session != nil }
+  public var accountName: String? {
+    get async {
+      await restore()
+      return session?.name
+    }
+  }
+
+  public var isSignedIn: Bool {
+    get async {
+      await restore()
+      return session != nil
+    }
+  }
+
+  /// Reads the session kept from an earlier launch the first time anything needs it. Callers
+  /// that arrive while it is being read wait for the same read.
+  private func restore() async {
+    guard !isRestored else { return }
+    let task = restoring ?? Task { [store] in await store.load() }
+    restoring = task
+    let kept = await task.value
+    // A session saved while the store was being read is newer than the kept one.
+    guard !isRestored else { return }
+    session = kept
+    isRestored = true
+    restoring = nil
+  }
 
   // MARK: Account
 
@@ -88,6 +115,8 @@ public actor TrainStackClient {
 
   private func save(_ session: AccountSession?) {
     self.session = session
+    isRestored = true
+    restoring = nil
     store.save(session)
   }
 
@@ -259,6 +288,8 @@ public actor TrainStackClient {
     _ method: String, _ path: String, query: [URLQueryItem] = [], json: [String: Any]? = nil,
     body: Data? = nil, contentType: String? = nil, signedIn: Bool = false
   ) async throws -> (Data, HTTPURLResponse) {
+    // The kept session is read before any request, which may need it or replace it.
+    await restore()
     var components = URLComponents(
       url: server.appending(path: path), resolvingAgainstBaseURL: false)!
     if !query.isEmpty { components.queryItems = query }
