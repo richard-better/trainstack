@@ -116,9 +116,14 @@ struct InterruptedRideTests {
   ])
   func aPretendLaunchJournalsInAFolderOfItsOwn(arguments: [String]) {
     let directory = RideLauncher.launchJournalDirectory(arguments: arguments)
-    #expect(directory != RideJournal.defaultDirectory)
-    #expect(directory.path.hasPrefix(URL.temporaryDirectory.path))
-    #expect(!directory.path.hasPrefix(RideJournal.defaultDirectory.path))
+    #if DEBUG
+      #expect(directory != RideJournal.defaultDirectory)
+      #expect(directory.path.hasPrefix(URL.temporaryDirectory.path))
+      #expect(!directory.path.hasPrefix(RideJournal.defaultDirectory.path))
+    #else
+      // Release builds have no pretend launches, so the flags change nothing.
+      #expect(directory == RideJournal.defaultDirectory)
+    #endif
   }
 
   @Test func aRideCannotStartWhileOneWaits() throws {
