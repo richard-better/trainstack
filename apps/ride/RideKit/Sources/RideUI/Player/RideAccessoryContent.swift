@@ -52,14 +52,14 @@ struct RideAccessoryContent: View {
 
   private var power: some View {
     HStack(alignment: .firstTextBaseline, spacing: 2) {
-      Text(session.latest.power.map(String.init) ?? "—")
+      Text(controller.power.map(String.init) ?? "—")
         .font(.headline)
         .contentTransition(.numericText())
-        .animation(reduceMotion ? nil : .default, value: session.latest.power)
+        .animation(reduceMotion ? nil : .default, value: controller.power)
       Text("W").font(.caption).foregroundStyle(.secondary)
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(session.latest.power.map { "\($0) watts" } ?? "No power")
+    .accessibilityLabel(controller.power.map { "\($0) watts" } ?? "No power")
   }
 
   private var zoneColor: Color {

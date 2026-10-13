@@ -221,6 +221,23 @@ struct RideControllerTests {
     #expect(controller.session.samples.count == 1)
   }
 
+  @Test func showsPowerAsTheRiderChoseButRecordsEachReading() {
+    let (devices, transport, trainer) = cyclingDevices()
+    let controller = RideController(
+      template: template, ftp: 200, devices: devices, simulated: false)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 250, 0]))
+    controller.tick(seconds: 1)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 0, 0, 0, 0]))
+    controller.tick(seconds: 1)
+    #expect(controller.power == 125)
+    #expect(controller.glance.power == 125)
+    #expect(controller.session.samples.map(\.sample.power) == [250, 0])
+
+    controller.powerDisplay = .instant
+    #expect(controller.power == 0)
+    #expect(controller.glance.power == 0)
+  }
+
   @Test func liveCyclingReadingsOverrideSimulationAndExpire() {
     let (devices, _, trainer) = cyclingDevices()
     let controller = RideController(

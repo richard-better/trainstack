@@ -64,6 +64,9 @@ public struct RootView: View {
     } message: {
       Text(library.storageProblem ?? "")
     }
+    .onChange(of: settings.powerDisplay, initial: true) { _, powerDisplay in
+      launcher.powerDisplay = powerDisplay
+    }
     .onChange(of: destination) { _, destination in
       if destination != .settings { appDestination = destination }
     }

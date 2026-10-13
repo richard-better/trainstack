@@ -13,6 +13,8 @@ final class RideController {
   let ftp: Int
   /// The zones the player and the watch show heart rate in.
   let heartRateZones: ZoneSet?
+  /// How power is shown, here and on the watch.
+  var powerDisplay = PowerDisplay.standard
   /// Called after each second of the ride, to keep the watch up to date.
   @ObservationIgnored var onTick: (() -> Void)?
   @ObservationIgnored private let heartRate: HeartRateFeed?
@@ -197,6 +199,9 @@ final class RideController {
     devices?.setTrainerTarget(trainerTarget, at: date)
   }
 
+  /// Power as the rider chose to see it.
+  var power: Int? { session.power(powerDisplay) }
+
   func zone(of interval: RideSession.Interval) -> PowerZone {
     PowerZone.zone(power: interval.plannedPower, ftp: ftp)
   }
@@ -209,7 +214,8 @@ final class RideController {
 
   /// The ride as the watch shows it.
   var glance: RideGlance {
-    RideGlance(session: session, ftp: ftp, heartRateZones: heartRateZones)
+    RideGlance(
+      session: session, ftp: ftp, heartRateZones: heartRateZones, powerDisplay: powerDisplay)
   }
 
   /// A controller part way through `template`, for previews.
