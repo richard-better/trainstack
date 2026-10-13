@@ -7,24 +7,30 @@ import RideStrava
 /// connection that hangs off it. Everything else in Ride works without either.
 @Observable
 final class TrainStackAccount {
-  private(set) var isSignedIn: Bool
+  /// Whether the sign-in kept from an earlier launch is still being read. Until it is, the account
+  /// is neither signed in nor out, as reading it can wait on a Keychain prompt.
+  private(set) var isRestoring = true
+  private(set) var isSignedIn = false
   private(set) var name: String?
   private(set) var isStravaConnected = false
   private(set) var stravaAthleteName: String?
   @ObservationIgnored private let client: TrainStackClient
 
-  /// Picks up a sign-in kept from an earlier launch.
+  /// Starts out restoring; `restore()` picks up the sign-in kept in `store`.
   init(
     store: any SessionStore = KeychainSessionStore(),
     transport: any HTTPTransport = URLSession.shared
   ) {
-    let session = store.load()
-    isSignedIn = session != nil
-    name = session?.name
     client = TrainStackClient(store: store, transport: transport)
   }
 
   // MARK: Account
+
+  /// Picks up a sign-in kept from an earlier launch, off the main actor.
+  func restore() async {
+    guard isRestoring else { return }
+    await sync()
+  }
 
   func signIn(identityToken: String, nonce: String, fullName: String?) async throws {
     try await client.signInWithApple(
@@ -47,15 +53,18 @@ final class TrainStackAccount {
     stravaAthleteName = nil
   }
 
+  /// Shows what the client holds, which it has restored by the time it answers.
   private func sync() async {
     isSignedIn = await client.isSignedIn
     name = await client.accountName
+    isRestoring = false
   }
 
   // MARK: Strava
 
   /// Asks whether Strava is connected. A failure leaves what was shown as it was.
   func refreshStrava() async {
+    await restore()
     guard isSignedIn else { return }
     do {
       apply(try await client.stravaStatus())
@@ -113,6 +122,9 @@ final class TrainStackAccount {
   static var sample: TrainStackAccount {
     let account = TrainStackAccount(
       store: InMemorySessionStore(AccountSession(token: "t", name: "Ada Rider")))
+    account.isRestoring = false
+    account.isSignedIn = true
+    account.name = "Ada Rider"
     account.isStravaConnected = true
     account.stravaAthleteName = "Ada Rider"
     return account
@@ -120,6 +132,8 @@ final class TrainStackAccount {
 
   /// Not signed in, for previews.
   static var signedOut: TrainStackAccount {
-    TrainStackAccount(store: InMemorySessionStore())
+    let account = TrainStackAccount(store: InMemorySessionStore())
+    account.isRestoring = false
+    return account
   }
 }

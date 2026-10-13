@@ -15,7 +15,9 @@ struct AccountSettingsView: View {
   var body: some View {
     Form {
       accountSection
-      stravaSection
+      if !account.isRestoring {
+        stravaSection
+      }
       Section {
         Text("Compatible with Strava")
           .font(.footnote)
@@ -41,7 +43,12 @@ struct AccountSettingsView: View {
 
   @ViewBuilder private var accountSection: some View {
     Section {
-      if account.isSignedIn {
+      if account.isRestoring {
+        // Reading the sign-in can wait on a Keychain prompt, so say neither signed in nor out.
+        ProgressView()
+          .frame(maxWidth: .infinity)
+          .accessibilityLabel("Checking your account")
+      } else if account.isSignedIn {
         LabeledContent("Signed in as", value: account.name ?? "Apple account")
         Button("Sign Out", action: signOut).disabled(isWorking)
         Button("Delete Account…", role: .destructive) { isConfirmingDelete = true }

@@ -16,7 +16,9 @@ public struct AccountSession: Codable, Equatable, Sendable {
 
 /// Where the session is kept between launches.
 public protocol SessionStore: Sendable {
-  func load() -> AccountSession?
+  /// Reads the kept session. It can take as long as the rider takes to answer a Keychain prompt,
+  /// so it is never read on the main actor.
+  func load() async -> AccountSession?
   /// Saves `session`, or forgets it with nil.
   func save(_ session: AccountSession?)
 }
@@ -37,7 +39,17 @@ public struct KeychainSessionStore: SessionStore {
     ]
   }
 
-  public func load() -> AccountSession? {
+  public func load() async -> AccountSession? {
+    // The read waits for the rider when macOS asks before sharing the item, so it gets a thread of
+    // its own rather than holding one Swift concurrency needs.
+    await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        continuation.resume(returning: read())
+      }
+    }
+  }
+
+  private func read() -> AccountSession? {
     var query = query
     query[kSecReturnData as String] = true
     query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -67,7 +79,7 @@ public final class InMemorySessionStore: SessionStore, @unchecked Sendable {
     self.session = session
   }
 
-  public func load() -> AccountSession? { lock.withLock { session } }
+  public func load() async -> AccountSession? { lock.withLock { session } }
 
   public func save(_ session: AccountSession?) { lock.withLock { self.session = session } }
 }

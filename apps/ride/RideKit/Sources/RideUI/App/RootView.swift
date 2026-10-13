@@ -44,6 +44,7 @@ public struct RootView: View {
     .task {
       launcher.checkForInterruptedRide()
       launcher.devices.connectPaired()
+      await account.restore()
     }
     .alert(
       "Pick Up Your Ride?", isPresented: interruptedShown, presenting: launcher.interrupted

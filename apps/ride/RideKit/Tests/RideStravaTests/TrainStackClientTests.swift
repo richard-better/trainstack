@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Synchronization
 import Testing
 
 @testable import RideStrava
@@ -33,6 +34,23 @@ private actor FakeTransport: HTTPTransport {
 private typealias Reply = FakeTransport.Reply
 
 private let session = AccountSession(token: "session-token", name: "Ada Rider")
+
+/// Counts the times the kept session is read.
+private final class CountingSessionStore: SessionStore {
+  private let kept: AccountSession?
+  private let count = Mutex(0)
+
+  init(_ kept: AccountSession?) { self.kept = kept }
+
+  var reads: Int { count.withLock { $0 } }
+
+  func load() async -> AccountSession? {
+    count.withLock { $0 += 1 }
+    return kept
+  }
+
+  func save(_ session: AccountSession?) {}
+}
 
 private func client(
   _ replies: [Reply], signedIn: Bool = true, pollLimit: Int = 5
@@ -68,7 +86,7 @@ struct TrainStackAccountTests {
 
     #expect(await client.isSignedIn)
     #expect(await client.accountName == "Ada Rider")
-    #expect(store.load() == AccountSession(token: "header-token", name: "Ada Rider"))
+    #expect(await store.load() == AccountSession(token: "header-token", name: "Ada Rider"))
     let request = try #require(await transport.requests.first)
     #expect(request.url?.absoluteString == "https://api.example.com/api/auth/sign-in/social")
     #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
@@ -86,7 +104,7 @@ struct TrainStackAccountTests {
       ], signedIn: false)
     try await client.signInWithApple(identityToken: "jwt", nonce: "n", fullName: "Ada Rider")
 
-    #expect(store.load()?.name == "Ada Rider")
+    #expect(await store.load()?.name == "Ada Rider")
     let requests = await transport.requests
     #expect(requests.count == 2)
     #expect(requests[1].url?.path == "/api/auth/update-user")
@@ -100,7 +118,7 @@ struct TrainStackAccountTests {
     await #expect(throws: StravaError.signInFailed) {
       try await rejected.signInWithApple(identityToken: "x", nonce: "n", fullName: nil)
     }
-    #expect(store.load() == nil)
+    #expect(await store.load() == nil)
 
     let (down, _, _) = client([json("{}", status: 503)], signedIn: false)
     await #expect(throws: StravaError.unavailable) {
@@ -112,18 +130,40 @@ struct TrainStackAccountTests {
     }
   }
 
+  @Test func readsTheKeptSessionOnceWhenFirstNeeded() async {
+    let store = CountingSessionStore(session)
+    let client = TrainStackClient(store: store, transport: FakeTransport([]))
+    #expect(store.reads == 0)
+    async let signedIn = client.isSignedIn
+    async let name = client.accountName
+    #expect(await signedIn)
+    #expect(await name == "Ada Rider")
+    #expect(store.reads == 1)
+  }
+
+  @Test func keepsANewSignInOverTheSessionKeptBeforeIt() async throws {
+    let store = CountingSessionStore(AccountSession(token: "old", name: "Old Name"))
+    let client = TrainStackClient(
+      store: store,
+      transport: FakeTransport([Reply(body: #"{"token":"new"}"#)]))
+    try await client.signInWithApple(identityToken: "jwt", nonce: "n", fullName: nil)
+    #expect(await client.isSignedIn)
+    #expect(await client.accountName == nil)
+    #expect(store.reads == 1)
+  }
+
   @Test func signsOutOfThisDeviceEvenWhenTheServerCannotBeReached() async {
     let (client, transport, store) = client([Reply(fails: true)])
     await client.signOut()
     #expect(await !client.isSignedIn)
-    #expect(store.load() == nil)
+    #expect(await store.load() == nil)
     #expect(await transport.requests.first?.url?.path == "/api/auth/sign-out")
   }
 
   @Test func deletesTheAccountAndForgetsTheSession() async throws {
     let (client, transport, store) = client([json("{}")])
     try await client.deleteAccount()
-    #expect(store.load() == nil)
+    #expect(await store.load() == nil)
     #expect(await transport.requests.first?.url?.path == "/api/auth/delete-user")
   }
 
@@ -132,7 +172,7 @@ struct TrainStackAccountTests {
     await #expect(throws: StravaError.rejected("Sign in again, then delete the account.")) {
       try await client.deleteAccount()
     }
-    #expect(store.load() == session)
+    #expect(await store.load() == session)
   }
 }
 
@@ -256,7 +296,7 @@ struct StravaConnectionTests {
   @Test func forgetsASessionTheServerNoLongerAccepts() async {
     let (client, _, store) = client([json(#"{"error":"unauthorized"}"#, status: 401)])
     await #expect(throws: StravaError.signedOut) { try await client.stravaStatus() }
-    #expect(store.load() == nil)
+    #expect(await store.load() == nil)
     #expect(await !client.isSignedIn)
   }
 

@@ -97,16 +97,17 @@ struct ActivityDetailView: View {
 
   /// Sends the ride to Strava, if the rider has set that up in Settings.
   private func sendToStrava() {
-    guard account.isSignedIn, account.isStravaConnected else {
-      stravaOutcome = .failed(
-        account.isSignedIn
-          ? StravaError.notConnected.localizedDescription
-          : StravaError.signedOut.localizedDescription)
-      return
-    }
     Task {
       isSendingToStrava = true
       defer { isSendingToStrava = false }
+      await account.restore()
+      guard account.isSignedIn, account.isStravaConnected else {
+        stravaOutcome = .failed(
+          account.isSignedIn
+            ? StravaError.notConnected.localizedDescription
+            : StravaError.signedOut.localizedDescription)
+        return
+      }
       do {
         stravaOutcome = .sent(try await account.upload(ride).url)
       } catch StravaError.duplicate(let activityID) {
