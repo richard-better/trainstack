@@ -27,6 +27,8 @@ struct PlayerLayout: View {
         .frame(minHeight: 52)
       PlayerSecondaryStats(session: session)
         .padding(.horizontal, Design.wideContentMargin)
+      PlayerNextInterval(controller: controller)
+        .padding(.horizontal, Design.wideContentMargin)
       PlayerPrimaryStats(controller: controller)
         .padding(.horizontal, Design.wideContentMargin)
         .frame(maxHeight: .infinity)
