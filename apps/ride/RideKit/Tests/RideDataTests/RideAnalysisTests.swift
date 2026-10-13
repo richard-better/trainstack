@@ -103,6 +103,21 @@ struct RideAnalysisTests {
     #expect(recording([.init(elapsed: 0, heartRate: 120)]).work() == nil)
   }
 
+  @Test(arguments: [1.0, 1.2, 2.0])
+  func addsUpTheSameWorkWhateverTheTimeBetweenSamples(interval: TimeInterval) {
+    // Two minutes at 200 W is 24 kJ, however often the trainer reported.
+    let count = Int((120 / interval).rounded()) + 1
+    let ride = recording((0..<count).map { .init(elapsed: Double($0) * interval, power: 200) })
+    #expect(ride.work() == 24)
+  }
+
+  @Test func leavesPausesOutOfTheWork() {
+    // A minute at 300 W, paused for a minute, then the samples carry on.
+    var samples = (0...60).map { RideRecording.Sample(elapsed: Double($0), power: 300) }
+    samples.append(.init(elapsed: 120, power: 300))
+    #expect(recording(samples).work() == 18)
+  }
+
   @Test func hasNoStressForAVeryShortRide() {
     let samples = (0..<10).map { RideRecording.Sample(elapsed: Double($0), power: 200) }
     let ride = RideRecording(startDate: .now, samples: samples, summary: .init(duration: 9))

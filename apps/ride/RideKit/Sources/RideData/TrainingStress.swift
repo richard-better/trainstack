@@ -27,11 +27,18 @@ extension RideRecording {
     return Int((summary.duration * intensity * intensity / 3600 * 100).rounded())
   }
 
-  /// The work done, in kilojoules: power over each second of the ride added up. Nil for a ride
-  /// without power.
-  public func work() -> Int? {
-    let perSecond = powerPerSecond()
-    guard !perSecond.isEmpty else { return nil }
-    return Int((Double(perSecond.reduce(0, +)) / 1000).rounded())
+  /// The work done, in kilojoules: each sample's power over the time until the next one. A gap
+  /// longer than `maxSampleGap` is a pause and does not count, as in `timeInZones`. Nil for a
+  /// ride without power.
+  public func work(maxSampleGap: TimeInterval = 5) -> Int? {
+    guard hasPower else { return nil }
+    var joules = 0.0
+    for (sample, next) in zip(samples, samples.dropFirst()) {
+      guard let power = sample.power else { continue }
+      let duration = next.elapsed - sample.elapsed
+      guard duration > 0, duration <= maxSampleGap else { continue }
+      joules += Double(power) * duration
+    }
+    return Int((joules / 1000).rounded())
   }
 }
