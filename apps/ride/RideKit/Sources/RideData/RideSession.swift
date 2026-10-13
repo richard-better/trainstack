@@ -221,14 +221,26 @@ public struct RideSession: Sendable {
     }
   }
 
+  /// Average power over the current interval so far, or nil before it has any. Only recorded
+  /// samples count, so paused time does not, and skipping to an interval starts it afresh.
+  public var intervalAveragePower: Int? {
+    guard let interval = currentInterval else { return nil }
+    // A sample's position is where it ended, so one ending at the start belongs to the interval
+    // before.
+    let ridden = samples.reversed().prefix { $0.position > interval.start }
+    return Self.average(ridden.compactMap(\.sample.power))
+  }
+
+  private static func average(_ values: [Int]) -> Int? {
+    values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
+  }
+
   /// What has been ridden so far, as a finished ride.
   public func recording() -> RideRecording {
     let recorded = samples.map(\.sample)
     let powers = recorded.compactMap(\.power)
     let heartRates = recorded.compactMap(\.heartRate)
-    func average(_ values: [Int]) -> Int? {
-      values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
-    }
+    let average = Self.average
     return RideRecording(
       startDate: startDate, workoutName: workout.name, sport: .cycling, samples: recorded,
       summary: .init(

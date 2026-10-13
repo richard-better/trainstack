@@ -40,6 +40,65 @@ struct RideSessionTests {
     #expect(session.elapsed == 11)
   }
 
+  @Test func averagesTheCurrentIntervalAndStartsAgainAtTheNext() {
+    var session = RideSession(workout: workout)
+    #expect(session.intervalAveragePower == nil)
+    ride(&session, seconds: 30, power: 90)
+    ride(&session, seconds: 30, power: 110)
+    #expect(session.currentInterval?.index == 1)
+    #expect(session.intervalAveragePower == nil)
+    ride(&session, seconds: 10, power: 210)
+    #expect(session.intervalAveragePower == 210)
+    ride(&session, seconds: 10, power: 190)
+    #expect(session.intervalAveragePower == 200)
+    ride(&session, seconds: 100)
+    #expect(session.isComplete)
+    #expect(session.intervalAveragePower == nil)
+  }
+
+  @Test func skippingStartsTheIntervalAverageAfresh() {
+    var session = RideSession(workout: workout)
+    ride(&session, seconds: 20, power: 100)
+    session.skipInterval()
+    #expect(session.intervalAveragePower == nil)
+    ride(&session, seconds: 5, power: 250)
+    #expect(session.intervalAveragePower == 250)
+  }
+
+  @Test func leavesPausedTimeOutOfTheTotals() {
+    var session = RideSession(workout: workout)
+    ride(&session, seconds: 60, power: 100)
+    session.togglePause()
+    for _ in 0..<30 { session.advance(by: 1, reading: .init(power: 0, heartRate: 90)) }
+    session.togglePause()
+    ride(&session, seconds: 60, power: 300)
+    let totals = RideTotals(session: session, ftp: 200)
+    #expect(totals.averagePower == 200)
+    #expect(totals.averageHeartRate == 140)
+    // A minute at 100 W and a minute at 300 W, without the pause between.
+    #expect(totals.work == 24)
+    #expect(totals.intervalAveragePower == 300)
+  }
+
+  @Test func scoresTheRideSoFarAgainstFTP() throws {
+    var session = RideSession(workout: workout)
+    #expect(RideTotals(session: session, ftp: 200) == RideTotals())
+    // Under 30 seconds there is no normalized power yet.
+    ride(&session, seconds: 20, power: 200)
+    #expect(RideTotals(session: session, ftp: 200).normalizedPower == nil)
+    ride(&session, seconds: 160, power: 200)
+    let totals = RideTotals(session: session, ftp: 200)
+    #expect(totals.normalizedPower == 200)
+    #expect(totals.intensityFactor == 1)
+    // Three minutes at FTP: 3/60 of an hour's 100.
+    #expect(totals.stressScore == 5)
+    #expect(totals.work == 36)
+    // Against a higher FTP the same ride is easier.
+    let easier = RideTotals(session: session, ftp: 250)
+    #expect(try #require(easier.intensityFactor) == 0.8)
+    #expect(easier.stressScore == 3)
+  }
+
   @Test func skippingMovesTheWorkoutButNotTheRideClock() {
     var session = RideSession(workout: workout)
     ride(&session, seconds: 10)
