@@ -6,13 +6,7 @@ struct PlayerTargetLabel: View {
   let zone: PowerZone?
 
   var body: some View {
-    let badge = zone.map { zone in
-      Text("Z\(zone.rawValue + 1) \(zone.name)")
-        .font(.caption)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 1)
-        .background(.quaternary, in: .capsule)
-    }
+    let badge = zone.map { PowerZoneBadge(zone: $0) }
     ViewThatFits(in: .horizontal) {
       HStack(spacing: 8) {
         Text("Target")
