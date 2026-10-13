@@ -18,6 +18,10 @@ final class RideLauncher {
   var isPlayerPresented = false
   /// The rider's devices, which stay connected between rides.
   let devices: BluetoothDevices
+  /// How rides show power, passed on to the ride as the rider changes it.
+  var powerDisplay = PowerDisplay.standard {
+    didSet { ride?.powerDisplay = powerDisplay }
+  }
   @ObservationIgnored private let simulated: Bool
   @ObservationIgnored private let journalDirectory: URL
   @ObservationIgnored private let heartRate = HeartRateFeed()
@@ -57,6 +61,7 @@ final class RideLauncher {
   }
 
   private func begin(_ ride: RideController) {
+    ride.powerDisplay = powerDisplay
     #if os(iOS)
       let watch = WatchLink.shared
       watch.onHeartRate = { [heartRate] bpm in heartRate.record(bpm, from: .watch) }

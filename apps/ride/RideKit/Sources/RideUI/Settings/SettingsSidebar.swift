@@ -32,6 +32,8 @@ struct SettingsSidebar: View {
         .padding(.leading, 24)
         Label("Rider", systemImage: "figure.outdoor.cycle")
           .tag(SettingsPage.rider)
+        Label("Player", systemImage: "gauge.with.needle")
+          .tag(SettingsPage.player)
         Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           .tag(SettingsPage.devices)
         Label("Account", systemImage: "person.crop.circle")

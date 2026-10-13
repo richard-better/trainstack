@@ -98,8 +98,12 @@ public struct RideGlance: Codable, Equatable, Sendable {
 }
 
 extension RideGlance {
-  /// The glance of `session` as it stands, for a rider with this FTP and heart rate zones.
-  public init(session: RideSession, ftp: Int, heartRateZones: ZoneSet?) {
+  /// The glance of `session` as it stands, for a rider with this FTP and heart rate zones, with
+  /// power shown as they chose.
+  public init(
+    session: RideSession, ftp: Int, heartRateZones: ZoneSet?,
+    powerDisplay: PowerDisplay = .standard
+  ) {
     let zones = session.intervals.map { PowerZone.zone(power: $0.plannedPower, ftp: ftp) }
     let ergTarget = { (interval: RideSession.Interval) in
       session.mode == .erg ? session.adjusted(interval.plannedPower) : nil
@@ -120,7 +124,7 @@ extension RideGlance {
     let reading = session.latest
     self.init(
       workoutName: session.workout.name, interval: interval, next: next, mode: session.mode,
-      isPaused: session.isPaused, power: reading.power, heartRate: reading.heartRate,
+      isPaused: session.isPaused, power: session.power(powerDisplay), heartRate: reading.heartRate,
       heartRateSource: reading.heartRateSource,
       heartRateZone: reading.heartRate.flatMap { bpm in
         heartRateZones.map { zones in

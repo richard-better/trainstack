@@ -71,6 +71,8 @@ public struct RideSession: Sendable {
   public private(set) var grade = 2.0
   public private(set) var level = 6
   public private(set) var latest = TrainerReading()
+  /// The last few seconds of power, paused or not, for the player to show it smoothed.
+  public private(set) var recentPower = PowerAverage()
   public private(set) var samples: [LiveSample] = []
   /// Metres.
   public private(set) var distance: Double = 0
@@ -138,6 +140,12 @@ public struct RideSession: Sendable {
   /// otherwise.
   private var roadGrade: Double { mode == .slope ? grade / 100 : 0 }
 
+  /// Power as the rider chose to see it: the latest reading, or the average of the last few
+  /// seconds.
+  public func power(_ display: PowerDisplay) -> Int? {
+    recentPower.average(over: display.window)
+  }
+
   /// The interval being ridden, or nil once the workout is done.
   public var currentInterval: Interval? {
     intervals.first { position < $0.end }
@@ -175,6 +183,7 @@ public struct RideSession: Sendable {
   /// is kept, so the screen stays live, and nothing is recorded.
   public mutating func advance(by duration: TimeInterval, reading: TrainerReading) {
     latest = reading
+    recentPower.record(reading.power, over: duration)
     guard !isPaused, duration > 0 else { return }
     let target = targetPower
     elapsed += duration

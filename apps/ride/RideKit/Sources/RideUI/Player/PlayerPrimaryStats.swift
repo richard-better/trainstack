@@ -13,7 +13,7 @@ struct PlayerPrimaryStats: View {
       PlayerTargetLabel(zone: session.currentInterval.map(controller.zone))
     }
     let power = BigStat(
-      value: session.latest.power.map(String.init) ?? "—", unit: "W", detail: powerDetail
+      value: controller.power.map(String.init) ?? "—", unit: "W", detail: powerDetail
     ) {
       LegendSwatch(title: "Power", color: .primary.opacity(0.85), height: 2)
     }
@@ -66,11 +66,12 @@ struct PlayerPrimaryStats: View {
     }
   }
 
-  /// How power compares with the target in ERG mode, where the trainer holds it.
+  /// How power, as the rider chose to see it, compares with the target in ERG mode, where the
+  /// trainer holds it.
   private var powerDetail: String {
     let session = controller.session
     guard session.mode == .erg else { return "Free power in \(session.mode.rawValue)" }
-    guard !session.isPaused, let target = session.targetPower, let power = session.latest.power
+    guard !session.isPaused, let target = session.targetPower, let power = controller.power
     else { return "" }
     let difference = power - target
     if abs(Double(difference)) <= Double(target) * 0.05 { return "On target" }

@@ -21,6 +21,9 @@ struct SettingsList: View {
           NavigationLink(value: SettingsPage.rider) {
             Label("Rider", systemImage: "figure.outdoor.cycle")
           }
+          NavigationLink(value: SettingsPage.player) {
+            Label("Player", systemImage: "gauge.with.needle")
+          }
           NavigationLink(value: SettingsPage.devices) {
             Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           }
