@@ -9,7 +9,10 @@ struct PlayerPrimaryStats: View {
 
   var body: some View {
     let session = controller.session
-    let target = BigStat(value: targetValue.value, unit: targetValue.unit) {
+    let target = BigStat(
+      value: targetValue.value, unit: targetValue.unit,
+      detail: controller.totals.intervalAveragePower.map { "Interval avg \($0) W" } ?? ""
+    ) {
       PlayerTargetLabel(zone: session.currentInterval.map(controller.zone))
     }
     let power = BigStat(
