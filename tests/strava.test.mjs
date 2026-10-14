@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { after, before, beforeEach, test } from "node:test";
 import { api, migrate, startWorker } from "./helpers/worker.mjs";
+import { mockApple } from "./helpers/apple.mjs";
 
 const credentials = { STRAVA_CLIENT_ID: "12345", STRAVA_CLIENT_SECRET: "client-secret-value" };
 const fit = new Uint8Array([0x0e, 0x20, 0x01, 0x02, 0xff, 0x00, 0x7f]);
@@ -11,6 +12,7 @@ let runtime;
 let db;
 /** What the Worker asked Strava for, and how Strava answers. */
 let strava;
+const appleAuth = mockApple();
 
 const tokens = (suffix, expiresAt = 4_102_444_800) => ({
   token_type: "Bearer",
@@ -70,7 +72,13 @@ async function stravaServer(request) {
 before(
   async () => {
     reset();
-    worker = await startWorker({ bindings: credentials, outboundService: stravaServer });
+    worker = await startWorker({
+      bindings: credentials,
+      outboundService: (request) =>
+        new URL(request.url).origin === "https://appleid.apple.com"
+          ? appleAuth.fetch(request)
+          : stravaServer(request),
+    });
     runtime = worker.runtime;
     await migrate(runtime);
     db = await runtime.getD1Database("DB");
@@ -92,29 +100,17 @@ after(async () => {
   await worker?.dispose();
 });
 
-let accounts = 0;
-/**
- * Signs a rider up. Real Sign in with Apple cannot run here, so an Apple-linked account is made
- * the way the sign-in would leave it: an email account with an `apple` provider row.
- */
+/** Signs in through the native Apple flow, with Apple's keys served locally. */
 async function signUp({ apple = true } = {}) {
-  const email = `rider${++accounts}@example.com`;
-  const response = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: "https://trainstackhq.com" },
-    body: JSON.stringify({ name: `Rider ${accounts}`, email, password: "test-password-12345" }),
-  });
-  assert.equal(response.status, 200, await response.clone().text());
-  if (apple) {
+  const rider = await appleAuth.signIn(runtime);
+  if (!apple) {
+    // Model an account left over from when email signup was available.
     await db
-      .prepare(
-        "INSERT INTO account (id, account_id, provider_id, user_id, updated_at) " +
-          "SELECT ?, ?, 'apple', id, 0 FROM \"user\" WHERE email = ?",
-      )
-      .bind(`apple-${accounts}`, `apple-sub-${accounts}`, email)
+      .prepare("UPDATE account SET provider_id = 'credential' WHERE user_id = ?")
+      .bind(rider.user.id)
       .run();
   }
-  return { email, token: response.headers.get("set-auth-token") };
+  return rider;
 }
 
 const call = (token, path, init = {}) =>
@@ -171,6 +167,7 @@ const upload = async (token, query = "name=Threshold%203x12&fileName=ride.fit") 
 test("every route but Strava's callback needs the rider to be signed in", async () => {
   for (const [path, method] of [
     ["/connect", "POST"],
+    ["/connect/complete", "POST"],
     ["", "GET"],
     ["", "DELETE"],
     ["/uploads", "POST"],
@@ -180,6 +177,89 @@ test("every route but Strava's callback needs the rider to be signed in", async 
     assert.equal(response.status, 401, `${method} ${path}`);
   }
   assert.equal((await call("not-a-session", "", { method: "GET" })).status, 401);
+});
+
+test("a cross-site page cannot upload to Strava using the rider's session cookie", async () => {
+  reset();
+  const { token, cookie } = await signUp();
+  await connect(token);
+  strava.requests.length = 0;
+  const response = await call(null, "/uploads?name=Unwanted%20ride", {
+    method: "POST",
+    headers: {
+      Cookie: cookie,
+      Origin: "https://attacker.example",
+      "Sec-Fetch-Site": "cross-site",
+      "Content-Type": "text/plain",
+    },
+    body: "unwanted-ride",
+  });
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: "unauthorized" });
+  assert.deepEqual(strava.requests, []);
+  assert.deepEqual(await (await call(token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+});
+
+test("protected Strava routes never fall back to cookies for missing or invalid bearer tokens", async () => {
+  reset();
+  const { cookie, token, user } = await signUp();
+  const session = await runtime.dispatchFetch(`${api}/api/auth/get-session`, {
+    headers: { Cookie: cookie },
+  });
+  assert.equal(
+    (await session.json()).user.id,
+    user.id,
+    "the cookie really authenticates a session",
+  );
+  for (const authorization of [
+    undefined,
+    "Basic credentials",
+    "Bearer",
+    "Bearer not-a-session",
+    "Bearer invalid.signature",
+    `Bearer ${token} trailing`,
+  ]) {
+    for (const [path, method] of [
+      ["", "GET"],
+      ["", "DELETE"],
+      ["/connect", "POST"],
+      ["/connect/complete", "POST"],
+      ["/uploads", "POST"],
+      ["/uploads/7", "GET"],
+    ]) {
+      const response = await call(null, path, {
+        method,
+        headers: { Cookie: cookie, ...(authorization ? { Authorization: authorization } : {}) },
+      });
+      assert.equal(response.status, 401, `${method} ${path} with ${authorization ?? "no bearer"}`);
+      assert.deepEqual(await response.json(), { error: "unauthorized" });
+    }
+  }
+  assert.deepEqual(strava.requests, []);
+});
+
+test("Strava authenticates only the bearer token when a different rider's cookie is present", async () => {
+  reset();
+  const owner = await signUp();
+  const other = await signUp();
+  await connect(owner.token);
+  strava.requests.length = 0;
+  const response = await call(null, "", {
+    headers: { Cookie: owner.cookie, Authorization: `bEaReR ${other.token}` },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { connected: false });
+  const upload = await call(other.token, "/uploads", {
+    method: "POST",
+    headers: { Cookie: owner.cookie, "Content-Type": "application/octet-stream" },
+    body: fit,
+  });
+  assert.equal(upload.status, 409);
+  assert.deepEqual(await upload.json(), { error: "not_connected" });
+  assert.deepEqual(strava.requests, []);
 });
 
 test("connecting sends the rider to Strava for upload permission only, tied to their account", async () => {
@@ -518,7 +598,7 @@ test("deleting the account deletes the Strava connection with it", async () => {
   const deleted = await runtime.dispatchFetch(`${api}/api/auth/delete-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ password: "test-password-12345" }),
+    body: JSON.stringify({}),
   });
   assert.equal(deleted.status, 200, await deleted.clone().text());
   assert.equal(await count(), before - 1);

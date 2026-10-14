@@ -24,7 +24,7 @@ export function createAuth(
       schema,
     }),
     trustedOrigins: [env.CORS_ORIGIN, ...desktopOrigins],
-    emailAndPassword: { enabled: true },
+    emailAndPassword: { enabled: false },
     // The Ride app signs in with the identity token Apple gives it, which only needs the bundle
     // ID to check. The web flow would need a Services ID and key, which are not set up.
     socialProviders: {
@@ -33,8 +33,8 @@ export function createAuth(
     // The app asks to delete the rider's account, as App Review requires wherever accounts are
     // made. Rows that belong to the user go with it.
     user: { deleteUser: { enabled: true } },
-    // Email accounts are not verified, so someone could register a rider's address first and keep
-    // the password. Signing in with Apple must never quietly join such an account.
+    // Legacy email accounts were not verified. Apple sign-in must not join an account that
+    // someone else could have registered with the rider's address.
     account: { accountLinking: { enabled: false } },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
