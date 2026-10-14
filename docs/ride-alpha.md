@@ -2,8 +2,8 @@
 
 Ride is an indoor cycling app for iPhone, iPad, Mac and Apple Watch. You pick a structured
 workout, Ride sets your smart trainer's resistance for every interval, and it saves the ride as a
-standard `.fit` file. This is an early alpha: it has been used for real rides, but only on a few
-trainers and devices, so please tell us what breaks.
+standard `.fit` file. This is an early alpha: it has only been tested on a Mac with a Zwift Ride
+and a Polar H10, so please tell us what breaks.
 
 ## What you need
 
@@ -42,9 +42,9 @@ trainers and devices, so please tell us what breaks.
 
 ## Try this first
 
-Ride has been used for real rides from start to finish, including sending them to Strava. It has
-seen few trainers and devices, and little of what goes wrong mid ride. A 30 minute ride that covers
-these is the most useful thing you can do:
+Ride has been used for real rides from start to finish, including sending them to Strava, but
+only on a Mac with a Zwift Ride and a Polar H10, and with little of what goes wrong mid ride. A 30
+minute ride that covers these is the most useful thing you can do:
 
 1. Start a workout in ERG mode and lock your phone partway through. Does the trainer still follow
    the intervals when you unlock it?
