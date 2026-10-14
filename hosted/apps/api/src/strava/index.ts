@@ -13,8 +13,8 @@ export type StravaDeps = {
     BETTER_AUTH_SECRET: string;
   };
   database: () => Database;
-  /** The signed-in rider's ID, if the request carries a session. */
-  userId: (request: Request) => Promise<string | undefined>;
+  /** The rider authenticated by this bearer token, without falling back to cookies. */
+  userId: (token: string) => Promise<string | undefined>;
   fetcher?: typeof fetch;
 };
 
@@ -290,10 +290,12 @@ export function stravaRoutes(deps: StravaDeps) {
     c.header("Referrer-Policy", "no-referrer");
   });
 
-  // Everything but the callback, which Strava's page calls, is for a signed-in rider.
+  // Only the callback is reached through a browser. Native calls require an explicit token.
   app.use("*", async (c, next) => {
     if (c.req.path === "/strava/callback") return next();
-    const userId = await deps.userId(c.req.raw);
+    const token = /^Bearer\s+(\S+)$/i.exec(c.req.header("Authorization") ?? "")?.[1];
+    if (!token) return c.json({ error: "unauthorized" }, 401);
+    const userId = await deps.userId(token);
     if (!userId) return c.json({ error: "unauthorized" }, 401);
     c.set("userId" as never, userId as never);
     return next();

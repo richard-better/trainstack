@@ -70,8 +70,13 @@ app.route(
   stravaRoutes({
     env: ENV,
     database: getDb,
-    userId: async (request) =>
-      (await (await createAuth()).api.getSession({ headers: request.headers }))?.user.id,
+    userId: async (token) => {
+      const auth = await createAuth();
+      const session = await auth.api.getSession({
+        headers: new Headers({ Authorization: `Bearer ${token}` }),
+      });
+      return session?.user.id;
+    },
   }),
 );
 
