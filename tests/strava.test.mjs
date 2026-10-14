@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { after, before, beforeEach, test } from "node:test";
 import { api, migrate, startWorker } from "./helpers/worker.mjs";
+import { mockApple } from "./helpers/apple.mjs";
 
 const credentials = { STRAVA_CLIENT_ID: "12345", STRAVA_CLIENT_SECRET: "client-secret-value" };
 const fit = new Uint8Array([0x0e, 0x20, 0x01, 0x02, 0xff, 0x00, 0x7f]);
@@ -11,6 +12,7 @@ let runtime;
 let db;
 /** What the Worker asked Strava for, and how Strava answers. */
 let strava;
+const appleAuth = mockApple();
 
 const tokens = (suffix, expiresAt = 4_102_444_800) => ({
   token_type: "Bearer",
@@ -70,7 +72,13 @@ async function stravaServer(request) {
 before(
   async () => {
     reset();
-    worker = await startWorker({ bindings: credentials, outboundService: stravaServer });
+    worker = await startWorker({
+      bindings: credentials,
+      outboundService: (request) =>
+        new URL(request.url).origin === "https://appleid.apple.com"
+          ? appleAuth.fetch(request)
+          : stravaServer(request),
+    });
     runtime = worker.runtime;
     await migrate(runtime);
     db = await runtime.getD1Database("DB");
@@ -92,29 +100,17 @@ after(async () => {
   await worker?.dispose();
 });
 
-let accounts = 0;
-/**
- * Signs a rider up. Real Sign in with Apple cannot run here, so an Apple-linked account is made
- * the way the sign-in would leave it: an email account with an `apple` provider row.
- */
+/** Signs in through the native Apple flow, with Apple's keys served locally. */
 async function signUp({ apple = true } = {}) {
-  const email = `rider${++accounts}@example.com`;
-  const response = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: "https://trainstackhq.com" },
-    body: JSON.stringify({ name: `Rider ${accounts}`, email, password: "test-password-12345" }),
-  });
-  assert.equal(response.status, 200, await response.clone().text());
-  if (apple) {
+  const rider = await appleAuth.signIn(runtime);
+  if (!apple) {
+    // Model an account left over from when email signup was available.
     await db
-      .prepare(
-        "INSERT INTO account (id, account_id, provider_id, user_id, updated_at) " +
-          "SELECT ?, ?, 'apple', id, 0 FROM \"user\" WHERE email = ?",
-      )
-      .bind(`apple-${accounts}`, `apple-sub-${accounts}`, email)
+      .prepare("UPDATE account SET provider_id = 'credential' WHERE user_id = ?")
+      .bind(rider.user.id)
       .run();
   }
-  return { email, token: response.headers.get("set-auth-token") };
+  return rider;
 }
 
 const call = (token, path, init = {}) =>
@@ -518,7 +514,7 @@ test("deleting the account deletes the Strava connection with it", async () => {
   const deleted = await runtime.dispatchFetch(`${api}/api/auth/delete-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ password: "test-password-12345" }),
+    body: JSON.stringify({}),
   });
   assert.equal(deleted.status, 200, await deleted.clone().text());
   assert.equal(await count(), before - 1);

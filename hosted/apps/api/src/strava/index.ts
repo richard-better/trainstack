@@ -312,8 +312,7 @@ export function stravaRoutes(deps: StravaDeps) {
       return c.json({ error: "invalid_request" }, 400);
     }
     const userId = userIdOf(c);
-    // Anyone can make an email account, and every sign-in costs Strava's shared limits, so
-    // connecting is for accounts made with Sign in with Apple, which are not free to make.
+    // Legacy email-only accounts cannot spend Strava's shared sign-in budget.
     const apple = await deps
       .database()
       .select({ id: account.id })

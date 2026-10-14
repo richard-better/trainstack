@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
+import { hashPassword } from "better-auth/crypto";
 import { api, migrate, origin, startWorker } from "./helpers/worker.mjs";
+import { mockApple } from "./helpers/apple.mjs";
 
 let worker;
 let runtime;
+const apple = mockApple();
 
 function rpcClient(cookie) {
   return createORPCClient(
@@ -27,7 +30,7 @@ function rpcClient(cookie) {
 
 before(
   async () => {
-    worker = await startWorker();
+    worker = await startWorker({ outboundService: apple.fetch });
     runtime = worker.runtime;
   },
   { timeout: 60_000 },
@@ -57,19 +60,9 @@ test("committed migrations support health and authentication on D1 without Axiom
   assert.equal(await anonymous.healthCheck(), "OK");
   await assert.rejects(anonymous.privateData(), { code: "UNAUTHORIZED", status: 401 });
 
-  const signup = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: origin },
-    body: JSON.stringify({
-      name: "CI User",
-      email: "ci@example.com",
-      password: "ci-test-password-123",
-    }),
-  });
-  assert.equal(signup.status, 200, await signup.clone().text());
+  const { response: signup, cookie } = await apple.signIn(runtime, { email: "ci@example.com" });
   assert.match(signup.headers.get("set-cookie"), /HttpOnly/i);
   assert.match(signup.headers.get("set-cookie"), /Secure/i);
-  const cookie = signup.headers.get("set-cookie").split(";")[0];
   const session = await runtime.dispatchFetch(`${api}/api/auth/get-session`, {
     headers: { Cookie: cookie },
   });
@@ -131,18 +124,7 @@ test("OpenAPI reference describes contract outputs and authentication errors", a
 });
 
 test("a native app signs in with a bearer token and can delete its account", async () => {
-  const signup = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: origin },
-    body: JSON.stringify({
-      name: "Native User",
-      email: "native@example.com",
-      password: "native-test-password-123",
-    }),
-  });
-  assert.equal(signup.status, 200, await signup.clone().text());
-  const token = signup.headers.get("set-auth-token");
-  assert.ok(token, "the session token is exposed for the app to keep");
+  const { token } = await apple.signIn(runtime, { email: "native@example.com" });
 
   const session = await runtime.dispatchFetch(`${api}/api/auth/get-session`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -154,13 +136,69 @@ test("a native app signs in with a bearer token and can delete its account", asy
   const deleted = await runtime.dispatchFetch(`${api}/api/auth/delete-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ password: "native-test-password-123" }),
+    body: JSON.stringify({}),
   });
   assert.equal(deleted.status, 200, await deleted.clone().text());
   const after = await runtime.dispatchFetch(`${api}/api/auth/get-session`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   assert.equal(await after.json(), null);
+});
+
+test("email signup cannot reserve an address ahead of Sign in with Apple", async () => {
+  const email = "victim@example.com";
+  const response = await runtime.dispatchFetch(`${api}/api/auth/sign-up/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: origin },
+    body: JSON.stringify({ name: "Squatter", email, password: "test-password-12345" }),
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).code, "EMAIL_PASSWORD_SIGN_UP_DISABLED");
+  assert.equal(response.headers.get("set-auth-token"), null);
+  assert.equal(response.headers.get("set-cookie"), null);
+  const db = await runtime.getD1Database("DB");
+  assert.equal(
+    (await db.prepare('SELECT count(*) AS n FROM "user" WHERE email = ?').bind(email).first()).n,
+    0,
+  );
+
+  const { user } = await apple.signIn(runtime, { email });
+  assert.equal(user.email, email);
+  assert.equal(user.emailVerified, true);
+  const returning = await apple.signIn(runtime, { email });
+  assert.equal(returning.user.id, user.id);
+});
+
+test("email and password sign-in is disabled even for a legacy account with a valid password", async () => {
+  const db = await runtime.getD1Database("DB");
+  const email = "legacy@example.com";
+  const password = "test-password-12345";
+  await db.batch([
+    db
+      .prepare('INSERT INTO "user" (id, name, email, updated_at) VALUES (?, ?, ?, ?)')
+      .bind("legacy", "Legacy Rider", email, Date.now()),
+    db
+      .prepare(
+        "INSERT INTO account (id, account_id, provider_id, user_id, password, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .bind(
+        "legacy-credential",
+        "legacy",
+        "credential",
+        "legacy",
+        await hashPassword(password),
+        Date.now(),
+      ),
+  ]);
+  const response = await runtime.dispatchFetch(`${api}/api/auth/sign-in/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: origin },
+    body: JSON.stringify({ email, password }),
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).code, "EMAIL_PASSWORD_DISABLED");
+  assert.equal(response.headers.get("set-auth-token"), null);
+  assert.equal(response.headers.get("set-cookie"), null);
 });
 
 test("Sign in with Apple is offered to the app and refuses a token that is not Apple's", async () => {
