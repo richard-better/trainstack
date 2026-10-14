@@ -72,8 +72,8 @@ Debug builds take launch arguments to try the app without hardware:
 - `-simulated-trainer` rides with a pretend trainer, and `-sample-devices` shows pretend
   Bluetooth devices, since the simulator has none.
 - `-sample-rides` uses a sample profile, the sample ride in History and a pretend trainer.
-- On the watch, `-ride "<workout name>"` plays a ride as if the phone ran it, `-ride-minutes
-  <minutes>` starts that far in, and `-always-on` shows the wrist-down screen.
+- On the watch, `-ride "<workout name>"` plays a ride as if the phone ran it,
+  `-ride-minutes <minutes>` starts that far in, and `-always-on` shows the wrist-down screen.
 
 Format with `swift format --in-place --recursive apps/ride/Ride apps/ride/RideKit`.
 CI runs `swift format lint --strict`.
