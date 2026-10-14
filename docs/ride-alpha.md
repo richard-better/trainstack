@@ -2,8 +2,8 @@
 
 Ride is an indoor cycling app for iPhone, iPad, Mac and Apple Watch. You pick a structured
 workout, Ride sets your smart trainer's resistance for every interval, and it saves the ride as a
-standard `.fit` file. This is an early alpha: it works end to end, but it has had little time on
-real hardware, so please tell us what breaks.
+standard `.fit` file. This is an early alpha: it has been used for real rides, but only on a few
+trainers and devices, so please tell us what breaks.
 
 ## What you need
 
@@ -42,15 +42,16 @@ real hardware, so please tell us what breaks.
 
 ## Try this first
 
-The riskiest parts have only been tested in code, not on a bike. A 30 minute ride that covers them
-is the most useful thing you can do:
+Ride has been used for real rides from start to finish, including sending them to Strava. It has
+seen few trainers and devices, and little of what goes wrong mid ride. A 30 minute ride that covers
+these is the most useful thing you can do:
 
 1. Start a workout in ERG mode and lock your phone partway through. Does the trainer still follow
    the intervals when you unlock it?
 2. Turn the trainer off for a few seconds. Does the ride pause, and does it reconnect and resume?
 3. Force quit the app mid ride and reopen it. Is the ride offered back?
 4. Finish the ride and send it to Strava, or export the `.fit` file and open it in Garmin Connect
-   or TrainingPeaks. Do the power, heart rate and time look right?
+   or TrainingPeaks. Do the power, heart rate and time look right for your setup?
 
 ## Reporting a problem
 
