@@ -11,6 +11,11 @@ the ride as a standard `.fit` file you can send to Strava.
 
 ![History shows each ride with its power, heart rate and zones](docs/images/ride-history.png)
 
+<p>
+  <img src="docs/images/ride-iphone-player.png" alt="The player on iPhone" height="600">
+  <img src="docs/images/ride-ipad-history.png" alt="History on iPad" height="600">
+</p>
+
 ## Where it is going
 
 Training is split across many apps today: one records, one plans, one tracks recovery, one
