@@ -41,6 +41,7 @@ final class RideLibrary {
       guard let data = try? Data(contentsOf: url), let recording = try? FITDecoder.decode(data)
       else { continue }
       let ride = Ride(recording: recording, fileData: data)
+      guard files[ride.id] == nil else { continue }
       rides.append(ride)
       files[ride.id] = url
     }
@@ -71,8 +72,8 @@ final class RideLibrary {
   /// Decodes `data` and adds it, unless the same file is already in the library.
   @discardableResult
   func add(_ data: Data) throws -> Ride.ID {
-    if let existing = rides.first(where: { $0.fileData == data }) { return existing.id }
     let ride = Ride(recording: try FITDecoder.decode(data), fileData: data)
+    guard self[ride.id] == nil else { return ride.id }
     rides.append(ride)
     rides.sort { $0.recording.startDate > $1.recording.startDate }
     store(ride)
