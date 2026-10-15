@@ -9,14 +9,20 @@ import Foundation
 @MainActor
 public final class HeartRateRelay: NSObject {
   static let service = CBUUID(string: "46EAB846-7359-4D1E-8DC7-CC90CF575CA1")
-  /// Written by Ride on a Mac that records the ride and saves it to Health through iCloud.
+  /// Written by Ride on a Mac that records the ride and saves it to Health through iCloud, with
+  /// `challenge` signed by its `RideClaim`.
   static let rideRecorded = CBUUID(string: "D73F6701-C585-461B-B225-B1A15B93926E")
+  /// A fresh value each time the relay starts, for a Mac to sign.
+  static let challenge = CBUUID(string: "58B5A803-7F11-4797-AB40-7C1E0B855255")
   private static let bodySensorLocation = CBUUID(string: "2A38")
   /// Body Sensor Location's value for the wrist.
   private static let wrist: UInt8 = 2
 
-  /// Called when Ride on a Mac says it records the ride.
+  /// Called when Ride on a Mac signed in to the rider's account says it records the ride.
   public var onRideRecorded: (() -> Void)?
+  /// The rider's claim, without which no Mac can claim a ride. Asked for as a Mac claims one.
+  public var claim: () -> RideClaim? = { nil }
+  private var challenge = RideClaim.challenge()
   private var manager: CBPeripheralManager?
   private var measurement: CBMutableCharacteristic?
   private var wanted = false
@@ -58,10 +64,13 @@ public final class HeartRateRelay: NSObject {
     let heartRate = CBMutableService(type: GATT.heartRate, primary: true)
     heartRate.characteristics = [measurement, location]
     manager.add(heartRate)
+    challenge = RideClaim.challenge()
     let ride = CBMutableService(type: Self.service, primary: true)
     ride.characteristics = [
       CBMutableCharacteristic(
-        type: Self.rideRecorded, properties: .write, value: nil, permissions: .writeable)
+        type: Self.challenge, properties: .read, value: challenge, permissions: .readable),
+      CBMutableCharacteristic(
+        type: Self.rideRecorded, properties: .write, value: nil, permissions: .writeable),
     ]
     manager.add(ride)
     self.measurement = measurement
@@ -87,8 +96,14 @@ extension HeartRateRelay: @preconcurrency CBPeripheralManagerDelegate {
     _ peripheral: CBPeripheralManager, didReceiveWrite requests: [CBATTRequest]
   ) {
     guard let first = requests.first else { return }
-    guard requests.allSatisfy({ $0.characteristic.uuid == Self.rideRecorded }) else {
+    guard requests.count == 1, first.characteristic.uuid == Self.rideRecorded else {
       peripheral.respond(to: first, withResult: .requestNotSupported)
+      return
+    }
+    guard let claim = claim(), let signature = first.value,
+      claim.verifies(signature, for: challenge)
+    else {
+      peripheral.respond(to: first, withResult: .insufficientAuthentication)
       return
     }
     peripheral.respond(to: first, withResult: .success)

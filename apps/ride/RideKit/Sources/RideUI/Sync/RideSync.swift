@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import RideBluetooth
 import RideData
 import os
 
@@ -30,6 +31,9 @@ final class RideSync {
     #endif
   }
 
+  /// Proves to the rider's iPhone that this device is theirs, once iCloud has said who the
+  /// rider is.
+  private(set) var claim: RideClaim?
   /// Called with each ride that arrives from another device.
   var onReceive: ((Ride.ID) -> Void)?
   private let library: RideLibrary
@@ -46,19 +50,28 @@ final class RideSync {
     URL.applicationSupportDirectory.appending(path: "RideSync/State.json")
   }
 
-  /// Whether rides sync with iCloud.
-  var isRunning: Bool { engine != nil }
-
   func start() {
     guard engine == nil, Self.isEntitled, library.isStored else { return }
     library.onChange = { [weak self] change in self?.send(change) }
     let state = loadState()
+    let container = CKContainer(identifier: Self.containerIdentifier)
     let engine = CKSyncEngine(
       CKSyncEngine.Configuration(
-        database: CKContainer(identifier: Self.containerIdentifier).privateCloudDatabase,
-        stateSerialization: state, delegate: self))
+        database: container.privateCloudDatabase, stateSerialization: state, delegate: self))
     self.engine = engine
     if state == nil { sendEverything(with: engine) }
+    updateClaim(from: container)
+  }
+
+  private func updateClaim(from container: CKContainer) {
+    claim = nil
+    Task {
+      do {
+        claim = RideClaim(accountRecordName: try await container.userRecordID().recordName)
+      } catch {
+        log.info("No iCloud account to claim rides with: \(error.localizedDescription)")
+      }
+    }
   }
 
   /// Starts over with no sync state, for another Apple Account or none. The rides stay on the
@@ -150,7 +163,9 @@ extension RideSync: CKSyncEngineDelegate {
       saveState(update.stateSerialization)
     case .accountChange(let change):
       switch change.changeType {
-      case .signIn: sendEverything(with: syncEngine)
+      case .signIn:
+        sendEverything(with: syncEngine)
+        updateClaim(from: CKContainer(identifier: Self.containerIdentifier))
       case .signOut, .switchAccounts: restart()
       @unknown default: break
       }
