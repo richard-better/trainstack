@@ -67,6 +67,15 @@ struct RideLibraryTests {
     }
   }
 
+  @Test func givesARideTheSameIDOnEveryLaunch() throws {
+    try withDirectory { directory in
+      let library = RideLibrary(directory: directory)
+      library.save(try quickTest())
+      let id = try #require(library.rides.first?.id)
+      #expect(RideLibrary(directory: directory).rides.map(\.id) == [id])
+    }
+  }
+
   @Test func doesNotSaveTheSameRideTwice() throws {
     try withDirectory { directory in
       let ride = try quickTest()
