@@ -43,6 +43,7 @@
         Task { @MainActor in self?.attach(session) }
       }
       Task { [phoneWorkout] in await phoneWorkout.endLeftOverSession() }
+      relay.claim = { AppSync.shared.claim }
       relay.onRideRecorded = { [weak self] in
         // Ride on a Mac records the ride, and this phone saves it to Health once it syncs.
         guard HealthRides.shared.canSave else { return }
