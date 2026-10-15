@@ -27,6 +27,27 @@ struct RideLibraryTests {
     return session.recording()
   }
 
+  @Test func remembersRidesOnStravaBetweenLaunches() throws {
+    try withDirectory { directory in
+      let defaults = try #require(UserDefaults(suiteName: "RideLibraryTests-\(UUID().uuidString)"))
+      let library = RideLibrary(directory: directory, defaults: defaults)
+      library.save(try quickTest(startDate: .init(timeIntervalSince1970: 1_800_000_000)))
+      library.save(try quickTest(startDate: .init(timeIntervalSince1970: 1_800_003_600)))
+      let sent = try #require(library.rides.first)
+      let url = try #require(URL(string: "https://www.strava.com/activities/42"))
+      library.markOnStrava(sent, url: url)
+      // A later duplicate report without an ID keeps the page already known.
+      library.markOnStrava(sent, url: nil)
+
+      let reopened = RideLibrary(directory: directory, defaults: defaults)
+      let rides = reopened.rides
+      #expect(rides.count == 2)
+      #expect(reopened.isOnStrava(rides[0]))
+      #expect(reopened.stravaURL(of: rides[0]) == url)
+      #expect(!reopened.isOnStrava(rides[1]))
+    }
+  }
+
   @Test func keepsASavedRideBetweenLaunches() throws {
     try withDirectory { directory in
       let ride = try quickTest()

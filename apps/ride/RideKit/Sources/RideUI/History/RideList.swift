@@ -12,7 +12,7 @@ struct RideList: View {
     List(selection: $selection) {
       ForEach(RideMonth.grouping(library.rides, calendar: calendar)) { month in
         Section(month.label) {
-          ForEach(month.rides) { RideRow(ride: $0).tag($0.id) }
+          ForEach(month.rides) { RideRow(ride: $0, isOnStrava: library.isOnStrava($0)).tag($0.id) }
         }
       }
     }
