@@ -76,7 +76,10 @@
         return
       default: break
       }
-      for id in pending {
+      // Rides queued while saving are saved in the same pass.
+      var attempted: Set<Ride.ID> = []
+      while let id = pending.subtracting(attempted).first {
+        attempted.insert(id)
         guard let ride = library[id] else {
           pending.remove(id)
           continue
