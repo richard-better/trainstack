@@ -30,6 +30,7 @@
     @ObservationIgnored private var session: HKWorkoutSession?
     @ObservationIgnored private var delegate: SessionDelegate?
     @ObservationIgnored private let relay = HeartRateRelay()
+    @ObservationIgnored private let phoneWorkout = PhoneWorkout()
     /// Says whether there is a watch with Ride on it.
     @ObservationIgnored private let pairing = WatchPairing()
     @ObservationIgnored private let log = Logger(
@@ -41,29 +42,38 @@
       store.workoutSessionMirroringStartHandler = { [weak self] session in
         Task { @MainActor in self?.attach(session) }
       }
+      Task { [phoneWorkout] in await phoneWorkout.endLeftOverSession() }
     }
 
     /// Makes sure the link is listening for the watch. See `WatchSupport.activate()`.
     static func activate() { _ = shared }
 
     /// Asks for access to Health, then opens Ride on the watch and starts its workout, unless
-    /// one is already running.
+    /// one is already running. Without a watch, the phone runs the workout session itself.
     func startWorkout() {
       guard HKHealthStore.isHealthDataAvailable(), session == nil else { return }
       Task {
         await HealthRides.shared.requestAccess()
-        guard pairing.hasRide, session == nil else { return }
+        guard session == nil else { return }
+        guard pairing.hasRide else {
+          phoneWorkout.start()
+          return
+        }
         do {
           try await store.startWatchApp(toHandle: WorkoutKind.configuration)
         } catch {
-          // No paired watch, or no Ride on it.
           log.info("Watch workout not started: \(error.localizedDescription)")
+          phoneWorkout.start()
         }
       }
     }
 
-    /// Tells the watch the ride is over, which ends its workout and saves it to Health.
-    func endRide() { send(.rideEnded) }
+    /// Ends the phone's workout session, and tells the watch the ride is over, which ends its
+    /// workout.
+    func endRide() {
+      phoneWorkout.end()
+      send(.rideEnded)
+    }
 
     func send(_ message: LinkMessage) {
       guard let session, let data = try? message.encoded() else { return }
