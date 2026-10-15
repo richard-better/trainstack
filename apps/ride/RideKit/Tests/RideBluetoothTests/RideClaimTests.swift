@@ -4,20 +4,27 @@ import Testing
 @testable import RideBluetooth
 
 struct RideClaimTests {
-  @Test func acceptsAClaimFromTheSameAccount() {
+  private let secret = RideClaim.secret()
+
+  @Test func acceptsAClaimWithTheSameSecret() {
     let challenge = RideClaim.challenge()
-    let signature = RideClaim(accountRecordName: "_rider").sign(challenge)
-    #expect(RideClaim(accountRecordName: "_rider").verifies(signature, for: challenge))
+    let signature = RideClaim(secret: secret).sign(challenge)
+    #expect(RideClaim(secret: secret).verifies(signature, for: challenge))
   }
 
-  @Test func refusesAClaimFromAnotherAccount() {
+  @Test func refusesAClaimWithAnotherSecret() {
     let challenge = RideClaim.challenge()
-    let signature = RideClaim(accountRecordName: "_someone-else").sign(challenge)
-    #expect(!RideClaim(accountRecordName: "_rider").verifies(signature, for: challenge))
+    let signature = RideClaim(secret: RideClaim.secret()).sign(challenge)
+    #expect(!RideClaim(secret: secret).verifies(signature, for: challenge))
+  }
+
+  @Test func makesADifferentSecretEachTime() {
+    #expect(secret.count == 32)
+    #expect(RideClaim.secret() != secret)
   }
 
   @Test func refusesAClaimForAnEarlierChallenge() {
-    let claim = RideClaim(accountRecordName: "_rider")
+    let claim = RideClaim(secret: secret)
     let earlier = RideClaim.challenge()
     #expect(!claim.verifies(claim.sign(earlier), for: RideClaim.challenge()))
     #expect(!claim.verifies(Data(), for: earlier))

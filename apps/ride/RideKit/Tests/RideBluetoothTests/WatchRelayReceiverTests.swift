@@ -40,7 +40,7 @@ struct WatchRelayReceiverTests {
     let (receiver, transport) = runningReceiver()
     #expect(transport.claim == nil)
     receiver.stop()
-    receiver.start(claim: RideClaim(accountRecordName: "_rider"))
+    receiver.start(claim: RideClaim(secret: RideClaim.secret()))
     #expect(transport.claim != nil)
   }
 
