@@ -60,13 +60,14 @@ extension RideLauncher {
 
 extension RideLibrary {
   /// The rides saved on this device, except that debug builds started with `-sample-rides`
-  /// begin with only the sample ride, kept in memory.
-  static func launchLibrary() -> RideLibrary {
+  /// begin with only the sample ride, kept in memory. Shared by every window, and by iCloud
+  /// syncing rides while the app has none.
+  static let launched: RideLibrary = {
     #if DEBUG
       if CommandLine.arguments.contains("-sample-rides") { return .sample() }
     #endif
     return RideLibrary(directory: storageDirectory)
-  }
+  }()
 
   /// Debug builds started with `-sample-rides` open on History, where the sample ride is.
   static func launchDestination() -> AppDestination {
