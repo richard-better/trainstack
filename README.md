@@ -29,7 +29,8 @@ useful on its own, and every ride produces the structured data the rest builds o
 Ride is an early alpha. See [the alpha guide](docs/ride-alpha.md) for what works, what does
 not yet, and what to test first.
 
-- Ride works without an account. Rides and settings stay on your device.
+- Ride works without an account. Rides sync between your devices through your own iCloud, and
+  are saved to Apple Health. Settings stay on your device.
 - You can create a TrainStack account with Sign in with Apple, and link it to Strava to send
   rides there.
 - The Strava connection is limited to 10 users for now, so linking may not be available to you

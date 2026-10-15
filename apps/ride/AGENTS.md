@@ -13,7 +13,8 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   The app links the `RideUI` product. `RideData` decodes FIT files into a `RideRecording`
   and analyses it (zones, power curve) with no UI dependency. `RideBluetooth` finds nearby
   devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
-  (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`) and
+  (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`,
+  `Health`, `Sync`) and
   `Shared` for what several use, with one type per file. `RideWatchUI` is the watch app,
   `RideLink` what the phone and watch send each other, `RideStrava` the TrainStack account (Sign in with Apple)
   and sending rides to Strava through the hosted API, which holds Strava's tokens (see
@@ -25,6 +26,14 @@ the phone sends back a `RideGlance` each second. The iPhone passes watch heart r
 standard Bluetooth heart rate sensor (`HeartRateRelay`) with a Ride service beside it. Ride
 on the Mac connects to that service during a ride (`WatchRelayReceiver`) without pairing. A
 paired chest strap (`BluetoothDevices`) wins over the watch while it keeps reporting.
+
+On iPhone and iPad, `HealthRides` saves each ride Ride records to Health from its recording,
+and the phone tells the watch (`LinkMessage.rideRecorded`) to discard its workout so Health
+has one. Without a watch, the phone runs the workout session itself (`PhoneWorkout`).
+`RideSync` syncs the library through the rider's private CloudKit database with
+`CKSyncEngine`, one record per ride named by its file's SHA-256. The Mac has no Health, so an
+iPhone saves the Mac's rides as they sync, and the Mac tells a relaying iPhone it records the
+ride so the watch discards its workout then too.
 
 While a ride is on, `KeepAwake` stops the screen locking (and App Nap on the Mac). The
 `bluetooth-central` background mode keeps the trainer connected with the app in the background,

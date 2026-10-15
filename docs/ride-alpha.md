@@ -30,14 +30,19 @@ and a Polar H10, so please tell us what breaks.
   with Apple under Settings, Account, then connect Strava). A ride interrupted by a crash or quit can be resumed or
   saved when you reopen the app.
 - Power, heart rate and pace zones, FTP tests and your training load on Progress.
+- Rides saved to Apple Health as indoor cycling workouts, with power, cadence, heart rate and
+  energy. On a Mac, which has no Health, the ride reaches Health through your iPhone once it
+  syncs. Ride skips a ride Health already has a cycling workout for.
+- Rides synced between your devices through iCloud, when they are signed in to the same Apple
+  Account.
 
 ## What does not work yet
 
 - You cannot build your own workouts or import `.zwo` and `.mrc` files.
 - Strava is the only place Ride can send a ride. Anywhere else, export the `.fit` file and upload it yourself.
-- Rides and settings stay on the device. There is no backup or sync, so deleting the app deletes
-  your rides and settings. Export rides you want to keep. A TrainStack account exists only to hold
-  your Strava connection, and Ride works without one.
+- Settings stay on the device, and so do rides without iCloud: deleting the app then deletes
+  them. Deleting a ride on one device deletes it on the others too. A TrainStack account exists
+  only to hold your Strava connection, and Ride works without one.
 - No training plans.
 
 ## Try this first
@@ -52,6 +57,8 @@ minute ride that covers these is the most useful thing you can do:
 3. Force quit the app mid ride and reopen it. Is the ride offered back?
 4. Finish the ride and send it to Strava, or export the `.fit` file and open it in Garmin Connect
    or TrainingPeaks. Do the power, heart rate and time look right for your setup?
+5. Check the ride in the Fitness or Health app. Is it there once, with its power and heart rate?
+   After a ride on a Mac, open Ride on your iPhone and check again.
 
 ## Reporting a problem
 
