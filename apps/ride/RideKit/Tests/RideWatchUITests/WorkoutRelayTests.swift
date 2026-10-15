@@ -23,6 +23,14 @@ struct WorkoutRelayTests {
     #expect(relay.glance?.glance == glance(remaining: 0))
   }
 
+  @Test func leavesSavingToHealthToTheDeviceThatRecordsTheRide() {
+    let relay = WorkoutRelay()
+    relay.start(fromPhone: false)
+    #expect(relay.workout?.isRecordedElsewhere == false)
+    relay.receive(.rideRecorded)
+    #expect(relay.workout?.isRecordedElsewhere == true)
+  }
+
   @Test func endsTheWorkoutWhenTheRideEnds() {
     let relay = WorkoutRelay()
     relay.onCue = { _ in }
