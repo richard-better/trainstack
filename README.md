@@ -5,16 +5,14 @@ TrainStack is an open source training app for serious amateur athletes. Today it
 structured workout, Ride sets your smart trainer's resistance for every interval, and it saves
 the ride as a standard `.fit` file you can send to Strava.
 
-![The Today screen suggests workouts that fit the time you have](docs/images/ride-today.png)
+| Today | Player | History |
+| :---: | :---: | :---: |
+| ![The Today screen suggests workouts that fit the time you have](docs/images/ride-today.png) | ![The player runs a structured workout in ERG mode](docs/images/ride-player.png) | ![History shows each ride with its power, heart rate and zones](docs/images/ride-history.png) |
+| Workouts that fit the time you have | Structured workouts in ERG mode | Power, heart rate and zones for each ride |
 
-![The player runs a structured workout in ERG mode](docs/images/ride-player.png)
-
-![History shows each ride with its power, heart rate and zones](docs/images/ride-history.png)
-
-<p>
-  <img src="docs/images/ride-iphone-player.png" alt="The player on iPhone" height="600">
-  <img src="docs/images/ride-ipad-history.png" alt="History on iPad" height="600">
-</p>
+| iPhone | iPad |
+| :---: | :---: |
+| <img src="docs/images/ride-iphone-player.png" alt="The player on iPhone" height="500"> | <img src="docs/images/ride-ipad-history.png" alt="History on iPad" height="500"> |
 
 ## Where it is going
 
