@@ -81,11 +81,13 @@ final class RideLibrary {
   }
 
   /// Adds a ride that has just been ridden.
-  func save(_ recording: RideRecording) {
+  @discardableResult
+  func save(_ recording: RideRecording) -> Ride.ID? {
     do {
-      try add(FITEncoder.encode(recording))
+      return try add(FITEncoder.encode(recording))
     } catch {
       storageProblem = "The ride could not be turned into a FIT file."
+      return nil
     }
   }
 
@@ -142,6 +144,10 @@ final class RideLibrary {
     }
     return url
   }
+
+  /// Whether the rides are kept on this device, rather than in memory for previews and sample
+  /// rides.
+  var isStored: Bool { directory != nil }
 
   subscript(id: Ride.ID?) -> Ride? {
     id.flatMap { id in rides.first { $0.id == id } }
