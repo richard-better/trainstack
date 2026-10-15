@@ -5,6 +5,7 @@ import SwiftUI
 /// A finished ride: when it happened, the headline numbers, the effort over time, and zones.
 struct ActivityDetailView: View {
   let ride: Ride
+  let library: RideLibrary
   var onRemove: () -> Void
   @State private var isExporting = false
   @State private var isConfirmingRemove = false
@@ -28,6 +29,7 @@ struct ActivityDetailView: View {
           )
           .foregroundStyle(.secondary)
           Text(ride.title).font(.largeTitle).bold()
+          stravaStatus
         }
         if let template = recording.workoutName.flatMap(WorkoutTemplate.named) {
           RideWorkoutCard(template: template)
@@ -81,9 +83,34 @@ struct ActivityDetailView: View {
     }
   }
 
+  /// Whether the ride is on its way to Strava or already there.
+  @ViewBuilder private var stravaStatus: some View {
+    if isSendingToStrava {
+      Label("Sending to Strava…", systemImage: "arrow.up.circle")
+        .font(.subheadline).foregroundStyle(.secondary)
+    } else if library.isOnStrava(ride) {
+      if let url = library.stravaURL(of: ride) {
+        Link(destination: url) {
+          Label("On Strava", systemImage: "checkmark.circle.fill")
+        }
+        .font(.subheadline)
+      } else {
+        Label("On Strava", systemImage: "checkmark.circle.fill")
+          .font(.subheadline).foregroundStyle(.secondary)
+      }
+    }
+  }
+
   @ViewBuilder private var moreActions: some View {
-    Button("Send to Strava", systemImage: "arrow.up.forward.app", action: sendToStrava)
+    if library.isOnStrava(ride), let url = library.stravaURL(of: ride) {
+      Button("View on Strava", systemImage: "arrow.up.forward.app") { openURL(url) }
+    } else {
+      Button(
+        library.isOnStrava(ride) ? "Send to Strava Again" : "Send to Strava",
+        systemImage: "arrow.up.forward.app", action: sendToStrava
+      )
       .disabled(isSendingToStrava)
+    }
     Button("Export FIT…", systemImage: "square.and.arrow.down", action: export)
     Divider()
     Button("Remove from History", systemImage: "trash", role: .destructive, action: confirmRemove)
@@ -109,10 +136,13 @@ struct ActivityDetailView: View {
         return
       }
       do {
-        stravaOutcome = .sent(try await account.upload(ride).url)
+        let url = try await account.upload(ride).url
+        library.markOnStrava(ride, url: url)
+        stravaOutcome = .sent(url)
       } catch StravaError.duplicate(let activityID) {
-        stravaOutcome = .alreadyThere(
-          activityID.flatMap { URL(string: "https://www.strava.com/activities/\($0)") })
+        let url = activityID.flatMap { URL(string: "https://www.strava.com/activities/\($0)") }
+        library.markOnStrava(ride, url: url)
+        stravaOutcome = .alreadyThere(url)
       } catch {
         stravaOutcome = .failed(error.localizedDescription)
       }
@@ -149,8 +179,9 @@ struct ActivityDetailView: View {
 
 #Preview {
   NavigationStack {
-    if let ride = RideLibrary.sample().rides.first {
-      ActivityDetailView(ride: ride) {}
+    let library = RideLibrary.sample()
+    if let ride = library.rides.first {
+      ActivityDetailView(ride: ride, library: library) {}
     }
   }
   .environment(RiderSettingsStore.sample)
