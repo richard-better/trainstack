@@ -12,7 +12,7 @@ public final class HeartRateRelay: NSObject {
   /// Written by Ride on a Mac that records the ride and saves it to Health through iCloud, with
   /// `challenge` signed by its `RideClaim`.
   static let rideRecorded = CBUUID(string: "D73F6701-C585-461B-B225-B1A15B93926E")
-  /// A fresh value each time the relay starts, for a Mac to sign.
+  /// A fresh value for a Mac to sign, replaced once a claim has used it.
   static let challenge = CBUUID(string: "58B5A803-7F11-4797-AB40-7C1E0B855255")
   private static let bodySensorLocation = CBUUID(string: "2A38")
   /// Body Sensor Location's value for the wrist.
@@ -64,11 +64,10 @@ public final class HeartRateRelay: NSObject {
     let heartRate = CBMutableService(type: GATT.heartRate, primary: true)
     heartRate.characteristics = [measurement, location]
     manager.add(heartRate)
-    challenge = RideClaim.challenge()
     let ride = CBMutableService(type: Self.service, primary: true)
     ride.characteristics = [
       CBMutableCharacteristic(
-        type: Self.challenge, properties: .read, value: challenge, permissions: .readable),
+        type: Self.challenge, properties: .read, value: nil, permissions: .readable),
       CBMutableCharacteristic(
         type: Self.rideRecorded, properties: .write, value: nil, permissions: .writeable),
     ]
@@ -106,8 +105,24 @@ extension HeartRateRelay: @preconcurrency CBPeripheralManagerDelegate {
       peripheral.respond(to: first, withResult: .insufficientAuthentication)
       return
     }
+    challenge = RideClaim.challenge()
     peripheral.respond(to: first, withResult: .success)
     onRideRecorded?()
+  }
+
+  public func peripheralManager(
+    _ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest
+  ) {
+    guard request.characteristic.uuid == Self.challenge else {
+      peripheral.respond(to: request, withResult: .requestNotSupported)
+      return
+    }
+    guard request.offset <= challenge.count else {
+      peripheral.respond(to: request, withResult: .invalidOffset)
+      return
+    }
+    request.value = challenge.subdata(in: request.offset..<challenge.count)
+    peripheral.respond(to: request, withResult: .success)
   }
 
   public func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
