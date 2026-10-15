@@ -27,6 +27,31 @@ struct FITEncoderTests {
     #expect(decoded == original)
   }
 
+  @Test func marksTheFileAsRecordedByRide() {
+    #expect(FITDecoder.isRecordedByRide(FITEncoder.encode(recording())))
+  }
+
+  @Test func tellsAnotherAppsFileFromRides() throws {
+    var bytes = [UInt8](FITEncoder.encode(recording()))
+    let id = Array("trainstack-ride!".utf8)
+    let other = Array("another-app-1234".utf8)
+    var index = 0
+    while index + id.count <= bytes.count {
+      if Array(bytes[index..<index + id.count]) == id {
+        bytes.replaceSubrange(index..<index + id.count, with: other)
+      }
+      index += 1
+    }
+    let end = bytes.count - 2
+    let checksum = fitChecksum(bytes[0..<end])
+    bytes[end] = UInt8(checksum & 0xFF)
+    bytes[end + 1] = UInt8(checksum >> 8)
+    let file = Data(bytes)
+    #expect(try FITDecoder.decode(file).samples.count == 45)
+    #expect(!FITDecoder.isRecordedByRide(file))
+    #expect(!FITDecoder.isRecordedByRide(Data("not a FIT file".utf8)))
+  }
+
   @Test func keepsTheTargetPowerOfEachSample() throws {
     let decoded = try FITDecoder.decode(FITEncoder.encode(recording()))
     #expect(decoded.hasTarget)
