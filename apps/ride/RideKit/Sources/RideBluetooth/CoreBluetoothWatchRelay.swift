@@ -6,12 +6,14 @@ final class CoreBluetoothWatchRelay: NSObject, WatchRelayTransport {
   var onMeasurement: ((UUID, HeartRateMeasurement) -> Void)?
   private var central: CBCentralManager?
   private var wanted = false
+  private var claimsRide = false
   /// Relays found, kept so they reconnect when they come back in range. CoreBluetooth cancels a
   /// connection whose peripheral is released.
   private var peripherals: [UUID: CBPeripheral] = [:]
 
-  func start() {
+  func start(claimingRide: Bool) {
     wanted = true
+    claimsRide = claimingRide
     if let central {
       scan(central)
     } else {
@@ -53,7 +55,7 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBCentralManagerDelegate {
   }
 
   func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-    peripheral.discoverServices([GATT.heartRate])
+    peripheral.discoverServices([GATT.heartRate, HeartRateRelay.service])
   }
 
   func centralManager(
@@ -75,8 +77,12 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBCentralManagerDelegate {
 
 extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
   func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
-    for service in peripheral.services ?? [] where service.uuid == GATT.heartRate {
-      peripheral.discoverCharacteristics([GATT.heartRateMeasurement], for: service)
+    for service in peripheral.services ?? [] {
+      if service.uuid == GATT.heartRate {
+        peripheral.discoverCharacteristics([GATT.heartRateMeasurement], for: service)
+      } else if service.uuid == HeartRateRelay.service, claimsRide {
+        peripheral.discoverCharacteristics([HeartRateRelay.rideRecorded], for: service)
+      }
     }
   }
 
@@ -84,9 +90,12 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
     _ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService,
     error: (any Error)?
   ) {
-    for characteristic in service.characteristics ?? []
-    where characteristic.uuid == GATT.heartRateMeasurement {
-      peripheral.setNotifyValue(true, for: characteristic)
+    for characteristic in service.characteristics ?? [] {
+      if characteristic.uuid == GATT.heartRateMeasurement {
+        peripheral.setNotifyValue(true, for: characteristic)
+      } else if characteristic.uuid == HeartRateRelay.rideRecorded {
+        peripheral.writeValue(Data([1]), for: characteristic, type: .withResponse)
+      }
     }
   }
 

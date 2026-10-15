@@ -5,14 +5,18 @@ import Foundation
 /// measures, so Ride on a Mac, or any other training app, can use the watch like a chest strap.
 ///
 /// Alongside the Heart Rate service it advertises one of Ride's own, so Ride on the Mac can
-/// tell the heart rate comes from a watch.
+/// tell the heart rate comes from a watch, and say that it records the ride.
 @MainActor
 public final class HeartRateRelay: NSObject {
   static let service = CBUUID(string: "46EAB846-7359-4D1E-8DC7-CC90CF575CA1")
+  /// Written by Ride on a Mac that records the ride and saves it to Health through iCloud.
+  static let rideRecorded = CBUUID(string: "D73F6701-C585-461B-B225-B1A15B93926E")
   private static let bodySensorLocation = CBUUID(string: "2A38")
   /// Body Sensor Location's value for the wrist.
   private static let wrist: UInt8 = 2
 
+  /// Called when Ride on a Mac says it records the ride.
+  public var onRideRecorded: (() -> Void)?
   private var manager: CBPeripheralManager?
   private var measurement: CBMutableCharacteristic?
   private var wanted = false
@@ -54,7 +58,12 @@ public final class HeartRateRelay: NSObject {
     let heartRate = CBMutableService(type: GATT.heartRate, primary: true)
     heartRate.characteristics = [measurement, location]
     manager.add(heartRate)
-    manager.add(CBMutableService(type: Self.service, primary: true))
+    let ride = CBMutableService(type: Self.service, primary: true)
+    ride.characteristics = [
+      CBMutableCharacteristic(
+        type: Self.rideRecorded, properties: .write, value: nil, permissions: .writeable)
+    ]
+    manager.add(ride)
     self.measurement = measurement
     manager.startAdvertising([
       CBAdvertisementDataLocalNameKey: "Ride",
@@ -72,6 +81,18 @@ extension HeartRateRelay: @preconcurrency CBPeripheralManagerDelegate {
       measurement = nil
       pending = nil
     }
+  }
+
+  public func peripheralManager(
+    _ peripheral: CBPeripheralManager, didReceiveWrite requests: [CBATTRequest]
+  ) {
+    guard let first = requests.first else { return }
+    guard requests.allSatisfy({ $0.characteristic.uuid == Self.rideRecorded }) else {
+      peripheral.respond(to: first, withResult: .requestNotSupported)
+      return
+    }
+    peripheral.respond(to: first, withResult: .success)
+    onRideRecorded?()
   }
 
   public func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
