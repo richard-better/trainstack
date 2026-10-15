@@ -48,6 +48,9 @@ struct WatchWorkout: Equatable {
   var startDate: Date
   /// Whether starting a ride on the phone opened the app, rather than the rider on the watch.
   var startedOnPhone: Bool
+  /// Whether Ride on the phone or a Mac records the ride, and saves it to Health in place of
+  /// the watch's workout.
+  var isRecordedElsewhere = false
 }
 
 /// A glance and when it arrived.
