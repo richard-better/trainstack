@@ -54,17 +54,19 @@ xcodebuild build -project apps/ride/Ride.xcodeproj -scheme Ride \
 The iOS build also builds the watch app. To try the watch alone, run the `RideWatch` scheme
 on a watch simulator.
 
-Builds with `CODE_SIGNING_ALLOWED=NO` carry no entitlements at all: no HealthKit, Sign in with
-Apple or (on the Mac) App Sandbox. To keep them:
+Builds with `CODE_SIGNING_ALLOWED=NO` carry no entitlements at all: no HealthKit, iCloud, Sign
+in with Apple or (on the Mac) App Sandbox. They are for checking that the app builds: on iOS,
+CloudKit stops an app without its entitlement as it launches, so run simulator builds signed.
+To keep the entitlements:
 
 - Without overrides, the project signs automatically with the team in `DEVELOPMENT_TEAM`. That
   needs an Xcode account in that team, and keeps every entitlement on every platform.
 - For the iOS and watch simulators, sign ad hoc
-  (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=`). That keeps HealthKit and
-  Sign in with Apple.
+  (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=`). That keeps HealthKit,
+  iCloud and Sign in with Apple, though iCloud only syncs in a build signed with the team.
 - On the Mac, ad hoc alone fails with `"Ride" requires a provisioning profile`, because Sign in
   with Apple needs one. Add `CODE_SIGN_ENTITLEMENTS=` to drop it: the app keeps the sandbox,
-  Bluetooth, network and file entitlements, but cannot sign in to TrainStack.
+  Bluetooth, network and file entitlements, but cannot sign in to TrainStack or sync rides.
 
 Debug builds take launch arguments to try the app without hardware:
 
