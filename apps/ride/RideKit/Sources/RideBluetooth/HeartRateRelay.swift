@@ -12,7 +12,8 @@ public final class HeartRateRelay: NSObject {
   /// Written by Ride on a Mac that records the ride and saves it to Health through iCloud, with
   /// `challenge` signed by its `RideClaim`.
   static let rideRecorded = CBUUID(string: "D73F6701-C585-461B-B225-B1A15B93926E")
-  /// A fresh value for a Mac to sign, replaced once a claim has used it.
+  /// A fresh value for a Mac to sign, replaced each time the relay starts and once a claim has
+  /// used it.
   static let challenge = CBUUID(string: "58B5A803-7F11-4797-AB40-7C1E0B855255")
   private static let bodySensorLocation = CBUUID(string: "2A38")
   /// Body Sensor Location's value for the wrist.
@@ -64,6 +65,7 @@ public final class HeartRateRelay: NSObject {
     let heartRate = CBMutableService(type: GATT.heartRate, primary: true)
     heartRate.characteristics = [measurement, location]
     manager.add(heartRate)
+    challenge = RideClaim.challenge()
     let ride = CBMutableService(type: Self.service, primary: true)
     ride.characteristics = [
       CBMutableCharacteristic(
