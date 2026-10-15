@@ -36,6 +36,14 @@ struct WatchRelayReceiverTests {
     #expect(transport.starts == 2)
   }
 
+  @Test func claimsTheRideOnlyWhenAsked() {
+    let (receiver, transport) = runningReceiver()
+    #expect(transport.claim == nil)
+    receiver.stop()
+    receiver.start(claim: RideClaim(secret: RideClaim.secret()))
+    #expect(transport.claim != nil)
+  }
+
   private func runningReceiver() -> (WatchRelayReceiver, FakeWatchRelayTransport) {
     let transport = FakeWatchRelayTransport()
     let receiver = WatchRelayReceiver(transport: transport)
@@ -51,7 +59,11 @@ private final class FakeWatchRelayTransport: WatchRelayTransport {
   var onMeasurement: ((UUID, HeartRateMeasurement) -> Void)?
   var starts = 0
   var stops = 0
+  var claim: RideClaim?
 
-  func start() { starts += 1 }
+  func start(claim: RideClaim?) {
+    starts += 1
+    self.claim = claim
+  }
   func stop() { stops += 1 }
 }

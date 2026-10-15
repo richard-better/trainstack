@@ -21,12 +21,17 @@
     private(set) var isConnected = false
     /// Called with each heart rate the watch sends.
     @ObservationIgnored var onHeartRate: ((Int) -> Void)?
+    /// Whether this phone is recording a ride, which it saves to Health in place of the watch's
+    /// workout when it can.
+    @ObservationIgnored var isRecordingRide = false {
+      didSet { claimRide() }
+    }
     @ObservationIgnored private let store = HKHealthStore()
     @ObservationIgnored private var session: HKWorkoutSession?
     @ObservationIgnored private var delegate: SessionDelegate?
     @ObservationIgnored private let relay = HeartRateRelay()
-    /// Says whether there is a watch with Ride on it, so riders without one are never asked
-    /// for Health access.
+    @ObservationIgnored private let phoneWorkout = PhoneWorkout()
+    /// Says whether there is a watch with Ride on it.
     @ObservationIgnored private let pairing = WatchPairing()
     @ObservationIgnored private let log = Logger(
       subsystem: "com.trainstackhq.ride", category: "watch")
@@ -37,28 +42,44 @@
       store.workoutSessionMirroringStartHandler = { [weak self] session in
         Task { @MainActor in self?.attach(session) }
       }
+      Task { [phoneWorkout] in await phoneWorkout.endLeftOverSession() }
+      relay.claim = { AppSync.shared.claim }
+      relay.onRideRecorded = { [weak self] in
+        // Ride on a Mac records the ride, and this phone saves it to Health once it syncs.
+        guard HealthRides.shared.canSave else { return }
+        self?.send(.rideRecorded)
+      }
     }
 
     /// Makes sure the link is listening for the watch. See `WatchSupport.activate()`.
     static func activate() { _ = shared }
 
-    /// Opens Ride on the watch and starts its workout, unless one is already running.
+    /// Asks for access to Health, then opens Ride on the watch and starts its workout, unless
+    /// one is already running. Without a watch, the phone runs the workout session itself.
     func startWorkout() {
-      guard HKHealthStore.isHealthDataAvailable(), pairing.hasRide, session == nil else { return }
+      guard HKHealthStore.isHealthDataAvailable(), session == nil else { return }
       Task {
+        await HealthRides.shared.requestAccess()
+        guard session == nil else { return }
+        guard pairing.hasRide else {
+          phoneWorkout.start()
+          return
+        }
         do {
-          try await store.requestAuthorization(
-            toShare: [HKObjectType.workoutType()], read: [HKQuantityType(.heartRate)])
           try await store.startWatchApp(toHandle: WorkoutKind.configuration)
         } catch {
-          // No paired watch, or no Ride on it.
           log.info("Watch workout not started: \(error.localizedDescription)")
+          phoneWorkout.start()
         }
       }
     }
 
-    /// Tells the watch the ride is over, which ends its workout and saves it to Health.
-    func endRide() { send(.rideEnded) }
+    /// Ends the phone's workout session, and tells the watch the ride is over, which ends its
+    /// workout.
+    func endRide() {
+      phoneWorkout.end()
+      send(.rideEnded)
+    }
 
     func send(_ message: LinkMessage) {
       guard let session, let data = try? message.encoded() else { return }
@@ -85,6 +106,14 @@
       self.delegate = delegate
       isConnected = true
       relay.start()
+      claimRide()
+    }
+
+    /// Tells the watch this phone saves the ride to Health, so the watch does not save its
+    /// workout too.
+    private func claimRide() {
+      guard isRecordingRide, HealthRides.shared.canSave else { return }
+      send(.rideRecorded)
     }
 
     private func detach(_ session: HKWorkoutSession) {

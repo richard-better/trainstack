@@ -4,7 +4,7 @@ import SwiftUI
 
 public struct RootView: View {
   @State private var destination = RideLibrary.launchDestination()
-  @State private var library = RideLibrary.launchLibrary()
+  @State private var library = RideLibrary.launched
   @State private var settings = RiderSettingsStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
   @State private var account = TrainStackAccount()
@@ -20,6 +20,7 @@ public struct RootView: View {
   @Namespace private var player
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.scenePhase) private var scenePhase
   #endif
 
   public init() {}
@@ -72,6 +73,13 @@ public struct RootView: View {
     .onChange(of: destination) { _, destination in
       if destination != .settings { appDestination = destination }
     }
+    #if os(iOS)
+      .onChange(of: scenePhase, initial: true) { _, phase in
+        // Rides that could not be saved to Health while the app was away.
+        guard phase == .active else { return }
+        Task { await HealthRides.shared.savePending(from: library) }
+      }
+    #endif
     #if DEBUG
       .task {
         launcher.startLaunchRide(

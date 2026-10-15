@@ -138,7 +138,7 @@ public enum FITEncoder {
   static let fitEpoch = 631_065_600
 
   /// Names the application that defined the developer field: 16 bytes of ASCII.
-  private static let applicationID = Array("trainstack-ride!".utf8)
+  static let applicationID = Array("trainstack-ride!".utf8)
 
   private static let invalid8 = UInt8.max
   private static let invalid16 = UInt16.max

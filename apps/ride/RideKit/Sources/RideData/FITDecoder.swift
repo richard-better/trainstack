@@ -13,19 +13,7 @@ public enum FITError: Error, Equatable, Sendable {
 /// that follow one. Everything else in the file is skipped without being interpreted.
 public enum FITDecoder {
   public static func decode(_ data: Data) throws -> RideRecording {
-    let bytes = [UInt8](data)
-    guard bytes.count >= 14 else { throw FITError.truncated }
-    let headerSize = Int(bytes[0])
-    guard headerSize >= 12, bytes.count >= headerSize, bytes[8..<12] == [0x2E, 0x46, 0x49, 0x54]
-    else { throw FITError.notAFITFile }
-
-    let dataSize = Int(readInteger(bytes, at: 4, size: 4, bigEndian: false))
-    let end = headerSize + dataSize
-    guard bytes.count >= end + 2 else { throw FITError.truncated }
-    let storedChecksum = UInt16(readInteger(bytes, at: end, size: 2, bigEndian: false))
-    guard fitChecksum(bytes[0..<end]) == storedChecksum else { throw FITError.badChecksum }
-
-    var reader = MessageReader(bytes: bytes, position: headerSize, end: end)
+    var reader = try MessageReader(data)
     var records: [Message] = []
     var session: Message?
     var workoutName: String?
@@ -41,7 +29,7 @@ public enum FITDecoder {
         {
           targetPowerField = DeveloperField(index: index, number: number)
         }
-      case .other: break
+      case .developerDataID, .other: break
       }
     }
     guard !records.isEmpty else { throw FITError.noRecords }
@@ -87,6 +75,18 @@ public enum FITDecoder {
       samples: samples, summary: summary)
   }
 
+  /// Whether Ride recorded the file, rather than another app whose file was opened in Ride.
+  /// Ride names itself as the application of the developer fields it writes.
+  public static func isRecordedByRide(_ data: Data) -> Bool {
+    guard var reader = try? MessageReader(data) else { return false }
+    while let message = try? reader.next() {
+      if message.kind == .developerDataID, message.bytes(1) == FITEncoder.applicationID {
+        return true
+      }
+    }
+    return false
+  }
+
   private static func mean(_ values: [Int]) -> Int? {
     values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
   }
@@ -98,7 +98,7 @@ public enum FITDecoder {
 // MARK: - Message stream
 
 private struct Message {
-  enum Kind { case record, session, workout, fieldDescription, other }
+  enum Kind { case record, session, workout, fieldDescription, developerDataID, other }
 
   let kind: Kind
   let fields: [Int: Field]
@@ -108,6 +108,7 @@ private struct Message {
   enum Field {
     case integer(Int)
     case string(String)
+    case bytes([UInt8])
   }
 
   func integer(_ number: Int) -> Int? {
@@ -116,6 +117,10 @@ private struct Message {
 
   func string(_ number: Int) -> String? {
     if case .string(let value) = fields[number] { value } else { nil }
+  }
+
+  func bytes(_ number: Int) -> [UInt8]? {
+    if case .bytes(let value) = fields[number] { value } else { nil }
   }
 }
 
@@ -150,9 +155,22 @@ private struct MessageReader {
   var definitions: [Int: Definition] = [:]
   var lastTimestamp = 0
 
-  init(bytes: [UInt8], position: Int, end: Int) {
+  /// Checks the file's header and checksum, and starts at its first message.
+  init(_ data: Data) throws {
+    let bytes = [UInt8](data)
+    guard bytes.count >= 14 else { throw FITError.truncated }
+    let headerSize = Int(bytes[0])
+    guard headerSize >= 12, bytes.count >= headerSize, bytes[8..<12] == [0x2E, 0x46, 0x49, 0x54]
+    else { throw FITError.notAFITFile }
+
+    let dataSize = Int(readInteger(bytes, at: 4, size: 4, bigEndian: false))
+    let end = headerSize + dataSize
+    guard bytes.count >= end + 2 else { throw FITError.truncated }
+    let storedChecksum = UInt16(readInteger(bytes, at: end, size: 2, bigEndian: false))
+    guard fitChecksum(bytes[0..<end]) == storedChecksum else { throw FITError.badChecksum }
+
     self.bytes = bytes
-    self.position = position
+    position = headerSize
     self.end = end
   }
 
@@ -241,6 +259,7 @@ private struct MessageReader {
       case 18: .session
       case 26: .workout
       case 206: .fieldDescription
+      case 207: .developerDataID
       default: .other
       }
     return Message(kind: kind, fields: fields, developer: developer)
@@ -268,8 +287,8 @@ extension Message {
 }
 
 private enum FITValue {
-  /// A single integer or string field, or nil when the field is arrays, floats, or holds the
-  /// base type's "invalid" marker.
+  /// A single integer, string or byte array field, or nil when the field is another kind of
+  /// array, floats, or holds the base type's "invalid" marker.
   static func decode(
     _ bytes: [UInt8], at position: Int, size: Int, baseType: Int, bigEndian: Bool
   ) -> Message.Field? {
@@ -277,6 +296,9 @@ private enum FITValue {
     case 7:
       let raw = bytes[position..<position + size].prefix { $0 != 0 }
       return raw.isEmpty ? nil : .string(String(decoding: raw, as: UTF8.self))
+    case 13 where size > 1:
+      let raw = Array(bytes[position..<position + size])
+      return raw.allSatisfy { $0 == 0xFF } ? nil : .bytes(raw)
     case 0, 2, 13: return integer(bytes, position, size, 1, signed: false, bigEndian)
     case 1: return integer(bytes, position, size, 1, signed: true, bigEndian)
     case 3: return integer(bytes, position, size, 2, signed: true, bigEndian)
