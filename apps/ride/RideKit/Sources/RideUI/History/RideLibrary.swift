@@ -12,17 +12,27 @@ final class RideLibrary {
   var storageProblem: String?
   @ObservationIgnored private let directory: URL?
   @ObservationIgnored private var files: [Ride.ID: URL] = [:]
+  /// The rides already on Strava, keyed by `stravaKey`, with their activity page when known
+  /// (empty when Strava only said it already had the ride).
+  private(set) var stravaActivities: [String: String]
+  @ObservationIgnored private let defaults: UserDefaults?
+  private static let stravaActivitiesKey = "stravaActivities"
 
   /// Holds `rides` in memory only, for previews and sample rides.
   init(rides: [Ride] = []) {
     self.rides = rides.sorted { $0.recording.startDate > $1.recording.startDate }
     directory = nil
+    defaults = nil
+    stravaActivities = [:]
   }
 
   /// Loads the FIT files in `directory`, skipping any that cannot be read, and saves new rides
   /// there.
-  init(directory: URL) {
+  init(directory: URL, defaults: UserDefaults = .standard) {
     self.directory = directory
+    self.defaults = defaults
+    stravaActivities =
+      defaults.dictionary(forKey: Self.stravaActivitiesKey) as? [String: String] ?? [:]
     rides = []
     let urls =
       (try? FileManager.default.contentsOfDirectory(
@@ -81,6 +91,28 @@ final class RideLibrary {
   func remove(_ id: Ride.ID) {
     rides.removeAll { $0.id == id }
     if let url = files.removeValue(forKey: id) { try? FileManager.default.removeItem(at: url) }
+  }
+
+  /// Whether the ride is known to be on Strava.
+  func isOnStrava(_ ride: Ride) -> Bool { stravaActivities[Self.stravaKey(ride)] != nil }
+
+  /// The ride's activity page on Strava, when it is known.
+  func stravaURL(of ride: Ride) -> URL? {
+    stravaActivities[Self.stravaKey(ride)].flatMap(URL.init(string:))
+  }
+
+  /// Remembers that the ride is on Strava, at `url` when that is known.
+  func markOnStrava(_ ride: Ride, url: URL?) {
+    let key = Self.stravaKey(ride)
+    // Keep a known page rather than forgetting it when Strava later reports a duplicate.
+    if url == nil, stravaActivities[key] != nil { return }
+    stravaActivities[key] = url?.absoluteString ?? ""
+    defaults?.set(stravaActivities, forKey: Self.stravaActivitiesKey)
+  }
+
+  /// Rides get a fresh `id` each launch, so uploads are remembered by when the ride started.
+  private static func stravaKey(_ ride: Ride) -> String {
+    ride.recording.startDate.formatted(.iso8601)
   }
 
   private func store(_ ride: Ride) {
