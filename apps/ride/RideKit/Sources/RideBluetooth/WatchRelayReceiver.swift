@@ -5,8 +5,8 @@ protocol WatchRelayTransport: AnyObject {
   /// A Heart Rate Measurement from a connected relay.
   var onMeasurement: ((UUID, HeartRateMeasurement) -> Void)? { get set }
   /// Finds and connects to every relaying iPhone in range, and reconnects any that drop out,
-  /// once Bluetooth is ready.
-  func start()
+  /// once Bluetooth is ready. `claimingRide` tells each one this Mac records the ride.
+  func start(claimingRide: Bool)
   func stop()
 }
 
@@ -27,10 +27,12 @@ public final class WatchRelayReceiver {
     transport.onMeasurement = { [weak self] _, measurement in self?.receive(measurement) }
   }
 
-  public func start() {
+  /// Starts listening. `claimingRide` tells the watch that this Mac records the ride and saves
+  /// it to Health, so the watch does not save its own workout.
+  public func start(claimingRide: Bool = false) {
     guard !isRunning else { return }
     isRunning = true
-    transport.start()
+    transport.start(claimingRide: claimingRide)
   }
 
   public func stop() {

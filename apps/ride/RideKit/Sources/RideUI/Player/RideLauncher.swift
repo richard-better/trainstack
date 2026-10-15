@@ -74,7 +74,8 @@ final class RideLauncher {
       watch.startWorkout()
     #endif
     #if os(macOS)
-      watchRelay.start()
+      // An iPhone saves the ride to Health once it syncs, in place of the watch's workout.
+      watchRelay.start(claimingRide: AppSync.shared.isRunning)
     #endif
     keepAwake.begin()
     ride.start()
