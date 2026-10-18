@@ -63,11 +63,12 @@ plist="$app/Contents/Info.plist"
 requirement='anchor apple generic and identifier "com.trainstackhq.ride" and certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = "S64PDPJKMJ"'
 codesign --verify --deep --strict --verbose=2 --test-requirement="=$requirement" "$app"
 # Developer ID cannot hold Sign in with Apple, but the keychain needs the application identifier.
+# PlistBuddy, unlike plutil, does not split these keys at their dots.
 codesign --display --entitlements "$work/entitlements.plist" --xml "$app"
 for key in com.apple.application-identifier com.apple.security.app-sandbox com.apple.security.device.bluetooth; do
-  plutil -extract "$key" raw "$work/entitlements.plist" > /dev/null || { echo "Missing entitlement $key" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c "Print :$key" "$work/entitlements.plist" > /dev/null || { echo "Missing entitlement $key" >&2; exit 1; }
 done
-if plutil -extract com.apple.developer.applesignin raw "$work/entitlements.plist" > /dev/null 2>&1; then
+if /usr/libexec/PlistBuddy -c 'Print :com.apple.developer.applesignin' "$work/entitlements.plist" > /dev/null 2>&1; then
   echo 'Developer ID build must not hold Sign in with Apple' >&2
   exit 1
 fi

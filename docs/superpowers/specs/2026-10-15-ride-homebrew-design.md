@@ -155,10 +155,14 @@ sign-in keeps working. Module start-up (`index.ts:23`) must not fail either way.
 
 ## 3. Building for Developer ID
 
-- `Ride/Ride-macOS-DeveloperID.entitlements` is an empty dictionary. Sandbox, network,
-  Bluetooth and file access come from build settings and stay.
+- `Ride/Ride-macOS-DeveloperID.entitlements` holds only `keychain-access-groups` with Ride's own
+  group, `$(AppIdentifierPrefix)com.trainstackhq.ride`. Without an entitlement that needs a
+  profile, Xcode embeds none and the app loses `com.apple.application-identifier`. Keychain
+  Sharing is allowed under Developer ID, and its first group matches the App Store build's default
+  group, so both builds read the same items. Sandbox, network, Bluetooth and file access come
+  from build settings and stay.
 - `apps/ride/scripts/build-notarized.sh <version> <build> <output>` archives with
-  `CODE_SIGN_ENTITLEMENTS[sdk=macosx*]=Ride/Ride-macOS-DeveloperID.entitlements`, then exports with
+  `CODE_SIGN_ENTITLEMENTS=Ride/Ride-macOS-DeveloperID.entitlements`, then exports with
   `ExportOptions-DeveloperID.plist`. Xcode makes a Developer ID profile without Sign in with
   Apple. The script then:
   - checks bundle ID, versions and the Developer ID / team requirement
