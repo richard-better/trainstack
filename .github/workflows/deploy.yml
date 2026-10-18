@@ -80,6 +80,8 @@ jobs:
           STRAVA_CLIENT_ID: ${{ vars.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
           GITHUB_FEEDBACK_TOKEN: ${{ secrets.GITHUB_FEEDBACK_TOKEN }}
+          APPLE_SIGN_IN_KEY_ID: ${{ vars.APPLE_SIGN_IN_KEY_ID }}
+          APPLE_SIGN_IN_PRIVATE_KEY: ${{ secrets.APPLE_SIGN_IN_PRIVATE_KEY }}
           AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
           AXIOM_ORG_ID: ${{ vars.AXIOM_ORG_ID }}
       - name: Verify production
