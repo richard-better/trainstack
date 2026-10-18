@@ -97,6 +97,60 @@ public actor TrainStackClient {
     }
   }
 
+  /// Signing in through Apple's web flow, for builds that cannot use Sign in with Apple
+  /// natively: the address to open in a web authentication session, and the secret that proves
+  /// the app that asked is the one that collects the result.
+  public struct WebSignInAttempt: Sendable {
+    public let url: URL
+    let verifier: String
+  }
+
+  public func startAppleWebSignIn() -> WebSignInAttempt {
+    let (verifier, challenge) = Self.proofKey()
+    var components = URLComponents(
+      url: server.appending(path: "api/auth/app-handoff/apple"), resolvingAgainstBaseURL: false)!
+    components.queryItems = [URLQueryItem(name: "code_challenge", value: challenge)]
+    return WebSignInAttempt(url: components.url!, verifier: verifier)
+  }
+
+  /// Finishes signing in once the web session has come back to the app: `callback` is the
+  /// address it ended at, with a code to trade for the session or the reason there is none.
+  public func finishAppleWebSignIn(_ attempt: WebSignInAttempt, callback: URL) async throws {
+    let code = try Self.signInCode(from: callback)
+    let (data, response) = try await send(
+      "POST", "api/auth/app-handoff/token",
+      json: ["code": code, "code_verifier": attempt.verifier])
+    switch response.statusCode {
+    case 200: break
+    case 429: throw StravaError.rateLimited
+    case 400..<500: throw StravaError.signInFailed
+    default: throw StravaError.unavailable
+    }
+    struct SignedIn: Decodable {
+      struct User: Decodable { let name: String? }
+      let token: String
+      let user: User?
+    }
+    guard let signedIn = try? Self.decoder.decode(SignedIn.self, from: data) else {
+      throw StravaError.signInFailed
+    }
+    // Apple's web flow gives the server the rider's name itself.
+    try keep(
+      AccountSession(
+        token: signedIn.token, name: signedIn.user?.name.flatMap { $0.isEmpty ? nil : $0 }))
+  }
+
+  /// The code in the address Apple's web flow ended at, or why there is none.
+  static func signInCode(from callback: URL) throws -> String {
+    let items = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    func value(_ name: String) -> String? { items.first { $0.name == name }?.value }
+    switch (value("code"), value("error")) {
+    case (let code?, nil) where !code.isEmpty: return code
+    case (_, "user_cancelled_authorize"?): throw StravaError.cancelled
+    default: throw StravaError.signInFailed
+    }
+  }
+
   /// Signs out of this device. The session ends on the server too when it can be reached.
   public func signOut() async {
     _ = try? await send("POST", "api/auth/sign-out", json: [:], signedIn: true)
@@ -161,12 +215,7 @@ public actor TrainStackClient {
   }
 
   public func startStravaConnection() async throws -> ConnectAttempt {
-    var bytes = [UInt8](repeating: 0, count: 48)
-    if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
-      bytes = bytes.map { _ in UInt8.random(in: .min ... .max) }
-    }
-    let verifier = Self.base64URL(Data(bytes))
-    let challenge = Self.base64URL(Data(SHA256.hash(data: Data(verifier.utf8))))
+    let (verifier, challenge) = Self.proofKey()
     let (data, response) = try await send(
       "POST", "strava/connect", json: ["code_challenge": challenge], signedIn: true)
     if response.statusCode == 403 { throw StravaError.appleAccountRequired }
@@ -204,13 +253,6 @@ public actor TrainStackClient {
     case (_, "strava_not_configured"?): throw StravaError.notConfigured
     default: throw StravaError.connectFailed
     }
-  }
-
-  private static func base64URL(_ data: Data) -> String {
-    data.base64EncodedString()
-      .replacingOccurrences(of: "+", with: "-")
-      .replacingOccurrences(of: "/", with: "_")
-      .replacingOccurrences(of: "=", with: "")
   }
 
   public func disconnectStrava() async throws {
@@ -275,6 +317,25 @@ public actor TrainStackClient {
     default:
       return nil
     }
+  }
+
+  // MARK: Proof keys
+
+  /// A secret verifier for the server to check later, and the SHA-256 challenge sent ahead of it.
+  static func proofKey() -> (verifier: String, challenge: String) {
+    var bytes = [UInt8](repeating: 0, count: 48)
+    if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
+      bytes = bytes.map { _ in UInt8.random(in: .min ... .max) }
+    }
+    let verifier = base64URL(Data(bytes))
+    return (verifier, base64URL(Data(SHA256.hash(data: Data(verifier.utf8)))))
+  }
+
+  private static func base64URL(_ data: Data) -> String {
+    data.base64EncodedString()
+      .replacingOccurrences(of: "+", with: "-")
+      .replacingOccurrences(of: "/", with: "_")
+      .replacingOccurrences(of: "=", with: "")
   }
 
   // MARK: Requests

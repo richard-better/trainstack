@@ -53,9 +53,11 @@ struct AccountSettingsView: View {
         Button("Sign Out", action: signOut).disabled(isWorking)
         Button("Delete Account…", role: .destructive) { isConfirmingDelete = true }
           .disabled(isWorking)
-      } else {
+      } else if AppleSignIn.isNative {
         SignInWithAppleButton(.signIn, onRequest: prepare, onCompletion: finish)
           .frame(height: 44)
+      } else {
+        WebSignInWithAppleButton(isWorking: isWorking, action: signInThroughBrowser)
       }
     } header: {
       Text("TrainStack account")
@@ -112,6 +114,16 @@ struct AccountSettingsView: View {
       }
       let name = credential.fullName.map { $0.formatted() }
       run { try await account.signIn(identityToken: token, nonce: nonce.raw, fullName: name) }
+    }
+  }
+
+  private func signInThroughBrowser() {
+    run {
+      try await account.signInThroughBrowser { url in
+        try await webAuthenticationSession.authenticate(
+          using: url, callback: .customScheme(TrainStackClient.callbackScheme),
+          preferredBrowserSession: .ephemeral, additionalHeaderFields: [:])
+      }
     }
   }
 

@@ -39,6 +39,22 @@ final class TrainStackAccount {
     await refreshStrava()
   }
 
+  /// Signs in through Apple's web flow, for builds that cannot use Sign in with Apple natively.
+  /// `authenticate` shows `url` and returns the address it ends at, as a web authentication
+  /// session does.
+  func signInThroughBrowser(authenticate: (URL) async throws -> URL) async throws {
+    let attempt = await client.startAppleWebSignIn()
+    let callback: URL
+    do {
+      callback = try await authenticate(attempt.url)
+    } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+      throw StravaError.cancelled
+    }
+    try await client.finishAppleWebSignIn(attempt, callback: callback)
+    await sync()
+    await refreshStrava()
+  }
+
   func signOut() async {
     await client.signOut()
     await sync()
