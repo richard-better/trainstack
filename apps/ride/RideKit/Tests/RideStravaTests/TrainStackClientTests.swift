@@ -52,6 +52,14 @@ private final class CountingSessionStore: SessionStore {
   func save(_ session: AccountSession?) {}
 }
 
+/// Refuses to keep a session, as the Keychain does for a build it will not store items for.
+private final class FullSessionStore: SessionStore {
+  func load() async -> AccountSession? { nil }
+  func save(_ session: AccountSession?) throws {
+    throw SessionStoreError(status: errSecMissingEntitlement)
+  }
+}
+
 private func client(
   _ replies: [Reply], signedIn: Bool = true, pollLimit: Int = 5
 ) -> (TrainStackClient, FakeTransport, InMemorySessionStore) {
@@ -128,6 +136,15 @@ struct TrainStackAccountTests {
     await #expect(throws: StravaError.signInFailed) {
       try await noToken.signInWithApple(identityToken: "x", nonce: "n", fullName: nil)
     }
+  }
+
+  @Test func staysSignedOutWhenTheDeviceWillNotKeepTheSession() async {
+    let client = TrainStackClient(
+      store: FullSessionStore(), transport: FakeTransport([Reply(body: #"{"token":"t"}"#)]))
+    await #expect(throws: StravaError.sessionNotKept) {
+      try await client.signInWithApple(identityToken: "jwt", nonce: "n", fullName: nil)
+    }
+    #expect(await !client.isSignedIn)
   }
 
   @Test func readsTheKeptSessionOnceWhenFirstNeeded() async {

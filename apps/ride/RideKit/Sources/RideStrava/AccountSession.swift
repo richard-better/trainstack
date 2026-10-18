@@ -19,8 +19,13 @@ public protocol SessionStore: Sendable {
   /// Reads the kept session. It can take as long as the rider takes to answer a Keychain prompt,
   /// so it is never read on the main actor.
   func load() async -> AccountSession?
-  /// Saves `session`, or forgets it with nil.
-  func save(_ session: AccountSession?)
+  /// Saves `session`, or forgets it with nil. Throws if the device would not keep it.
+  func save(_ session: AccountSession?) throws
+}
+
+/// The Keychain would not store or delete the session, with the status it gave.
+public struct SessionStoreError: Error, Equatable {
+  public let status: OSStatus
 }
 
 /// Keeps the session in the Keychain, so it stays out of backups of the app's files.
@@ -66,17 +71,21 @@ public struct KeychainSessionStore: SessionStore {
     #endif
   }
 
-  public func save(_ session: AccountSession?) {
-    SecItemDelete(query as CFDictionary)
-    guard let session, let data = try? JSONEncoder().encode(session) else { return }
-    add(data)
+  public func save(_ session: AccountSession?) throws {
+    let deleted = SecItemDelete(query as CFDictionary)
+    guard deleted == errSecSuccess || deleted == errSecItemNotFound else {
+      throw SessionStoreError(status: deleted)
+    }
+    guard let session else { return }
+    let added = add(try JSONEncoder().encode(session))
+    guard added == errSecSuccess else { throw SessionStoreError(status: added) }
   }
 
-  @discardableResult private func add(_ data: Data) -> Bool {
+  private func add(_ data: Data) -> OSStatus {
     var item = query
     item[kSecValueData as String] = data
     item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-    return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
+    return SecItemAdd(item as CFDictionary, nil)
   }
 
   private static func data(matching query: [String: Any]) -> Data? {
@@ -100,7 +109,7 @@ public struct KeychainSessionStore: SessionStore {
       guard let data = Self.data(matching: legacy),
         let session = try? JSONDecoder().decode(AccountSession.self, from: data)
       else { return nil }
-      if add(data) { SecItemDelete(legacy as CFDictionary) }
+      if add(data) == errSecSuccess { SecItemDelete(legacy as CFDictionary) }
       return session
     }
 

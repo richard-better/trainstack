@@ -84,7 +84,7 @@ public actor TrainStackClient {
       throw StravaError.signInFailed
     }
     var name = signedIn?.user?.name.flatMap { $0.isEmpty ? nil : $0 }
-    save(AccountSession(token: token, name: name))
+    try keep(AccountSession(token: token, name: name))
 
     // Apple shares the name once, with the app and not in the token, so give it to the account.
     if name == nil, let fullName, !fullName.isEmpty {
@@ -92,7 +92,7 @@ public actor TrainStackClient {
         .1.statusCode == 200
       {
         name = fullName
-        save(AccountSession(token: token, name: name))
+        try? keep(AccountSession(token: token, name: name))
       }
     }
   }
@@ -100,24 +100,38 @@ public actor TrainStackClient {
   /// Signs out of this device. The session ends on the server too when it can be reached.
   public func signOut() async {
     _ = try? await send("POST", "api/auth/sign-out", json: [:], signedIn: true)
-    save(nil)
+    forget()
   }
 
   /// Deletes the account and everything stored for it, including the Strava connection.
   public func deleteAccount() async throws {
     let (_, response) = try await send("POST", "api/auth/delete-user", json: [:], signedIn: true)
     switch response.statusCode {
-    case 200: save(nil)
+    case 200: forget()
     case 400: throw StravaError.rejected("Sign in again, then delete the account.")
     default: throw StravaError.unavailable
     }
   }
 
-  private func save(_ session: AccountSession?) {
+  /// Keeps `session` for later launches. One the device cannot store is not kept at all, so the
+  /// rider is not signed in now only to find themselves signed out after a relaunch.
+  private func keep(_ session: AccountSession) throws {
+    do {
+      try store.save(session)
+    } catch {
+      throw StravaError.sessionNotKept
+    }
     self.session = session
     isRestored = true
     restoring = nil
-    store.save(session)
+  }
+
+  /// Forgets the session on this device.
+  private func forget() {
+    session = nil
+    isRestored = true
+    restoring = nil
+    try? store.save(nil)
   }
 
   // MARK: Strava
@@ -271,7 +285,7 @@ public actor TrainStackClient {
     switch response.statusCode {
     case 200..<300: return
     case 401:
-      save(nil)
+      forget()
       throw StravaError.signedOut
     case 409: throw StravaError.notConnected
     case 413: throw StravaError.rejected("The ride is too large to upload.")
