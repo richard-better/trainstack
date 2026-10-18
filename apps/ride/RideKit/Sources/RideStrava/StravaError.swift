@@ -9,6 +9,8 @@ public enum StravaError: Error, Equatable, Sendable {
   case notConfigured
   /// Apple or the server did not accept the sign-in.
   case signInFailed
+  /// The device would not store the sign-in, so it would be gone after a relaunch.
+  case sessionNotKept
   case connectFailed
   /// That Strava account is connected to another TrainStack account.
   case athleteInUse
@@ -36,6 +38,7 @@ extension StravaError: LocalizedError {
     case .missingPermission: "Ride needs permission to upload activities to Strava."
     case .notConfigured: "Strava isn't set up on the server yet."
     case .signInFailed: "Sign in didn't work. Try again."
+    case .sessionNotKept: "Ride couldn't keep your sign-in on this device. Try again."
     case .connectFailed: "Couldn't connect Strava. Try again."
     case .athleteInUse:
       "That Strava account is already connected to another TrainStack account. If it isn't yours to keep, remove Ride in Strava's settings under My Apps, then connect again."
