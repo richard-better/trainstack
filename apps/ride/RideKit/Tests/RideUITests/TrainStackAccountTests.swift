@@ -120,6 +120,34 @@ struct TrainStackAccountTests {
     #expect(account.stravaAthleteName == "Ada R")
   }
 
+  @Test func signsInThroughTheWebSession() async throws {
+    let transport = FakeTransport([
+      reply(#"{"token":"t","user":{"name":"Ada Rider"}}"#),
+      reply(#"{"connected":false}"#),
+    ])
+    let account = TrainStackAccount(store: InMemorySessionStore(), transport: transport)
+    var opened: URL?
+    try await account.signInThroughBrowser { url in
+      opened = url
+      return URL(string: "trainstackride://signed-in?code=c")!
+    }
+    #expect(opened?.path == "/api/auth/app-handoff/apple")
+    #expect(account.isSignedIn)
+    #expect(account.name == "Ada Rider")
+    #expect(
+      await transport.requests.map(\.url?.path) == ["/api/auth/app-handoff/token", "/strava"])
+  }
+
+  @Test func treatsBackingOutOfTheWebSignInAsCancelled() async {
+    let account = TrainStackAccount(store: InMemorySessionStore(), transport: FakeTransport([]))
+    await #expect(throws: StravaError.cancelled) {
+      try await account.signInThroughBrowser { _ in
+        throw ASWebAuthenticationSessionError(.canceledLogin)
+      }
+    }
+    #expect(!account.isSignedIn)
+  }
+
   @Test func signingOutForgetsStravaToo() async {
     let account = TrainStackAccount.sample
     #expect(account.isStravaConnected)
