@@ -74,36 +74,41 @@ who signed in natively lands on the same account through the browser. Account li
 1. The app makes a random 32-byte verifier and opens, in `ASWebAuthenticationSession` with the
    `trainstackride` scheme and an ephemeral session:
    `GET /api/auth/app-handoff/apple?code_challenge=<S256>`.
-2. `app-handoff/apple` checks the challenge (43 base64url characters). It calls `signInSocial`
-   for Apple through the endpoint API with `returnHeaders: true`, passing
-   `additionalData: { appChallenge }`, `callbackURL: /api/auth/app-handoff/done` and
-   `errorCallbackURL: /api/auth/app-handoff/done`. It forwards every `Set-Cookie`, then
-   redirects the browser to the returned authorization URL itself, because `signInSocial` answers
-   with JSON. The challenge lives in better-auth's server-side OAuth state, tied to that state's
-   cookie.
+2. `app-handoff/apple` checks the challenge (43 base64url characters), sending the app
+   `error=invalid_request` if it is wrong, and stores it with
+   `addOAuthServerContext`, which better-auth keeps in the server side of the OAuth state where
+   no client can set it (unlike `additionalData`). It then calls `signInSocial` for Apple
+   through the endpoint API with `returnHeaders: true`, `disableRedirect: true`,
+   `callbackURL` and `errorCallbackURL` both `/api/auth/app-handoff/done`. It forwards every
+   `Set-Cookie`, sets a short-lived `app_handoff` marker cookie, and redirects the browser to the
+   returned authorization URL itself.
 3. Apple posts back to `/api/auth/callback/apple`. better-auth checks state, exchanges the
-   code, verifies the ID token and creates a browser session.
+   code and creates a browser session.
 4. An `after` hook on `/callback/:id` handles Apple only, and ignores the POST that better-auth
-   bounces to a GET before it parses state. It reads the state with `getOAuthState`, and
-   validates `appChallenge` again there, because `additionalData` can come from any client.
-   - **Success** (`ctx.context.newSession` set, valid `appChallenge`):
+   bounces to a GET before it parses state. It reads the state with `getOAuthState`. A state
+   without `serverContext.appChallenge` is someone else's flow and is left alone.
+   - **Success** (`ctx.context.newSession` set, valid challenge):
      - insert a handoff row: a random 32-byte code (only its SHA-256 is stored), the
        challenge, the user ID, and an expiry two minutes out
-     - delete the browser session, and clear it with `deleteSessionCookie`, which also drops
-       session cookies already queued on the response
-     - remove any `set-auth-token` header. The `appHandoff` plugin is listed before
-       `bearer()`, so its hook runs first, and stripping the header covers the order changing
+     - delete the browser session, and take its cookies and any `set-auth-token` header off
+       the queued response headers. `deleteSessionCookie` only appends expiring cookies, so the
+       real ones would still go out. The `appHandoff` plugin is listed before `bearer()`, so
+       bearer finds no session cookie to expose either way
      - redirect to `trainstackride://signed-in?code=<code>`
-   - **Failure after valid state** (no new session, valid `appChallenge`): redirect to
+   - **Failure after valid state** (no new session): redirect to
      `trainstackride://signed-in?error=<better-auth code>`.
-   - **State cannot be recovered** (missing or forged state): better-auth sends the browser to
-     `errorCallbackURL`. `done` turns an `error` parameter into
-     `trainstackride://signed-in?error=<code>`, which carries no credential. Without an `error`
-     parameter it answers 400.
-   Every destination is fixed in code, so no scheme comes from the request and nothing joins
-   `trustedOrigins`. Responses carry `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
-   A sign-in link carrying someone else's challenge gains them nothing. The code goes to the
-   signed-in rider's own machine, and only the challenge's verifier redeems it.
+   - **State cannot be recovered** (missing, expired or forged): better-auth redirects to its
+     own `/error` page, not `errorCallbackURL`. If the browser holds the marker cookie, the hook
+     sends it to `trainstackride://signed-in?error=<code>` instead, which carries no credential.
+     Without the marker, the redirect stands.
+   - `done` is only reached if the hook did not run. It turns an `error` parameter into the
+     same app redirect and answers 400 without one.
+     Every destination is fixed in code, so no scheme comes from the request and nothing joins
+     `trustedOrigins`. Error codes are passed on only if they look like one
+     (`[A-Za-z0-9_]{1,64}`), otherwise `sign_in_failed`. Responses carry
+     `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. A sign-in link carrying
+     someone else's challenge gains them nothing. The code goes to the signed-in rider's own
+     machine, and only the challenge's verifier redeems it.
 5. The app posts `{ code, code_verifier }` to `/api/auth/app-handoff/token`. One
    `DELETE … WHERE code_hash = ? AND challenge = ? AND expires_at > now RETURNING user_id`
    consumes the row atomically: the challenge is computed from the verifier, so a wrong verifier
@@ -113,8 +118,10 @@ who signed in natively lands on the same account through the browser. Account li
 
 Handoff rows live in D1 (`app_handoff` table, a drizzle migration). Expired rows are deleted on
 every insert. better-auth's rate limiter covers both public endpoints:
-- `rateLimit: { enabled: true, storage: "database" }`, with `customRules` of 10 per minute
-  per IP for `/app-handoff/apple` and `/app-handoff/token`
+
+- `rateLimit: { storage: "database" }`. better-auth turns the limiter on in production. The
+  plugin declares its own rule of 10 per minute per IP for `/app-handoff/apple` and
+  `/app-handoff/token`
 - the `rateLimit` table, added to the auth schema in the same migration
 - `advanced.ipAddress.ipAddressHeaders: ["cf-connecting-ip"]`, so the IP is Cloudflare's
   rather than a spoofable `x-forwarded-for`
@@ -133,8 +140,8 @@ go. A failed revocation is logged and does not block deletion.
 New Worker secrets, through `hosted/infra/alchemy.run.ts` and `.env.schema`:
 `APPLE_SIGN_IN_KEY_ID`, `APPLE_SIGN_IN_PRIVATE_KEY`. The team ID and Services ID are
 constants next to `APPLE_APP_BUNDLE_ID`. Without the secrets, `createAuth` leaves
-`clientSecret` out, the Apple web endpoints answer 503 `apple_web_not_configured`, and native
-sign-in keeps working. Module start-up (`index.ts:23`) must not fail either way.
+`clientSecret` out, `app-handoff/apple` sends the app `error=apple_web_not_configured`, and
+native sign-in keeps working. A key that does not parse is logged and treated as missing. Module start-up (`index.ts:23`) must not fail either way.
 
 ## 2. App
 
@@ -169,9 +176,9 @@ sign-in keeps working. Module start-up (`index.ts:23`) must not fail either way.
   - checks the signed entitlements have `com.apple.application-identifier`, the sandbox and
     Bluetooth, and do not have `com.apple.developer.applesignin`
   - notarizes the ZIP, staples the app, runs `spctl`, then writes `Ride-<version>.zip` and
-  `SHA256SUMS`
-  In CI it authenticates with the API key. Locally it uses the Xcode account and
-  `NOTARY_KEYCHAIN_PROFILE`.
+    `SHA256SUMS`
+    In CI it authenticates with the API key. Locally it uses the Xcode account and
+    `NOTARY_KEYCHAIN_PROFILE`.
 - Versions: a named release is `X.Y.Z`, which is also its marketing version. An alpha is
   `<marketing>-alpha.<build>`, where `<marketing>` is the project's `MARKETING_VERSION` (`1.0`
   today, `X.Y` or `X.Y.Z`). The build number is `yyMMddHHmm` UTC, as for TestFlight.
@@ -189,7 +196,7 @@ sign-in keeps working. Module start-up (`index.ts:23`) must not fail either way.
   - publishes prerelease `ride-v<marketing>-alpha.<build>`
   - starts the tap's update for `trainstack-ride@alpha`
   - deletes alpha prereleases and tags beyond the newest ten
-  Concurrency group `ride-alpha`, not cancelling a run in progress.
+    Concurrency group `ride-alpha`, not cancelling a run in progress.
 - Both use the `testflight` environment: the ASC key plus a new `HOMEBREW_TAP_TOKEN`, a
   fine-grained token with Actions read and write on `homebrew-tap` only. Jobs that publish
   get `contents: write`.
@@ -220,6 +227,7 @@ sign-in keeps working. Module start-up (`index.ts:23`) must not fail either way.
 ## 6. One-time setup (Richard)
 
 Apple Developer:
+
 1. Create Services ID `com.trainstackhq.ride.web`, enable Sign in with Apple, group it with
    `com.trainstackhq.ride`, and add the domain `api.trainstackhq.com` and return URL
    `https://api.trainstackhq.com/api/auth/callback/apple`.
