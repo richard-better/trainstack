@@ -12,6 +12,7 @@ import { cors } from "hono/cors";
 
 import { createContext } from "./context";
 import { ENV } from "./env.server";
+import { feedbackRoutes } from "./feedback";
 import { appRouter } from "./router";
 import { createAuth, getDb } from "./services";
 import { stravaRoutes } from "./strava";
@@ -65,20 +66,17 @@ app.get("/health", async (c) => {
   }
 });
 
-app.route(
-  "/strava",
-  stravaRoutes({
-    env: ENV,
-    database: getDb,
-    userId: async (token) => {
-      const auth = await createAuth();
-      const session = await auth.api.getSession({
-        headers: new Headers({ Authorization: `Bearer ${token}` }),
-      });
-      return session?.user.id;
-    },
-  }),
-);
+/** The rider a session token belongs to, read from the token alone. */
+const riderOf = async (token: string) => {
+  const auth = await createAuth();
+  const session = await auth.api.getSession({
+    headers: new Headers({ Authorization: `Bearer ${token}` }),
+  });
+  return session?.user.id;
+};
+
+app.route("/strava", stravaRoutes({ env: ENV, database: getDb, userId: riderOf }));
+app.route("/feedback", feedbackRoutes({ env: ENV, database: getDb, userId: riderOf }));
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 

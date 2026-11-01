@@ -2,7 +2,8 @@ import { and, eq, isNull, lt, ne, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { Database } from "../db";
-import { account, stravaBudget, stravaConnection, stravaLink } from "../db/schema";
+import { stravaBudget, stravaConnection, stravaLink } from "../db/schema";
+import { hasAppleAccount, requireRider, riderId, type RiderOf } from "../rider";
 import * as strava from "./api";
 import { createVault, type Vault } from "./crypto";
 
@@ -13,8 +14,7 @@ export type StravaDeps = {
     BETTER_AUTH_SECRET: string;
   };
   database: () => Database;
-  /** The rider authenticated by this bearer token, without falling back to cookies. */
-  userId: (token: string) => Promise<string | undefined>;
+  userId: RiderOf;
   fetcher?: typeof fetch;
 };
 
@@ -291,17 +291,10 @@ export function stravaRoutes(deps: StravaDeps) {
   });
 
   // Only the callback is reached through a browser. Native calls require an explicit token.
-  app.use("*", async (c, next) => {
-    if (c.req.path === "/strava/callback") return next();
-    const token = /^Bearer\s+(\S+)$/i.exec(c.req.header("Authorization") ?? "")?.[1];
-    if (!token) return c.json({ error: "unauthorized" }, 401);
-    const userId = await deps.userId(token);
-    if (!userId) return c.json({ error: "unauthorized" }, 401);
-    c.set("userId" as never, userId as never);
-    return next();
-  });
-
-  const userIdOf = (c: { get: (key: never) => unknown }) => c.get("userId" as never) as string;
+  app.use(
+    "*",
+    requireRider(deps.userId, (path) => path === "/strava/callback"),
+  );
 
   // The app opens the address this returns in a web authentication session. It keeps the verifier
   // behind its challenge to itself until Strava's page is done.
@@ -313,15 +306,11 @@ export function stravaRoutes(deps: StravaDeps) {
     if (typeof challenge !== "string" || !CHALLENGE.test(challenge)) {
       return c.json({ error: "invalid_request" }, 400);
     }
-    const userId = userIdOf(c);
+    const userId = riderId(c);
     // Legacy email-only accounts cannot spend Strava's shared sign-in budget.
-    const apple = await deps
-      .database()
-      .select({ id: account.id })
-      .from(account)
-      .where(and(eq(account.userId, userId), eq(account.providerId, "apple")))
-      .get();
-    if (!apple) return c.json({ error: "apple_account_required" }, 403);
+    if (!(await hasAppleAccount(deps.database(), userId))) {
+      return c.json({ error: "apple_account_required" }, 403);
+    }
     if (!(await spend(`user:${userId}`, USER_CONNECTS))) {
       return c.json({ error: "rate_limited" }, 429);
     }
@@ -395,7 +384,7 @@ export function stravaRoutes(deps: StravaDeps) {
     const challenge = toBase64Url(
       await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
     );
-    const userId = userIdOf(c);
+    const userId = riderId(c);
     const database = deps.database();
     const link = await database
       .select()
@@ -426,10 +415,10 @@ export function stravaRoutes(deps: StravaDeps) {
       : { connected: false };
   };
 
-  app.get("/", async (c) => c.json(await statusOf(userIdOf(c))));
+  app.get("/", async (c) => c.json(await statusOf(riderId(c))));
 
   app.delete("/", async (c) => {
-    const userId = userIdOf(c);
+    const userId = riderId(c);
     const row = await connectionOf(userId);
     if (row) {
       // Tell Strava too, so Ride disappears from the rider's connected apps. If the token has
@@ -449,7 +438,7 @@ export function stravaRoutes(deps: StravaDeps) {
     if (Number(c.req.header("content-length") ?? 0) > MAX_FIT_BYTES) {
       return c.json({ error: "too_large" }, 413);
     }
-    const userId = userIdOf(c);
+    const userId = riderId(c);
     // Counted properly when Strava is called; this saves reading a ride for a rider who is out.
     const row = await connectionOf(userId);
     if (!row) return c.json({ error: "not_connected" }, 409);
@@ -486,9 +475,7 @@ export function stravaRoutes(deps: StravaDeps) {
     const id = Number(c.req.param("id"));
     if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "invalid_request" }, 400);
     try {
-      const response = await withToken(userIdOf(c), (token) =>
-        strava.getUpload(fetcher, token, id),
-      );
+      const response = await withToken(riderId(c), (token) => strava.getUpload(fetcher, token, id));
       if (response.status === 429) return c.json({ error: "rate_limited" }, 429);
       if (!response.ok) throw new Error(`Strava answered ${response.status}`);
       return c.json(shape(await response.json()));

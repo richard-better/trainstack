@@ -5,6 +5,7 @@ import SwiftUI
 struct SettingsList: View {
   @Binding var path: [SettingsPage]
   @Environment(RiderSettingsStore.self) private var store
+  @Environment(\.sendFeedback) private var sendFeedback
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -29,6 +30,15 @@ struct SettingsList: View {
           }
           NavigationLink(value: SettingsPage.account) {
             Label("Account", systemImage: "person.crop.circle")
+          }
+        }
+        if let sendFeedback {
+          Section {
+            Button {
+              sendFeedback()
+            } label: {
+              Label("Send Feedback", systemImage: "bubble.left.and.text.bubble.right")
+            }
           }
         }
       }
