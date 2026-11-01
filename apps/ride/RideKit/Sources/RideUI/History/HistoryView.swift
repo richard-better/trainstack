@@ -33,6 +33,7 @@ struct HistoryView: View {
       if let ride = library[selection] {
         NavigationStack(path: $workoutPath) {
           ActivityDetailView(ride: ride, library: library) { remove(ride) }
+            .id(ride.id)
             .navigationTitle(ride.title)
             #if os(iOS)
               .navigationBarTitleDisplayMode(.inline)
