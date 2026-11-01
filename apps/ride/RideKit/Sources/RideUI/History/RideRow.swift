@@ -4,6 +4,7 @@ import SwiftUI
 /// A finished ride in History: its title, day, headline numbers and time in zones.
 struct RideRow: View {
   let ride: Ride
+  var isOnStrava = false
   @Environment(RiderSettingsStore.self) private var store
 
   var body: some View {
@@ -14,6 +15,12 @@ struct RideRow: View {
     VStack(alignment: .leading, spacing: 6) {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
         Text(ride.title).font(.headline).lineLimit(1)
+        if isOnStrava {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("On Strava")
+        }
         Spacer(minLength: 0)
         Text(ride.recording.startDate, format: .dateTime.day().weekday(.abbreviated))
           .font(.caption)
