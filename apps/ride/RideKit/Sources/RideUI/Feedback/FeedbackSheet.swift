@@ -54,9 +54,12 @@ struct FeedbackSheet: View {
         .onChange(of: message) { _, text in
           // The most the server takes, which it counts in UTF-16.
           if text.utf16.count > 5000 {
-            var cut = text
-            while cut.utf16.count > 5000 { cut.removeLast() }
-            message = cut
+            var length = 0
+            message = String(
+              text.prefix { character in
+                length += character.utf16.count
+                return length <= 5000
+              })
           }
         }
       } footer: {
