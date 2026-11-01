@@ -926,12 +926,17 @@ test("a ride is never read past the size limit, even when it does not say how lo
       controller.enqueue(chunk);
     },
   });
-  const response = await call(token, "/uploads?name=Ride", {
+  // The Worker answers before the body ends, so the client may still be writing when the
+  // connection closes and see that instead of the 413.
+  const status = await call(token, "/uploads?name=Ride", {
     method: "POST",
     body,
     duplex: "half",
-  });
-  assert.equal(response.status, 413);
+  }).then(
+    (response) => response.status,
+    (error) => error.cause?.code,
+  );
+  assert.ok([413, "EPIPE", "ECONNRESET"].includes(status), `got ${status}`);
   assert.ok(sent < 64, `${sent} MB were read`);
   assert.deepEqual(
     strava.requests.filter((r) => r.path.startsWith("/api")),
