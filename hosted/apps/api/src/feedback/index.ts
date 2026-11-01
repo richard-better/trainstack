@@ -151,7 +151,7 @@ export function issueBody({ message, context }: Submission) {
     .filter(([, value]) => value)
     .map(([label, value]) => `- ${label}: ${value}`);
   return [
-    noMentions(message.trim()),
+    ...verbatim(message.trim()),
     "",
     "---",
     "",
@@ -161,8 +161,16 @@ export function issueBody({ message, context }: Submission) {
   ].join("\n");
 }
 
-/** Keeps a rider's `@name` from notifying that GitHub user. */
-const noMentions = (text: string) => text.replace(/@(?=[\w-])/g, "@​");
+/**
+ * The rider's words as a fenced code block, longer than any run of backticks in them. GitHub finds
+ * no mentions, issue references or Markdown in a code block, so a message cannot notify anyone,
+ * link itself into other repositories or show images.
+ */
+function verbatim(text: string) {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  return [`${fence}text`, text, fence];
+}
 
 /** Context is only ever names and numbers, so anything that would format is dropped. */
-const plain = (text: string) => text.replace(/[^\p{L}\p{N} .,:()/×+-]/gu, "").trim();
+const plain = (text: string) => text.replace(/[^\p{L}\p{N} .,()×+-]/gu, "").trim();

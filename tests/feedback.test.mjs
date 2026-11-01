@@ -99,9 +99,11 @@ test("signed-in feedback becomes a GitHub issue that does not say who sent it", 
   assert.equal(
     request.body.body,
     [
+      "```text",
       "Show the FTP line on the ride chart",
       "",
       "It would help pacing.",
+      "```",
       "",
       "---",
       "",
@@ -161,23 +163,28 @@ test("feedback must have words, and not too many", async () => {
   assert.deepEqual(github.requests, []);
 });
 
-test("a rider's words cannot notify people or format the context", async () => {
+test("a rider's words stay plain text, so they cannot notify, link or format", async () => {
   const { token } = await appleAuth.signIn(runtime);
   const long = "Make the workout library searchable by name, zone, duration and stress score";
+  const message = [
+    long,
+    "@richard-better &#64;octocat owner/repo#1 https://github.com/owner/repo/issues/2",
+    "![pixel](https://evil.example/p.png) <img src=x>",
+    "````",
+    "```",
+  ].join("\n");
   const response = await send(token, {
-    message: `${long}\n@richard-better please look, cc @octocat. Mail me@example.com`,
+    message,
     context: { screen: "History](https://evil.example)\n- App: fake" },
   });
   assert.equal(response.status, 201);
   const { title, body } = github.requests[0].body;
   assert.equal(title, `Feedback: ${long.slice(0, 71).trimEnd()}…`);
-  assert.ok(!/@[\w-]/.test(body), body);
-  assert.ok(body.includes("@​richard-better please look"));
-  const contextLines = body
-    .split("---\n")[1]
-    .split("\n")
-    .filter((line) => line.startsWith("- "));
-  assert.deepEqual(contextLines, ["- Screen: History(https://evil.example)- App: fake"]);
+  // The whole message is one code block, fenced longer than any backticks inside it.
+  const [fenced, details] = body.split("\n\n---\n\n");
+  assert.equal(fenced, `\`\`\`\`\`text\n${message}\n\`\`\`\`\``);
+  const contextLines = details.split("\n").filter((line) => line.startsWith("- "));
+  assert.deepEqual(contextLines, ["- Screen: History(httpsevil.example)- App fake"]);
 });
 
 test("a rider can send ten pieces of feedback a day", async () => {
