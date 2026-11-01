@@ -145,9 +145,7 @@
       "id": "UI-031",
       "area": "Personal plans",
       "url": "https://app.trainerday.com/plans?forceLoadData=true",
-      "findings": [
-        "Search, More filters, new-plan entry and personal collection."
-      ],
+      "findings": ["Search, More filters, new-plan entry and personal collection."],
       "evidenceType": "observed"
     },
     {

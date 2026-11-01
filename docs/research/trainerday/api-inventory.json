@@ -207,11 +207,7 @@
       "request": {
         "application/json": {
           "type": "object",
-          "required": [
-            "name",
-            "dataType",
-            "data"
-          ],
+          "required": ["name", "dataType", "data"],
           "properties": {
             "name": {
               "type": "string"
@@ -224,18 +220,11 @@
             },
             "sportType": {
               "type": "string",
-              "enum": [
-                "bike",
-                "swim"
-              ]
+              "enum": ["bike", "swim"]
             },
             "dataType": {
               "type": "string",
-              "enum": [
-                "tcx",
-                "gpx",
-                "fit"
-              ]
+              "enum": ["tcx", "gpx", "fit"]
             },
             "data": {
               "type": "string",
@@ -312,9 +301,7 @@
       "request": {
         "application/json": {
           "type": "object",
-          "required": [
-            "calendarDate"
-          ],
+          "required": ["calendarDate"],
           "properties": {
             "calendarDate": {
               "type": "string"
@@ -344,15 +331,7 @@
                 },
                 "kind": {
                   "type": "string",
-                  "enum": [
-                    "default",
-                    "run",
-                    "skiing",
-                    "hiking",
-                    "walk",
-                    "strength",
-                    "yoga"
-                  ]
+                  "enum": ["default", "run", "skiing", "hiking", "walk", "strength", "yoga"]
                 },
                 "text": {
                   "type": "string"
@@ -617,11 +596,7 @@
       "request": {
         "application/json": {
           "type": "object",
-          "required": [
-            "name",
-            "dataType",
-            "data"
-          ],
+          "required": ["name", "dataType", "data"],
           "properties": {
             "name": {
               "type": "string"
@@ -634,18 +609,11 @@
             },
             "sportType": {
               "type": "string",
-              "enum": [
-                "bike",
-                "swim"
-              ]
+              "enum": ["bike", "swim"]
             },
             "dataType": {
               "type": "string",
-              "enum": [
-                "tcx",
-                "gpx",
-                "fit"
-              ]
+              "enum": ["tcx", "gpx", "fit"]
             },
             "data": {
               "type": "string",
@@ -827,12 +795,7 @@
         },
         "activeSportProfile": {
           "type": "string",
-          "enum": [
-            "bike",
-            "swim",
-            "rowing",
-            "run"
-          ]
+          "enum": ["bike", "swim", "rowing", "run"]
         },
         "ftp": {
           "type": "number"
@@ -873,10 +836,7 @@
     },
     "SegmentTarget": {
       "type": "object",
-      "required": [
-        "min",
-        "type"
-      ],
+      "required": ["min", "type"],
       "properties": {
         "min": {
           "type": "number"
@@ -887,21 +847,13 @@
         },
         "type": {
           "type": "string",
-          "enum": [
-            "primary",
-            "cadence",
-            "slope",
-            "heart_rate"
-          ]
+          "enum": ["primary", "cadence", "slope", "heart_rate"]
         }
       }
     },
     "SegmentNote": {
       "type": "object",
-      "required": [
-        "timeOffset",
-        "text"
-      ],
+      "required": ["timeOffset", "text"],
       "properties": {
         "timeOffset": {
           "type": "number"
@@ -913,9 +865,7 @@
     },
     "BlockSegment": {
       "type": "object",
-      "required": [
-        "durationValue"
-      ],
+      "required": ["durationValue"],
       "properties": {
         "name": {
           "type": "string"
@@ -923,12 +873,7 @@
         "controlMode": {
           "type": "string",
           "nullable": true,
-          "enum": [
-            "slope",
-            "hr",
-            "erg",
-            "resistance"
-          ]
+          "enum": ["slope", "hr", "erg", "resistance"]
         },
         "segmentType": {
           "type": "string",
@@ -951,10 +896,7 @@
         },
         "durationType": {
           "type": "string",
-          "enum": [
-            "second",
-            "meter"
-          ],
+          "enum": ["second", "meter"],
           "default": "second"
         },
         "durationValue": {
@@ -980,10 +922,7 @@
     },
     "WorkoutBlock": {
       "type": "object",
-      "required": [
-        "segments",
-        "type"
-      ],
+      "required": ["segments", "type"],
       "properties": {
         "start": {
           "type": "number"
@@ -1004,11 +943,7 @@
         },
         "type": {
           "type": "string",
-          "enum": [
-            "segment",
-            "repetition",
-            "set"
-          ]
+          "enum": ["segment", "repetition", "set"]
         }
       }
     },
@@ -1059,19 +994,11 @@
         },
         "workoutType": {
           "type": "string",
-          "enum": [
-            "bike",
-            "swim",
-            "rowing",
-            "run"
-          ]
+          "enum": ["bike", "swim", "rowing", "run"]
         },
         "intensityMetric": {
           "type": "string",
-          "enum": [
-            "percentOfFtp",
-            "percentOfHr"
-          ]
+          "enum": ["percentOfFtp", "percentOfHr"]
         },
         "lengthUnit": {
           "type": "string"
@@ -1092,12 +1019,7 @@
         },
         "workoutType": {
           "type": "string",
-          "enum": [
-            "bike",
-            "swim",
-            "rowing",
-            "run"
-          ]
+          "enum": ["bike", "swim", "rowing", "run"]
         },
         "startDateUTC": {
           "type": "string"
@@ -1137,14 +1059,7 @@
         },
         "dominantZone": {
           "type": "string",
-          "enum": [
-            "Recovery",
-            "Endurance",
-            "Tempo",
-            "Threshold",
-            "VO2Max",
-            "Anaerobic"
-          ]
+          "enum": ["Recovery", "Endurance", "Tempo", "Threshold", "VO2Max", "Anaerobic"]
         },
         "isOutdoor": {
           "type": "boolean"
@@ -1214,22 +1129,11 @@
         },
         "dominantZone": {
           "type": "string",
-          "enum": [
-            "",
-            "Z1",
-            "Z2",
-            "Z3",
-            "Z4",
-            "Z5",
-            "Z6"
-          ]
+          "enum": ["", "Z1", "Z2", "Z3", "Z4", "Z5", "Z6"]
         },
         "isOutdoor": {
           "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
+          "enum": ["true", "false"]
         },
         "timezone": {
           "type": "string"
@@ -1238,9 +1142,7 @@
     },
     "EmbedWorkoutV2": {
       "type": "object",
-      "required": [
-        "title"
-      ],
+      "required": ["title"],
       "additionalProperties": true,
       "properties": {
         "title": {
@@ -1272,23 +1174,11 @@
         },
         "dominantZone": {
           "type": "string",
-          "enum": [
-            "recovery",
-            "endurance",
-            "tempo",
-            "threshold",
-            "vo2max",
-            "anaerobic"
-          ]
+          "enum": ["recovery", "endurance", "tempo", "threshold", "vo2max", "anaerobic"]
         },
         "workoutType": {
           "type": "string",
-          "enum": [
-            "bike",
-            "swim",
-            "rowing",
-            "run"
-          ],
+          "enum": ["bike", "swim", "rowing", "run"],
           "default": "bike"
         },
         "tags": {
@@ -1301,9 +1191,7 @@
     },
     "CreateWorkoutFromZwo": {
       "type": "object",
-      "required": [
-        "zwo"
-      ],
+      "required": ["zwo"],
       "properties": {
         "zwo": {
           "type": "string",

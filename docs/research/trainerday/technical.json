@@ -3561,18 +3561,8 @@
     "originalWorkoutId"
   ],
   "workout_shape": {
-    "block": [
-      "start",
-      "end",
-      "type",
-      "reps",
-      "segments"
-    ],
-    "block_types": [
-      "segment",
-      "set",
-      "repetition"
-    ],
+    "block": ["start", "end", "type", "reps", "segments"],
+    "block_types": ["segment", "set", "repetition"],
     "segment": [
       "name",
       "controlMode",
@@ -3583,27 +3573,10 @@
       "targets",
       "notes"
     ],
-    "target": [
-      "type",
-      "min",
-      "max"
-    ],
-    "target_types": [
-      "primary",
-      "cadence",
-      "slope",
-      "heart_rate"
-    ],
-    "duration_types": [
-      "second",
-      "meter"
-    ],
-    "control_modes": [
-      "erg",
-      "slope",
-      "hr",
-      "resistance"
-    ],
+    "target": ["type", "min", "max"],
+    "target_types": ["primary", "cadence", "slope", "heart_rate"],
+    "duration_types": ["second", "meter"],
+    "control_modes": ["erg", "slope", "hr", "resistance"],
     "intensity_units": [
       "watts",
       "percentOfFtp",
@@ -3614,10 +3587,7 @@
       "percentOfRacePace",
       "vdotZone"
     ],
-    "length_units": [
-      "duration",
-      "distance"
-    ]
+    "length_units": ["duration", "distance"]
   },
   "locations": {
     "production_config": {
