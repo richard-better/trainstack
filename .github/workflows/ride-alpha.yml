@@ -1,0 +1,27 @@
+name: Ride alpha
+
+# Publishes every change to Ride on main as an alpha for Homebrew:
+# `brew install --cask richard-better/tap/trainstack-ride@alpha`.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/ride/**"
+      - ".github/workflows/ride-alpha.yml"
+      - ".github/workflows/ride-homebrew.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ride-alpha
+  cancel-in-progress: false
+
+jobs:
+  homebrew:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/ride-homebrew.yml
+    with:
+      channel: alpha
+    secrets: inherit

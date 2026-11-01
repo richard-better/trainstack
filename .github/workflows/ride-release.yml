@@ -1,16 +1,15 @@
 name: Ride release
 
 # Archives Ride and uploads it to App Store Connect, where it appears in TestFlight once Apple
-# has processed it. Push a tag like `ride-v1.0.0` or run the workflow by hand. See
-# docs/ride-release.md for the one-time setup.
+# has processed it, and publishes the Developer ID build that Homebrew installs as release
+# `ride-v<version>`. Run it by hand from the Actions tab. See docs/ride-release.md for the
+# one-time setup.
 on:
-  push:
-    tags: ["ride-v*"]
   workflow_dispatch:
     inputs:
       version:
-        description: Marketing version, such as 1.0.1. Leave empty to keep the project's.
-        required: false
+        description: Marketing version, such as 1.0.1.
+        required: true
         type: string
 
 permissions:
@@ -51,21 +50,21 @@ jobs:
               exit 1
             fi
           done
+      - name: Check the version
+        run: |
+          if ! [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unexpected version $INPUT_VERSION. Use one like 1.0.1."
+            exit 1
+          fi
       - name: Write the App Store Connect key
         run: |
           echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
           chmod 600 "$RUNNER_TEMP/AuthKey.p8"
       - name: Archive
         run: |
-          version="$INPUT_VERSION"
-          if [ -z "$version" ] && [ "$GITHUB_REF_TYPE" = tag ]; then
-            version="${GITHUB_REF_NAME#ride-v}"
-          fi
           # App Store Connect needs each upload's build number to be higher than the last, so
           # use the UTC time, which also keeps the iOS and macOS builds of one release apart.
           build="$(date -u +%y%m%d%H%M)"
-          settings=("CURRENT_PROJECT_VERSION=$build")
-          if [ -n "$version" ]; then settings+=("MARKETING_VERSION=$version"); fi
           xcodebuild archive \
             -project apps/ride/Ride.xcodeproj \
             -scheme Ride \
@@ -75,7 +74,8 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            "${settings[@]}"
+            CURRENT_PROJECT_VERSION="$build" \
+            MARKETING_VERSION="$INPUT_VERSION"
       - name: Upload to App Store Connect
         run: >
           xcodebuild -exportArchive
@@ -89,3 +89,12 @@ jobs:
       - name: Remove the App Store Connect key
         if: always()
         run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+
+  homebrew:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/ride-homebrew.yml
+    with:
+      channel: stable
+      version: ${{ inputs.version }}
+    secrets: inherit

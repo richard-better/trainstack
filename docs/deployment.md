@@ -35,15 +35,17 @@ Use a one-year expiry and rotate before it expires. Leave IP filtering unrestric
 
 Open [GitHub's environment settings](https://github.com/richard-better/trainstack/settings/environments) and select `production`. Restrict deployment branches to `main` and configure:
 
-| Kind               | Name                    | Value                                                                         |
-| ------------------ | ----------------------- | ----------------------------------------------------------------------------- |
-| Variable           | `CLOUDFLARE_ACCOUNT_ID` | `01cc6559c6f0e531712c9262c70af1b1`                                            |
-| Secret             | `CLOUDFLARE_API_TOKEN`  | The account-owned token                                                       |
-| Secret             | `BETTER_AUTH_SECRET`    | A stable random secret of at least 32 characters                              |
-| Variable, optional | `STRAVA_CLIENT_ID`      | The client ID of the TrainStack Ride Strava API application                   |
-| Secret, optional   | `STRAVA_CLIENT_SECRET`  | The client secret of the same Strava API application                          |
-| Secret, optional   | `AXIOM_TOKEN`           | An Axiom provisioning token with dataset and API-token management permissions |
-| Variable, optional | `AXIOM_ORG_ID`          | The target Axiom organization ID, if the token requires one                   |
+| Kind               | Name                        | Value                                                                         |
+| ------------------ | --------------------------- | ----------------------------------------------------------------------------- |
+| Variable           | `CLOUDFLARE_ACCOUNT_ID`     | `01cc6559c6f0e531712c9262c70af1b1`                                            |
+| Secret             | `CLOUDFLARE_API_TOKEN`      | The account-owned token                                                       |
+| Secret             | `BETTER_AUTH_SECRET`        | A stable random secret of at least 32 characters                              |
+| Variable, optional | `STRAVA_CLIENT_ID`          | The client ID of the TrainStack Ride Strava API application                   |
+| Secret, optional   | `STRAVA_CLIENT_SECRET`      | The client secret of the same Strava API application                          |
+| Variable, optional | `APPLE_SIGN_IN_KEY_ID`      | The ID of the Sign in with Apple key for Apple's web flow                     |
+| Secret, optional   | `APPLE_SIGN_IN_PRIVATE_KEY` | The contents of that key's `.p8` file                                         |
+| Secret, optional   | `AXIOM_TOKEN`               | An Axiom provisioning token with dataset and API-token management permissions |
+| Variable, optional | `AXIOM_ORG_ID`              | The target Axiom organization ID, if the token requires one                   |
 
 Without `AXIOM_TOKEN`, deployment skips the Axiom stack and both applications emit logs to Cloudflare Workers Logs. Adding the secret enables Axiom on the next deployment. If it is later removed, the Axiom stack and its state remain untouched, while application log forwarding is disabled. A supplied but invalid token or a failed Axiom deployment remains an error; it is not silently ignored.
 
@@ -73,7 +75,22 @@ Failures are `409 not_connected` (no connection, or the rider revoked Ride in St
 
 Tokens are stored in the `strava_connection` table, encrypted with AES-GCM under a key derived from `BETTER_AUTH_SECRET`, so a copy of the database is no use on its own. Changing that secret signs everyone out and makes riders connect Strava again; the stored tokens become unreadable, and the API keeps such a connection rather than hand its athlete to anyone, so clear it with `DELETE FROM strava_connection` in D1 after a rotation. Deleting an account deletes its connection.
 
-Email/password signup and sign-in are disabled. Existing accounts and sessions are not removed. Automatic account linking stays off, so signing in with Apple never joins a legacy email account, which could have been registered by someone else without verifying the address. Any existing email collision needs a separately reviewed account recovery. Sign in with Apple needs no secret: the app sends the identity token Apple gives it and the API checks it against Apple's keys, with the bundle ID `com.trainstackhq.ride` as the audience. Enable the Sign in with Apple capability on that App ID. Revoking a rider's Apple tokens on account deletion, which App Review also expects once Ride ships on the App Store, is not done yet.
+Email/password signup and sign-in are disabled. Existing accounts and sessions are not removed. Automatic account linking stays off, so signing in with Apple never joins a legacy email account, which could have been registered by someone else without verifying the address. Any existing email collision needs a separately reviewed account recovery. Sign in with Apple needs no secret: the app sends the identity token Apple gives it and the API checks it against Apple's keys, with the bundle ID `com.trainstackhq.ride` as the audience. Enable the Sign in with Apple capability on that App ID.
+
+### Sign in with Apple on the web
+
+Builds signed with Developer ID, such as the Homebrew app, cannot hold the Sign in with Apple entitlement, so they sign in through Apple's web flow instead. The API runs it as the Services ID `com.trainstackhq.ride.web` and needs a Sign in with Apple key to sign its client secret. In [Apple Developer](https://developer.apple.com/account/resources/identifiers/list/serviceId):
+
+1. Create the Services ID `com.trainstackhq.ride.web`, enable Sign in with Apple, choose `com.trainstackhq.ride` as its primary App ID, and add the domain `api.trainstackhq.com` with the return URL `https://api.trainstackhq.com/api/auth/callback/apple`. Grouping it with the App ID gives riders the same Apple user ID in both flows, so they reach the same account.
+2. Create a key with Sign in with Apple enabled for `com.trainstackhq.ride`, and download its `.p8` file.
+3. Store the key's ID as `APPLE_SIGN_IN_KEY_ID` and the file as `APPLE_SIGN_IN_PRIVATE_KEY`, without printing it:
+
+```bash
+gh variable set APPLE_SIGN_IN_KEY_ID --env production --repo richard-better/trainstack --body '<KEY_ID>'
+gh secret set APPLE_SIGN_IN_PRIVATE_KEY --env production --repo richard-better/trainstack < AuthKey_<KEY_ID>.p8
+```
+
+Without them, the web flow sends the app `apple_web_not_configured` and native sign-in keeps working. The app opens `GET /api/auth/app-handoff/apple?code_challenge=` in a web authentication session. When Apple's flow ends with a new session, the API deletes the browser's session and redirects to `trainstackride://signed-in?code=`, or `?error=`. The app trades the code and its verifier at `POST /api/auth/app-handoff/token` for `{ token, user: { name } }`. Codes last two minutes, work once, and only with the verifier, which never leaves the app. Both endpoints allow 10 requests a minute per client address. Deleting an account revokes the refresh token Apple's web flow gave, which App Review expects.
 
 The workflow passes the GitHub `production` variable and secret to Alchemy through `hosted/infra/.env.schema`. The API receives a plain ID binding and a redacted secret binding, accessed through `ENV.STRAVA_CLIENT_ID` and `ENV.STRAVA_CLIENT_SECRET` from `hosted/apps/api/src/env.server.ts`. Missing values default to empty strings so deployment works before registration. Configure both before enabling Strava features.
 

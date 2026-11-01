@@ -23,6 +23,7 @@
     "drizzle-orm": "catalog:",
     "evlog": "catalog:",
     "hono": "^4.13.7",
+    "jose": "6.2.12",
     "libsql": "0.5.29",
     "varlock": "catalog:",
     "zod": "catalog:"
