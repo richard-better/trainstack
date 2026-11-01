@@ -6,15 +6,15 @@ This reference collects observations from signed-in Chrome, official documentati
 
 ## Reference files
 
-| File | Contents |
-| --- | --- |
-| [observations.json](observations.json) | Curated UI evidence, source pages, and coverage checklist. Personal activity values, identity, and calendar subscription links are omitted. |
-| [public-sources.md](public-sources.md) | 36 topics covering pricing, native apps, training methods, integrations, support, and privacy. |
-| [public-sources.json](public-sources.json) | The same published findings with sources and caveats. |
-| [technical.md](technical.md) | Frontend architecture, route inventory, service boundaries, and workout model. |
-| [technical.json](technical.json) | REA Evidence IDs, asset digests, static locations, and endpoint candidates. |
-| [api-inventory.json](api-inventory.json) | Derived public API operations and schema field inventory without copied prose. |
-| [overview.html](overview.html) | Searchable feature map with evidence type and links. |
+| File                                       | Contents                                                                                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [observations.json](observations.json)     | Curated UI evidence, source pages, and coverage checklist. Personal activity values, identity, and calendar subscription links are omitted. |
+| [public-sources.md](public-sources.md)     | 36 topics covering pricing, native apps, training methods, integrations, support, and privacy.                                              |
+| [public-sources.json](public-sources.json) | The same published findings with sources and caveats.                                                                                       |
+| [technical.md](technical.md)               | Frontend architecture, route inventory, service boundaries, and workout model.                                                              |
+| [technical.json](technical.json)           | REA Evidence IDs, asset digests, static locations, and endpoint candidates.                                                                 |
+| [api-inventory.json](api-inventory.json)   | Derived public API operations and schema field inventory without copied prose.                                                              |
+| [overview.html](overview.html)             | Searchable feature map with evidence type and links.                                                                                        |
 
 ## Workout discovery and authoring
 
@@ -52,18 +52,18 @@ Progress displays FitScore and Classic choices, easy/moderate/hard intensity dis
 
 The table describes the current Connections screen, not successful end-to-end delivery. No connection or synchronization setting was changed. [Connections](https://app.trainerday.com/apps-and-devices), UI-043.
 
-| Destination | Published on the current screen |
-| --- | --- |
-| Strava | Post completed activities. Imported Strava activities were also visible in calendar and activity screens. |
-| Zwift | Send planned workouts and sync the TrainerDay calendar into its TrainerDay folder. |
-| MyWhoosh | Calendar sync requires paid TrainerDay. Initiate the connection inside MyWhoosh profile settings. |
-| TrainingPeaks | Post activities/workouts, obtain current calendar workouts, and sync the calendar. Separate WOD and calendar toggles. Calendar sync says only today and tomorrow. |
-| Garmin | Planned workouts and calendar in power or HR. Sending an entire plan is power only. The screen says completed activities cannot sync because of Garmin policy. |
-| Intervals.icu | Post workouts and calendar sync. Home-page copy also describes external WOD in the training app. |
-| COROS | Upload activities, send planned workouts, and sync the calendar. |
-| Dropbox | Post TCX or FIT activities to its TrainerDay folder. |
-| Google Calendar | One-click training-plan sends require a paid membership. ICS subscription is separately available in calendar export. |
-| Wahoo | Send planned workouts. |
+| Destination     | Published on the current screen                                                                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strava          | Post completed activities. Imported Strava activities were also visible in calendar and activity screens.                                                         |
+| Zwift           | Send planned workouts and sync the TrainerDay calendar into its TrainerDay folder.                                                                                |
+| MyWhoosh        | Calendar sync requires paid TrainerDay. Initiate the connection inside MyWhoosh profile settings.                                                                 |
+| TrainingPeaks   | Post activities/workouts, obtain current calendar workouts, and sync the calendar. Separate WOD and calendar toggles. Calendar sync says only today and tomorrow. |
+| Garmin          | Planned workouts and calendar in power or HR. Sending an entire plan is power only. The screen says completed activities cannot sync because of Garmin policy.    |
+| Intervals.icu   | Post workouts and calendar sync. Home-page copy also describes external WOD in the training app.                                                                  |
+| COROS           | Upload activities, send planned workouts, and sync the calendar.                                                                                                  |
+| Dropbox         | Post TCX or FIT activities to its TrainerDay folder.                                                                                                              |
+| Google Calendar | One-click training-plan sends require a paid membership. ICS subscription is separately available in calendar export.                                             |
+| Wahoo           | Send planned workouts.                                                                                                                                            |
 
 Workout Send To offers My calendar, Zwift, COROS, Garmin, Intervals.icu, TrainingPeaks, and Wahoo. Unconnected destinations can be disabled. The dialog also exposes Power and Simplified choices; no final Send action was used. [Workout detail](https://app.trainerday.com/workouts/vo2-max-1-8x4min-120), UI-009 and UI-010.
 
@@ -97,16 +97,16 @@ The home page advertises live viewing of a mobile workout on another screen. Cli
 
 ## Conflicts and limits
 
-| Topic | Evidence and interpretation |
-| --- | --- |
-| Library size | Website advertises 40K+, stores say 20K+. Neither count was independently enumerated. |
-| Subscription | Website annualized rate and US iOS annual price differ. Do not derive a universal annual charge. |
-| FitScore | Progress visibly displays it. The October privacy addendum says it never passed testing and no rider data was used that way. This does not establish a public leaderboard. |
-| Route FIT | Live import explicitly accepts FIT. Older route guidance describes FIT as forthcoming. |
-| Interval comments | Older guide describes mobile support as future work. iOS release notes report comments during workouts. |
-| iOS minimum | Download page says iOS 15+ while store metadata says 13.3. |
-| API versions | Landing page V1 calendar samples differ from the current V2-only calendar specification. |
-| Garmin activities | Current Connections says no completed-activity sync. Other product descriptions refer to Garmin activity analysis; direction, source, and client may differ. |
+| Topic             | Evidence and interpretation                                                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Library size      | Website advertises 40K+, stores say 20K+. Neither count was independently enumerated.                                                                                      |
+| Subscription      | Website annualized rate and US iOS annual price differ. Do not derive a universal annual charge.                                                                           |
+| FitScore          | Progress visibly displays it. The October privacy addendum says it never passed testing and no rider data was used that way. This does not establish a public leaderboard. |
+| Route FIT         | Live import explicitly accepts FIT. Older route guidance describes FIT as forthcoming.                                                                                     |
+| Interval comments | Older guide describes mobile support as future work. iOS release notes report comments during workouts.                                                                    |
+| iOS minimum       | Download page says iOS 15+ while store metadata says 13.3.                                                                                                                 |
+| API versions      | Landing page V1 calendar samples differ from the current V2-only calendar specification.                                                                                   |
+| Garmin activities | Current Connections says no completed-activity sync. Other product descriptions refer to Garmin activity analysis; direction, source, and client may differ.               |
 
 Privacy findings are summarized once in public-sources.md. The live October 9 policy supersedes the stale web cache and names current infrastructure/AI providers. It also retains conflicting older analytics wording. UI visibility, vendor claims, and verified execution are different evidence types.
 

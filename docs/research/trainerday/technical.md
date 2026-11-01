@@ -77,18 +77,18 @@ The running-plan-builder route has a static guard: query `preview=1` admits that
 
 ## Service boundaries
 
-| Client role | Production base URL |
-| --- | --- |
-| main | https://app.api.trainerday.com |
-| activities | https://api.data.trainerday.com |
-| coach jack | https://app.api.trainerday.com/api/v1/cj |
-| intervals icu | https://intervals.api.trainerday.com |
-| garmin | https://garmin.api.trainerday.com |
-| training peaks | https://tp.api.trainerday.com |
-| wahoo | https://wahoo.api.trainerday.com |
-| billing | https://billing.prod.trainerday.com/api |
-| strava dropbox google | https://sdg.prod.trainerday.com |
-| events | https://events-tracker.trainerday.com/webhook |
+| Client role           | Production base URL                           |
+| --------------------- | --------------------------------------------- |
+| main                  | https://app.api.trainerday.com                |
+| activities            | https://api.data.trainerday.com               |
+| coach jack            | https://app.api.trainerday.com/api/v1/cj      |
+| intervals icu         | https://intervals.api.trainerday.com          |
+| garmin                | https://garmin.api.trainerday.com             |
+| training peaks        | https://tp.api.trainerday.com                 |
+| wahoo                 | https://wahoo.api.trainerday.com              |
+| billing               | https://billing.prod.trainerday.com/api       |
+| strava dropbox google | https://sdg.prod.trainerday.com               |
+| events                | https://events-tracker.trainerday.com/webhook |
 
 - API-client syntax attaches bearer authorization when a token is available, along with locale, time zone and `appVersion=500`; a 401 branch routes to login. No token value was read.
 - Login, registration, pricing and checkout navigate to the separate trainerday.com site.
@@ -134,11 +134,11 @@ The running-plan-builder route has a static guard: query `preview=1` admits that
 
 ## Public asset digests
 
-| Asset | Bytes | SHA-256 |
-| --- | ---: | --- |
-| index-CjwVpe-L.js | 205810 | `9848669ecc29dadf01f17c6371c56ae142413d4a8707ccbc743f6b230570145f` |
-| vendor-BvdN2VcP.js | 2796056 | `73c46f6d61907bfe8fbe4da9569850e99059ed0b8f7c049c6c9bcae855615377` |
-| Details-DBrnA6r9.js | 28979 | `89d5efd07abb53fb0cfef2935ffeece159e1482bce1d41ba03ea6fbc138424df` |
-| Create-rXv4vTwY.js | 123688 | `44efec572b6d7ed625dbb36d627f44e22bf908fbc3f1372c57696bcddedb581b` |
+| Asset               |   Bytes | SHA-256                                                            |
+| ------------------- | ------: | ------------------------------------------------------------------ |
+| index-CjwVpe-L.js   |  205810 | `9848669ecc29dadf01f17c6371c56ae142413d4a8707ccbc743f6b230570145f` |
+| vendor-BvdN2VcP.js  | 2796056 | `73c46f6d61907bfe8fbe4da9569850e99059ed0b8f7c049c6c9bcae855615377` |
+| Details-DBrnA6r9.js |   28979 | `89d5efd07abb53fb0cfef2935ffeece159e1482bce1d41ba03ea6fbc138424df` |
+| Create-rXv4vTwY.js  |  123688 | `44efec572b6d7ed625dbb36d627f44e22bf908fbc3f1372c57696bcddedb581b` |
 
 Primary assets were discovered from the live page and its literal imports: [entry](https://app.trainerday.com/assets/index-CjwVpe-L.js), [vendor](https://app.trainerday.com/assets/vendor-BvdN2VcP.js), [workout detail](https://app.trainerday.com/assets/Details-DBrnA6r9.js), [creator](https://app.trainerday.com/assets/Create-rXv4vTwY.js).

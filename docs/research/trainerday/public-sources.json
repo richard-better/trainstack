@@ -175,9 +175,7 @@
       "verified_date": "2026-10-13",
       "evidence_type": "official-public-page",
       "confidence": "published-claim",
-      "caveats": [
-        "Published mechanism only; precise calculations/limits unknown."
-      ]
+      "caveats": ["Published mechanism only; precise calculations/limits unknown."]
     },
     {
       "topic": "Reusable plans versus dates",
@@ -186,9 +184,7 @@
       "verified_date": "2026-10-13",
       "evidence_type": "official-public-page",
       "confidence": "published-claim",
-      "caveats": [
-        "Current UI labels may have changed."
-      ]
+      "caveats": ["Current UI labels may have changed."]
     },
     {
       "topic": "Simple calendar",
@@ -197,9 +193,7 @@
       "verified_date": "2026-10-13",
       "evidence_type": "official-public-page",
       "confidence": "published-claim",
-      "caveats": [
-        "Sync timing and conflict/error resolution not specified."
-      ]
+      "caveats": ["Sync timing and conflict/error resolution not specified."]
     },
     {
       "topic": "External calendar direction",
@@ -208,9 +202,7 @@
       "verified_date": "2026-10-13",
       "evidence_type": "official-public-page",
       "confidence": "published-claim",
-      "caveats": [
-        "Current integration behavior still requires account-specific confirmation."
-      ]
+      "caveats": ["Current integration behavior still requires account-specific confirmation."]
     },
     {
       "topic": "TrainingPeaks workflow",
@@ -274,9 +266,7 @@
       "verified_date": "2026-10-13",
       "evidence_type": "official-public-page",
       "confidence": "published-claim",
-      "caveats": [
-        "External exports may lose mode semantics."
-      ]
+      "caveats": ["External exports may lose mode semantics."]
     },
     {
       "topic": "Free ride/open-ended semantics",
@@ -351,9 +341,7 @@
       "verified_date": "2026-10-13",
       "evidence_type": "official-public-page",
       "confidence": "published-claim",
-      "caveats": [
-        "Historical origin, not current ownership evidence."
-      ]
+      "caveats": ["Historical origin, not current ownership evidence."]
     },
     {
       "topic": "Progress and technology announcement",
@@ -396,9 +384,7 @@
       "verified_date": "2026-10-13",
       "evidence_type": "official-public-page",
       "confidence": "published-claim",
-      "caveats": [
-        "Models/formula quality not reviewed."
-      ]
+      "caveats": ["Models/formula quality not reviewed."]
     }
   ],
   "unresolved": [
