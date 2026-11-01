@@ -42,6 +42,7 @@ Open [GitHub's environment settings](https://github.com/richard-better/trainstac
 | Secret             | `BETTER_AUTH_SECRET`    | A stable random secret of at least 32 characters                              |
 | Variable, optional | `STRAVA_CLIENT_ID`      | The client ID of the TrainStack Ride Strava API application                   |
 | Secret, optional   | `STRAVA_CLIENT_SECRET`  | The client secret of the same Strava API application                          |
+| Secret, optional   | `GITHUB_FEEDBACK_TOKEN` | A `kes-agent` GitHub token that can open issues on this repository            |
 | Secret, optional   | `AXIOM_TOKEN`           | An Axiom provisioning token with dataset and API-token management permissions |
 | Variable, optional | `AXIOM_ORG_ID`          | The target Axiom organization ID, if the token requires one                   |
 
@@ -85,6 +86,20 @@ gh secret set STRAVA_CLIENT_SECRET --env production --repo richard-better/trains
 The second command prompts for the client secret without putting it in shell history. For rotation, rotate the secret in Strava's API settings, replace the GitHub secret, and redeploy the current `main` revision. Update the ID too if replacing the application. For local deployment, use the ignored `hosted/apps/api/.env`.
 
 New apps start with only their owner's athlete account and default overall limits of 200 requests per 15 minutes and 2,000 per day. Strava now offers a self-service dashboard upgrade to 10 athletes, with overall limits of 400 per 15 minutes and 4,000 per day. Further capacity requires the [Developer Program review form](https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8), including screenshots of every place Strava data appears and the **Connect with Strava** button. Follow the [brand guidelines](https://developers.strava.com/guidelines/) for the button and **Powered by Strava** attribution (the guidelines also allow **Compatible with Strava**). Capacity and rate increases are subject to review and are not guaranteed; see [rate limits](https://developers.strava.com/docs/rate-limits/) and [getting started](https://developers.strava.com/docs/getting-started/). Uploads need the OAuth scope [`activity:write`](https://developers.strava.com/docs/authentication/).
+
+### Feedback
+
+Signed-in riders can send feedback from Ride (Settings, or **Help > Send Feedback** on the Mac and iPad), and the API files it as a GitHub issue on `richard-better/trainstack`, opened by the `kes-agent` account. `hosted/apps/api/src/feedback/index.ts` serves `POST /feedback`, which takes `{ "message": "...", "context": { "app", "system", "device", "screen", "window" } }` with the rider's session token as `Authorization: Bearer <token>` and returns `201 { number, url }`.
+
+The repository is public, so the issue has the rider's words and the app's context, but not their name, email or account. The `feedback` table is the only record of which account sent which issue, and it goes when the account is deleted. The message goes in as a code block, so it cannot mention people, reference issues in other repositories or show images. Like Strava, only Sign in with Apple accounts can send feedback (`403 apple_account_required`), and each account can send 10 a day (`429 rate_limited`). A request GitHub fails gets `502 github_unavailable` and does not count. Without the token, the route answers `503 feedback_not_configured`.
+
+`kes-agent` needs no access beyond what any GitHub account has to a public repository. Sign in to GitHub as `kes-agent`, create a [classic personal access token](https://github.com/settings/tokens/new) named `TrainStack feedback` with only the `public_repo` scope and a one-year expiry, and send it straight to GitHub:
+
+```bash
+gh secret set GITHUB_FEEDBACK_TOKEN --env production --repo richard-better/trainstack
+```
+
+A fine-grained token cannot write to a repository that `kes-agent` does not own, which is why this is a classic one. Rotate it before it expires by replacing the secret and redeploying.
 
 ## First deployment
 

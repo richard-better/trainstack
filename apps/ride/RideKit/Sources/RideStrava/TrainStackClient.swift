@@ -263,6 +263,31 @@ public actor TrainStackClient {
     }
   }
 
+  // MARK: Feedback
+
+  /// Sends the rider's feedback, which the server files as a public GitHub issue without saying
+  /// who wrote it.
+  public func sendFeedback(_ message: String, context: FeedbackContext) async throws
+    -> FeedbackIssue
+  {
+    let (data, response) = try await send(
+      "POST", "feedback", json: ["message": message, "context": context.json], signedIn: true)
+    switch response.statusCode {
+    case 403: throw FeedbackError.appleAccountRequired
+    case 429: throw FeedbackError.tooMuch
+    case 503: throw FeedbackError.notConfigured
+    default: try check(response, data)
+    }
+    struct Filed: Decodable {
+      let number: Int
+      let url: URL
+    }
+    guard let filed = try? Self.decoder.decode(Filed.self, from: data) else {
+      throw StravaError.unavailable
+    }
+    return FeedbackIssue(number: filed.number, url: filed.url)
+  }
+
   // MARK: Requests
 
   /// Turns what the API answered into an error if it was one. A session the server no longer

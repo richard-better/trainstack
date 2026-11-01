@@ -5,6 +5,7 @@ struct SettingsSidebar: View {
   @Binding var page: SettingsPage
   let back: () -> Void
   @Environment(RiderSettingsStore.self) private var store
+  @Environment(\.sendFeedback) private var sendFeedback
 
   var body: some View {
     List(selection: optionalPage) {
@@ -40,6 +41,16 @@ struct SettingsSidebar: View {
           .tag(SettingsPage.account)
       } header: {
         Text("Settings").font(.title3).bold().foregroundStyle(.primary)
+      }
+      if let sendFeedback {
+        Section {
+          Button {
+            sendFeedback()
+          } label: {
+            Label("Send Feedback", systemImage: "bubble.left.and.text.bubble.right")
+          }
+          .buttonStyle(.borderless)
+        }
       }
     }
   }

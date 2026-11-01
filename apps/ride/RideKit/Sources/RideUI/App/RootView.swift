@@ -1,5 +1,6 @@
 import RideBluetooth
 import RideData
+import RideStrava
 import SwiftUI
 
 public struct RootView: View {
@@ -17,6 +18,9 @@ public struct RootView: View {
   @State private var today = TodayState()
   @State private var workouts = WorkoutsState()
   @State private var historySelection: Ride.ID?
+  /// What Send Feedback attaches, from when it was opened; nil while it is closed.
+  @State private var feedback: FeedbackContext?
+  @State private var windowSize: CGSize?
   @Namespace private var player
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -37,12 +41,18 @@ public struct RootView: View {
           player: player)
       }
     }
+    .environment(\.sendFeedback, sendFeedback)
     .modifier(PlayerPresentation(launcher: launcher, library: library, namespace: player))
+    .sheet(isPresented: feedbackShown) {
+      if let feedback { FeedbackSheet(context: feedback) }
+    }
+    .onGeometryChange(for: CGSize.self, of: Self.windowSize) { windowSize = $0 }
     .environment(settings)
     .environment(launcher)
     .environment(launcher.devices)
     .environment(account)
     .focusedSceneValue(\.rideLauncher, launcher)
+    .focusedSceneValue(\.sendFeedback, sendFeedback)
     .task {
       launcher.checkForInterruptedRide()
       launcher.devices.connectPaired()
@@ -99,9 +109,43 @@ public struct RootView: View {
 
   private func backToApp() { destination = appDestination }
 
+  /// The whole window, safe areas included, which is what the root view's geometry leaves out.
+  nonisolated private static func windowSize(_ geometry: GeometryProxy) -> CGSize {
+    let insets = geometry.safeAreaInsets
+    return CGSize(
+      width: geometry.size.width + insets.leading + insets.trailing,
+      height: geometry.size.height + insets.top + insets.bottom)
+  }
+
+  /// Opens Send Feedback, for a signed-in rider only.
+  private var sendFeedback: SendFeedbackAction? {
+    guard account.isSignedIn else { return nil }
+    return SendFeedbackAction {
+      feedback = .current(screen: screenName, window: windowSize)
+    }
+  }
+
+  /// What the rider is looking at, for feedback.
+  private var screenName: String {
+    if launcher.isPlayerPresented { return "the player" }
+    return switch destination {
+    case .today: "Today"
+    case .workouts: "Workouts"
+    case .history: "History"
+    case .progress: "Progress"
+    case .settings: "Settings"
+    }
+  }
+
   /// Shown while an interrupted ride waits; the buttons are what end it.
   private var interruptedShown: Binding<Bool> {
     Binding(get: { launcher.interrupted != nil }, set: { _ in })
+  }
+
+  private var feedbackShown: Binding<Bool> {
+    Binding(
+      get: { feedback != nil },
+      set: { if !$0 { feedback = nil } })
   }
 
   private var storageProblemShown: Binding<Bool> {

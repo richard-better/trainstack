@@ -3,8 +3,8 @@ import Foundation
 import Observation
 import RideStrava
 
-/// The rider's TrainStack account, which Ride needs only to send rides to Strava, and the Strava
-/// connection that hangs off it. Everything else in Ride works without either.
+/// The rider's TrainStack account, which Ride needs only to send rides to Strava and feedback, and
+/// the Strava connection that hangs off it. Everything else in Ride works without either.
 @Observable
 final class TrainStackAccount {
   /// Whether the sign-in kept from an earlier launch is still being read. Until it is, the account
@@ -109,6 +109,18 @@ final class TrainStackAccount {
     } catch {
       await sync()
       if case StravaError.notConnected = error { apply(StravaStatus(isConnected: false)) }
+      throw error
+    }
+  }
+
+  // MARK: Feedback
+
+  /// Sends the rider's feedback, which becomes a public GitHub issue without their name.
+  func sendFeedback(_ message: String, context: FeedbackContext) async throws -> FeedbackIssue {
+    do {
+      return try await client.sendFeedback(message, context: context)
+    } catch {
+      await sync()
       throw error
     }
   }
