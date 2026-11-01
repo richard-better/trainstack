@@ -26,7 +26,7 @@ nonisolated struct HealthWorkout {
 
     let perMinute = HKUnit.count().unitDivided(by: .minute())
     var samples: [HKQuantitySample] = []
-    var energy = EnergyTally(start: start)
+    var energy = EnergyTally(rideID: ride.id, start: start)
     var previous: TimeInterval?
     for sample in recording.samples {
       // A sample covers the time since the one before it.
@@ -37,9 +37,9 @@ nonisolated struct HealthWorkout {
       func add(_ identifier: HKQuantityTypeIdentifier, _ unit: HKUnit, _ value: Int?) {
         guard let value else { return }
         samples.append(
-          HKQuantitySample(
-            type: HKQuantityType(identifier),
-            quantity: HKQuantity(unit: unit, doubleValue: Double(value)), start: from, end: to))
+          Self.sample(
+            identifier, HKQuantity(unit: unit, doubleValue: Double(value)), from: from, to: to,
+            of: ride.id))
       }
       add(.cyclingPower, .watt(), sample.power)
       add(.cyclingCadence, perMinute, sample.cadence)
@@ -52,17 +52,34 @@ nonisolated struct HealthWorkout {
     self.samples = samples
   }
 
+  /// A sample named by its ride, type and start, so Health keeps one of it however many devices
+  /// save the ride, and however many times one tries.
+  private static func sample(
+    _ identifier: HKQuantityTypeIdentifier, _ quantity: HKQuantity, from: Date, to: Date,
+    of rideID: Ride.ID
+  ) -> HKQuantitySample {
+    let milliseconds = Int((from.timeIntervalSince1970 * 1000).rounded())
+    return HKQuantitySample(
+      type: HKQuantityType(identifier), quantity: quantity, start: from, end: to,
+      metadata: [
+        HKMetadataKeySyncIdentifier: "\(rideID).\(identifier.rawValue).\(milliseconds)",
+        HKMetadataKeySyncVersion: 1,
+      ])
+  }
+
   /// Active energy in a sample a minute, from the work done at the pedals.
   private struct EnergyTally {
     /// The share of the energy a rider burns that reaches the pedals.
     private static let grossEfficiency = 0.24
     private static let span: TimeInterval = 60
 
+    private let rideID: Ride.ID
     private var start: Date
     private var end: Date
     private var joules = 0.0
 
-    init(start: Date) {
+    init(rideID: Ride.ID, start: Date) {
+      self.rideID = rideID
       self.start = start
       end = start
     }
@@ -80,10 +97,7 @@ nonisolated struct HealthWorkout {
       }
       guard joules > 0, end > start else { return [] }
       let burned = HKQuantity(unit: .joule(), doubleValue: joules / Self.grossEfficiency)
-      return [
-        HKQuantitySample(
-          type: HKQuantityType(.activeEnergyBurned), quantity: burned, start: start, end: end)
-      ]
+      return [HealthWorkout.sample(.activeEnergyBurned, burned, from: start, to: end, of: rideID)]
     }
   }
 }

@@ -53,6 +53,18 @@ struct HealthWorkoutTests {
     #expect(abs(joules - 18_000 / 0.24) < 1)
   }
 
+  @Test func namesEachSampleSoHealthKeepsOne() {
+    let ride = ride()
+    let names = HealthWorkout(ride).samples.map {
+      $0.metadata?[HKMetadataKeySyncIdentifier] as? String
+    }
+    #expect(names.allSatisfy { $0?.hasPrefix(ride.id) == true })
+    #expect(Set(names).count == names.count)
+    #expect(
+      HealthWorkout(ride).samples.map { $0.metadata?[HKMetadataKeySyncIdentifier] as? String }
+        == names)
+  }
+
   @Test func leavesOutWhatWasNotMeasured() {
     let workout = HealthWorkout(ride(power: nil))
     #expect(samples(.cyclingPower, in: workout).isEmpty)
