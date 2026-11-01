@@ -52,8 +52,12 @@ struct FeedbackSheet: View {
         .focused($isWriting)
         .disabled(isSending)
         .onChange(of: message) { _, text in
-          // The most the server takes.
-          if text.count > 5000 { message = String(text.prefix(5000)) }
+          // The most the server takes, which it counts in UTF-16.
+          if text.utf16.count > 5000 {
+            var cut = text
+            while cut.utf16.count > 5000 { cut.removeLast() }
+            message = cut
+          }
         }
       } footer: {
         Text(

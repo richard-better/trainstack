@@ -117,9 +117,13 @@ public struct RootView: View {
       height: geometry.size.height + insets.top + insets.bottom)
   }
 
-  /// Opens Send Feedback, for a signed-in rider only.
+  /// Opens Send Feedback, for a signed-in rider only. On iOS the player covers the window, which
+  /// a sheet from here cannot go over, so the rider minimises it first.
   private var sendFeedback: SendFeedbackAction? {
     guard account.isSignedIn else { return nil }
+    #if os(iOS)
+      if launcher.isPlayerPresented { return nil }
+    #endif
     return SendFeedbackAction {
       feedback = .current(screen: screenName, window: windowSize)
     }
