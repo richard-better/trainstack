@@ -13,7 +13,8 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   The app links the `RideUI` product. `RideData` decodes FIT files into a `RideRecording`
   and analyses it (zones, power curve) with no UI dependency. `RideBluetooth` finds nearby
   devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
-  (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`) and
+  (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`,
+  `Health`, `Sync`) and
   `Shared` for what several use, with one type per file. `RideWatchUI` is the watch app,
   `RideLink` what the phone and watch send each other, `RideStrava` the TrainStack account (Sign in with Apple)
   and sending rides to Strava through the hosted API, which holds Strava's tokens (see
@@ -25,6 +26,14 @@ the phone sends back a `RideGlance` each second. The iPhone passes watch heart r
 standard Bluetooth heart rate sensor (`HeartRateRelay`) with a Ride service beside it. Ride
 on the Mac connects to that service during a ride (`WatchRelayReceiver`) without pairing. A
 paired chest strap (`BluetoothDevices`) wins over the watch while it keeps reporting.
+
+On iPhone and iPad, `HealthRides` saves each ride Ride records to Health from its recording,
+and the phone tells the watch (`LinkMessage.rideRecorded`) to discard its workout so Health
+has one. Without a watch, the phone runs the workout session itself (`PhoneWorkout`).
+`RideSync` syncs the library through the rider's private CloudKit database with
+`CKSyncEngine`, one record per ride named by its file's SHA-256. The Mac has no Health, so an
+iPhone saves the Mac's rides as they sync, and the Mac tells a relaying iPhone it records the
+ride so the watch discards its workout then too.
 
 While a ride is on, `KeepAwake` stops the screen locking (and App Nap on the Mac). The
 `bluetooth-central` background mode keeps the trainer connected with the app in the background,
@@ -54,17 +63,19 @@ xcodebuild build -project apps/ride/Ride.xcodeproj -scheme Ride \
 The iOS build also builds the watch app. To try the watch alone, run the `RideWatch` scheme
 on a watch simulator.
 
-Builds with `CODE_SIGNING_ALLOWED=NO` carry no entitlements at all: no HealthKit, Sign in with
-Apple or (on the Mac) App Sandbox. To keep them:
+Builds with `CODE_SIGNING_ALLOWED=NO` carry no entitlements at all: no HealthKit, iCloud, Sign
+in with Apple or (on the Mac) App Sandbox. They are for checking that the app builds: on iOS,
+CloudKit stops an app without its entitlement as it launches, so run simulator builds signed.
+To keep the entitlements:
 
 - Without overrides, the project signs automatically with the team in `DEVELOPMENT_TEAM`. That
   needs an Xcode account in that team, and keeps every entitlement on every platform.
 - For the iOS and watch simulators, sign ad hoc
-  (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=`). That keeps HealthKit and
-  Sign in with Apple.
+  (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=`). That keeps HealthKit,
+  iCloud and Sign in with Apple, though iCloud only syncs in a build signed with the team.
 - On the Mac, ad hoc alone fails with `"Ride" requires a provisioning profile`, because Sign in
   with Apple needs one. Add `CODE_SIGN_ENTITLEMENTS=` to drop it: the app keeps the sandbox,
-  Bluetooth, network and file entitlements, but cannot sign in to TrainStack.
+  Bluetooth, network and file entitlements, but cannot sign in to TrainStack or sync rides.
 
 Debug builds take launch arguments to try the app without hardware:
 

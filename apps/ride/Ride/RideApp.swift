@@ -5,6 +5,7 @@ import SwiftUI
 struct RideApp: App {
   init() {
     WatchSupport.activate()
+    SyncSupport.activate()
   }
 
   var body: some Scene {

@@ -9,7 +9,8 @@ import os
 #endif
 
 /// The watch's workout: it measures heart rate, sends it to the phone, and shows the ride the
-/// phone sends back. The workout is saved to Health as an indoor ride when it ends.
+/// phone sends back. The workout is saved to Health as an indoor ride when it ends, unless Ride
+/// on the phone or a Mac recorded the ride and saves it instead.
 @Observable
 public final class WorkoutRelay {
   public static let shared = WorkoutRelay()
@@ -43,6 +44,14 @@ public final class WorkoutRelay {
       if let cue = countdown.update(glance.interval, isPaused: glance.isPaused) { onCue(cue) }
     case .rideEnded:
       end()
+    case .rideRecorded:
+      workout?.isRecordedElsewhere = true
+      #if os(watchOS)
+        // The workout saved in its place has the energy the trainer measured. Discarding a
+        // workout keeps the samples it collected, so stop collecting energy to not count it
+        // twice.
+        builder?.dataSource?.disableCollection(for: HKQuantityType(.activeEnergyBurned))
+      #endif
     case .heartRate:
       break
     }
@@ -132,7 +141,8 @@ public final class WorkoutRelay {
       }
     }
 
-    /// Ends the workout. It is saved to Health once the session has stopped.
+    /// Ends the workout. It is saved to Health once the session has stopped, unless the ride is
+    /// recorded elsewhere.
     public func end() {
       if let session {
         session.end()
@@ -191,6 +201,7 @@ public final class WorkoutRelay {
 
     private func finish(at date: Date) {
       guard let builder else { return }
+      let isRecordedElsewhere = workout?.isRecordedElsewhere ?? false
       let startup = self.startup
       self.startup = nil
       startup?.cancel()
@@ -200,6 +211,10 @@ public final class WorkoutRelay {
       reset()
       Task {
         await startup?.value
+        guard !isRecordedElsewhere else {
+          builder.discardWorkout()
+          return
+        }
         do {
           try await builder.endCollection(at: date)
           try await builder.finishWorkout()

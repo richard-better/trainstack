@@ -88,7 +88,7 @@ struct RideGlanceTests {
   @Test func survivesTheTripBetweenDevices() throws {
     let glance = RideGlance(
       session: session(at: 1_200), ftp: 200, heartRateZones: heartRateZones)
-    for message in [LinkMessage.glance(glance), .rideEnded, .heartRate(152)] {
+    for message in [LinkMessage.glance(glance), .rideEnded, .rideRecorded, .heartRate(152)] {
       #expect(try LinkMessage(data: message.encoded()) == message)
     }
   }

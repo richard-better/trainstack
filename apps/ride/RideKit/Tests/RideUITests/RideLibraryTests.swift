@@ -88,6 +88,45 @@ struct RideLibraryTests {
     }
   }
 
+  @Test func givesARideTheSameIDOnEveryLaunch() throws {
+    try withDirectory { directory in
+      let library = RideLibrary(directory: directory)
+      library.save(try quickTest())
+      let id = try #require(library.rides.first?.id)
+      #expect(RideLibrary(directory: directory).rides.map(\.id) == [id])
+    }
+  }
+
+  @Test func tellsWhatChangesOnThisDevice() throws {
+    try withDirectory { directory in
+      let library = RideLibrary(directory: directory)
+      var changes: [RideLibrary.Change] = []
+      library.onChange = { changes.append($0) }
+      let id = try #require(library.save(try quickTest()))
+      library.save(try quickTest(startDate: .now.addingTimeInterval(-3600)))
+      library.remove(id)
+      #expect(changes.count == 3)
+      #expect(changes.first == .added(id))
+      #expect(changes.last == .removed(id))
+    }
+  }
+
+  @Test func keepsRidesFromOtherDevicesWithoutSendingThemBack() throws {
+    try withDirectory { directory in
+      let library = RideLibrary(directory: directory)
+      var changes: [RideLibrary.Change] = []
+      library.onChange = { changes.append($0) }
+      let data = FITEncoder.encode(try quickTest())
+      let id = try #require(try library.receive(data))
+      #expect(try library.receive(data) == nil)
+      #expect(library.fileURL(for: id) != nil)
+      #expect(RideLibrary(directory: directory).rides.map(\.id) == [id])
+      library.removeReceived(id)
+      #expect(library.rides.isEmpty)
+      #expect(changes.isEmpty)
+    }
+  }
+
   @Test func doesNotSaveTheSameRideTwice() throws {
     try withDirectory { directory in
       let ride = try quickTest()

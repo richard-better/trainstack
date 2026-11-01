@@ -70,10 +70,13 @@ final class RideLauncher {
       ride.onTick = { [weak ride] in
         if let ride { watch.send(.glance(ride.glance)) }
       }
+      watch.isRecordingRide = true
       watch.startWorkout()
     #endif
     #if os(macOS)
-      watchRelay.start()
+      // The rider's iPhone saves the ride to Health once it syncs, in place of the watch's
+      // workout.
+      watchRelay.start(claim: AppSync.shared.claim)
     #endif
     keepAwake.begin()
     ride.start()
@@ -83,8 +86,8 @@ final class RideLauncher {
 
   /// Ends the ride, keeping it in `library` if there is one.
   func end(saveTo library: RideLibrary? = nil) {
-    if let recording = ride?.session.recording(), !recording.samples.isEmpty {
-      library?.save(recording)
+    if let recording = ride?.session.recording(), !recording.samples.isEmpty, let library {
+      keep(recording, in: library)
     }
     ride?.stop()
     ride?.journal?.finish()
@@ -96,7 +99,17 @@ final class RideLauncher {
       watchRelay.stop()
     #endif
     #if os(iOS)
+      WatchLink.shared.isRecordingRide = false
       WatchLink.shared.endRide()
+    #endif
+  }
+
+  /// Saves a ride to `library`, and on iPhone and iPad to Health.
+  private func keep(_ recording: RideRecording, in library: RideLibrary) {
+    #if os(iOS)
+      if let id = library.save(recording) { HealthRides.shared.save(id, from: library) }
+    #else
+      library.save(recording)
     #endif
   }
 
@@ -124,7 +137,7 @@ final class RideLauncher {
   /// Keeps what was ridden of the interrupted ride in `library`.
   func saveInterrupted(to library: RideLibrary) {
     guard let interrupted else { return }
-    library.save(interrupted.session().recording())
+    keep(interrupted.session().recording(), in: library)
     discardInterrupted()
   }
 
