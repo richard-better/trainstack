@@ -79,6 +79,7 @@ jobs:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           STRAVA_CLIENT_ID: ${{ vars.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          GITHUB_FEEDBACK_TOKEN: ${{ secrets.GITHUB_FEEDBACK_TOKEN }}
           AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
           AXIOM_ORG_ID: ${{ vars.AXIOM_ORG_ID }}
       - name: Verify production

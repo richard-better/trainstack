@@ -62,6 +62,9 @@ export const server = Cloudflare.Worker("server", {
     STRAVA_CLIENT_SECRET: Config.Redacted("STRAVA_CLIENT_SECRET").pipe(
       Config.withDefault(Redacted.make("")),
     ),
+    GITHUB_FEEDBACK_TOKEN: Config.Redacted("GITHUB_FEEDBACK_TOKEN").pipe(
+      Config.withDefault(Redacted.make("")),
+    ),
     BETTER_AUTH_URL: Cloudflare.Worker.URL,
     ...observabilityBindings,
   },
