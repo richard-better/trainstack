@@ -1,6 +1,7 @@
 import Foundation
 import RideBluetooth
 import RideData
+import RideStrava
 
 extension RiderSettingsStore {
   /// The saved profile, except that debug builds started with `-sample-rides` use the sample one.
@@ -86,5 +87,29 @@ extension BluetoothDevices {
       if CommandLine.arguments.contains("-sample-devices") { return .sample() }
     #endif
     return BluetoothDevices()
+  }
+}
+
+extension TrainStackAccount {
+  /// The rider's account, except that debug builds started with
+  /// `-trainstack-server <url> -trainstack-session <token>` talk to that server, signed in with
+  /// that session token and keeping it in memory only, so account features can be tried
+  /// against a local API without Sign in with Apple.
+  static func launchAccount(arguments: [String] = CommandLine.arguments) -> TrainStackAccount {
+    #if DEBUG
+      func value(_ flag: String) -> String? {
+        guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else {
+          return nil
+        }
+        return arguments[index + 1]
+      }
+      if let server = value("-trainstack-server").flatMap(URL.init(string:)),
+        let token = value("-trainstack-session")
+      {
+        return TrainStackAccount(
+          server: server, store: InMemorySessionStore(AccountSession(token: token)))
+      }
+    #endif
+    return TrainStackAccount()
   }
 }

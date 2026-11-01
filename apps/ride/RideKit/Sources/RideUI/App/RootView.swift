@@ -7,7 +7,7 @@ public struct RootView: View {
   @State private var library = RideLibrary.launched
   @State private var settings = RiderSettingsStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
-  @State private var account = TrainStackAccount()
+  @State private var account = TrainStackAccount.launchAccount()
   /// Where Back to app returns to from Settings.
   @State private var appDestination = AppDestination.today
   @State private var settingsPage = SettingsPage.zones(.all)

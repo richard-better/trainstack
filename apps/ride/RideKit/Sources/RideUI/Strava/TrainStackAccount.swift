@@ -18,10 +18,10 @@ final class TrainStackAccount {
 
   /// Starts out restoring; `restore()` picks up the sign-in kept in `store`.
   init(
-    store: any SessionStore = KeychainSessionStore(),
+    server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
     transport: any HTTPTransport = URLSession.shared
   ) {
-    client = TrainStackClient(store: store, transport: transport)
+    client = TrainStackClient(server: server, store: store, transport: transport)
   }
 
   // MARK: Account
