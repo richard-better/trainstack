@@ -26,6 +26,10 @@ public final class WorkoutRelay {
     @ObservationIgnored private var builder: HKLiveWorkoutBuilder?
     @ObservationIgnored private var delegate: MainActorWorkoutDelegate?
     @ObservationIgnored private var startup: Task<Void, Never>?
+    @ObservationIgnored private var phoneWatchdog: Task<Void, Never>?
+    @ObservationIgnored private let defaults = UserDefaults.standard
+    private static let startedOnPhoneKey = "workoutStartedOnPhone"
+    private static let phoneWatchdogInterval = Duration.seconds(30)
   #endif
 
   init() {}
@@ -34,6 +38,7 @@ public final class WorkoutRelay {
     switch message {
     case .glance(let glance):
       self.glance = ReceivedGlance(glance: glance, receivedAt: date)
+      workout?.lastHeardFromPhone = date
       if let cue = countdown.update(glance.interval, isPaused: glance.isPaused) { playCue(cue) }
     case .rideEnded:
       end()
@@ -95,6 +100,8 @@ public final class WorkoutRelay {
         guard attach(session, builder: builder) else { return }
         let startDate = Date.now
         workout = WatchWorkout(startDate: startDate, startedOnPhone: fromPhone)
+        defaults.set(fromPhone, forKey: Self.startedOnPhoneKey)
+        watchForASilentPhone(session)
         session.startActivity(with: startDate)
         startup = Task {
           do {
@@ -119,7 +126,10 @@ public final class WorkoutRelay {
         guard let session = recovered,
           attach(session, builder: session.associatedWorkoutBuilder())
         else { return }
-        workout = WatchWorkout(startDate: session.startDate ?? .now, startedOnPhone: false)
+        workout = WatchWorkout(
+          startDate: session.startDate ?? .now,
+          startedOnPhone: defaults.bool(forKey: Self.startedOnPhoneKey), lastHeardFromPhone: .now)
+        watchForASilentPhone(session)
         await mirror(session)
       } catch {
         log.error("Workout not recovered: \(error.localizedDescription)")
@@ -160,6 +170,21 @@ public final class WorkoutRelay {
       return true
     }
 
+    private func watchForASilentPhone(_ session: HKWorkoutSession) {
+      phoneWatchdog?.cancel()
+      phoneWatchdog = Task { [weak self, weak session] in
+        while !Task.isCancelled {
+          do { try await Task.sleep(for: Self.phoneWatchdogInterval) } catch { return }
+          guard let self, let session, slot.holds(session), let workout else { return }
+          if workout.hasLostThePhone(at: .now) {
+            log.info("Ending a workout the phone stopped sending to")
+            session.end()
+            return
+          }
+        }
+      }
+    }
+
     private func stopCollectingEnergyTheRecordingAlreadyHas() {
       builder?.dataSource?.disableCollection(for: HKQuantityType(.activeEnergyBurned))
     }
@@ -190,17 +215,20 @@ public final class WorkoutRelay {
 
     private func finish(at date: Date) {
       guard let builder else { return }
-      let isRecordedElsewhere = workout?.isRecordedElsewhere ?? false
+      let savesToHealth = workout?.savesToHealthItself ?? true
       let startup = self.startup
       self.startup = nil
       startup?.cancel()
+      phoneWatchdog?.cancel()
+      phoneWatchdog = nil
+      defaults.removeObject(forKey: Self.startedOnPhoneKey)
       slot.empty()
       self.builder = nil
       delegate = nil
       reset()
       Task {
         await startup?.value
-        guard !isRecordedElsewhere else {
+        guard savesToHealth else {
           builder.discardWorkout()
           return
         }

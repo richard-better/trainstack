@@ -16,6 +16,7 @@
     @ObservationIgnored var isRecordingRide = false {
       didSet { claimRideForHealth() }
     }
+    @ObservationIgnored private var isRelayingARideTheMacRecords = false
     @ObservationIgnored private let store = HKHealthStore()
     @ObservationIgnored private var session: HKWorkoutSession?
     @ObservationIgnored private var delegate: SessionDelegate?
@@ -32,8 +33,8 @@
       Task { [phoneWorkout] in await phoneWorkout.endLeftOverSession() }
       relay.claim = { AppSync.shared.claim }
       relay.onRideRecorded = { [weak self] in
-        guard HealthRides.shared.canSave else { return }
-        self?.send(.rideRecorded)
+        self?.isRelayingARideTheMacRecords = true
+        self?.claimRideForHealth()
       }
     }
 
@@ -60,6 +61,11 @@
     func endRide() {
       phoneWorkout.end()
       send(.rideEnded)
+    }
+
+    func sendGlance(_ glance: RideGlance) {
+      send(.glance(glance))
+      claimRideForHealth()
     }
 
     func send(_ message: LinkMessage) {
@@ -91,7 +97,8 @@
     }
 
     private func claimRideForHealth() {
-      guard isRecordingRide, HealthRides.shared.canSave else { return }
+      guard isRecordingRide || isRelayingARideTheMacRecords, HealthRides.shared.canSave
+      else { return }
       send(.rideRecorded)
     }
 
@@ -99,6 +106,7 @@
       guard session === self.session else { return }
       self.session = nil
       delegate = nil
+      isRelayingARideTheMacRecords = false
       isConnected = false
       heartRate = nil
       relay.stop()
@@ -110,6 +118,7 @@
         onHeartRate?(bpm)
         relay.send(bpm: bpm)
       }
+      if isRelayingARideTheMacRecords { claimRideForHealth() }
     }
   }
 

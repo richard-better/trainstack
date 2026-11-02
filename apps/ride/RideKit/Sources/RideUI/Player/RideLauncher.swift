@@ -57,7 +57,7 @@ final class RideLauncher {
       let watch = WatchLink.shared
       watch.onHeartRate = { [heartRate] bpm in heartRate.record(bpm, from: .watch) }
       ride.onTick = { [weak ride] in
-        if let ride { watch.send(.glance(ride.glance)) }
+        if let ride { watch.sendGlance(ride.glance) }
       }
       watch.isRecordingRide = true
       watch.startWorkout()
