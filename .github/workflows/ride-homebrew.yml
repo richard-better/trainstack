@@ -1,0 +1,106 @@
+name: Ride Homebrew
+
+# Builds Ride for macOS with Developer ID, notarizes it, publishes it as a GitHub release and asks
+# richard-better/homebrew-tap to update its cask. Called by `Ride release` for named releases and
+# by `Ride alpha` for every push to main. See docs/ride-release.md.
+on:
+  workflow_call:
+    inputs:
+      channel:
+        description: stable or alpha
+        required: true
+        type: string
+      version:
+        description: The marketing version of a stable release, such as 1.0.1.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish (${{ inputs.channel }})
+    runs-on: xcode-27
+    timeout-minutes: 60
+    environment: testflight
+    permissions:
+      contents: write
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      CHANNEL: ${{ inputs.channel }}
+      INPUT_VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check the secrets are configured
+        run: |
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 HOMEBREW_TAP_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is not set on the testflight environment. See docs/ride-release.md."
+              exit 1
+            fi
+          done
+      - name: Choose the version
+        id: version
+        run: |
+          # The build number is the UTC time, as for TestFlight, so it only ever goes up.
+          build="$(date -u +%y%m%d%H%M)"
+          case "$CHANNEL" in
+            stable)
+              [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Unexpected version $INPUT_VERSION"; exit 1; }
+              version="$INPUT_VERSION" ;;
+            alpha)
+              marketing="$(sed -n 's/^[[:space:]]*MARKETING_VERSION = \([0-9.]*\);$/\1/p' apps/ride/Ride.xcodeproj/project.pbxproj | sort -u)"
+              [[ "$marketing" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "::error::Unexpected MARKETING_VERSION $marketing"; exit 1; }
+              version="$marketing-alpha.$build" ;;
+            *) echo "::error::Unexpected channel $CHANNEL"; exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+      - name: Write the App Store Connect key
+        run: |
+          echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+      - name: Build, notarize and staple
+        env:
+          ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ steps.version.outputs.build }}
+        run: apps/ride/scripts/build-notarized.sh "$VERSION" "$BUILD" "$RUNNER_TEMP/release"
+      - name: Remove the App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+      - name: Publish the release
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="ride-v$VERSION"
+          files=("$RUNNER_TEMP/release/Ride-$VERSION.zip" "$RUNNER_TEMP/release/SHA256SUMS")
+          if [ "$CHANNEL" = stable ]; then
+            previous="$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName \
+              --jq '[.[].tagName | select(test("^ride-v[0-9]+\\.[0-9]+\\.[0-9]+$"))][0] // empty')"
+            gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" --title "Ride $VERSION" \
+              --latest --generate-notes ${previous:+--notes-start-tag "$previous"}
+          else
+            gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" --title "Ride $VERSION" \
+              --prerelease --latest=false --notes "Alpha built from $GITHUB_SHA. Install it with \`brew install --cask richard-better/tap/trainstack-ride@alpha\`."
+          fi
+      - name: Keep the ten newest alphas
+        if: inputs.channel == 'alpha'
+        run: |
+          gh release list --exclude-drafts --limit 200 --json tagName,isPrerelease,createdAt \
+            --jq '[.[] | select(.isPrerelease and (.tagName | test("^ride-v[0-9.]+-alpha\\.[0-9]+$")))]
+              | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' |
+            while read -r tag; do gh release delete "$tag" --cleanup-tag --yes; done
+      - name: Update the Homebrew cask
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          CASK: ${{ inputs.channel == 'alpha' && 'trainstack-ride@alpha' || 'trainstack-ride' }}
+        run: gh workflow run update.yml --repo richard-better/homebrew-tap -f cask="$CASK"

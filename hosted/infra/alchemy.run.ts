@@ -65,6 +65,12 @@ export const server = Cloudflare.Worker("server", {
     GITHUB_FEEDBACK_TOKEN: Config.Redacted("GITHUB_FEEDBACK_TOKEN").pipe(
       Config.withDefault(Redacted.make("")),
     ),
+    APPLE_SIGN_IN_KEY_ID: Output.fromEffect(
+      Config.String("APPLE_SIGN_IN_KEY_ID").pipe(Config.withDefault(""), Effect.orDie),
+    ),
+    APPLE_SIGN_IN_PRIVATE_KEY: Config.Redacted("APPLE_SIGN_IN_PRIVATE_KEY").pipe(
+      Config.withDefault(Redacted.make("")),
+    ),
     BETTER_AUTH_URL: Cloudflare.Worker.URL,
     ...observabilityBindings,
   },
