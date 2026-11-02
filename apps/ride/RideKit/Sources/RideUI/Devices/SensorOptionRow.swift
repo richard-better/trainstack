@@ -1,9 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// A paired sensor that can supply a reading, under the reading's row. The checked one is in
-/// use; a connected one can be picked, and one that is out of range can be connected again.
-/// Forget it by swiping or from its context menu.
 struct SensorOptionRow: View {
   let device: DiscoveredDevice
   let metric: RideMetric

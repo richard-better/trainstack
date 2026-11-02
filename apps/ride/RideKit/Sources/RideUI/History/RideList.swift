@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Finished rides by month, newest first, with a way to open more.
 struct RideList: View {
   let library: RideLibrary
   @Binding var selection: Ride.ID?

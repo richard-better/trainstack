@@ -1,4 +1,5 @@
 import Foundation
+import RideCore
 import RideData
 import Testing
 
@@ -9,10 +10,10 @@ struct InterruptedRideTests {
   private let template = WorkoutTemplate.named("Quick test 45s")!
 
   private func withDirectory(_ body: (URL) throws -> Void) throws {
-    let directory = FileManager.default.temporaryDirectory.appending(
+    let parent = FileManager.default.temporaryDirectory.appending(
       path: "InterruptedRideTests-\(UUID().uuidString)", directoryHint: .isDirectory)
-    defer { try? FileManager.default.removeItem(at: directory) }
-    try body(directory)
+    defer { try? FileManager.default.removeItem(at: parent) }
+    try body(parent.appending(path: "Ride in progress", directoryHint: .isDirectory))
   }
 
   private func launcher(journalDirectory: URL) -> RideLauncher {
@@ -21,12 +22,12 @@ struct InterruptedRideTests {
     return RideLauncher(simulated: true, devices: devices, journalDirectory: journalDirectory)
   }
 
-  /// A ride that got `seconds` in and was never ended.
   private func crashedRide(_ seconds: Int, in directory: URL) throws {
     let session = RideSession(workout: template.workout(ftp: 200))
     let journal = RideJournal(
       directory: directory,
-      header: .init(template: template, ftp: 200, startDate: session.startDate))
+      header: .init(
+        template: template, ftp: 200, startDate: session.startDate, riderWeight: 75))
     let controller = RideController(
       template: template, ftp: 200, session: session, journal: journal, simulated: true)
     for _ in 0..<seconds { controller.tick(seconds: 1) }
@@ -37,8 +38,8 @@ struct InterruptedRideTests {
       try crashedRide(20, in: directory)
       let interrupted = try #require(RideJournal.recover(from: directory))
       #expect(interrupted.name == "Quick test 45s")
-      #expect(interrupted.samples.count == 20)
-      #expect(interrupted.state.position == 20)
+      #expect(interrupted.session.samples.count == 20)
+      #expect(interrupted.session.position == 20)
     }
   }
 
@@ -49,16 +50,17 @@ struct InterruptedRideTests {
         template: template, ftp: 200, session: session,
         journal: RideJournal(
           directory: directory,
-          header: .init(template: template, ftp: 200, startDate: session.startDate)),
+          header: .init(
+            template: template, ftp: 200, startDate: session.startDate, riderWeight: 75)),
         simulated: true)
       for _ in 0..<5 { controller.tick(seconds: 1) }
       controller.adjust(by: 10)
       controller.togglePause()
       controller.tick(seconds: 1)
       let interrupted = try #require(RideJournal.recover(from: directory))
-      #expect(interrupted.samples.count == 5)
-      #expect(interrupted.state.ergPercent == 110)
-      #expect(interrupted.state.isPaused)
+      #expect(interrupted.session.samples.count == 5)
+      #expect(interrupted.session.ergPercent == 110)
+      #expect(interrupted.session.isPaused)
     }
   }
 
@@ -70,7 +72,7 @@ struct InterruptedRideTests {
 
       try crashedRide(12, in: directory)
       launcher.checkForInterruptedRide()
-      #expect(launcher.interrupted?.samples.count == 12)
+      #expect(launcher.interrupted?.session.samples.count == 12)
     }
   }
 
@@ -121,7 +123,6 @@ struct InterruptedRideTests {
       #expect(directory.path.hasPrefix(URL.temporaryDirectory.path))
       #expect(!directory.path.hasPrefix(RideJournal.defaultDirectory.path))
     #else
-      // Release builds have no pretend launches, so the flags change nothing.
       #expect(directory == RideJournal.defaultDirectory)
     #endif
   }
@@ -133,7 +134,7 @@ struct InterruptedRideTests {
       launcher.checkForInterruptedRide()
       launcher.start(template, ftp: 200, heartRateZones: nil, riderWeight: 75)
       #expect(launcher.ride == nil)
-      #expect(RideJournal.recover(from: directory)?.samples.count == 10)
+      #expect(RideJournal.recover(from: directory)?.session.samples.count == 10)
     }
   }
 }

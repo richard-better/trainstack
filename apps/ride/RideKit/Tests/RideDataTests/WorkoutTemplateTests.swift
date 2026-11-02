@@ -4,7 +4,6 @@ import Testing
 @testable import RideData
 
 struct WorkoutTemplateTests {
-  /// 10 minutes easy, 5 at threshold, 5 easy.
   private let template = WorkoutTemplate(
     name: "Test 20", category: .threshold,
     steps: [
@@ -16,7 +15,6 @@ struct WorkoutTemplateTests {
     let hour = WorkoutTemplate(
       name: "FTP", category: .threshold, steps: [.init(duration: 3600, intensity: 1)])
     #expect(hour.stressScore == 100)
-    // 15 minutes at 50% is 6.25 and 5 minutes at 100% is 8.33.
     #expect(template.stressScore == 15)
   }
 
@@ -53,6 +51,11 @@ struct WorkoutTemplateTests {
     #expect(test.duration == 45)
     #expect(test.workout(ftp: 200).steps.map(\.duration) == [15, 15, 15])
     #expect(test.workout(ftp: 200).steps.map(\.targetPower) == [100, 150, 240])
+  }
+
+  @Test func treatsStepsBelowTempoAsEasy() {
+    #expect(PowerZone.zone(intensity: WorkoutTemplate.easyIntensity) == .tempo)
+    #expect(PowerZone.zone(intensity: WorkoutTemplate.easyIntensity - 0.01) == .endurance)
   }
 
   @Test func zonesStepsByShareOfFTP() {

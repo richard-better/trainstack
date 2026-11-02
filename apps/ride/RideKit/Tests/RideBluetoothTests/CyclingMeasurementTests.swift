@@ -11,15 +11,19 @@ struct CyclingMeasurementTests {
   }
 
   @Test func locatesCrankDataAfterOptionalPowerFields() {
-    let packet = Data([
-      0x75, 0x0F, 250, 0,  // flags, power
-      100, 20, 0,  // pedal balance, torque
-      10, 0, 0, 0, 0, 4,  // wheel revolutions, wheel time
-      42, 0, 0, 8,  // crank revolutions, crank time
-      0, 0, 0, 0,  // extreme force
-      0, 0, 0,  // extreme angles
-      0, 0, 0, 0, 0, 0,  // top/bottom angles, energy
-    ])
+    let flags: [UInt8] = [0x75, 0x0F]
+    let power: [UInt8] = [250, 0]
+    let pedalBalanceAndTorque: [UInt8] = [100, 20, 0]
+    let wheelRevolutionsAndTime: [UInt8] = [10, 0, 0, 0, 0, 4]
+    let crankRevolutionsAndTime: [UInt8] = [42, 0, 0, 8]
+    let extremeForces: [UInt8] = [0, 0, 0, 0]
+    let extremeAngles: [UInt8] = [0, 0, 0]
+    let deadSpotAnglesAndEnergy: [UInt8] = [0, 0, 0, 0, 0, 0]
+    let packet = Data(
+      [
+        flags, power, pedalBalanceAndTorque, wheelRevolutionsAndTime, crankRevolutionsAndTime,
+        extremeForces, extremeAngles, deadSpotAnglesAndEnergy,
+      ].joined())
     let measurement = CyclingPowerMeasurement(packet)
     #expect(measurement?.watts == 250)
     #expect(measurement?.crank == CrankRevolution(count: 42, eventTime: 2048))
@@ -40,15 +44,19 @@ struct CyclingMeasurementTests {
   }
 
   @Test func indoorBikeHandlesEveryOptionalFieldAndHalfRpm() {
-    let packet = Data([
-      0xFE, 0x1F,  // every field, including speed
-      0xB8, 0x0B, 0xB8, 0x0B,  // speed and average speed
-      181, 0, 180, 0,  // cadence 90.5 rpm and average cadence
-      1, 0, 0, 10, 0,  // distance, resistance
-      250, 0, 240, 0,  // instantaneous and average power
-      1, 0, 1, 0, 1,  // energy
-      120, 10, 60, 0, 120, 0,  // HR, MET, elapsed and remaining time
-    ])
+    let everyFieldIncludingSpeed: [UInt8] = [0xFE, 0x1F]
+    let speedAndAverageSpeed: [UInt8] = [0xB8, 0x0B, 0xB8, 0x0B]
+    let cadenceOf90AndAHalfAndAverageCadence: [UInt8] = [181, 0, 180, 0]
+    let distanceAndResistance: [UInt8] = [1, 0, 0, 10, 0]
+    let powerAndAveragePower: [UInt8] = [250, 0, 240, 0]
+    let energy: [UInt8] = [1, 0, 1, 0, 1]
+    let heartRateMetAndElapsedAndRemainingTime: [UInt8] = [120, 10, 60, 0, 120, 0]
+    let packet = Data(
+      [
+        everyFieldIncludingSpeed, speedAndAverageSpeed, cadenceOf90AndAHalfAndAverageCadence,
+        distanceAndResistance, powerAndAveragePower, energy,
+        heartRateMetAndElapsedAndRemainingTime,
+      ].joined())
     #expect(IndoorBikeMeasurement(packet)?.watts == 250)
     #expect(IndoorBikeMeasurement(packet)?.cadence == 91)
     for length in 0..<packet.count {

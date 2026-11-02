@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A ride's headline numbers in one row when they fit, otherwise in a grid.
 struct RideStatsRow: View {
   let stats: [RideStat]
 

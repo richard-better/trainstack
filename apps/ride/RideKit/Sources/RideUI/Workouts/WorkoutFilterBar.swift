@@ -1,14 +1,10 @@
 import RideData
 import SwiftUI
 
-/// The library's filters, how many workouts pass them, and the sort order, as glass capsules
-/// floating over the cards. One row when it fits, otherwise the same row scrolling sideways.
 struct WorkoutFilterBar: View {
   @Binding var state: WorkoutsState
-  /// How many workouts pass the filters.
-  let count: Int
+  let matchingCount: Int
 
-  /// The zones the library has workouts for, easiest first.
   static let zones = PowerZone.allCases.filter { zone in
     WorkoutTemplate.library.contains { $0.category == zone }
   }
@@ -18,7 +14,7 @@ struct WorkoutFilterBar: View {
       HStack(spacing: 8) {
         WorkoutFilterMenus(state: $state)
         Spacer()
-        Text("^[\(count) workout](inflect: true)")
+        Text("^[\(matchingCount) workout](inflect: true)")
           .foregroundStyle(.secondary)
           .fixedSize()
           .padding(.horizontal, 4)

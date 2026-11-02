@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A legend entry that switches its series on and off, and lights up under the pointer.
 struct LegendToggle: View {
   let title: String
   let color: Color

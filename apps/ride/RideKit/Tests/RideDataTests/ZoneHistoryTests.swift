@@ -29,9 +29,14 @@ struct ZoneHistoryTests {
     #expect(ftp(on: day(5, 31), in: history) == 200)
     #expect(ftp(on: day(6, 1), in: history) == 220)
     #expect(ftp(on: day(9, 1), in: history) == 220)
-    // Before the first change, the earliest zones apply.
-    #expect(ftp(on: day(1, 1), in: history) == 200)
     #expect(history.current.value(of: .ftp, in: .all) == 220)
+  }
+
+  @Test func usesTheEarliestZonesBeforeTheFirstChange() {
+    var history = ZoneHistory()
+    history.record([ftp(200)], on: day(3, 1), calendar: calendar)
+    history.record([ftp(220)], on: day(6, 1), calendar: calendar)
+    #expect(ftp(on: day(1, 1), in: history) == 200)
   }
 
   @Test func groupsChangesOnTheSameDayAndKeepsTheLast() {
@@ -74,6 +79,18 @@ struct ZoneHistoryTests {
     #expect(ftp(on: day(9, 1), in: history) == 200)
   }
 
+  @Test func movingOntoADayWithChangesMergesThemAndTheMovedOnesWin() throws {
+    var history = ZoneHistory()
+    history.record(
+      [ftp(200), .threshold(.maxHeartRate, scope: .all, value: 190)], on: day(3, 1),
+      calendar: calendar)
+    history.record([ftp(220)], on: day(6, 1), calendar: calendar)
+    history.move(try #require(history.entries.last?.id), to: day(3, 1), calendar: calendar)
+    #expect(history.entries.count == 1)
+    #expect(history.current.value(of: .ftp, in: .all) == 220)
+    #expect(history.current.value(of: .maxHeartRate, in: .all) == 190)
+  }
+
   @Test func letsASportKeepItsOwnZones() {
     var history = ZoneHistory()
     history.record([ftp(250), .listed(.running, true)], on: day(3, 1), calendar: calendar)
@@ -82,13 +99,6 @@ struct ZoneHistoryTests {
     #expect(profile.listedSports == [.running])
     #expect(profile.usesDefault(.power, in: .running))
     #expect(profile.value(of: .ftp, in: running) == 250)
-    // Running starts with pace zones that need a threshold pace.
-    #expect(profile.settings(for: .pace, in: running)?.missingThresholds == [.thresholdPace])
-    #expect(profile.settings(for: .pace, in: .all) == nil)
-
-    // A change to a sport that uses Default does nothing.
-    history.record([ftp(300, running)], on: day(3, 2), calendar: calendar)
-    #expect(history.entries.count == 1)
 
     history.record(
       [.ownZones(.power, sport: .running, true), ftp(300, running)], on: day(4, 1),
@@ -104,6 +114,46 @@ struct ZoneHistoryTests {
     history.record([.listed(.running, false)], on: day(5, 1), calendar: calendar)
     #expect(history.current.listedSports.isEmpty)
     #expect(history.current.value(of: .ftp, in: running) == 250)
+  }
+
+  @Test func aListedRunningStartsWithPaceZonesThatNeedAThresholdPace() {
+    var history = ZoneHistory()
+    history.record([.listed(.running, true)], on: day(3, 1), calendar: calendar)
+    let profile = history.current
+    #expect(
+      profile.settings(for: .pace, in: .sport(.running))?.missingThresholds == [.thresholdPace])
+  }
+
+  @Test func paceHasNoDefaultZones() {
+    var history = ZoneHistory()
+    history.record([.listed(.running, true)], on: day(3, 1), calendar: calendar)
+    let profile = history.current
+    #expect(profile.settings(for: .pace, in: .all) == nil)
+    #expect(!profile.usesDefault(.pace, in: .running))
+  }
+
+  @Test func aChangeToASportThatUsesDefaultDoesNothing() {
+    var history = ZoneHistory()
+    history.record([ftp(250), .listed(.running, true)], on: day(3, 1), calendar: calendar)
+    history.record([ftp(300, .sport(.running))], on: day(3, 2), calendar: calendar)
+    #expect(history.entries.count == 1)
+    #expect(history.current.value(of: .ftp, in: .sport(.running)) == 250)
+  }
+
+  @Test func aSportsOwnZonesStartAsACopyOfDefault() {
+    var history = ZoneHistory()
+    history.record([ftp(250), .listed(.running, true)], on: day(3, 1), calendar: calendar)
+    history.record([.ownZones(.power, sport: .running, true)], on: day(4, 1), calendar: calendar)
+    let profile = history.current
+    #expect(!profile.usesDefault(.power, in: .running))
+    #expect(profile.value(of: .ftp, in: .sport(.running)) == 250)
+  }
+
+  @Test func listsSportsInTheirUsualOrder() {
+    var history = ZoneHistory()
+    history.record(
+      [.listed(.swimming, true), .listed(.running, true)], on: day(3, 1), calendar: calendar)
+    #expect(history.current.listedSports == [.running, .swimming])
   }
 
   @Test func roundTripsThroughCoding() throws {

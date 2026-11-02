@@ -1,20 +1,13 @@
 import RideData
 import SwiftUI
 
-/// The workout being ridden. The whole workout is on screen as a chart, with the four numbers
-/// a rider checks most underneath it, big enough to read from the saddle.
 struct PlayerView: View {
   let controller: RideController
-  /// Whether to ask the rider to confirm ending the ride, as the End Ride button and the
-  /// Controls menu do.
   @Binding var isConfirmingEnd: Bool
   var onMinimize: () -> Void
-  /// Called once the rider has ended the ride, with whether to keep it in History.
   var onEnd: (_ save: Bool) -> Void
 
   var body: some View {
-    // Everything on one screen when it fits; otherwise, such as in landscape or with large
-    // text, the same layout scrolls.
     ViewThatFits(in: .vertical) {
       PlayerLayout(controller: controller)
       ScrollView { PlayerLayout(controller: controller) }

@@ -5,20 +5,13 @@
   import UIKit
   import os
 
-  /// Saves rides to Health as workouts, on iPhone and iPad.
-  ///
-  /// A ride waits in a queue until it is saved, so one that cannot be saved yet, because Health
-  /// is locked or the rider has not been asked for access, is saved once the app is next active.
-  /// A ride Health already has a cycling workout for, from Ride or any other app, is skipped.
   final class HealthRides {
     static let shared = HealthRides()
 
-    /// What Ride saves: the workout and its samples.
     static let savedTypes: Set<HKSampleType> = [
       .workoutType(), HKQuantityType(.activeEnergyBurned), HKQuantityType(.cyclingPower),
       HKQuantityType(.cyclingCadence), HKQuantityType(.heartRate),
     ]
-    /// What Ride reads: workouts, to not save a ride twice, and heart rate from the watch.
     static let readTypes: Set<HKObjectType> = [.workoutType(), HKQuantityType(.heartRate)]
 
     private let store = HKHealthStore()
@@ -35,15 +28,12 @@
       pending = Set(defaults.stringArray(forKey: Self.pendingKey) ?? [])
     }
 
-    /// Whether the rider lets Ride save workouts to Health.
     var canSave: Bool {
       HKHealthStore.isHealthDataAvailable()
         && store.authorizationStatus(for: .workoutType()) == .sharingAuthorized
     }
 
-    /// Asks the rider for access to Health, unless they have answered already. Only asks while
-    /// the app is in front, where the request can show.
-    func requestAccess() async {
+    func requestAccessWhileInFront() async {
       guard HKHealthStore.isHealthDataAvailable(),
         UIApplication.shared.applicationState == .active
       else { return }
@@ -54,21 +44,18 @@
       }
     }
 
-    /// Saves the ride with `id` in `library` to Health, now or once it can. Sample rides and
-    /// rides kept only in memory stay out of Health.
     func save(_ id: Ride.ID, from library: RideLibrary) {
       guard HKHealthStore.isHealthDataAvailable(), library.isStored else { return }
       pending.insert(id)
       Task { await savePending(from: library) }
     }
 
-    /// Saves the rides waiting for Health.
     func savePending(from library: RideLibrary) async {
       guard HKHealthStore.isHealthDataAvailable(), library.isStored, !pending.isEmpty, !isSaving
       else { return }
       isSaving = true
       defer { isSaving = false }
-      await requestAccess()
+      await requestAccessWhileInFront()
       switch store.authorizationStatus(for: .workoutType()) {
       case .notDetermined: return
       case .sharingDenied:
@@ -76,7 +63,6 @@
         return
       default: break
       }
-      // Rides queued while saving are saved in the same pass.
       var attempted: Set<Ride.ID> = []
       while let id = pending.subtracting(attempted).first {
         attempted.insert(id)

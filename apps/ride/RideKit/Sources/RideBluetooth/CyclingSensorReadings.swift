@@ -1,9 +1,11 @@
 import Foundation
 
-/// One device can notify through several services. Keep their counters separate and prefer
-/// Cycling Power for watts, and a direct FTMS cadence over a calculated crank cadence.
 struct CyclingSensorReadings: Sendable {
   static let maxAge: TimeInterval = 5
+  static let powerSourcesBestFirst: [CyclingCharacteristic] = [.power, .indoorBike]
+  static let cadenceSourcesBestFirst: [CyclingCharacteristic] = [
+    .indoorBike, .speedAndCadence, .power,
+  ]
 
   private struct Reading: Sendable {
     let value: Int
@@ -36,8 +38,8 @@ struct CyclingSensorReadings: Sendable {
 
   func reading(for metric: RideMetric, at date: Date) -> Int? {
     switch metric {
-    case .power: current(power, preference: [.power, .indoorBike], at: date)
-    case .cadence: current(cadence, preference: [.indoorBike, .speedAndCadence, .power], at: date)
+    case .power: current(power, preference: Self.powerSourcesBestFirst, at: date)
+    case .cadence: current(cadence, preference: Self.cadenceSourcesBestFirst, at: date)
     case .heartRate: nil
     }
   }

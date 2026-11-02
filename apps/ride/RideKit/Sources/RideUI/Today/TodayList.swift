@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Today on iPhone: one featured suggestion with Start ride on its card, and the others as
-/// compact rows, so all of them fit above the tab bar.
 struct TodayList: View {
   let suggestions: [TodaySuggestion]
   @Binding var state: TodayState
@@ -39,7 +37,7 @@ struct TodayList: View {
           NavigationLink(value: suggestion.template) {
             WorkoutRow(
               template: suggestion.template,
-              detail: "\(suggestion.tag) · \(suggestion.template.shortSummary)")
+              detail: "\(suggestion.kindOfDay) · \(suggestion.template.shortSummary)")
           }
         }
       }
@@ -50,5 +48,5 @@ struct TodayList: View {
     #endif
   }
 
-  private func shuffle() { state.shuffle += 1 }
+  private func shuffle() { state.shuffleCount += 1 }
 }

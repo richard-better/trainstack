@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// The player's chart, controls and numbers, top to bottom.
 struct PlayerLayout: View {
   let controller: RideController
 

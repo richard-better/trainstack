@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// How to start a suggestion, or without an FTP, that one is needed and where to add it.
 struct TodayFootnote: View {
   let openSettings: () -> Void
   @Environment(RiderSettingsStore.self) private var settings

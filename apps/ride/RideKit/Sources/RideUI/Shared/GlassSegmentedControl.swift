@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// A segmented control on a glass track. The chosen segment is lit in the accent colour, and
-/// the light slides to the one picked. Used where macOS's own segmented control would draw a
-/// flat slab among glass controls.
 struct GlassSegmentedControl<Value: Hashable>: View {
   let title: String
   let options: [Value]

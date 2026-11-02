@@ -2,8 +2,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// The featured suggestion: its kind of day, profile, name and summary, which open the
-/// workout, then Start ride beneath, so it is clear what starts.
 struct TodayPickCard: View {
   let suggestion: TodaySuggestion
   @ScaledMetric private var profileHeight = 84.0
@@ -11,7 +9,7 @@ struct TodayPickCard: View {
   var body: some View {
     NavigationLink(value: suggestion.template) {
       VStack(alignment: .leading, spacing: 12) {
-        Text(suggestion.tag)
+        Text(suggestion.kindOfDay)
           .font(.footnote.weight(.semibold))
           .foregroundStyle(.secondary)
         WorkoutProfile(template: suggestion.template)

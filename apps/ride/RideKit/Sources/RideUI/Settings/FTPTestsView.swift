@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// The FTP tests entered for a scope, newest first, with a way to add one.
 struct FTPTestsView: View {
   let scope: ZoneScope
   @State private var isAdding = false

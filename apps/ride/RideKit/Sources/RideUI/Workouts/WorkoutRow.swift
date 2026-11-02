@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A workout as a list row: a small profile, its name, and a line about it.
 struct WorkoutRow: View {
   let template: WorkoutTemplate
   let detail: String

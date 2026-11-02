@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A threshold of a scope, such as FTP, with Default's value beside a sport's own.
 struct ThresholdField: View {
   let threshold: Threshold
   let scope: ZoneScope
@@ -40,7 +39,6 @@ struct ThresholdField: View {
     }
   }
 
-  /// Default's value, shown beside a sport's own when they differ.
   private var defaultHint: String? {
     guard scope != .all, let value = store[threshold, .all], value != store[threshold, scope]
     else { return nil }

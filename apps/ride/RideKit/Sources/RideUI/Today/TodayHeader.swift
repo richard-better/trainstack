@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Today's date, and an invitation to ride since nothing is planned.
 struct TodayHeader: View {
-  /// Smaller, for an iPhone list.
   var isCompact = false
 
   var body: some View {

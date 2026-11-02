@@ -2,8 +2,6 @@ import CryptoKit
 import Foundation
 import Security
 
-/// The nonce for one Sign in with Apple: Apple is given its SHA-256 and puts it in the identity
-/// token, and the server is given the original, so a token cannot be replayed from elsewhere.
 struct AppleSignInNonce {
   let raw: String
 
@@ -19,8 +17,7 @@ struct AppleSignInNonce {
     self.raw = raw
   }
 
-  /// What goes to Apple.
-  var hashed: String {
+  var sha256ForApple: String {
     SHA256.hash(data: Data(raw.utf8)).map { String(format: "%02x", $0) }.joined()
   }
 }

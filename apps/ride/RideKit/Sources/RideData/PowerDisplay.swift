@@ -1,15 +1,11 @@
 import Foundation
 
-/// How the player shows power: each reading as it comes, or averaged over a few seconds so a
-/// moment off the pedals does not throw the number around. Charts and recordings keep every
-/// reading.
 public enum PowerDisplay: String, CaseIterable, Codable, Sendable {
   case instant, threeSeconds, fiveSeconds
 
   public static let standard = PowerDisplay.threeSeconds
 
-  /// The longest window of any choice.
-  public static let longestWindow: TimeInterval = 5
+  public static let longestWindow = allCases.map(\.window).max() ?? 0
 
   public var name: String {
     switch self {
@@ -19,7 +15,6 @@ public enum PowerDisplay: String, CaseIterable, Codable, Sendable {
     }
   }
 
-  /// Seconds averaged over, or 0 for each reading as it comes.
   public var window: TimeInterval {
     switch self {
     case .instant: 0
@@ -30,7 +25,6 @@ public enum PowerDisplay: String, CaseIterable, Codable, Sendable {
 
   private static let key = "powerDisplay"
 
-  /// The saved choice, or `standard` if there is none.
   public static func load(from defaults: UserDefaults) -> PowerDisplay {
     defaults.string(forKey: key).flatMap(PowerDisplay.init(rawValue:)) ?? .standard
   }

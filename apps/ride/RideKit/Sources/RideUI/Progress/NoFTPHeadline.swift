@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// In place of fitness and form, which need an FTP, a way to add one, beside this week's
-/// riding.
 struct NoFTPHeadline: View {
   let rides: [RideRecording]
   let openSettings: () -> Void

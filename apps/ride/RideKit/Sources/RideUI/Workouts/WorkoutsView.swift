@@ -2,9 +2,6 @@ import RideBluetooth
 import RideData
 import SwiftUI
 
-/// The workout library. With room, a grid of cards with filters as pop-up buttons and one
-/// Start button for the selected card. On iPhone, a list grouped by zone whose rows open each
-/// workout, where it starts.
 struct WorkoutsView: View {
   @Binding var state: WorkoutsState
   #if os(iOS)
@@ -16,7 +13,7 @@ struct WorkoutsView: View {
     Group {
       if isWide {
         WorkoutGrid(state: $state, shown: shown)
-          .safeAreaBar(edge: .top) { WorkoutFilterBar(state: $state, count: shown.count) }
+          .safeAreaBar(edge: .top) { WorkoutFilterBar(state: $state, matchingCount: shown.count) }
           .toolbar {
             ToolbarItem(placement: .primaryAction) {
               let selected = shown.first { $0.id == state.selection }
@@ -44,8 +41,6 @@ struct WorkoutsView: View {
     .searchable(text: $state.search, placement: searchPlacement, prompt: "Search")
   }
 
-  /// On iPhone the search field sits under the title, revealed by pulling the list down. Kept
-  /// always visible, it starts with the title collapsed.
   private var searchPlacement: SearchFieldPlacement {
     #if os(iOS)
       isWide ? .automatic : .navigationBarDrawer

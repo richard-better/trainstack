@@ -1,22 +1,19 @@
 import RideData
 import SwiftUI
 
-/// The library's filters as short capsules that fit an iPhone's width, and how many workouts
-/// pass them.
 struct WorkoutFilterChips: View {
   @Binding var state: WorkoutsState
-  /// How many workouts pass the filters.
-  let count: Int
+  let matchingCount: Int
 
   var body: some View {
     HStack(spacing: 8) {
       WorkoutFilterMenus(state: $state)
       Spacer(minLength: 0)
-      Text("\(count)")
+      Text("\(matchingCount)")
         .font(.footnote)
         .foregroundStyle(.secondary)
         .monospacedDigit()
-        .accessibilityLabel("^[\(count) workout](inflect: true)")
+        .accessibilityLabel("^[\(matchingCount) workout](inflect: true)")
     }
     .lineLimit(1)
   }

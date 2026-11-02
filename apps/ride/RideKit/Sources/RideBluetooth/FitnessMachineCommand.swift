@@ -1,18 +1,16 @@
 import Foundation
 
-/// A write to the FTMS Fitness Machine Control Point (0x2AD9).
 enum FitnessMachineCommand: Equatable, Sendable {
   case requestControl
-  /// Releases control and returns the trainer to its default settings.
   case reset
   case start
-  /// Watts.
-  case targetPower(Int)
-  /// In the trainer's units of 0.1. FTMS 1.0 sends one byte, but a trainer whose range reaches
-  /// past it can only take two.
-  case targetResistance(Int, wide: Bool)
-  /// Percent gradient, on a road with no wind and typical rolling resistance and drag.
-  case simulation(grade: Double)
+  case targetPower(watts: Int)
+  case targetResistance(level: Int, wide: Bool)
+  case simulation(gradePercent: Double)
+
+  static let stillAirMetresPerSecond = 0.0
+  static let typicalRollingResistanceCoefficient = 0.004
+  static let typicalWindResistanceKilogramsPerMetre = 0.51
 
   var opCode: UInt8 {
     switch self {
@@ -36,11 +34,11 @@ enum FitnessMachineCommand: Equatable, Sendable {
       } else {
         data.append(UInt8(level.clamped(to: 0...255)))
       }
-    case .simulation(let grade):
-      data.append(sint16: 0)  // wind speed
-      data.append(sint16: Int((grade * 100).rounded()))
-      data.append(40)  // rolling resistance coefficient, 0.004
-      data.append(51)  // wind resistance coefficient, 0.51 kg/m
+    case .simulation(let gradePercent):
+      data.append(sint16: Self.stillAirMetresPerSecond, resolution: 0.001)
+      data.append(sint16: gradePercent, resolution: 0.01)
+      data.append(uint8: Self.typicalRollingResistanceCoefficient, resolution: 0.0001)
+      data.append(uint8: Self.typicalWindResistanceKilogramsPerMetre, resolution: 0.01)
     }
     return data
   }
@@ -50,5 +48,13 @@ extension Data {
   fileprivate mutating func append(sint16 value: Int) {
     let value = UInt16(bitPattern: Int16(value.clamped(to: Int(Int16.min)...Int(Int16.max))))
     append(contentsOf: [UInt8(value & 0xFF), UInt8(value >> 8)])
+  }
+
+  fileprivate mutating func append(sint16 value: Double, resolution: Double) {
+    append(sint16: Int((value / resolution).rounded()))
+  }
+
+  fileprivate mutating func append(uint8 value: Double, resolution: Double) {
+    append(UInt8(Int((value / resolution).rounded()).clamped(to: 0...255)))
   }
 }

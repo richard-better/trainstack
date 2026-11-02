@@ -1,6 +1,5 @@
 import Foundation
 
-/// How sending a ride to Strava ended, for the rider to read.
 enum StravaOutcome: Identifiable {
   case sent(URL)
   case alreadyThere(URL?)
@@ -30,7 +29,6 @@ enum StravaOutcome: Identifiable {
     }
   }
 
-  /// Where to see the activity on Strava, if there is one.
   var activityURL: URL? {
     switch self {
     case .sent(let url): url

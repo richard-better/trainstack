@@ -1,11 +1,8 @@
 #if os(watchOS)
   import SwiftUI
 
-  /// The moment a ride started on the phone opens the app: a count into the ride, with heart
-  /// rate already on its way to the phone.
   struct StartingView: View {
     let count: Int
-    /// Nil until the phone's first glance arrives.
     let workoutName: String?
     let heartRate: Int?
     let isPhoneConnected: Bool
@@ -37,8 +34,7 @@
     }
   }
 
-  /// The heart rate and whether it reaches the phone, such as "72 · sending to iPhone".
-  struct HeartRateStatus: View {
+  private struct HeartRateStatus: View {
     let heartRate: Int?
     let isPhoneConnected: Bool
 

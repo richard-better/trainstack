@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// The four numbers a rider checks most: target, power, cadence and heart rate. One row on a
-/// wide window, otherwise two.
 struct PlayerPrimaryStats: View {
   let controller: RideController
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -59,18 +57,15 @@ struct PlayerPrimaryStats: View {
     }
   }
 
-  /// What the trainer is aiming for in the current mode.
   private var targetValue: (value: String, unit: String) {
     let session = controller.session
     return switch session.mode {
     case .erg: (session.targetPower.map(String.init) ?? "—", "W")
-    case .slope: (session.grade.formatted(.oneDecimal), "%")
+    case .slope: (session.slopeGradePercent.formatted(.oneDecimal), "%")
     case .level: ("\(session.level)", "level")
     }
   }
 
-  /// How power, as the rider chose to see it, compares with the target in ERG mode, where the
-  /// trainer holds it.
   private var powerDetail: String {
     let session = controller.session
     guard session.mode == .erg else { return "Free power in \(session.mode.rawValue)" }

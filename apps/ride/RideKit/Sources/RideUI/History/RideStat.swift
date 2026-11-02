@@ -1,4 +1,3 @@
-/// One of a finished ride's headline numbers.
 struct RideStat: Identifiable {
   let label: String
   let value: String

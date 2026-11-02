@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Time ridden this week, and its training stress when the rider has an FTP.
 struct ThisWeekStat: View {
   let rides: [RideRecording]
   @Environment(RiderSettingsStore.self) private var settings

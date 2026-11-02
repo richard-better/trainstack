@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A ride's time in each zone of a metric, or what the rider needs to set to see it.
 struct ZoneBreakdown: View {
   let recording: RideRecording
   let metric: ZoneMetric

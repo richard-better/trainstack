@@ -2,9 +2,6 @@ import RideBluetooth
 import RideData
 import SwiftUI
 
-/// What a workout asks of the rider: how long and how hard, then each interval in watts for
-/// their FTP. Start ride stays pinned to the bottom beside the device status, so a ride can
-/// start from anywhere on the page.
 struct WorkoutDetailView: View {
   let template: WorkoutTemplate
   @Environment(RiderSettingsStore.self) private var settings
@@ -59,7 +56,6 @@ struct WorkoutDetailView: View {
     .navigationTitle(template.name)
     .safeAreaBar(edge: .bottom) {
       #if os(macOS)
-        // A ride in progress has its own bar there, and nothing else can start meanwhile.
         if launcher.ride == nil { startBar }
       #else
         startBar
@@ -68,7 +64,6 @@ struct WorkoutDetailView: View {
     .sheet(isPresented: $isShowingDevices) { DevicesSheet() }
   }
 
-  /// The device status in a capsule, then Start ride across the rest of the width.
   private var startBar: some View {
     GlassEffectContainer {
       HStack(spacing: 10) {

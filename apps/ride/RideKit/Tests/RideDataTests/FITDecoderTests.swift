@@ -11,7 +11,7 @@ struct FITDecoderTests {
     #expect(ride.summary.maxPower == 177)
     #expect(ride.summary.averageHeartRate == 146)
     #expect(ride.summary.maxHeartRate == 167)
-    #expect(abs(try #require(ride.summary.distance) - 14389) < 1)
+    #expect(abs(try #require(ride.summary.distanceMetres) - 14389) < 1)
   }
 
   @Test func decodesTheSport() throws {
@@ -33,8 +33,13 @@ struct FITDecoderTests {
 
   @Test func startsAtTheSessionStartTime() throws {
     let ride = try RideRecording.sample()
-    // FIT timestamp 1160230875 + 631065600 epoch offset.
     #expect(ride.startDate == Date(timeIntervalSince1970: 1_791_296_475))
+  }
+
+  @Test func countsFITTimestampsFromTheLastDayOf1989() throws {
+    let lastDayOf1989 = try Date("1989-12-31T00:00:00Z", strategy: .iso8601)
+    let epoch = Date(timeIntervalSince1970: TimeInterval(FITProfile.epochInUnixTime))
+    #expect(epoch == lastDayOf1989)
   }
 
   @Test func rejectsNonFITData() {
@@ -53,25 +58,5 @@ struct FITDecoderTests {
   @Test func rejectsTruncatedData() throws {
     let data = try RideRecording.sampleFITData()
     #expect(throws: FITError.truncated) { try FITDecoder.decode(data.prefix(data.count - 40)) }
-  }
-}
-
-struct ExportFileNameTests {
-  @Test func keepsOrdinaryWorkoutNames() throws {
-    var ride = try RideRecording.sample()
-    ride.workoutName = "Threshold builder"
-    #expect(ride.exportFileName == "Threshold builder 2026-10-06.fit")
-  }
-
-  @Test func neverEscapesItsDirectory() throws {
-    var ride = try RideRecording.sample()
-    for name in ["../../etc/passwd", "..\\..\\x", "a/b:c", "/", "..", "\u{0}\n"] {
-      ride.workoutName = name
-      let fileName = ride.exportFileName
-      #expect(!fileName.contains("/") && !fileName.contains("\\") && !fileName.hasPrefix("."))
-      #expect(
-        URL(filePath: "/tmp/ride").appending(path: fileName).deletingLastPathComponent().path
-          == "/tmp/ride")
-    }
   }
 }

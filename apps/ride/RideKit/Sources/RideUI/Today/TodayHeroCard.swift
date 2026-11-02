@@ -2,8 +2,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// The featured suggestion on a wide Today: a large profile, its kind of day, name and
-/// summary, which open the workout, and a Start ride button, so it is clear what starts.
 struct TodayHeroCard: View {
   let suggestion: TodaySuggestion
 
@@ -18,7 +16,7 @@ struct TodayHeroCard: View {
             .frame(height: 220)
             .background(.primary.opacity(0.05))
           VStack(alignment: .leading, spacing: 6) {
-            Text(suggestion.tag)
+            Text(suggestion.kindOfDay)
               .font(.subheadline.weight(.semibold))
               .foregroundStyle(.secondary)
             Text(template.name).font(.title.bold())

@@ -2,26 +2,17 @@ import Foundation
 import Observation
 import RideData
 
-/// The finished rides, kept as FIT files in a folder when there is one.
 @Observable
 final class RideLibrary {
-  /// Newest first.
   private(set) var rides: [Ride]
-  /// What went wrong the last time a ride could not be written to the folder, until the rider
-  /// has seen it. The ride stays in History for the rest of the session either way.
   var storageProblem: String?
-  /// Called with each ride added or removed on this device, but not with those that arrive from
-  /// or leave with another device.
-  @ObservationIgnored var onChange: ((Change) -> Void)?
+  @ObservationIgnored var onLocalChange: ((Change) -> Void)?
   @ObservationIgnored private let directory: URL?
   @ObservationIgnored private var files: [Ride.ID: URL] = [:]
-  /// The rides already on Strava, keyed by `stravaKey`, with their activity page when known
-  /// (empty when Strava only said it already had the ride).
   private(set) var stravaActivities: [String: String]
   @ObservationIgnored private let defaults: UserDefaults?
   private static let stravaActivitiesKey = "stravaActivities"
 
-  /// Holds `rides` in memory only, for previews and sample rides.
   init(rides: [Ride] = []) {
     self.rides = rides.sorted { $0.recording.startDate > $1.recording.startDate }
     directory = nil
@@ -29,8 +20,6 @@ final class RideLibrary {
     stravaActivities = [:]
   }
 
-  /// Loads the FIT files in `directory`, skipping any that cannot be read, and saves new rides
-  /// there.
   init(directory: URL, defaults: UserDefaults = .standard) {
     self.directory = directory
     self.defaults = defaults
@@ -51,12 +40,10 @@ final class RideLibrary {
     rides.sort { $0.recording.startDate > $1.recording.startDate }
   }
 
-  /// Where rides are kept between launches.
   static var storageDirectory: URL {
     URL.documentsDirectory.appending(path: "Rides", directoryHint: .isDirectory)
   }
 
-  /// Adds the rides in `urls`. Returns a description of each file that could not be read.
   @discardableResult
   func open(_ urls: [URL]) -> [String] {
     var failures: [String] = []
@@ -72,22 +59,19 @@ final class RideLibrary {
     return failures
   }
 
-  /// Decodes `data` and adds it, unless the same file is already in the library.
   @discardableResult
   func add(_ data: Data) throws -> Ride.ID {
     let ride = Ride(recording: try FITDecoder.decode(data), fileData: data)
-    if insert(ride) { onChange?(.added(ride.id)) }
+    if insertIfNew(ride) { onLocalChange?(.added(ride.id)) }
     return ride.id
   }
 
-  /// Adds a ride another device added. Returns its ID if the library did not have it.
   func receive(_ data: Data) throws -> Ride.ID? {
     let ride = Ride(recording: try FITDecoder.decode(data), fileData: data)
-    return insert(ride) ? ride.id : nil
+    return insertIfNew(ride) ? ride.id : nil
   }
 
-  /// Whether the ride was new to the library.
-  private func insert(_ ride: Ride) -> Bool {
+  private func insertIfNew(_ ride: Ride) -> Bool {
     guard self[ride.id] == nil else { return false }
     rides.append(ride)
     rides.sort { $0.recording.startDate > $1.recording.startDate }
@@ -95,7 +79,6 @@ final class RideLibrary {
     return true
   }
 
-  /// Adds a ride that has just been ridden.
   @discardableResult
   func save(_ recording: RideRecording) -> Ride.ID? {
     do {
@@ -109,38 +92,31 @@ final class RideLibrary {
   func remove(_ id: Ride.ID) {
     guard self[id] != nil else { return }
     removeReceived(id)
-    onChange?(.removed(id))
+    onLocalChange?(.removed(id))
   }
 
-  /// Removes a ride another device removed.
   func removeReceived(_ id: Ride.ID) {
     rides.removeAll { $0.id == id }
     if let url = files.removeValue(forKey: id) { try? FileManager.default.removeItem(at: url) }
   }
 
-  /// Whether the ride is known to be on Strava.
   func isOnStrava(_ ride: Ride) -> Bool { stravaActivities[Self.stravaKey(ride)] != nil }
 
-  /// The ride's activity page on Strava, when it is known.
   func stravaURL(of ride: Ride) -> URL? {
     stravaActivities[Self.stravaKey(ride)].flatMap(URL.init(string:))
   }
 
-  /// Remembers that the ride is on Strava, at `url` when that is known.
   func markOnStrava(_ ride: Ride, url: URL?) {
     let key = Self.stravaKey(ride)
-    // Keep a known page rather than forgetting it when Strava later reports a duplicate.
     if url == nil, stravaActivities[key] != nil { return }
     stravaActivities[key] = url?.absoluteString ?? ""
     defaults?.set(stravaActivities, forKey: Self.stravaActivitiesKey)
   }
 
-  /// Rides get a fresh `id` each launch, so uploads are remembered by when the ride started.
   private static func stravaKey(_ ride: Ride) -> String {
     ride.recording.startDate.formatted(.iso8601)
   }
 
-  /// Where the ride's file is kept, unless it could not be written.
   func fileURL(for id: Ride.ID) -> URL? { files[id] }
 
   enum Change: Equatable {
@@ -161,7 +137,6 @@ final class RideLibrary {
     }
   }
 
-  /// A file named for when the ride started, with a number added if that name is taken.
   private func uniqueURL(for recording: RideRecording, in directory: URL) -> URL {
     let stamp = recording.startDate.formatted(
       .iso8601.year().month().day().time(includingFractionalSeconds: false)
@@ -175,8 +150,6 @@ final class RideLibrary {
     return url
   }
 
-  /// Whether the rides are kept on this device, rather than in memory for previews and sample
-  /// rides.
   var isStored: Bool { directory != nil }
 
   subscript(id: Ride.ID?) -> Ride? {

@@ -1,8 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// One kind of device as its symbol: with a green dot when connected, or orange with an orange
-/// dot when it is missing.
 struct DeviceStatusIcon: View {
   let kind: FitnessService
   let isConnected: Bool

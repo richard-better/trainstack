@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Every change to the rider's zones, newest first. Each entry's day can be corrected, and an
-/// entry can be deleted.
 struct ZoneHistoryView: View {
   @Environment(RiderSettingsStore.self) private var store
   @Environment(\.dismiss) private var dismiss
@@ -44,7 +42,6 @@ struct ZoneHistoryView: View {
       }
     }
     #if os(macOS)
-      // A sheet on macOS is only as big as its content asks for.
       .frame(minWidth: 480, minHeight: 420)
     #endif
   }

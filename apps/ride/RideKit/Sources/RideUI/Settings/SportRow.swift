@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A sport in the list of zones, noting when it has none of its own.
 struct SportRow: View {
   let sport: Sport
   @Environment(RiderSettingsStore.self) private var store

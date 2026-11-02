@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A number in the workout detail's row of stats, centred over its label.
 struct WorkoutStat: View {
   let label: String
   let value: String

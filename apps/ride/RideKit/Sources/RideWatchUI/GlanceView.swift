@@ -4,9 +4,6 @@
   import RideStyle
   import SwiftUI
 
-  /// The ride at a glance: time left in the interval, power against its target, and heart rate
-  /// with its zone and source. Wrist down, it dims to what changes slowly: the minutes left, the
-  /// target and the zone.
   struct GlanceView: View {
     let glance: RideGlance
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
@@ -14,7 +11,7 @@
     var body: some View {
       VStack(alignment: .leading, spacing: 4) {
         if let interval = glance.interval {
-          Text(remaining(interval.remaining))
+          Text(interval.remainingClock(minutesOnly: isLuminanceReduced))
             .font(.system(size: 44, weight: isLuminanceReduced ? .medium : .semibold))
             .tracking(-1)
             .padding(.top, 4)
@@ -45,32 +42,35 @@
       }
     }
 
-    /// Minutes and seconds, or wrist down only the minutes, such as `8:–`.
-    private func remaining(_ seconds: TimeInterval) -> String {
-      let clock = Duration.seconds(seconds.rounded(.up)).formatted(.time(pattern: .minuteSecond))
-      guard isLuminanceReduced, let separator = clock.lastIndex(where: { !$0.isNumber }) else {
-        return clock
-      }
-      return clock[...separator] + "–"
-    }
-
-    @ViewBuilder private func power(in interval: RideGlance.Interval) -> some View {
-      let color = interval.zone.color.opacity(isLuminanceReduced ? 0.55 : 1)
+    private func power(in interval: RideGlance.Interval) -> some View {
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         if isLuminanceReduced {
-          // The target holds for the whole interval, unlike live power.
-          if let target = interval.targetPower {
-            Text("\(target) W").font(.system(size: 30, weight: .medium)).foregroundStyle(color)
-          }
+          targetPowerHeldAllInterval(interval)
         } else {
-          Text(glance.power.map(String.init) ?? "--")
-            .font(.system(size: 30, weight: .semibold))
-            .foregroundStyle(color)
-            .contentTransition(.numericText())
-          Text(interval.targetPower.map { "/ \($0) W" } ?? "W")
-            .font(.system(size: 14))
-            .foregroundStyle(.secondary)
+          livePower(against: interval)
         }
+      }
+    }
+
+    @ViewBuilder private func targetPowerHeldAllInterval(
+      _ interval: RideGlance.Interval
+    ) -> some View {
+      if let target = interval.targetPower {
+        Text("\(target) W")
+          .font(.system(size: 30, weight: .medium))
+          .foregroundStyle(interval.zone.color.opacity(0.55))
+      }
+    }
+
+    private func livePower(against interval: RideGlance.Interval) -> some View {
+      HStack(alignment: .firstTextBaseline, spacing: 6) {
+        Text(glance.power.map(String.init) ?? "--")
+          .font(.system(size: 30, weight: .semibold))
+          .foregroundStyle(interval.zone.color)
+          .contentTransition(.numericText())
+        Text(interval.targetPower.map { "/ \($0) W" } ?? "W")
+          .font(.system(size: 14))
+          .foregroundStyle(.secondary)
       }
     }
 
@@ -96,17 +96,16 @@
     }
   }
 
-  /// How much of the interval has been ridden, as a thin bar.
-  struct IntervalProgress: View {
+  private struct IntervalProgress: View {
     let progress: Double
     let color: Color
 
     var body: some View {
       Capsule()
         .fill(.quaternary)
-        .overlay(alignment: .leading) {
-          GeometryReader { proxy in
-            Capsule().fill(color).frame(width: proxy.size.width * progress)
+        .overlay {
+          LeadingFraction(fraction: progress) {
+            Capsule().fill(color)
           }
         }
         .frame(height: 4)
@@ -116,25 +115,24 @@
     }
   }
 
-  /// The interval's name in its zone colour, such as "Threshold 2/3", or that the ride is paused.
-  struct IntervalTitle: View {
-    let glance: RideGlance
-    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+  private struct LeadingFraction: Layout {
+    let fraction: Double
 
-    var body: some View {
-      if glance.isPaused {
-        Text("Paused").foregroundStyle(.orange)
-      } else if let interval = glance.interval {
-        Text(interval.title)
-          .foregroundStyle(interval.zone.color.opacity(isLuminanceReduced ? 0.55 : 1))
-      } else {
-        Text("Done").foregroundStyle(.green)
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+      proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(
+      in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) {
+      let filled = ProposedViewSize(width: bounds.width * fraction, height: bounds.height)
+      for subview in subviews {
+        subview.place(at: bounds.origin, anchor: .topLeading, proposal: filled)
       }
     }
   }
 
-  /// A heart rate zone's number on its colour, such as "Z3".
-  struct ZoneChip: View {
+  private struct ZoneChip: View {
     let zone: RideGlance.HeartRateZone
 
     var body: some View {
@@ -150,9 +148,7 @@
     }
   }
 
-  /// Which sensor the heart rate comes from. A chest strap takes over from the watch when one is
-  /// connected, since the wrist lags when gripping the bars.
-  struct HeartRateSourceLabel: View {
+  private struct HeartRateSourceLabel: View {
     let source: HeartRateSource
 
     var body: some View {
@@ -179,12 +175,12 @@
   }
 
   extension RideGlance {
-    /// The design's sample: the second of three threshold efforts, part way through.
     static func sample(heartRateSource: HeartRateSource = .watch) -> RideGlance {
       RideGlance(
         workoutName: "Threshold waves 3×12",
         interval: .init(
-          index: 4, zone: .threshold, number: 2, count: 3, targetPower: 250, remaining: 522,
+          index: 4, zone: .threshold, numberInZone: 2, countInZone: 3, targetPower: 250,
+          remaining: 522,
           duration: 720),
         next: .init(zone: .recovery, targetPower: 120), power: 248,
         heartRate: heartRateSource == .chestStrap ? 154 : 152, heartRateSource: heartRateSource,

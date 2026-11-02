@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Where the time went: recent time in zone beside the year's intensity when there is room,
-/// otherwise one above the other.
 struct BreakdownSections: View {
   let rides: [RideRecording]
 

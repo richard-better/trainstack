@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// The app's sections: a sidebar on macOS and iPad, a tab bar on iPhone. On iOS a ride in
-/// progress shows above the tab bar while the player is minimised.
 struct AppTabs: View {
   @Binding var destination: AppDestination
   @Binding var today: TodayState
@@ -10,7 +8,6 @@ struct AppTabs: View {
   @Binding var historySelection: Ride.ID?
   @Binding var settingsPath: [SettingsPage]
   let library: RideLibrary
-  /// Where the player zooms from and back to.
   let player: Namespace.ID
   @Environment(RideLauncher.self) private var launcher
   @State private var todayPath: [WorkoutTemplate] = []
@@ -46,7 +43,6 @@ struct AppTabs: View {
     }
     .tabViewStyle(.sidebarAdaptable)
     #if os(iOS)
-      // The tab bar shrinks while scrolling down, and the ride accessory goes inline with it.
       .tabBarMinimizeBehavior(.onScrollDown)
       .tabViewBottomAccessory(isEnabled: launcher.ride != nil) {
         if let ride = launcher.ride {

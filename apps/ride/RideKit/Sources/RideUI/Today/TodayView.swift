@@ -2,8 +2,6 @@ import RideBluetooth
 import RideData
 import SwiftUI
 
-/// What to ride today: three suggestions, each a different kind of day, sized to the time the
-/// rider has. Cards side by side with room; on iPhone a featured pick and compact rows.
 struct TodayView: View {
   @Binding var state: TodayState
   let openSettings: () -> Void
@@ -13,7 +11,7 @@ struct TodayView: View {
   #endif
 
   var body: some View {
-    let suggestions = TodaySuggestion.suggestions(minutes: minutes, shuffle: state.shuffle)
+    let suggestions = TodaySuggestion.suggestions(minutes: minutes, shuffle: state.shuffleCount)
     Group {
       if isWide {
         TodayCards(
@@ -22,8 +20,8 @@ struct TodayView: View {
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
             let selected =
-              suggestions.indices.contains(state.selection)
-              ? suggestions[state.selection] : suggestions.first
+              suggestions.indices.contains(state.selectedIndex)
+              ? suggestions[state.selectedIndex] : suggestions.first
             StartButton(
               template: selected?.template,
               title: selected.map { "Start \($0.template.name)" } ?? "Start"

@@ -9,16 +9,12 @@ public struct RootView: View {
   @State private var settings = RiderSettingsStore.launchStore()
   @State private var launcher = RideLauncher.launchLauncher()
   @State private var account = TrainStackAccount.launchAccount()
-  /// Where Back to app returns to from Settings.
-  @State private var appDestination = AppDestination.today
+  @State private var destinationBeforeSettings = AppDestination.today
   @State private var settingsPage = SettingsPage.zones(.all)
   @State private var settingsPath: [SettingsPage] = []
-  // The tabs are rebuilt when Settings takes over the sidebar, so what the rider chose in them
-  // is held here.
   @State private var today = TodayState()
   @State private var workouts = WorkoutsState()
   @State private var historySelection: Ride.ID?
-  /// What Send Feedback attaches, from when it was opened; nil while it is closed.
   @State private var feedback: FeedbackContext?
   @State private var windowSize: CGSize?
   @Namespace private var player
@@ -32,7 +28,6 @@ public struct RootView: View {
   public var body: some View {
     Group {
       if destination == .settings && hasSidebar {
-        // Settings takes over the sidebar, like drilling into System Settings.
         SettingsSplitView(page: $settingsPage, back: backToApp)
       } else {
         AppTabs(
@@ -46,7 +41,7 @@ public struct RootView: View {
     .sheet(isPresented: feedbackShown) {
       if let feedback { FeedbackSheet(context: feedback) }
     }
-    .onGeometryChange(for: CGSize.self, of: Self.windowSize) { windowSize = $0 }
+    .onGeometryChange(for: CGSize.self, of: Self.sizeIncludingSafeAreas) { windowSize = $0 }
     .environment(settings)
     .environment(launcher)
     .environment(launcher.devices)
@@ -62,14 +57,13 @@ public struct RootView: View {
       "Pick Up Your Ride?", isPresented: interruptedShown, presenting: launcher.interrupted
     ) { _ in
       Button("Resume") {
-        launcher.resumeInterrupted(
-          heartRateZones: settings.heartRateZones, riderWeight: settings.weight)
+        launcher.resumeInterrupted(heartRateZones: settings.heartRateZones)
       }
       Button("Save What I Rode") { launcher.saveInterrupted(to: library) }
       Button("Discard", role: .destructive, action: launcher.discardInterrupted)
     } message: { interrupted in
       Text(
-        "\(interrupted.name) stopped after \(interrupted.state.elapsed.clockString) of riding. Resume it where you left off, or save what you rode."
+        "\(interrupted.name) stopped after \(interrupted.session.elapsed.clockString) of riding. Resume it where you left off, or save what you rode."
       )
     }
     .alert("Couldn't Save the Ride", isPresented: storageProblemShown) {
@@ -81,11 +75,10 @@ public struct RootView: View {
       launcher.powerDisplay = powerDisplay
     }
     .onChange(of: destination) { _, destination in
-      if destination != .settings { appDestination = destination }
+      if destination != .settings { destinationBeforeSettings = destination }
     }
     #if os(iOS)
       .onChange(of: scenePhase, initial: true) { _, phase in
-        // Rides that could not be saved to Health while the app was away.
         guard phase == .active else { return }
         Task { await HealthRides.shared.savePending(from: library) }
       }
@@ -98,7 +91,6 @@ public struct RootView: View {
     #endif
   }
 
-  /// Whether the app has a sidebar for Settings to take over, rather than a tab bar.
   private var hasSidebar: Bool {
     #if os(iOS)
       sizeClass == .regular
@@ -107,29 +99,30 @@ public struct RootView: View {
     #endif
   }
 
-  private func backToApp() { destination = appDestination }
+  private func backToApp() { destination = destinationBeforeSettings }
 
-  /// The whole window, safe areas included, which is what the root view's geometry leaves out.
-  nonisolated private static func windowSize(_ geometry: GeometryProxy) -> CGSize {
+  nonisolated private static func sizeIncludingSafeAreas(_ geometry: GeometryProxy) -> CGSize {
     let insets = geometry.safeAreaInsets
     return CGSize(
       width: geometry.size.width + insets.leading + insets.trailing,
       height: geometry.size.height + insets.top + insets.bottom)
   }
 
-  /// Opens Send Feedback, for a signed-in rider only. On iOS the player covers the window, which
-  /// a sheet from here cannot go over, so the rider minimises it first.
   private var sendFeedback: SendFeedbackAction? {
-    guard account.isSignedIn else { return nil }
-    #if os(iOS)
-      if launcher.isPlayerPresented { return nil }
-    #endif
+    guard account.isSignedIn, !playerCoversSheets else { return nil }
     return SendFeedbackAction {
       feedback = .current(screen: screenName, window: windowSize)
     }
   }
 
-  /// What the rider is looking at, for feedback.
+  private var playerCoversSheets: Bool {
+    #if os(iOS)
+      launcher.isPlayerPresented
+    #else
+      false
+    #endif
+  }
+
   private var screenName: String {
     if launcher.isPlayerPresented { return "the player" }
     return switch destination {
@@ -141,7 +134,6 @@ public struct RootView: View {
     }
   }
 
-  /// Shown while an interrupted ride waits; the buttons are what end it.
   private var interruptedShown: Binding<Bool> {
     Binding(get: { launcher.interrupted != nil }, set: { _ in })
   }

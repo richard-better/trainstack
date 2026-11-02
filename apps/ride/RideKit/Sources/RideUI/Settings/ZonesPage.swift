@@ -1,19 +1,15 @@
 import RideData
 import SwiftUI
 
-/// A scope's thresholds and zones for one metric at a time, chosen in the toolbar.
 struct ZonesPage: View {
   let scope: ZoneScope
   @State private var metric = ZoneMetric.heartRate
   @State private var isShowingHistory = false
-  /// Side margins that keep the rows no wider than is comfortable to read, or nil for the
-  /// system's own.
   @State private var margins: EdgeInsets?
   @Environment(RiderSettingsStore.self) private var store
 
   private var metrics: [ZoneMetric] { store.current.metrics(in: scope) }
 
-  /// The chosen metric, or the scope's first when it has no zones for that one.
   private var shownMetric: ZoneMetric {
     metrics.contains(metric) ? metric : metrics.first ?? metric
   }
@@ -45,7 +41,6 @@ struct ZonesPage: View {
       ZonesSection(scope: scope, metric: metric)
     }
     .formStyle(.grouped)
-    // Limiting the form's own width would leave its background short of the column's edges.
     .contentMargins(.leading, margins?.leading, for: .scrollContent)
     .contentMargins(.trailing, margins?.trailing, for: .scrollContent)
     .onGeometryChange(for: EdgeInsets?.self, of: readableMargins) { margins = $0 }
@@ -68,10 +63,10 @@ struct ZonesPage: View {
     .onChange(of: scope) { self.metric = shownMetric }
   }
 
-  /// Margins that centre 700 points of rows. They include the safe area, such as under the
-  /// sidebar on iPad, which content margins otherwise only overlap.
+  nonisolated private static let readableWidth = 700.0
+
   nonisolated private func readableMargins(of proxy: GeometryProxy) -> EdgeInsets? {
-    let extra = (proxy.size.width - 700) / 2
+    let extra = (proxy.size.width - Self.readableWidth) / 2
     guard extra > 30 else { return nil }
     let safeArea = proxy.safeAreaInsets
     return EdgeInsets(

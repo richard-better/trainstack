@@ -24,15 +24,15 @@ struct WorkoutChartScaleTests {
     for peak in [140.0, 380, 560] {
       let scale = WorkoutChartScale(peakPower: peak, heartRates: heartRates)
       #expect(scale.heartRateFloor % scale.heartRateStep == 0)
-      #expect(scale.position(ofHeartRate: Double(heartRates.lowerBound)) >= 0)
-      #expect(scale.position(ofHeartRate: Double(heartRates.upperBound)) <= scale.powerMaximum)
+      #expect(scale.watts(atHeartRate: Double(heartRates.lowerBound)) >= 0)
+      #expect(scale.watts(atHeartRate: Double(heartRates.upperBound)) <= scale.powerMaximum)
     }
   }
 
   @Test func readsBackTheHeartRateItPlaces() {
     let scale = WorkoutChartScale(peakPower: 380, heartRates: 120...175)
     for bpm in [120.0, 133, 150.5, 175] {
-      #expect(abs(scale.heartRate(at: scale.position(ofHeartRate: bpm)) - bpm) < 1e-9)
+      #expect(abs(scale.heartRate(at: scale.watts(atHeartRate: bpm)) - bpm) < 1e-9)
     }
   }
 

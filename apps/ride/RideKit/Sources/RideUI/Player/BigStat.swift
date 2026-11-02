@@ -1,14 +1,11 @@
 import SwiftUI
 
-/// One of the player's four main numbers, with its label above and a detail line below.
 struct BigStat<Label: View>: View {
   let value: String
   let unit: String
-  /// A line under the number. Every stat keeps room for one so the numbers line up.
   var detail = ""
   @ViewBuilder let label: Label
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  /// Big enough to read from the saddle, and bigger still with larger text.
   @ScaledMetric(relativeTo: .largeTitle) private var valueSize = 84.0
 
   var body: some View {

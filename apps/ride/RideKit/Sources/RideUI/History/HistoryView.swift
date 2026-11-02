@@ -1,27 +1,26 @@
 import RideData
 import SwiftUI
 
-/// Finished rides. With room to spare the list and the selected ride sit side by side, as in
-/// Mail; otherwise the list pushes the ride full width.
 struct HistoryView: View {
   let library: RideLibrary
   @Binding var selection: Ride.ID?
-  /// Workouts opened from the selected ride.
   @State private var workoutPath: [WorkoutTemplate] = []
   @State private var isImporting = false
-  /// What went wrong opening the last files, while it is shown.
   @State private var failures: [String]?
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
   #endif
 
-  /// Whether the list and the ride are on screen together, rather than one pushing the other.
   private var showsBothColumns: Bool {
     #if os(iOS)
       sizeClass == .regular
     #else
       true
     #endif
+  }
+
+  private func selectNewestRideWhenBothColumnsShow() {
+    if showsBothColumns, selection == nil { selection = library.rides.first?.id }
   }
 
   var body: some View {
@@ -46,14 +45,8 @@ struct HistoryView: View {
       }
     }
     .onChange(of: selection) { workoutPath = [] }
-    // The split view always has a ride to show, like Mail's. On a phone, selecting one would
-    // push it, so there the rider chooses.
-    .onChange(of: library.rides.first?.id, initial: true) { _, newest in
-      if showsBothColumns, selection == nil { selection = newest }
-    }
-    .onChange(of: showsBothColumns) { _, showsBothColumns in
-      if showsBothColumns, selection == nil { selection = library.rides.first?.id }
-    }
+    .onChange(of: library.rides.first?.id, initial: true) { selectNewestRideWhenBothColumnsShow() }
+    .onChange(of: showsBothColumns) { selectNewestRideWhenBothColumnsShow() }
     .fileImporter(
       isPresented: $isImporting, allowedContentTypes: [.fitFile], allowsMultipleSelection: true
     ) { result in

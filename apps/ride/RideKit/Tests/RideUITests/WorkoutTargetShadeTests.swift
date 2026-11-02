@@ -4,7 +4,6 @@ import Testing
 @testable import RideUI
 
 struct WorkoutTargetShadeTests {
-  /// The second interval of a workout, from 600 to 900 seconds at `power` watts.
   private func interval(power: Int = 190) -> RideSession.Interval {
     let workout = Workout(
       name: "Three steps",

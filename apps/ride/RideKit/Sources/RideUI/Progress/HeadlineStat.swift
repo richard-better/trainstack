@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A headline number on Progress, with its label above.
 struct HeadlineStat<Content: View>: View {
   let label: String
   var swatch: Color?

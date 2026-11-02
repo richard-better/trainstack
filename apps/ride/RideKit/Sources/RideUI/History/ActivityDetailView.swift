@@ -2,16 +2,13 @@ import RideData
 import RideStrava
 import SwiftUI
 
-/// A finished ride: when it happened, the headline numbers, the effort over time, and zones.
 struct ActivityDetailView: View {
   let ride: Ride
   let library: RideLibrary
   var onRemove: () -> Void
   @State private var isExporting = false
   @State private var isConfirmingRemove = false
-  /// Why the last export failed, while it is shown.
   @State private var exportError: String?
-  /// How sending the ride to Strava ended, while it is shown.
   @State private var stravaOutcome: StravaOutcome?
   @State private var isSendingToStrava = false
   @Environment(RiderSettingsStore.self) private var store
@@ -47,7 +44,6 @@ struct ActivityDetailView: View {
         ShareLink(item: ride, preview: SharePreview(ride.title))
       }
       #if os(iOS)
-        // Its actions join the system's own overflow menu rather than nesting in it.
         ToolbarOverflowMenu { moreActions }
       #else
         ToolbarItem {
@@ -55,7 +51,6 @@ struct ActivityDetailView: View {
         }
       #endif
     }
-    // Attached outside the menu, which the system owns on iOS, so that it can present.
     .confirmationDialog("Remove this ride from History?", isPresented: $isConfirmingRemove) {
       Button("Remove Ride", role: .destructive, action: onRemove)
     } message: {
@@ -83,7 +78,6 @@ struct ActivityDetailView: View {
     }
   }
 
-  /// Whether the ride is on its way to Strava or already there.
   @ViewBuilder private var stravaStatus: some View {
     if isSendingToStrava {
       Label("Sending to Strava…", systemImage: "arrow.up.circle")
@@ -122,7 +116,6 @@ struct ActivityDetailView: View {
     Binding(get: { stravaOutcome != nil }, set: { if !$0 { stravaOutcome = nil } })
   }
 
-  /// Sends the ride to Strava, if the rider has set that up in Settings.
   private func sendToStrava() {
     Task {
       isSendingToStrava = true
@@ -167,7 +160,7 @@ struct ActivityDetailView: View {
       result.append(
         .init(label: "On target", value: "\(Int((onTarget * 100).rounded()))", unit: "%"))
     }
-    if let distance = summary.distance {
+    if let distance = summary.distanceMetres {
       result.append(
         .init(
           label: "Distance",

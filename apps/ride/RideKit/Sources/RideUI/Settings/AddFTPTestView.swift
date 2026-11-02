@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A form for a test's date, kind and result.
 struct AddFTPTestView: View {
   let scope: ZoneScope
   @State private var date = Date.now
@@ -61,7 +60,6 @@ struct AddFTPTestView: View {
       }
     }
     #if os(macOS)
-      // A sheet on macOS is only as big as its content asks for.
       .frame(minWidth: 420, minHeight: 360)
     #endif
   }

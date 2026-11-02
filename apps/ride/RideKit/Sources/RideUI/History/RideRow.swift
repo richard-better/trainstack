@@ -1,14 +1,12 @@
 import RideData
 import SwiftUI
 
-/// A finished ride in History: its title, day, headline numbers and time in zones.
 struct RideRow: View {
   let ride: Ride
   var isOnStrava = false
   @Environment(RiderSettingsStore.self) private var store
 
   var body: some View {
-    // Time in power zones when the rider has them, otherwise in heart rate zones.
     let zoneShares = [ZoneMetric.power, .heartRate].lazy
       .map { store.timeInZones(of: ride.recording, for: $0) }
       .first { !$0.isEmpty }

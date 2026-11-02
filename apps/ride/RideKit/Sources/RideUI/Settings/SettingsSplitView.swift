@@ -2,8 +2,6 @@ import RideBluetooth
 import RideData
 import SwiftUI
 
-/// Settings in its own sidebar, which takes over from the app's until Back to app. On macOS and
-/// iPad; iPhone uses `SettingsList` in a tab instead.
 struct SettingsSplitView: View {
   @Binding var page: SettingsPage
   let back: () -> Void

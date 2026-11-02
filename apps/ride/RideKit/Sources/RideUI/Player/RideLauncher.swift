@@ -1,26 +1,16 @@
 import Foundation
 import Observation
 import RideBluetooth
+import RideCore
 import RideData
 
-/// Starts and ends rides. Held by the root view, which shows the player while a ride is on.
-///
-/// A ride takes power and cadence from its selected sensors, and heart rate from the rider's
-/// paired strap and from an Apple Watch: on iPhone
-/// directly, as the watch starts its workout with the ride, and on the Mac through an iPhone
-/// relaying it.
 @Observable
 final class RideLauncher {
   private(set) var ride: RideController?
-  /// A ride the app was closed on without ending, until the rider decides what to do with it.
-  private(set) var interrupted: RideJournal.Interrupted?
-  /// Whether the player is showing. The rider can minimise it while the ride carries on.
+  private(set) var interrupted: InterruptedRide?
   var isPlayerPresented = false
-  /// Whether the player is asking the rider to confirm ending the ride.
   var isConfirmingEnd = false
-  /// The rider's devices, which stay connected between rides.
   let devices: BluetoothDevices
-  /// How rides show power, passed on to the ride as the rider changes it.
   var powerDisplay = PowerDisplay.standard {
     didSet { ride?.powerDisplay = powerDisplay }
   }
@@ -46,8 +36,6 @@ final class RideLauncher {
     devices.onHeartRate = { [heartRate] bpm in heartRate.record(bpm, from: .chestStrap) }
   }
 
-  /// Starts `template` with targets from `ftp`, unless a ride is already on or one is waiting
-  /// to be dealt with. `riderWeight` sets the rider's speed for their power.
   func start(
     _ template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet?, riderWeight: Double
   ) {
@@ -55,7 +43,8 @@ final class RideLauncher {
     let session = RideSession(workout: template.workout(ftp: ftp), riderWeight: riderWeight)
     let journal = RideJournal(
       directory: journalDirectory,
-      header: .init(template: template, ftp: ftp, startDate: session.startDate))
+      header: .init(
+        template: template, ftp: ftp, startDate: session.startDate, riderWeight: riderWeight))
     begin(
       RideController(
         template: template, ftp: ftp, heartRateZones: heartRateZones, heartRate: heartRate,
@@ -74,8 +63,6 @@ final class RideLauncher {
       watch.startWorkout()
     #endif
     #if os(macOS)
-      // The rider's iPhone saves the ride to Health once it syncs, in place of the watch's
-      // workout.
       watchRelay.start(claim: AppSync.shared.claim)
     #endif
     keepAwake.begin()
@@ -84,7 +71,6 @@ final class RideLauncher {
     isPlayerPresented = true
   }
 
-  /// Ends the ride, keeping it in `library` if there is one.
   func end(saveTo library: RideLibrary? = nil) {
     if let recording = ride?.session.recording(), !recording.samples.isEmpty, let library {
       keep(recording, in: library)
@@ -104,7 +90,6 @@ final class RideLauncher {
     #endif
   }
 
-  /// Saves a ride to `library`, and on iPhone and iPad to Health.
   private func keep(_ recording: RideRecording, in library: RideLibrary) {
     #if os(iOS)
       if let id = library.save(recording) { HealthRides.shared.save(id, from: library) }
@@ -113,31 +98,23 @@ final class RideLauncher {
     #endif
   }
 
-  // MARK: Interrupted rides
-
-  /// Looks for a ride left over from a crash or a quit, to offer to pick it up.
   func checkForInterruptedRide() {
     guard ride == nil, interrupted == nil else { return }
     interrupted = RideJournal.recover(from: journalDirectory)
   }
 
-  /// Carries on the interrupted ride, paused where it stopped.
-  func resumeInterrupted(heartRateZones: ZoneSet?, riderWeight: Double) {
+  func resumeInterrupted(heartRateZones: ZoneSet?) {
     guard ride == nil, let interrupted else { return }
     self.interrupted = nil
     begin(
       RideController(
-        template: interrupted.header.template, ftp: interrupted.header.ftp,
-        heartRateZones: heartRateZones, heartRate: heartRate, devices: devices,
-        session: interrupted.session(riderWeight: riderWeight),
-        journal: RideJournal(resuming: journalDirectory),
-        simulated: simulated))
+        resuming: interrupted, heartRateZones: heartRateZones, heartRate: heartRate,
+        devices: devices, journal: RideJournal(resuming: journalDirectory), simulated: simulated))
   }
 
-  /// Keeps what was ridden of the interrupted ride in `library`.
   func saveInterrupted(to library: RideLibrary) {
     guard let interrupted else { return }
-    keep(interrupted.session().recording(), in: library)
+    keep(interrupted.session.recording(), in: library)
     discardInterrupted()
   }
 

@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Sign in with Apple for builds that go through Apple's web flow, drawn as Apple's guidelines
-/// draw the native button: the Apple logo and "Sign in with Apple", black on a light background
-/// and white on a dark one.
 struct WebSignInWithAppleButton: View {
+  private static let titleSizeAt43PercentOfTheButtonHeight: CGFloat = 19
+  private static let buttonHeight: CGFloat = 44
+
   var isWorking = false
   var action: () -> Void
   @Environment(\.colorScheme) private var colorScheme
@@ -18,10 +18,9 @@ struct WebSignInWithAppleButton: View {
         }
         Text("Sign in with Apple")
       }
-      // Apple sizes the title at 43% of the button's height.
-      .font(.system(size: 19, weight: .medium))
+      .font(.system(size: Self.titleSizeAt43PercentOfTheButtonHeight, weight: .medium))
       .foregroundStyle(foreground)
-      .frame(maxWidth: .infinity, minHeight: 44)
+      .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
       .background(background, in: .rect(cornerRadius: 6))
       .contentShape(.rect(cornerRadius: 6))
     }

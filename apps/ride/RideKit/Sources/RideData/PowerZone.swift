@@ -1,7 +1,5 @@
 import Foundation
 
-/// The six classic power bands, as fractions of FTP. Workouts are described by them, since a
-/// workout's steps are set as a share of FTP rather than in a rider's own zones.
 public enum PowerZone: Int, CaseIterable, Codable, Sendable {
   case recovery, endurance, tempo, threshold, vo2Max, anaerobic
 
@@ -16,8 +14,7 @@ public enum PowerZone: Int, CaseIterable, Codable, Sendable {
     }
   }
 
-  /// Lower bound of the zone as a fraction of FTP.
-  private var lowerBound: Double {
+  var lowestIntensity: Double {
     switch self {
     case .recovery: 0
     case .endurance: 0.55
@@ -32,8 +29,7 @@ public enum PowerZone: Int, CaseIterable, Codable, Sendable {
     zone(intensity: Double(power) / Double(ftp))
   }
 
-  /// The zone of a power given as a fraction of FTP.
   public static func zone(intensity: Double) -> PowerZone {
-    allCases.last { intensity >= $0.lowerBound } ?? .recovery
+    allCases.last { intensity >= $0.lowestIntensity } ?? .recovery
   }
 }

@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// How training is going: fitness, fatigue and form as numbers first, then the trend, then
-/// where the time went.
 struct TrainingProgressView: View {
   let library: RideLibrary
   let openSettings: () -> Void
@@ -36,14 +34,12 @@ struct TrainingProgressView: View {
     .navigationTitle("Progress")
   }
 
-  /// Daily load for the longest span, starting early enough that fitness has built up by the
-  /// first day shown. Each ride is scored against the FTP in effect on its day.
   private func dailyLoad(of rides: [RideRecording]) -> [TrainingLoad] {
     let today = Date.now
-    let lead = Int(TrainingLoad.fitnessDays) * 3
+    let fitnessWarmUpDays = Int(TrainingLoad.fitnessDays) * 3
     guard
       let start = calendar.date(
-        byAdding: .day, value: -(ProgressSpan.oneYear.days + lead), to: today)
+        byAdding: .day, value: -(ProgressSpan.oneYear.days + fitnessWarmUpDays), to: today)
     else { return [] }
     return TrainingLoad.daily(
       stress: rides.stressByDay(calendar: calendar) { settings.ftp(for: $0) }, from: start,

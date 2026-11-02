@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// One of a ride's sensors as its symbol, with a badge for how it is doing: a green dot while it
-/// reports, a grey one while it connects, a yellow warning once it has gone quiet, and a red
-/// cross when it is not connected.
 struct SensorStatusIcon: View {
   let status: SensorStatus
 
@@ -42,7 +39,6 @@ struct SensorStatusIcon: View {
     }
   }
 
-  /// What the icon tells, for the tooltip and VoiceOver.
   var summary: String {
     let health =
       switch status.health {

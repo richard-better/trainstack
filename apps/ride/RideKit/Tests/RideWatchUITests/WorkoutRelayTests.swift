@@ -14,12 +14,12 @@ struct WorkoutRelayTests {
   @Test func tapsTheWristAsGlancesCountDownAnInterval() {
     let relay = WorkoutRelay()
     var cues: [IntervalCue] = []
-    relay.onCue = { cues.append($0) }
+    relay.playCue = { cues.append($0) }
     relay.start(fromPhone: true)
     for remaining in stride(from: 12.0, through: 0, by: -1) {
       relay.receive(.glance(glance(remaining: remaining)))
     }
-    #expect(cues == [.warning, .count(3), .count(2), .count(1)])
+    #expect(cues == [.warning, .secondsLeft(3), .secondsLeft(2), .secondsLeft(1)])
     #expect(relay.glance?.glance == glance(remaining: 0))
   }
 
@@ -33,7 +33,7 @@ struct WorkoutRelayTests {
 
   @Test func endsTheWorkoutWhenTheRideEnds() {
     let relay = WorkoutRelay()
-    relay.onCue = { _ in }
+    relay.playCue = { _ in }
     relay.start(fromPhone: true)
     relay.receive(.glance(glance(remaining: 300)))
     relay.receive(.rideEnded)

@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Time left in the interval, time ridden and left in the workout, speed and distance. One row
-/// when it fits, otherwise two.
 struct PlayerSecondaryStats: View {
   let session: RideSession
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -10,17 +8,16 @@ struct PlayerSecondaryStats: View {
   var body: some View {
     let intervalLeft = SmallStat(
       label: "Interval left", value: session.intervalRemaining?.clockString ?? "—")
-    // The workout's length is in the title; what is left of it is what the rider counts down.
     let elapsed = SmallStat(
       label: "Elapsed", value: session.elapsed.clockString,
       unit: session.isComplete
         ? "/ \(session.duration.clockString)" : "· \(session.remaining.clockString) left")
     let speed = SmallStat(
       label: "Speed",
-      value: (session.speed * 3.6).formatted(.oneDecimal),
+      value: (session.speedMetresPerSecond * 3.6).formatted(.oneDecimal),
       unit: "km/h")
     let distance = SmallStat(
-      label: "Distance", value: (session.distance / 1000).formatted(.oneDecimal), unit: "km")
+      label: "Distance", value: (session.distanceMetres / 1000).formatted(.oneDecimal), unit: "km")
     Group {
       if dynamicTypeSize.isAccessibilitySize {
         VStack(alignment: .leading, spacing: 8) {

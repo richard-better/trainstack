@@ -2,7 +2,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// A zone's name after a dot in its colour, heading the workouts that train it.
 struct ZoneLabel: View {
   let zone: PowerZone
 

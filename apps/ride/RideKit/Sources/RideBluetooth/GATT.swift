@@ -1,7 +1,5 @@
 import CoreBluetooth
 
-/// The Bluetooth services and characteristics Ride uses, beyond the ones that identify a
-/// fitness device.
 @MainActor
 enum GATT {
   static let heartRate = CBUUID(string: FitnessService.heartRate.rawValue)

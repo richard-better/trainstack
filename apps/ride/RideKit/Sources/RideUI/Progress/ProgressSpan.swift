@@ -1,4 +1,3 @@
-/// How far back the Progress trend looks.
 enum ProgressSpan: CaseIterable {
   case sixWeeks, sixMonths, oneYear
 

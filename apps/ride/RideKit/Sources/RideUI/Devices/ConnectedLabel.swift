@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A green dot and "Connected".
 struct ConnectedLabel: View {
   var body: some View {
     HStack(spacing: 5) {

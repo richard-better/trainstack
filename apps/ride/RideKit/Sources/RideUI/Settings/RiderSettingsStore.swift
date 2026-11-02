@@ -2,41 +2,32 @@ import Foundation
 import Observation
 import RideData
 
-/// The rider's settings as the app reads and edits them. Edits take effect today, are saved
-/// as they are made, and a threshold outside its allowed range is ignored.
 @Observable
 final class RiderSettingsStore {
   private(set) var settings: RiderSettings
-  /// How the player shows power.
   var powerDisplay: PowerDisplay {
     didSet { if let defaults { powerDisplay.save(to: defaults) } }
   }
   @ObservationIgnored private let defaults: UserDefaults?
 
-  /// Loads from `defaults` and saves back to it.
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
     settings = RiderSettings.load(from: defaults)
     powerDisplay = PowerDisplay.load(from: defaults)
   }
 
-  /// Holds `settings` in memory only, for previews and sample rides.
   init(settings: RiderSettings) {
     self.defaults = nil
     self.settings = settings
     powerDisplay = .standard
   }
 
-  /// The zones in effect today.
   var current: ZoneProfile { settings.history.current }
 
-  /// The FTP an indoor ride's targets are set from today: cycling's own, or else Default's.
   var ftp: Int? { current.value(of: .ftp, in: .sport(.cycling)) }
 
-  /// The heart rate zones an indoor ride is shown in today.
   var heartRateZones: ZoneSet? { current.zones(for: .heartRate, in: .cycling) }
 
-  /// The rider's weight in kilograms. A weight outside `RiderSettings.weightRange` is ignored.
   var weight: Double {
     get { settings.weight }
     set {
@@ -47,20 +38,15 @@ final class RiderSettingsStore {
 
   var historyEntries: [ZoneHistory.Entry] { settings.history.entries }
 
-  // MARK: Activities
-
-  /// The zones `recording` is analysed with: those of its sport on the day it was recorded.
   func zones(for metric: ZoneMetric, of recording: RideRecording) -> ZoneSet? {
     settings.history.profile(on: recording.startDate).zones(for: metric, in: recording.sport)
   }
 
-  /// The settings behind `zones(for:of:)`.
   func settings(for metric: ZoneMetric, of recording: RideRecording) -> MetricZones? {
     settings.history.profile(on: recording.startDate)
       .settings(for: metric, in: recording.sport.map(ZoneScope.sport) ?? .all)
   }
 
-  /// Time in each of the zones `recording` is analysed with, or none without zones.
   func timeInZones(of recording: RideRecording, for metric: ZoneMetric) -> [ZoneShare] {
     zones(for: metric, of: recording).map { recording.timeInZones($0, of: metric) } ?? []
   }
@@ -68,8 +54,6 @@ final class RiderSettingsStore {
   func ftp(for recording: RideRecording) -> Int? {
     settings(for: .power, of: recording)?.thresholds[.ftp]
   }
-
-  // MARK: Editing
 
   subscript(threshold: Threshold, scope: ZoneScope) -> Int? {
     get { current.value(of: threshold, in: scope) }
@@ -79,8 +63,6 @@ final class RiderSettingsStore {
     }
   }
 
-  /// The model a scope's zones for `metric` follow, or nil when they are custom. Setting nil
-  /// leaves them as they are, since custom zones come from editing them.
   subscript(modelFor metric: ZoneMetric, in scope: ZoneScope) -> ZoneModel? {
     get {
       guard let choice = current.settings(for: metric, in: scope)?.choice else { return nil }
@@ -91,7 +73,6 @@ final class RiderSettingsStore {
     }
   }
 
-  /// Where a zone ends, which moves where the next starts. See `setLimit(_:ofZone:for:in:)`.
   subscript(endOfZone index: Int, for metric: ZoneMetric, in scope: ZoneScope) -> Int? {
     get { current.settings(for: metric, in: scope)?.zones?.zones.first { $0.index == index }?.end }
     set {
@@ -99,18 +80,15 @@ final class RiderSettingsStore {
     }
   }
 
-  /// Whether `sport` uses Default's zones for `metric` rather than its own.
   subscript(usesDefault metric: ZoneMetric, in sport: Sport) -> Bool {
     get { current.usesDefault(metric, in: sport) }
     set { setUsesDefault(newValue, for: metric, in: sport) }
   }
 
-  /// Follows `model`, dropping any custom limits.
   func choose(_ model: ZoneModel, in scope: ZoneScope) {
     record(.choice(model.metric, scope: scope, ZoneChoice(model: model)))
   }
 
-  /// Moves the end of a zone, which makes the zones custom. Ignored when it would empty a zone.
   func setLimit(_ limit: Int, ofZone index: Int, for metric: ZoneMetric, in scope: ZoneScope) {
     guard let own = current.settings(for: metric, in: scope),
       let limits = own.zones?.limits(settingZone: index, endTo: limit)
@@ -158,7 +136,6 @@ final class RiderSettingsStore {
     if let defaults { settings.save(to: defaults) }
   }
 
-  /// The settings the design's sample ride was shown with.
   static var sample: RiderSettingsStore {
     var settings = RiderSettings()
     let start = Calendar.current.date(from: DateComponents(year: 2026, month: 9, day: 1)) ?? .now

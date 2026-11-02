@@ -4,7 +4,6 @@ import Testing
 @testable import RideUI
 
 struct WorkoutsStateTests {
-  /// 30 minutes easy, 60 at threshold and 90 at a mix, so each filter has something to drop.
   private let library = [
     WorkoutTemplate(
       name: "Spin", category: .recovery, steps: [.init(duration: 1800, intensity: 0.5)]),

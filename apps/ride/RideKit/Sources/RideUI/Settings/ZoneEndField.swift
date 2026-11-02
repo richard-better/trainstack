@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Where a zone ends, which moves where the next starts.
 struct ZoneEndField: View {
   let zone: Zone
   let metric: ZoneMetric

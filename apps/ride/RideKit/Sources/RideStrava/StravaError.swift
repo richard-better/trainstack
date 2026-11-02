@@ -1,33 +1,20 @@
 import Foundation
 
 public enum StravaError: Error, Equatable, Sendable {
-  /// The rider backed out of signing in or connecting.
   case cancelled
-  /// The rider did not let Ride upload activities.
   case missingPermission
-  /// The server has no Strava application set up.
   case notConfigured
-  /// Apple or the server did not accept the sign-in.
   case signInFailed
-  /// The device would not store the sign-in, so it would be gone after a relaunch.
   case sessionNotKept
   case connectFailed
-  /// That Strava account is connected to another TrainStack account.
   case athleteInUse
-  /// Only accounts made with Sign in with Apple can connect Strava.
   case appleAccountRequired
-  /// There is no TrainStack account signed in, or the server no longer accepts its session.
   case signedOut
-  /// The account has not connected Strava, or the rider revoked Ride in Strava.
   case notConnected
   case rateLimited
-  /// The server or Strava could not be reached.
   case unavailable
-  /// Strava already has this ride, as `activityID` when it says which.
   case duplicate(activityID: Int?)
-  /// Strava or the server turned the file down, with its reason.
-  case rejected(String)
-  /// Strava is still working on an upload.
+  case rejected(reason: String)
   case stillProcessing
 }
 

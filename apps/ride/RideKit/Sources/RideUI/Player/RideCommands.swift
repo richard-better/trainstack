@@ -1,9 +1,6 @@
 import RideData
 import SwiftUI
 
-/// The Controls menu: the player's controls with their keyboard shortcuts, in the menu bar on the
-/// Mac and in the shortcuts overlay when holding ⌘ on iPad. They work on the ride in the
-/// focused window, and only while one is on.
 public struct RideCommands: Commands {
   @FocusedValue(\.rideLauncher) private var launcher
 
@@ -39,7 +36,6 @@ public struct RideCommands: Commands {
     .disabled(!command.isEnabled(in: launcher))
   }
 
-  /// Ticked for the trainer's mode, and switches to the mode when chosen.
   private func modeBinding(_ mode: TrainerMode) -> Binding<Bool> {
     Binding(
       get: { RideCommand.mode(mode).isChecked(in: launcher) },
@@ -50,6 +46,5 @@ public struct RideCommands: Commands {
 }
 
 extension FocusedValues {
-  /// What starts and ends rides in the focused window, for the Controls menu.
   @Entry var rideLauncher: RideLauncher?
 }

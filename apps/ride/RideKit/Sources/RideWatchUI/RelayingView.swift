@@ -1,8 +1,6 @@
 #if os(watchOS)
   import SwiftUI
 
-  /// Heart rate on its own, while the watch relays it for a ride the phone is not running, such
-  /// as one on a Mac.
   struct RelayingView: View {
     let startDate: Date
     let heartRate: Int?

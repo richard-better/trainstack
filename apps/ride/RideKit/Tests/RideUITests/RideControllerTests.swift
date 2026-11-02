@@ -65,8 +65,8 @@ struct RideControllerTests {
     #expect(controller.session.samples.count == 1)
     #expect(abs(controller.session.elapsed - 3) < 0.1)
 
-    // The measurement is what calls it, but too soon after the last tick it does nothing.
-    transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 250, 0]))
+    let measurementTooSoonAfterTheLastTick = Data([0x45, 0, 180, 0, 250, 0])
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, measurementTooSoonAfterTheLastTick)
     #expect(controller.session.samples.count == 1)
   }
 
@@ -158,7 +158,8 @@ struct RideControllerTests {
   }
 
   @Test func placesHeartRateInTheRidersZones() throws {
-    // Percent of a 186 bpm max: zone 2 ends at 129 and zone 3 starts at 130.
+    let topOfZone2 = 129
+    let bottomOfZone3 = 130
     let zones = try #require(RiderSettingsStore.sample.heartRateZones)
     let feed = HeartRateFeed()
     let controller = RideController(
@@ -166,11 +167,11 @@ struct RideControllerTests {
     let now = Date.now
     controller.tick(seconds: 1, at: now)
     #expect(controller.heartRateZone == nil)
-    feed.record(129, from: .chestStrap, at: now)
+    feed.record(topOfZone2, from: .chestStrap, at: now)
     controller.tick(seconds: 1, at: now)
     #expect(controller.heartRateZone?.label == "2")
     #expect(controller.heartRateZone?.name == "Aerobic")
-    feed.record(130, from: .chestStrap, at: now)
+    feed.record(bottomOfZone3, from: .chestStrap, at: now)
     controller.tick(seconds: 1, at: now)
     #expect(controller.heartRateZone?.label == "3")
     #expect(controller.heartRateZone?.name == "Tempo")
@@ -217,8 +218,11 @@ struct RideControllerTests {
     controller.skipInterval()
     #expect(controller.totals.intervalAveragePower == nil)
     #expect(controller.totals.averagePower == paused.averagePower)
+  }
 
-    // A ride carried on starts with what it had added up to.
+  @Test func aResumedRideStartsWithTheTotalsItHadAddedUpTo() {
+    let controller = RideController(template: template, ftp: 200, simulated: true)
+    for _ in 0..<90 { controller.tick(seconds: 1) }
     let resumed = RideController(
       template: template, ftp: 200, session: controller.session, simulated: true)
     #expect(resumed.totals == controller.totals)
@@ -329,24 +333,24 @@ struct RideControllerTests {
     answerLastWrite()
     answerLastWrite()
     let power = controller.session.targetPower!
-    #expect(transport.trainerWrites.last == FitnessMachineCommand.targetPower(power).data)
+    #expect(transport.trainerWrites.last == FitnessMachineCommand.targetPower(watts: power).data)
 
     answerLastWrite()
     controller.adjust(by: 5)
     #expect(
       transport.trainerWrites.last
-        == FitnessMachineCommand.targetPower(controller.session.targetPower!).data)
+        == FitnessMachineCommand.targetPower(watts: controller.session.targetPower!).data)
     #expect(controller.session.targetPower! > power)
 
     answerLastWrite()
     controller.mode = .slope
-    #expect(transport.trainerWrites.last == FitnessMachineCommand.simulation(grade: 2).data)
+    #expect(transport.trainerWrites.last == FitnessMachineCommand.simulation(gradePercent: 2).data)
 
     answerLastWrite()
     controller.mode = .level
     #expect(
       transport.trainerWrites.last
-        == FitnessMachineCommand.targetResistance(60, wide: false).data)
+        == FitnessMachineCommand.targetResistance(level: 60, wide: false).data)
 
     answerLastWrite()
     controller.stop()
@@ -357,8 +361,8 @@ struct RideControllerTests {
     let (devices, transport, trainer) = cyclingDevices()
     let heartRate = HeartRateFeed()
     let session = RideSession(workout: template.workout(ftp: 200))
-    // From an earlier ride, so not this one's.
-    heartRate.record(140, from: .watch, at: session.startDate - 60)
+    let duringAnEarlierRide = session.startDate - 60
+    heartRate.record(140, from: .watch, at: duringAnEarlierRide)
     let controller = RideController(
       template: template, ftp: 200, heartRate: heartRate, devices: devices, session: session,
       simulated: false)

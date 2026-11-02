@@ -2,8 +2,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// The heart rate's label and zone in its colour, stacked when larger text leaves too little room
-/// for a row.
 struct PlayerHeartRateLabel: View {
   let zone: Zone?
 

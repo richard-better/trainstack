@@ -1,12 +1,9 @@
 import SwiftUI
 
-/// A filter as a capsule naming what it filters by, or its choice once one is made. Its menu
-/// lists the choices.
 struct FilterMenu<Value: Hashable, Choices: View>: View {
   let title: String
   @Binding var selection: Value
-  /// The choice that filters nothing.
-  let any: Value
+  let unfiltered: Value
   let choiceTitle: (Value) -> String
   @ViewBuilder let choices: Choices
 
@@ -16,7 +13,7 @@ struct FilterMenu<Value: Hashable, Choices: View>: View {
         .pickerStyle(.inline)
     } label: {
       HStack(spacing: 5) {
-        Text(selection == any ? title : choiceTitle(selection))
+        Text(selection == unfiltered ? title : choiceTitle(selection))
         Image(systemName: "chevron.down")
           .font(.caption2.weight(.bold))
           .foregroundStyle(.secondary)

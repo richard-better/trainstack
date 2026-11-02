@@ -1,10 +1,8 @@
 import Foundation
 
-/// A finished ride: the second-by-second samples and the summary of the whole session.
 public struct RideRecording: Equatable, Sendable {
   public var startDate: Date
   public var workoutName: String?
-  /// Nil when the file does not say, or names a sport Ride keeps no zones for.
   public var sport: Sport?
   public var samples: [Sample]
   public var summary: Summary
@@ -20,48 +18,42 @@ public struct RideRecording: Equatable, Sendable {
     self.summary = summary
   }
 
-  public struct Sample: Equatable, Identifiable, Codable, Sendable {
-    /// Seconds since the start of the ride.
+  public struct Sample: Equatable, Identifiable, Sendable {
     public var elapsed: TimeInterval
     public var power: Int?
-    /// The power the trainer was set to hold, in ERG mode. Nil when the ride had no target.
     public var targetPower: Int?
     public var heartRate: Int?
     public var cadence: Int?
-    /// Metres per second.
-    public var speed: Double?
-    /// Metres since the start of the ride.
-    public var distance: Double?
-
+    public var speedMetresPerSecond: Double?
+    public var distanceMetres: Double?
     public init(
       elapsed: TimeInterval, power: Int? = nil, targetPower: Int? = nil, heartRate: Int? = nil,
-      cadence: Int? = nil, speed: Double? = nil, distance: Double? = nil
+      cadence: Int? = nil, speedMetresPerSecond: Double? = nil, distanceMetres: Double? = nil
     ) {
       self.elapsed = elapsed
       self.power = power
       self.targetPower = targetPower
       self.heartRate = heartRate
       self.cadence = cadence
-      self.speed = speed
-      self.distance = distance
+      self.speedMetresPerSecond = speedMetresPerSecond
+      self.distanceMetres = distanceMetres
     }
   }
 
   public struct Summary: Equatable, Sendable {
     public var duration: TimeInterval
-    /// Metres.
-    public var distance: Double?
+    public var distanceMetres: Double?
     public var averagePower: Int?
     public var maxPower: Int?
     public var averageHeartRate: Int?
     public var maxHeartRate: Int?
 
     public init(
-      duration: TimeInterval, distance: Double? = nil, averagePower: Int? = nil,
+      duration: TimeInterval, distanceMetres: Double? = nil, averagePower: Int? = nil,
       maxPower: Int? = nil, averageHeartRate: Int? = nil, maxHeartRate: Int? = nil
     ) {
       self.duration = duration
-      self.distance = distance
+      self.distanceMetres = distanceMetres
       self.averagePower = averagePower
       self.maxPower = maxPower
       self.averageHeartRate = averageHeartRate
@@ -69,8 +61,6 @@ public struct RideRecording: Equatable, Sendable {
     }
   }
 
-  /// A name for the exported `.fit` file. The workout name comes from the file, so anything that
-  /// could move the path out of its directory is replaced.
   public var exportFileName: String {
     let date = startDate.formatted(.iso8601.year().month().day())
     let forbidden = CharacterSet(charactersIn: "/\\:").union(.controlCharacters)
@@ -83,10 +73,9 @@ public struct RideRecording: Equatable, Sendable {
   public var hasPower: Bool { samples.contains { $0.power != nil } }
   public var hasTarget: Bool { samples.contains { $0.targetPower != nil } }
   public var hasHeartRate: Bool { samples.contains { $0.heartRate != nil } }
-  public var hasSpeed: Bool { samples.contains { $0.speed != nil } }
+  public var hasSpeed: Bool { samples.contains { $0.speedMetresPerSecond != nil } }
 }
 
 extension RideRecording.Sample {
-  /// Unique within a recording, which has at most one sample per moment.
   public var id: TimeInterval { elapsed }
 }

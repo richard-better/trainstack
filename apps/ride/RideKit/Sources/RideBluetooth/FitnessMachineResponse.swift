@@ -1,7 +1,5 @@
 import Foundation
 
-/// The trainer's indication on the Fitness Machine Control Point once it has carried out, or
-/// refused, a command.
 struct FitnessMachineResponse: Equatable, Sendable {
   enum Result: UInt8, Sendable {
     case success = 0x01
@@ -11,22 +9,22 @@ struct FitnessMachineResponse: Equatable, Sendable {
     case notPermitted = 0x05
   }
 
-  /// The op code of the command answered.
-  let opCode: UInt8
+  static let responseCode: UInt8 = 0x80
+
+  let requestOpCode: UInt8
   let result: Result
 
-  init(opCode: UInt8, result: Result) {
-    self.opCode = opCode
+  init(requestOpCode: UInt8, result: Result) {
+    self.requestOpCode = requestOpCode
     self.result = result
   }
 
   init?(_ data: Data) {
     var reader = BluetoothValueReader(data)
-    guard reader.uint8() == 0x80, let opCode = reader.uint8(), let code = reader.uint8() else {
-      return nil
-    }
-    self.opCode = opCode
-    // Codes reserved for future use are failures as far as Ride can tell.
+    guard reader.uint8() == Self.responseCode, let requestOpCode = reader.uint8(),
+      let code = reader.uint8()
+    else { return nil }
+    self.requestOpCode = requestOpCode
     result = Result(rawValue: code) ?? .failed
   }
 }

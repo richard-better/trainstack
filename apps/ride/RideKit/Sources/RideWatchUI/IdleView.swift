@@ -1,8 +1,6 @@
 #if os(watchOS)
   import SwiftUI
 
-  /// Before a workout: rides start on the phone, or the rider starts relaying here for a ride on
-  /// a Mac.
   struct IdleView: View {
     let start: () -> Void
 

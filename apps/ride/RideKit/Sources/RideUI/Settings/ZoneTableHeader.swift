@@ -4,8 +4,8 @@ import SwiftUI
 struct ZoneTableHeader: View {
   let reference: Threshold
   let hasPercentColumn: Bool
-  @ScaledMetric private var limitWidth = ZoneColumn.limit
-  @ScaledMetric private var percentWidth = ZoneColumn.percent
+  @ScaledMetric private var limitWidth = ZoneColumnWidth.limit
+  @ScaledMetric private var percentWidth = ZoneColumnWidth.percent
 
   var body: some View {
     HStack(spacing: 10) {

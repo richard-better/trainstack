@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Stats side by side, sharing the width, with a rule between each.
 struct DividedRow<Content: View>: View {
-  /// The space either side of each rule.
   var spacing = 20.0
   @ViewBuilder let content: Content
 

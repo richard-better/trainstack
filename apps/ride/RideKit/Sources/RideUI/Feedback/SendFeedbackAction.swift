@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Opens Send Feedback over the window. Only there while the rider is signed in, since feedback
-/// goes through their account. Call it like a function, as with SwiftUI's `OpenURLAction`.
 struct SendFeedbackAction {
   private let handler: () -> Void
 
@@ -19,6 +17,5 @@ extension EnvironmentValues {
 }
 
 extension FocusedValues {
-  /// Send Feedback for the focused window, for the Help menu.
   @Entry var sendFeedback: SendFeedbackAction?
 }

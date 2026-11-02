@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A legend entry: a block for an area, a short line for a line.
 struct LegendSwatch: View {
   let title: String
   let fill: AnyShapeStyle

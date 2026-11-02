@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A menu of the sports not listed yet.
 struct AddSportMenu: View {
   let added: (Sport) -> Void
   @Environment(RiderSettingsStore.self) private var store

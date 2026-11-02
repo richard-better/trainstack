@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import RideData
 import Testing
@@ -5,7 +6,6 @@ import Testing
 @testable import RideUI
 
 struct RideLibraryTests {
-  /// An empty folder for one test, removed when `body` returns.
   private func withDirectory(_ body: (URL) throws -> Void) throws {
     let directory = FileManager.default.temporaryDirectory.appending(
       path: "RideLibraryTests-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -17,7 +17,6 @@ struct RideLibraryTests {
     try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
   }
 
-  /// A ride of the quick test workout that started at `startDate`, as the controller records it.
   private func quickTest(startDate: Date = .now) throws -> RideRecording {
     let template = try #require(WorkoutTemplate.named("Quick test 45s"))
     var session = RideSession(workout: template.workout(ftp: 200), startDate: startDate)
@@ -36,8 +35,6 @@ struct RideLibraryTests {
       let sent = try #require(library.rides.first)
       let url = try #require(URL(string: "https://www.strava.com/activities/42"))
       library.markOnStrava(sent, url: url)
-      // A later duplicate report without an ID keeps the page already known.
-      library.markOnStrava(sent, url: nil)
 
       let reopened = RideLibrary(directory: directory, defaults: defaults)
       let rides = reopened.rides
@@ -46,6 +43,15 @@ struct RideLibraryTests {
       #expect(reopened.stravaURL(of: rides[0]) == url)
       #expect(!reopened.isOnStrava(rides[1]))
     }
+  }
+
+  @Test func aLaterDuplicateReportWithoutAPageKeepsTheKnownStravaPage() throws {
+    let library = RideLibrary.sample()
+    let ride = try #require(library.rides.first)
+    let url = try #require(URL(string: "https://www.strava.com/activities/42"))
+    library.markOnStrava(ride, url: url)
+    library.markOnStrava(ride, url: nil)
+    #expect(library.stravaURL(of: ride) == url)
   }
 
   @Test func keepsASavedRideBetweenLaunches() throws {
@@ -69,7 +75,7 @@ struct RideLibraryTests {
 
   @Test func namesTheFileForWhenTheRideStarted() throws {
     try withDirectory { directory in
-      let start = Date(timeIntervalSince1970: 1_791_296_475)  // 2026-10-06 14:21:15 UTC
+      let start = Date(timeIntervalSince1970: 1_791_296_475)
       RideLibrary(directory: directory).save(try quickTest(startDate: start))
       #expect(try fileNames(in: directory) == ["20261006T142115Z.fit"])
     }
@@ -97,11 +103,19 @@ struct RideLibraryTests {
     }
   }
 
+  @Test func aRidesIDIsTheSHA256OfItsFileSoEveryDeviceAgreesOnIt() throws {
+    let recording = try quickTest(startDate: .init(timeIntervalSince1970: 1_800_000_000))
+    let data = try FITEncoder.encode(recording)
+    let expected = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    #expect(Ride(recording: recording, fileData: data).id == expected)
+    #expect(try RideLibrary().receive(data) == expected)
+  }
+
   @Test func tellsWhatChangesOnThisDevice() throws {
     try withDirectory { directory in
       let library = RideLibrary(directory: directory)
       var changes: [RideLibrary.Change] = []
-      library.onChange = { changes.append($0) }
+      library.onLocalChange = { changes.append($0) }
       let id = try #require(library.save(try quickTest()))
       library.save(try quickTest(startDate: .now.addingTimeInterval(-3600)))
       library.remove(id)
@@ -115,7 +129,7 @@ struct RideLibraryTests {
     try withDirectory { directory in
       let library = RideLibrary(directory: directory)
       var changes: [RideLibrary.Change] = []
-      library.onChange = { changes.append($0) }
+      library.onLocalChange = { changes.append($0) }
       let data = FITEncoder.encode(try quickTest())
       let id = try #require(try library.receive(data))
       #expect(try library.receive(data) == nil)
@@ -161,8 +175,8 @@ struct RideLibraryTests {
 
   @Test func keepsTheRideAndSaysSoWhenItCannotBeWritten() throws {
     try withDirectory { directory in
-      // A file where the folder should be.
-      try Data().write(to: directory)
+      let fileWhereTheFolderShouldBe = directory
+      try Data().write(to: fileWhereTheFolderShouldBe)
       let library = RideLibrary(directory: directory)
       library.save(try quickTest())
       #expect(library.rides.count == 1)

@@ -2,8 +2,6 @@
   import RideLink
   import SwiftUI
 
-  /// The watch app: a button to relay heart rate until a workout starts, then the ride, with the
-  /// workout's controls a swipe away.
   public struct WatchRootView: View {
     @State private var relay = WorkoutRelay.shared
     @State private var page = Page.ride
@@ -11,11 +9,13 @@
 
     private enum Page { case controls, ride }
 
+    private static let wristDownRefreshInterval: TimeInterval = 60
+    private static let wristUpRefreshInterval: TimeInterval = 1
+
     public init() {}
 
     public var body: some View {
-      // Wrist down, the screen changes at most once a minute.
-      TimelineView(.periodic(from: .now, by: isLuminanceReduced ? 60 : 1)) { context in
+      TimelineView(.periodic(from: .now, by: refreshInterval)) { context in
         let screen = WatchScreen(workout: relay.workout, glance: relay.glance, at: context.date)
         if screen == .idle {
           NavigationStack {
@@ -48,12 +48,15 @@
             return
           }
         #endif
-        await relay.requestAuthorization()
+        await relay.requestAuthorizationBeforeTheFirstRide()
       }
+    }
+
+    private var refreshInterval: TimeInterval {
+      isLuminanceReduced ? Self.wristDownRefreshInterval : Self.wristUpRefreshInterval
     }
   }
 
-  /// The page that follows the workout.
   private struct ScreenView: View {
     let screen: WatchScreen
     let relay: WorkoutRelay
@@ -64,7 +67,8 @@
         EmptyView()
       case .starting(let count):
         StartingView(
-          count: count, workoutName: relay.glance?.glance.workoutName, heartRate: relay.heartRate,
+          count: count, workoutName: relay.glance?.glance.workoutName,
+          heartRate: relay.measuredHeartRate,
           isPhoneConnected: relay.isPhoneConnected)
       case .glance(let glance):
         GlanceView(glance: glance)
@@ -72,7 +76,7 @@
         IntervalEndingView(glance: glance, seconds: seconds)
       case .relaying:
         RelayingView(
-          startDate: relay.workout?.startDate ?? .now, heartRate: relay.heartRate,
+          startDate: relay.workout?.startDate ?? .now, heartRate: relay.measuredHeartRate,
           isPhoneConnected: relay.isPhoneConnected)
       }
     }

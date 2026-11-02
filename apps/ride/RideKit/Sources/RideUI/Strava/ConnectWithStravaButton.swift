@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// Strava's brand guidelines ask for their own "Connect with Strava" artwork. This stands in for
-/// it, in their orange, until the artwork is added for the app's review by Strava.
 struct ConnectWithStravaButton: View {
+  private static let stravaOrange = Color(red: 252 / 255, green: 76 / 255, blue: 2 / 255)
   var isWorking = false
   var action: () -> Void
 
@@ -15,7 +14,7 @@ struct ConnectWithStravaButton: View {
       .frame(maxWidth: .infinity)
     }
     .buttonStyle(.borderedProminent)
-    .tint(Color(red: 252 / 255, green: 76 / 255, blue: 2 / 255))
+    .tint(Self.stravaOrange)
     .disabled(isWorking)
   }
 }

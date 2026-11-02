@@ -2,7 +2,6 @@ import Foundation
 import RideData
 
 extension ZoneMetric {
-  /// `Heart rate`, for headings.
   var title: String {
     switch self {
     case .heartRate: "Heart rate"
@@ -11,7 +10,6 @@ extension ZoneMetric {
     }
   }
 
-  /// `heart rate`, for use within a sentence.
   var name: String {
     switch self {
     case .heartRate: "heart rate"
@@ -20,7 +18,6 @@ extension ZoneMetric {
     }
   }
 
-  /// The unit values are shown in, such as `bpm` or `/km`.
   func unit(in sport: Sport?) -> String {
     switch self {
     case .heartRate: "bpm"
@@ -29,7 +26,6 @@ extension ZoneMetric {
     }
   }
 
-  /// A value as it is shown: a number, or minutes and seconds for pace.
   func format(_ value: Int) -> String {
     self == .pace ? PaceFormat().format(value) : "\(value)"
   }
@@ -76,7 +72,6 @@ extension ZoneScope {
 }
 
 extension ZoneChange {
-  /// What the change did, such as `Default: FTP 220 W`.
   var summary: String {
     switch self {
     case .threshold(let threshold, let scope, let value):

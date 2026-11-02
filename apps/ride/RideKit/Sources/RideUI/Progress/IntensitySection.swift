@@ -3,8 +3,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// Hours at each intensity per month for the last 12 months, from power zones when the rider
-/// has an FTP and heart rate zones otherwise.
 struct IntensitySection: View {
   let rides: [RideRecording]
   @Environment(RiderSettingsStore.self) private var settings
@@ -75,7 +73,6 @@ struct IntensitySection: View {
     }
   }
 
-  /// Time at each intensity, from the first of power and heart rate the ride has zones for.
   private func intensities(of ride: RideRecording) -> [(Intensity, TimeInterval)] {
     let shares = [ZoneMetric.power, .heartRate].lazy.map {
       settings.timeInZones(of: ride, for: $0)

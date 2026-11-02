@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// How long and how hard a workout is: duration, stress, intensity factor and average power.
 struct WorkoutStats: View {
   let template: WorkoutTemplate
   let ftp: Int?

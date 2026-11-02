@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Lays out its subviews side by side across the width it is offered, each as wide as its share
-/// of the row's total `layoutProportion`, with `spacing` between them.
 struct ProportionalRow: Layout {
   var spacing = 0.0
 

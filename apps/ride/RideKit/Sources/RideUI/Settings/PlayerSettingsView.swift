@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// How the player shows a ride.
 struct PlayerSettingsView: View {
   @Environment(RiderSettingsStore.self) private var store
 

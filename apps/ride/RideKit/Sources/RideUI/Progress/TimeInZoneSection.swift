@@ -1,22 +1,20 @@
 import RideData
 import SwiftUI
 
-/// Time in each zone over the last four weeks, by power or heart rate.
 struct TimeInZoneSection: View {
   let rides: [RideRecording]
   @State private var choice: ZoneMetric?
   @Environment(RiderSettingsStore.self) private var settings
   @Environment(\.calendar) private var calendar
 
-  /// The metrics the rider has Default zones for.
-  private var metrics: [ZoneMetric] {
+  private var metricsWithZones: [ZoneMetric] {
     [ZoneMetric.power, .heartRate].filter { settings.current.zones(for: $0, in: nil) != nil }
   }
 
   var body: some View {
     let title = Text("Time in zone · last 4 weeks").font(.headline)
     VStack(alignment: .leading, spacing: 14) {
-      if metrics.count > 1 {
+      if metricsWithZones.count > 1 {
         ViewThatFits(in: .horizontal) {
           HStack {
             title
@@ -31,7 +29,7 @@ struct TimeInZoneSection: View {
       } else {
         title
       }
-      if let metric = choice ?? metrics.first {
+      if let metric = choice ?? metricsWithZones.first {
         let shares = recentRides.map { settings.timeInZones(of: $0, for: metric) }.combined()
         if shares.isEmpty {
           Text("No rides with this data in the last 4 weeks.")
@@ -45,16 +43,17 @@ struct TimeInZoneSection: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .onChange(of: metrics, initial: true) { _, metrics in
-      if let choice, metrics.contains(choice) { return }
-      choice = metrics.first
+    .onChange(of: metricsWithZones, initial: true) { _, metricsWithZones in
+      if let choice, metricsWithZones.contains(choice) { return }
+      choice = metricsWithZones.first
     }
   }
 
   private var picker: some View {
     SegmentedPicker(
-      title: "Zones", options: metrics,
-      selection: Binding(get: { choice ?? metrics[0] }, set: { choice = $0 }), label: \.title
+      title: "Zones", options: metricsWithZones,
+      selection: Binding(get: { choice ?? metricsWithZones[0] }, set: { choice = $0 }),
+      label: \.title
     )
     .fixedSize()
   }

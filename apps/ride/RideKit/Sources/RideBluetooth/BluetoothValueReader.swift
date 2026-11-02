@@ -1,6 +1,5 @@
 import Foundation
 
-/// Reads little-endian GATT fields without assuming alignment or a complete packet.
 struct BluetoothValueReader {
   private let bytes: [UInt8]
   private var offset = 0
