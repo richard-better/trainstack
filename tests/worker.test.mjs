@@ -201,6 +201,40 @@ test("email and password sign-in is disabled even for a legacy account with a va
   assert.equal(response.headers.get("set-cookie"), null);
 });
 
+test("Sign in with Apple never joins a legacy email account with the same address", async () => {
+  const db = await runtime.getD1Database("DB");
+  const email = "unverified-legacy@example.com";
+  await db.batch([
+    db
+      .prepare('INSERT INTO "user" (id, name, email, updated_at) VALUES (?, ?, ?, ?)')
+      .bind("unverified-legacy", "Someone Else", email, Date.now()),
+    db
+      .prepare(
+        "INSERT INTO account (id, account_id, provider_id, user_id, password, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .bind(
+        "unverified-legacy-credential",
+        "unverified-legacy",
+        "credential",
+        "unverified-legacy",
+        await hashPassword("test-password-12345"),
+        Date.now(),
+      ),
+  ]);
+  const response = await apple.attemptSignIn(runtime, { email });
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).code, "OAUTH_LINK_ERROR");
+  assert.equal(response.headers.get("set-auth-token"), null);
+  const providers = await db
+    .prepare("SELECT provider_id FROM account WHERE user_id = ?")
+    .bind("unverified-legacy")
+    .all();
+  assert.deepEqual(
+    providers.results.map((row) => row.provider_id),
+    ["credential"],
+  );
+});
+
 test("Sign in with Apple is offered to the app and refuses a token that is not Apple's", async () => {
   const response = await runtime.dispatchFetch(`${api}/api/auth/sign-in/social`, {
     method: "POST",

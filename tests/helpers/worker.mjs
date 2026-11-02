@@ -7,10 +7,6 @@ import { rolldown } from "rolldown";
 export const origin = "https://trainstackhq.com";
 export const api = "https://api.trainstackhq.com";
 
-/**
- * Builds the API Worker and runs it in Cloudflare's local Workers runtime with a D1 database.
- * `outboundService` answers the Worker's requests to other servers, such as Strava.
- */
 export async function startWorker({ bindings = {}, outboundService } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "trainstack-worker-"));
   const bundle = await rolldown({
@@ -57,7 +53,6 @@ export async function startWorker({ bindings = {}, outboundService } = {}) {
   };
 }
 
-/** Applies the committed migrations, as deployment does. */
 export async function migrate(runtime) {
   const db = await runtime.getD1Database("DB");
   const migrations = "hosted/apps/api/src/db/migrations";

@@ -41,17 +41,15 @@ const links = [
   const signOutButton = document.getElementById("signout-button");
 
   async function checkSession() {
-    try {
-      const { data: session } = await authClient.getSession();
-      if (session?.user) {
-        loginLink?.classList.add("hidden");
-        userMenu?.classList.remove("hidden");
-        if (userDisplay) {
-          userDisplay.textContent = session.user.name || session.user.email?.split("@")[0] || "User";
-        }
-      }
-    } catch (e) {
-      // Not logged in
+    const session = await authClient.getSession().then(
+      ({ data }) => data,
+      () => null,
+    );
+    if (!session?.user) return;
+    loginLink?.classList.add("hidden");
+    userMenu?.classList.remove("hidden");
+    if (userDisplay) {
+      userDisplay.textContent = session.user.name || session.user.email?.split("@")[0] || "User";
     }
   }
 

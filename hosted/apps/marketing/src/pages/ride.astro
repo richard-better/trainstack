@@ -10,16 +10,20 @@ const metrics = [
   { label: "Cadence", value: "88" },
 ];
 
-// Sweet spot 3 x 12 min: warm-up, three efforts with recoveries, cool-down.
-// Efforts already ridden are lit; the playhead sits in the second one.
-const intervals = [
-  { flex: 4, height: "30%", fill: "bg-ts-graphite" },
-  { flex: 7, height: "80%", fill: "bg-linear-to-b from-ts-silver to-ts-steel" },
-  { flex: 2, height: "35%", fill: "bg-ts-steel" },
-  { flex: 7, height: "80%", fill: "bg-linear-to-b from-ts-silver to-ts-steel" },
-  { flex: 2, height: "35%", fill: "bg-ts-graphite" },
-  { flex: 7, height: "80%", fill: "bg-ts-charcoal" },
-  { flex: 4, height: "25%", fill: "bg-ts-graphite" },
+const warmUp = { flex: 4, height: "30%", fill: "bg-ts-graphite" };
+const riddenEffort = { flex: 7, height: "80%", fill: "bg-linear-to-b from-ts-silver to-ts-steel" };
+const riddenRecovery = { flex: 2, height: "35%", fill: "bg-ts-steel" };
+const recoveryAhead = { flex: 2, height: "35%", fill: "bg-ts-graphite" };
+const effortAhead = { flex: 7, height: "80%", fill: "bg-ts-charcoal" };
+const coolDown = { flex: 4, height: "25%", fill: "bg-ts-graphite" };
+const sweetSpot3x12WithPlayheadInSecondEffort = [
+  warmUp,
+  riddenEffort,
+  riddenRecovery,
+  riddenEffort,
+  recoveryAhead,
+  effortAhead,
+  coolDown,
 ];
 
 const features = [
@@ -101,7 +105,7 @@ const features = [
         </dl>
         <div class="relative flex h-[150px] items-end gap-[3px]" aria-hidden="true">
           {
-            intervals.map((interval) => (
+            sweetSpot3x12WithPlayheadInSecondEffort.map((interval) => (
               <div
                 class:list={["rounded-t-[3px]", interval.fill]}
                 style={{ flex: interval.flex, height: interval.height }}

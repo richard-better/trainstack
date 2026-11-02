@@ -1,4 +1,3 @@
-// Alchemy validates deployment inputs with Varlock; Workers use native env bindings.
 import type { PublicCoercedEnvSchema } from "./env";
 
 export const ENV = {

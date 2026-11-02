@@ -2,10 +2,6 @@ import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, randomUUID, sign } from "node:crypto";
 import { api } from "./worker.mjs";
 
-/**
- * Exercises real Apple token verification against a local signing key, without calling Apple. It
- * also plays Apple's side of the web flow: the sign-in page, the token endpoint and revocation.
- */
 export function mockApple() {
   const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const key = {
@@ -29,11 +25,25 @@ export function mockApple() {
     ].join(".");
     return `${payload}.${sign("RSA-SHA256", Buffer.from(payload), privateKey).toString("base64url")}`;
   };
-  /** Codes Apple's page has handed out and not yet exchanged. */
-  const grants = new Map();
-  /** Every form the API posted to Apple's token and revoke endpoints. */
+  const unexchangedCodes = new Map();
   const tokenRequests = [];
   const revocations = [];
+
+  async function attemptSignIn(runtime, { email, subject = email }) {
+    const nonce = randomUUID();
+    const token = identityToken({
+      aud: "com.trainstackhq.ride",
+      sub: subject,
+      email,
+      name: "Test Rider",
+      nonce: createHash("sha256").update(nonce).digest("hex"),
+    });
+    return runtime.dispatchFetch(`${api}/api/auth/sign-in/social`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: "apple", idToken: { token, nonce } }),
+    });
+  }
 
   return {
     tokenRequests,
@@ -45,8 +55,8 @@ export function mockApple() {
         case "https://appleid.apple.com/auth/token": {
           const form = new URLSearchParams(await request.text());
           tokenRequests.push(form);
-          const grant = grants.get(form.get("code"));
-          grants.delete(form.get("code"));
+          const grant = unexchangedCodes.get(form.get("code"));
+          unexchangedCodes.delete(form.get("code"));
           if (!grant) return Response.json({ error: "invalid_grant" }, { status: 400 });
           return Response.json({
             access_token: "apple-access-token",
@@ -67,10 +77,6 @@ export function mockApple() {
           assert.fail(`Unexpected request to ${request.url}`);
       }
     },
-    /**
-     * Approves Apple's sign-in page at `authorizationURL` and returns the form Apple would post
-     * back. Apple sends the name with the first sign-in only.
-     */
     authorize(
       authorizationURL,
       { email = `${randomUUID()}@example.com`, subject = email, name } = {},
@@ -79,7 +85,7 @@ export function mockApple() {
       assert.equal(`${url.origin}${url.pathname}`, "https://appleid.apple.com/auth/authorize");
       assert.equal(url.searchParams.get("response_mode"), "form_post");
       const code = randomUUID();
-      grants.set(code, { subject, email });
+      unexchangedCodes.set(code, { subject, email });
       const form = new URLSearchParams({ code, state: url.searchParams.get("state") });
       if (name) {
         const [firstName, lastName] = name.split(" ");
@@ -88,19 +94,7 @@ export function mockApple() {
       return { url, form, redirectURI: url.searchParams.get("redirect_uri") };
     },
     async signIn(runtime, { email = `${randomUUID()}@example.com`, subject = email } = {}) {
-      const nonce = randomUUID();
-      const token = identityToken({
-        aud: "com.trainstackhq.ride",
-        sub: subject,
-        email,
-        name: "Test Rider",
-        nonce: createHash("sha256").update(nonce).digest("hex"),
-      });
-      const response = await runtime.dispatchFetch(`${api}/api/auth/sign-in/social`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "apple", idToken: { token, nonce } }),
-      });
+      const response = await attemptSignIn(runtime, { email, subject });
       assert.equal(response.status, 200, await response.clone().text());
       const sessionToken = response.headers.get("set-auth-token");
       assert.ok(sessionToken, "the session token is exposed for the app to keep");
@@ -111,5 +105,6 @@ export function mockApple() {
       const { user } = await response.json();
       return { email, token: sessionToken, cookie, user, response };
     },
+    attemptSignIn,
   };
 }

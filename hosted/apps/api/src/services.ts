@@ -8,11 +8,14 @@ export function getDb(): Database {
   return createDb(ENV);
 }
 export async function createAuth(database?: Database) {
-  return createConfiguredAuth(ENV, database ?? (await getDb()), await webSignInSecret());
+  return createConfiguredAuth(
+    ENV,
+    database ?? (await getDb()),
+    await webSignInSecretOrNoWebFlowIfTheKeyIsBroken(),
+  );
 }
 
-// A broken key turns off Apple's web flow rather than every request.
-async function webSignInSecret() {
+async function webSignInSecretOrNoWebFlowIfTheKeyIsBroken() {
   try {
     return await appleClientSecret(ENV);
   } catch (error) {
