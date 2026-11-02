@@ -116,7 +116,7 @@ extension WorkoutTemplate {
     .init(
       name: "VO2 max booster", category: .vo2Max,
       steps: minutes(
-        [(5, 40), (3, 50), (3, 58), (3, 64), (6, 72), (5, 52), (6, 125), (25, 68), (4, 45)]),
+        [(5, 40), (3, 50), (3, 58), (3, 64), (6, 72), (5, 52), (6, 118), (25, 68), (4, 45)]),
       about:
         "A ramping warm-up, one six-minute effort well above threshold, then a long endurance spin. Raises the ceiling on your aerobic power."
     ),
