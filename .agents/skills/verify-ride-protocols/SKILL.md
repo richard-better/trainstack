@@ -22,36 +22,36 @@ unbounded crashes cannot guarantee eventual delivery. No symmetry reduction is
 used with temporal checking. Each model explores all schedules in its bounds.
 
 - `HealthHandoff`: one ride, with `Phone`, `Mac`, and `PhoneOnly` initial modes.
-  `RideUI/Watch/WatchLink.swift` sends claims through `claimRide` and
-  `relay.onRideRecorded`, and ends through `endRide`.
-  `RideBluetooth/WatchRelayReceiver.swift` and `HeartRateRelay.swift` abstract to
-  an authenticated Mac claim relayed by the phone. Cryptography and heart rate
-  payloads are outside the state machine. `RideLink/LinkMessage.swift` defines
-  the two control messages. These use HealthKit mirroring, not WatchConnectivity;
-  WatchConnectivity only supplies pairing availability. Messages are an unordered
-  set: delivery retains a message, allowing arbitrary duplicates; `Drop` removes
-  it. Connection changes gate delivery. This deliberately overapproximates
-  transport reordering and loss. `RideWatchUI/WorkoutRelay.swift` maps to
-  `DeliverClaim`, `FinishWatch`, `WatchCrash`, and `WatchRecover`. Recovery loses
-  the in-memory `isRecordedElsewhere` flag. Ending snapshots that flag; asynchronous
-  builder completion is collapsed into the end transition. This does not cover
-  a kill during builder completion. `RideUI/Health/PhoneWorkout.swift` collects
-  nothing and never saves a workout, so phone-only sessions contribute no Health
-  object. Its start/end and leftover-session recovery are abstracted away.
-  `Record` collapses file persistence and Health enqueue; `HealthQueue` separately
-  checks that non-atomic boundary. `SyncMac` represents eventual CloudKit arrival
-  and `SyncSupport.onReceive`. Query and save are separate transitions from
-  `HealthRides.savePending`. Health visibility is immediate here, a stronger
-  assumption than cross-device propagation. A watch save and a recording save
-  have different identities. Pending implies recorded; recorded rides eventually
-  reach Health under strong fairness of sync/query/save and weak fairness of
-  relaunch. No fairness is imposed on user termination or message delivery after
-  a message has been lost. This exposes leftover sessions rather than assuming
-  they end. Claims are bounded to one send, enough to expose failure even when
-  no reconnect retry occurs. Repeated sessions and stale cross-session messages
-  are outside this bound.
+  `RideUI/Watch/WatchLink.swift` sends the claim (`LinkMessage.rideRecorded`)
+  through `claimRideForHealth`: with every glance while the phone records a ride
+  (`sendGlance`), and with every heart rate from the watch while it relays a ride
+  the Mac records (`relay.onRideRecorded` sets `isRelayingARideTheMacRecords`).
+  `Claim` is therefore repeatable while the ride is on. `RideBluetooth/WatchRelayReceiver.swift`
+  and `HeartRateRelay.swift` abstract to an authenticated Mac claim relayed by the
+  phone. These use HealthKit mirroring, not WatchConnectivity. Messages are an
+  unordered set: delivery retains a message, allowing duplicates; `Drop` removes
+  it. Connection changes gate delivery. `RideWatchUI/WorkoutRelay.swift` maps to
+  `DeliverClaim`, `FinishWatch`, `WatchCrash`, `WatchRecover` and
+  `WatchGivesUpOnASilentPhone`. `WatchWorkout.savesToHealthItself` is
+  `WatchSavesItself`: a workout the phone started (`origin = "Phone"`) is never
+  saved by the watch, since the phone saves its recording, and one the rider
+  started on the watch is saved unless claimed. Whether the phone started it
+  survives a watch crash (`workoutStartedOnPhone` in the watch's defaults); the
+  claim does not, but is resent. `WatchWorkout.hasLostThePhone` is
+  `WatchGivesUpOnASilentPhone`: after five minutes without a glance, the watch ends
+  a workout the phone started. `RideUI/Health/PhoneWorkout.swift` collects nothing
+  and never saves a workout. `Record` collapses file persistence and Health
+  enqueue; `HealthQueue` checks that boundary. `SyncMac` represents eventual
+  CloudKit arrival. Query and save are separate transitions from
+  `HealthRides.savePending`, with immediate Health visibility, a stronger
+  assumption than cross-device propagation.
+  Checked: `NoDuplicatesForPhoneRides`, `RecordedEventuallySaved` and
+  `WatchEventuallyEndsAfterAPhoneRide`. A Mac ride can still end up with two
+  workouts if the watch never receives a single claim before the rider ends it
+  on the watch, and the rider ends a watch-started workout themselves, so
+  neither is checked for `Mac` rides.
 - `HealthDedupe`: two Health-capable devices with the same immutable file hash
-  already queued by `RideSync.receive` and `SyncSupport.onReceive`. Models
+  already queued by `RideSync.receive` through `beforeStoringRideFromAnotherDevice`. Models
   `HealthRides.savePending` with separate query/save steps, per-device serialization,
   durable pending work, and interrupted queries. `RideUI/Health/HealthWorkout.swift`
   sets `HKMetadataKeySyncIdentifier = ride.id` and version 1. Save therefore inserts
@@ -64,59 +64,36 @@ used with temporal checking. Each model explores all schedules in its bounds.
   and [Synchronize health data with HealthKit](https://developer.apple.com/videos/play/wwdc2020/10184/).
   Do not replace identifier-based insertion with device-based insertion: that
   would invent a duplicate bug absent from the current metadata.
-- `HealthQueue`: `RideUI/Player/RideLauncher.keep` persists through
-  `RideUI/History/RideLibrary.save` before `HealthRides.save` persists the pending
-  ID. Termination can split those two synchronous operations. Relaunch restores
-  the file and pending defaults, but cannot restore the lost continuation.
-  `RideLibrary.receive` returns nil for a file already present, so another fetch
-  cannot repair this window through `RideSync.onReceive`. Queued work eventually
-  saves under strong enqueue/save fairness and weak launch fairness. Recovery
-  through a rider manually resuming a journal is optional, not assumed.
+- `HealthQueue`: `RideUI/Player/RideLauncher.keep` and `RideSync.receive` queue a
+  ride for Health (`HealthRides.queue`) in `RideLibrary`'s `beforeStoring`, before
+  its file is written (`QueueBeforeStoring`, then `StoreFile`, which run in one
+  main-actor call that only termination can split). `SavePending` drops a queued
+  ride whose file never got written. Checked: a stored ride is always queued or
+  saved, and a stored ride eventually reaches Health.
 - `LibrarySync`: one immutable SHA-256 record, two devices initially holding it,
   one removal, and at most one bootstrap per device. `RideUI/Sync/RideSync.swift`
-  maps `sendEverything` to `Bootstrap`, `send` and the next batch to `Send`, and
-  fetched modifications/deletions to `Fetch`. `RideLibrary.receive` and
-  `removeReceived` update the local presence bit without echoing a local change.
-  Server conflict on an existing immutable record leaves its value unchanged.
-  Bootstrap represents absent serialized state or sign-in while a stale local
-  file remains. The cloud bit abstracts successful latest-state delivery and
-  deletion processing, not CKSyncEngine internals or its complete change history.
-  No permanent tombstone exists in this model because the app has none. Finite
-  mutations and weakly fair bootstrap/send/fetch imply eventual stable convergence.
-  This does not imply deletion wins: stale bootstrap can recreate the record.
-  Account changes, zone resets, and arbitrary failed state-file writes need an
-  expanded model when those behaviours change.
-- `TrainerPause`: `RideUI/Player/RideController.swift` maps `togglePause` to
-  `Toggle`, and `pauseIfTrainerDropped` plus `session.advance` to atomic `Tick`.
-  Initially a paired trainer is connected; connection changes, manual toggles,
-  and ticks can interleave arbitrarily. `previouslyConnected` is the previous
-  sampled state, not an ever-connected latch. `unsafeAdvance` remembers an
-  advancing disconnected tick; elapsed time is otherwise omitted. Trainer pauses
-  imply paused state and ticks never resume automatically. These are behavioural
-  contracts to retain through any pure-engine refactor.
+  maps `everythingToSend` to `Bootstrap`, `changes(toSendFor:)` and the next batch
+  to `Send`, and `receive` and fetched deletions to `FetchDeleted`, `FetchRide`
+  and `FetchRideGone`. Removing a ride saves a permanent `DeletedRide` record
+  (`deleted-<id>`) and remembers the id in `DeletedRides.json`. A device that
+  knows a ride was deleted never sends it, drops it locally, and deletes its
+  record again if a stale device sends it back. Checked: a device that knows of
+  the deletion never holds the ride, every device converges with the cloud, and
+  a deleted ride is eventually gone everywhere for good. A stale device can still
+  re-upload the record for a moment before it fetches the deletion.
+- `TrainerPause`: `RideCore/RideEngine.swift` maps `.togglePause` to `Toggle`,
+  and `pauseIfTrainerDropped` plus `session.advance` in `.tick` to atomic `Tick`.
+  Connection changes, manual toggles and ticks interleave arbitrarily.
+  `previouslyConnected` is the previous sampled state. Checked: a trainer pause
+  implies the ride is paused, and ticks never resume a ride. A rider may resume
+  while the trainer is still away and the ride then carries on, as
+  `doesNotPauseAgainWhenResumedBeforeTheTrainerIsBack` pins.
 
 ## Known failing properties
 
-The script uses only `<System>.cfg`; dotted configs are intentional reproductions
-and must fail until the matching protocol changes. Run one explicitly, for example:
-
-```sh
-java -cp "${XDG_CACHE_HOME:-$HOME/.cache}/ride-tla/tla2tools-1.7.4.jar" tlc2.TLC \
-  -cleanup -metadir /tmp/ride-protocol-counterexample \
-  -config apps/ride/Specs/LibrarySync.Resurrection.cfg \
-  apps/ride/Specs/LibrarySync.tla
-```
-
-- `HealthHandoff.Duplicates.cfg`: `NoDuplicates` fails when the recording is saved
-  before the watch finishes without receiving the claim. Recovery can also lose
-  an already received claim. The watch builder has no matching sync identifier.
-- `HealthHandoff.Leftover.cfg`: `WatchEventuallyEnds` fails when the end message
-  is lost, or a Mac ride finishes without a watch-end path. Fair processing cannot
-  deliver a message that no longer exists, and recovery resumes the watch session.
-- `HealthQueue.Lost.cfg`: `RecordedEventuallySaved` fails if termination occurs
-  after file persistence and before persisting the pending Health ID.
-- `LibrarySync.Resurrection.cfg`: `NoResurrection` fails when a stale device
-  bootstraps and uploads after the server deletion.
+None. When TLC finds a bug that is not fixed in the same change, keep the
+property in a dotted config (`<System>.<Problem>.cfg`), which `check.sh` skips,
+and list it here with TLC's action sequence and the matching Swift path.
 
 ## Updating the models
 

@@ -33,14 +33,23 @@ while it keeps reporting.
 On iPhone and iPad, `HealthRides` saves each ride Ride records to Health from its recording,
 and the phone tells the watch (`LinkMessage.rideRecorded`) to discard its workout so Health
 has one. Discarding keeps the samples the workout collected, so the watch also stops collecting
-active energy then. Without a watch, the phone runs the workout session itself (`PhoneWorkout`).
+active energy then. The phone resends that claim with every glance, and with every heart rate
+while it relays a ride the Mac records. The watch never saves a workout the phone started, since
+the phone saves its own recording, and it ends one itself once the phone has been quiet for five
+minutes (`WatchWorkout`). A workout the rider started on the watch is saved by the watch unless
+it is claimed. Without a watch, the phone runs the workout session itself (`PhoneWorkout`).
 A ride waits in a saved queue until Health can take it (locked, or access not asked yet), and is
-skipped when Health already has a cycling workout over its time, from Ride or any other app.
+skipped when Health already has a cycling workout over its time, from Ride or any other app. A
+ride joins the queue before its file is written, so a crash between the two cannot leave it out.
 `RideSync` syncs the library through the rider's private CloudKit database with
 `CKSyncEngine`, one record per ride named by its file's SHA-256. A ride's file never changes, so
 its record is only added or deleted, and a conflict on one is ignored. The library on the device
 stays the source of truth: a device that has not synced yet, or has just signed in, sends every
-ride. One more record holds the secret behind `RideClaim`; the first device to send it wins and
+ride. Deleting a ride leaves a `DeletedRide` record, which every device remembers, so a device that
+has not synced since cannot send the ride back: once it hears of the deletion it drops the ride,
+and a device that knows deletes the record again if a stale one sends it. Importing a deleted
+ride's file again keeps it on that device only. One more record holds the secret behind
+`RideClaim`; the first device to send it wins and
 the others adopt it. The Mac has no Health, so an
 iPhone saves the Mac's rides as they sync, and the Mac tells a relaying iPhone it records the
 ride so the watch discards its workout then too.
