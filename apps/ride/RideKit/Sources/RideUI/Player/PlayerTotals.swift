@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// What the ride adds up to so far: average and normalized power, work, intensity, stress and
-/// average heart rate. One row when it fits, otherwise two rows of three.
 struct PlayerTotals: View {
   let totals: RideTotals
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -12,7 +10,8 @@ struct PlayerTotals: View {
       label: "Avg power", value: totals.averagePower.map(String.init) ?? "-", unit: "W")
     let normalizedPower = SmallStat(
       label: "NP", value: totals.normalizedPower.map(String.init) ?? "-", unit: "W")
-    let work = SmallStat(label: "Work", value: totals.work.map(String.init) ?? "-", unit: "kJ")
+    let work = SmallStat(
+      label: "Work", value: totals.workKilojoules.map(String.init) ?? "-", unit: "kJ")
     let intensity = SmallStat(
       label: "IF",
       value: totals.intensityFactor?.formatted(.number.precision(.fractionLength(2))) ?? "-")

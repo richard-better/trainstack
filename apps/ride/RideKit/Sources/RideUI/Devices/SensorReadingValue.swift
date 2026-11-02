@@ -1,7 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// A sensor's live reading. Missing data is distinct from a measured zero.
 struct SensorReadingValue: View {
   let metric: RideMetric
   let device: DiscoveredDevice

@@ -4,11 +4,12 @@ import Foundation
   import UIKit
 #endif
 
-/// Stops the screen from dimming and locking, and the Mac from napping, while a ride is on, so
-/// the rider need not touch the device with sweaty hands to keep seeing the numbers.
 final class KeepAwake {
   #if os(macOS)
     private var activity: NSObjectProtocol?
+    private static let screenOnAndNoAppNapToSlowTheClock: ProcessInfo.ActivityOptions = [
+      .userInitiated, .idleDisplaySleepDisabled,
+    ]
   #endif
 
   func begin() {
@@ -16,9 +17,8 @@ final class KeepAwake {
       UIApplication.shared.isIdleTimerDisabled = true
     #elseif os(macOS)
       guard activity == nil else { return }
-      // `.userInitiated` also keeps App Nap from slowing the one second clock.
       activity = ProcessInfo.processInfo.beginActivity(
-        options: [.userInitiated, .idleDisplaySleepDisabled], reason: "Riding a workout")
+        options: Self.screenOnAndNoAppNapToSlowTheClock, reason: "Riding a workout")
     #endif
   }
 

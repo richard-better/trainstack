@@ -1,5 +1,4 @@
-/// A reading a ride takes from its devices.
-public enum RideMetric: String, CaseIterable, Sendable {
+public enum RideMetric: String, CaseIterable, Codable, CodingKeyRepresentable, Sendable {
   case power, cadence, heartRate
 
   public var name: String {
@@ -10,8 +9,7 @@ public enum RideMetric: String, CaseIterable, Sendable {
     }
   }
 
-  /// The services that supply the reading, best first: a dedicated sensor over a trainer.
-  var sources: [FitnessService] {
+  var servicesBestFirst: [FitnessService] {
     switch self {
     case .power: [.power, .trainer]
     case .cadence: [.speedAndCadence, .power, .trainer]

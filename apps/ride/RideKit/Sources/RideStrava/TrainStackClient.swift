@@ -2,12 +2,8 @@ import CryptoKit
 import Foundation
 import Security
 
-/// Talks to the TrainStack API for the rider's account: signing in with Apple, connecting Strava,
-/// and sending rides there. The API holds Strava's tokens, so nothing secret is kept here but the
-/// account's session token.
 public actor TrainStackClient {
   public static let server = URL(string: "https://api.trainstackhq.com")!
-  /// The scheme the API sends the rider back to once Strava is connected.
   public static let callbackScheme = "trainstackride"
 
   private let server: URL
@@ -16,9 +12,8 @@ public actor TrainStackClient {
   private let pollInterval: Duration
   private let pollLimit: Int
   private var session: AccountSession?
-  /// Reading the session kept from an earlier launch, until it is read or a new one saved.
-  private var restoring: Task<AccountSession?, Never>?
-  private var isRestored = false
+  private var keptSessionRead: Task<AccountSession?, Never>?
+  private var knowsCurrentSession = false
 
   public init(
     server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
@@ -46,24 +41,17 @@ public actor TrainStackClient {
     }
   }
 
-  /// Reads the session kept from an earlier launch the first time anything needs it. Callers
-  /// that arrive while it is being read wait for the same read.
   private func restore() async {
-    guard !isRestored else { return }
-    let task = restoring ?? Task { [store] in await store.load() }
-    restoring = task
+    guard !knowsCurrentSession else { return }
+    let task = keptSessionRead ?? Task { [store] in await store.load() }
+    keptSessionRead = task
     let kept = await task.value
-    // A session saved while the store was being read is newer than the kept one.
-    guard !isRestored else { return }
+    guard !knowsCurrentSession else { return }
     session = kept
-    isRestored = true
-    restoring = nil
+    knowsCurrentSession = true
+    keptSessionRead = nil
   }
 
-  // MARK: Account
-
-  /// Signs in with the identity token Apple gave the app. `nonce` is the unhashed one whose
-  /// SHA-256 went to Apple, and `fullName` is what Apple shares the first time only.
   public func signInWithApple(
     identityToken: String, nonce: String, fullName: String?
   ) async throws {
@@ -83,23 +71,20 @@ public actor TrainStackClient {
     guard let token = response.value(forHTTPHeaderField: "set-auth-token") ?? signedIn?.token else {
       throw StravaError.signInFailed
     }
-    var name = signedIn?.user?.name.flatMap { $0.isEmpty ? nil : $0 }
+    let name = signedIn?.user?.name.flatMap { $0.isEmpty ? nil : $0 }
     try keep(AccountSession(token: token, name: name))
-
-    // Apple shares the name once, with the app and not in the token, so give it to the account.
     if name == nil, let fullName, !fullName.isEmpty {
-      if (try? await send("POST", "api/auth/update-user", json: ["name": fullName], signedIn: true))?
-        .1.statusCode == 200
-      {
-        name = fullName
-        try? keep(AccountSession(token: token, name: name))
-      }
+      await giveTheAccountTheNameAppleSharesOnce(fullName, token: token)
     }
   }
 
-  /// Signing in through Apple's web flow, for builds that cannot use Sign in with Apple
-  /// natively: the address to open in a web authentication session, and the secret that proves
-  /// the app that asked is the one that collects the result.
+  private func giveTheAccountTheNameAppleSharesOnce(_ fullName: String, token: String) async {
+    let updated = try? await send(
+      "POST", "api/auth/update-user", json: ["name": fullName], signedIn: true)
+    guard updated?.1.statusCode == 200 else { return }
+    try? keep(AccountSession(token: token, name: fullName))
+  }
+
   public struct WebSignInAttempt: Sendable {
     public let url: URL
     let verifier: String
@@ -113,8 +98,6 @@ public actor TrainStackClient {
     return WebSignInAttempt(url: components.url!, verifier: verifier)
   }
 
-  /// Finishes signing in once the web session has come back to the app: `callback` is the
-  /// address it ended at, with a code to trade for the session or the reason there is none.
   public func finishAppleWebSignIn(_ attempt: WebSignInAttempt, callback: URL) async throws {
     let code = try Self.signInCode(from: callback)
     let (data, response) = try await send(
@@ -134,13 +117,10 @@ public actor TrainStackClient {
     guard let signedIn = try? Self.decoder.decode(SignedIn.self, from: data) else {
       throw StravaError.signInFailed
     }
-    // Apple's web flow gives the server the rider's name itself.
-    try keep(
-      AccountSession(
-        token: signedIn.token, name: signedIn.user?.name.flatMap { $0.isEmpty ? nil : $0 }))
+    let nameTheServerGotFromApple = signedIn.user?.name.flatMap { $0.isEmpty ? nil : $0 }
+    try keep(AccountSession(token: signedIn.token, name: nameTheServerGotFromApple))
   }
 
-  /// The code in the address Apple's web flow ended at, or why there is none.
   static func signInCode(from callback: URL) throws -> String {
     let items = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.queryItems ?? []
     func value(_ name: String) -> String? { items.first { $0.name == name }?.value }
@@ -151,24 +131,20 @@ public actor TrainStackClient {
     }
   }
 
-  /// Signs out of this device. The session ends on the server too when it can be reached.
   public func signOut() async {
     _ = try? await send("POST", "api/auth/sign-out", json: [:], signedIn: true)
     forget()
   }
 
-  /// Deletes the account and everything stored for it, including the Strava connection.
   public func deleteAccount() async throws {
     let (_, response) = try await send("POST", "api/auth/delete-user", json: [:], signedIn: true)
     switch response.statusCode {
     case 200: forget()
-    case 400: throw StravaError.rejected("Sign in again, then delete the account.")
+    case 400: throw StravaError.rejected(reason: "Sign in again, then delete the account.")
     default: throw StravaError.unavailable
     }
   }
 
-  /// Keeps `session` for later launches. One the device cannot store is not kept at all, so the
-  /// rider is not signed in now only to find themselves signed out after a relaunch.
   private func keep(_ session: AccountSession) throws {
     do {
       try store.save(session)
@@ -176,19 +152,16 @@ public actor TrainStackClient {
       throw StravaError.sessionNotKept
     }
     self.session = session
-    isRestored = true
-    restoring = nil
+    knowsCurrentSession = true
+    keptSessionRead = nil
   }
 
-  /// Forgets the session on this device.
   private func forget() {
     session = nil
-    isRestored = true
-    restoring = nil
+    knowsCurrentSession = true
+    keptSessionRead = nil
     try? store.save(nil)
   }
-
-  // MARK: Strava
 
   public func stravaStatus() async throws -> StravaStatus {
     let (data, response) = try await send("GET", "strava", signedIn: true)
@@ -207,11 +180,9 @@ public actor TrainStackClient {
     return StravaStatus(isConnected: status.connected, athleteName: status.athleteName)
   }
 
-  /// Connecting Strava: the address to show the rider so they can allow Ride to upload, and the
-  /// secret that proves the app that asked is the one that collects the result.
   public struct ConnectAttempt: Sendable {
-    public let url: URL
-    let verifier: String
+    public let authorizationURL: URL
+    let codeVerifier: String
   }
 
   public func startStravaConnection() async throws -> ConnectAttempt {
@@ -224,17 +195,15 @@ public actor TrainStackClient {
     guard let connect = try? Self.decoder.decode(Connect.self, from: data) else {
       throw StravaError.unavailable
     }
-    return ConnectAttempt(url: connect.url, verifier: verifier)
+    return ConnectAttempt(authorizationURL: connect.url, codeVerifier: verifier)
   }
 
-  /// Finishes connecting once the web session has come back to the app: `callback` is the address
-  /// it ended at, which says whether Strava agreed.
   public func finishStravaConnection(
     _ attempt: ConnectAttempt, callback: URL
   ) async throws -> StravaStatus {
     try Self.checkConnectCallback(callback)
     let (data, response) = try await send(
-      "POST", "strava/connect/complete", json: ["code_verifier": attempt.verifier],
+      "POST", "strava/connect/complete", json: ["code_verifier": attempt.codeVerifier],
       signedIn: true)
     if response.statusCode == 400 { throw StravaError.connectFailed }
     if response.statusCode == 409 { throw StravaError.athleteInUse }
@@ -242,7 +211,6 @@ public actor TrainStackClient {
     return try Self.status(from: data)
   }
 
-  /// Whether the address the rider ended up at means Strava agreed.
   static func checkConnectCallback(_ callback: URL) throws {
     let items = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.queryItems ?? []
     func value(_ name: String) -> String? { items.first { $0.name == name }?.value }
@@ -255,15 +223,27 @@ public actor TrainStackClient {
     }
   }
 
+  static func proofKey() -> (verifier: String, challenge: String) {
+    var bytes = [UInt8](repeating: 0, count: 48)
+    if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
+      bytes = bytes.map { _ in UInt8.random(in: .min ... .max) }
+    }
+    let verifier = base64URL(Data(bytes))
+    return (verifier, base64URL(Data(SHA256.hash(data: Data(verifier.utf8)))))
+  }
+
+  private static func base64URL(_ data: Data) -> String {
+    data.base64EncodedString()
+      .replacingOccurrences(of: "+", with: "-")
+      .replacingOccurrences(of: "/", with: "_")
+      .replacingOccurrences(of: "=", with: "")
+  }
+
   public func disconnectStrava() async throws {
     let (data, response) = try await send("DELETE", "strava", signedIn: true)
     try check(response, data)
   }
 
-  // MARK: Uploading
-
-  /// Sends a ride's FIT file to Strava as an indoor trainer ride, and waits for Strava to make an
-  /// activity of it.
   public func upload(_ fit: Data, name: String, fileName: String) async throws -> StravaUpload {
     let query = [
       URLQueryItem(name: "name", value: name), URLQueryItem(name: "fileName", value: fileName),
@@ -271,8 +251,7 @@ public actor TrainStackClient {
     let (data, response) = try await send(
       "POST", "strava/uploads", query: query, body: fit, contentType: "application/octet-stream",
       signedIn: true)
-    // A file Strava turns down comes back as 400 with the reason.
-    if response.statusCode != 400 { try check(response, data) }
+    if response.statusCode != Self.fileTurnedDownStatus { try check(response, data) }
     var report = try Self.report(from: data)
     if let result = try Self.finished(report) { return result }
 
@@ -286,6 +265,8 @@ public actor TrainStackClient {
     }
     throw StravaError.stillProcessing
   }
+
+  private static let fileTurnedDownStatus = 400
 
   private struct UploadReport: Decodable {
     let id: Int?
@@ -313,16 +294,12 @@ public actor TrainStackClient {
       {
         throw StravaError.duplicate(activityID: report.duplicateOf)
       }
-      throw StravaError.rejected(report.error ?? "Strava turned the file down.")
+      throw StravaError.rejected(reason: report.error ?? "Strava turned the file down.")
     default:
       return nil
     }
   }
 
-  // MARK: Feedback
-
-  /// Sends the rider's feedback, which the server files as a public GitHub issue without saying
-  /// who wrote it.
   public func sendFeedback(_ message: String, context: FeedbackContext) async throws
     -> FeedbackIssue
   {
@@ -330,7 +307,7 @@ public actor TrainStackClient {
       "POST", "feedback", json: ["message": message, "context": context.json], signedIn: true)
     switch response.statusCode {
     case 403: throw FeedbackError.appleAccountRequired
-    case 429: throw FeedbackError.tooMuch
+    case 429: throw FeedbackError.dailyLimitReached
     case 503: throw FeedbackError.notConfigured
     default: try check(response, data)
     }
@@ -344,29 +321,6 @@ public actor TrainStackClient {
     return FeedbackIssue(number: filed.number, url: filed.url)
   }
 
-  // MARK: Proof keys
-
-  /// A secret verifier for the server to check later, and the SHA-256 challenge sent ahead of it.
-  static func proofKey() -> (verifier: String, challenge: String) {
-    var bytes = [UInt8](repeating: 0, count: 48)
-    if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
-      bytes = bytes.map { _ in UInt8.random(in: .min ... .max) }
-    }
-    let verifier = base64URL(Data(bytes))
-    return (verifier, base64URL(Data(SHA256.hash(data: Data(verifier.utf8)))))
-  }
-
-  private static func base64URL(_ data: Data) -> String {
-    data.base64EncodedString()
-      .replacingOccurrences(of: "+", with: "-")
-      .replacingOccurrences(of: "/", with: "_")
-      .replacingOccurrences(of: "=", with: "")
-  }
-
-  // MARK: Requests
-
-  /// Turns what the API answered into an error if it was one. A session the server no longer
-  /// accepts ends the sign-in.
   private func check(_ response: HTTPURLResponse, _ data: Data) throws {
     switch response.statusCode {
     case 200..<300: return
@@ -374,7 +328,7 @@ public actor TrainStackClient {
       forget()
       throw StravaError.signedOut
     case 409: throw StravaError.notConnected
-    case 413: throw StravaError.rejected("The ride is too large to upload.")
+    case 413: throw StravaError.rejected(reason: "The ride is too large to upload.")
     case 429: throw StravaError.rateLimited
     case 503
     where (try? Self.decoder.decode([String: String].self, from: data))?["error"]
@@ -388,7 +342,6 @@ public actor TrainStackClient {
     _ method: String, _ path: String, query: [URLQueryItem] = [], json: [String: Any]? = nil,
     body: Data? = nil, contentType: String? = nil, signedIn: Bool = false
   ) async throws -> (Data, HTTPURLResponse) {
-    // The kept session is read before any request, which may need it or replace it.
     await restore()
     var components = URLComponents(
       url: server.appending(path: path), resolvingAgainstBaseURL: false)!

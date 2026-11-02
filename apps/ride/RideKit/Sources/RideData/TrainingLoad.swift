@@ -1,25 +1,16 @@
 import Foundation
 
-/// Fitness, fatigue and form on one day, from the training stress of the days before it.
-///
-/// Fitness (chronic training load) is the average daily stress over about six weeks, fatigue
-/// (acute training load) over about a week, both weighted toward recent days. Form is fitness
-/// minus fatigue: positive when rested, negative while building.
 public struct TrainingLoad: Equatable, Identifiable, Sendable {
   public static let fitnessDays = 42.0
   public static let fatigueDays = 7.0
 
-  /// The start of the day.
   public var date: Date
-  /// The stress ridden that day.
   public var stress: Double
   public var fitness: Double
   public var fatigue: Double
 
   public var form: Double { fitness - fatigue }
 
-  /// One entry per day from `start` through `end`, starting from no load. Stress on days outside
-  /// the range is ignored, so start early enough for the load to build up.
   public static func daily(
     stress: [Date: Double], from start: Date, through end: Date, calendar: Calendar = .current
   ) -> [TrainingLoad] {
@@ -40,19 +31,6 @@ public struct TrainingLoad: Equatable, Identifiable, Sendable {
   }
 }
 
-/// How hard training felt, in three bands of zones.
-public enum Intensity: Int, CaseIterable, Sendable {
-  case easy, moderate, hard
-
-  public var name: String {
-    switch self {
-    case .easy: "Easy"
-    case .moderate: "Moderate"
-    case .hard: "Hard"
-    }
-  }
-}
-
 extension PowerZone {
   public var intensity: Intensity {
     switch self {
@@ -64,8 +42,6 @@ extension PowerZone {
 }
 
 extension Sequence where Element == RideRecording {
-  /// Training stress per day, keyed by the start of the day, each ride scored against the FTP
-  /// `ftp` gives for it. Rides without power or an FTP are left out.
   public func stressByDay(
     calendar: Calendar = .current, ftp: (RideRecording) -> Int?
   ) -> [Date: Double] {
@@ -77,9 +53,6 @@ extension Sequence where Element == RideRecording {
 }
 
 extension Sequence where Element == [ZoneShare] {
-  /// Several rides' zone times added up, in the order zones first appear. Zones with the same
-  /// number and name count as one, even when thresholds moved between rides. Empty when none of
-  /// the rides had any.
   public func combined() -> [ZoneShare] {
     var zones: [ZoneKey: Zone] = [:]
     var order: [ZoneKey] = []
@@ -104,13 +77,11 @@ extension Sequence where Element == [ZoneShare] {
   }
 }
 
-/// What makes zones from different rides the same zone when adding them up.
 private struct ZoneKey: Hashable {
   let label: String
   let name: String
 }
 
 extension TrainingLoad {
-  /// One load per day.
   public var id: Date { date }
 }

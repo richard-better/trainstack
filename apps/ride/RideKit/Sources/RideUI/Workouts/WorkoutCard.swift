@@ -2,16 +2,12 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// A workout to pick: its profile coloured by zone, so workouts can be told apart by shape and
-/// intensity at a glance. Click to select, double-click to open the workout. The selected card
-/// has its zone's colour around it and a Start button.
 struct WorkoutCard: View {
   let template: WorkoutTemplate
   var tag: String?
   var profileHeight = 96.0
   let isSelected: Bool
   let select: () -> Void
-  /// Opens the workout's page.
   let open: () -> Void
   let start: (() -> Void)?
 

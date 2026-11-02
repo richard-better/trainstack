@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// What form means for the next ride, as a coloured label.
 struct FormBadge: View {
   let form: Double
 

@@ -6,11 +6,9 @@ import RideStrava
 #endif
 
 extension FeedbackContext {
-  /// What this copy of Ride is running on, with the `screen` the rider was on and the `window`
-  /// size it had.
   static func current(screen: String, window: CGSize?) -> FeedbackContext {
     FeedbackContext(
-      app: appVersion, system: systemVersion, device: deviceModel, screen: screen,
+      app: appVersion, system: systemVersion, device: modelIdentifier, screen: screen,
       window: window.map { "\(Int($0.width.rounded()))×\(Int($0.height.rounded()))" })
   }
 
@@ -30,9 +28,7 @@ extension FeedbackContext {
     #endif
   }
 
-  /// The model identifier, like `iPhone18,1` or `Mac16,10`, which says more than the marketing
-  /// name the system offers.
-  private static var deviceModel: String? {
+  private static var modelIdentifier: String? {
     #if targetEnvironment(simulator)
       return ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"].map {
         "\($0) (Simulator)"

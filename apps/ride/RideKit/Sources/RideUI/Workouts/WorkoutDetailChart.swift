@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A workout's profile at full width, with a dashed line at FTP and the time along the bottom.
 struct WorkoutDetailChart: View {
   let template: WorkoutTemplate
   let ftp: Int?
@@ -29,9 +28,7 @@ struct WorkoutDetailChart: View {
     .accessibilityValue(template.summary)
   }
 
-  /// The line sits at FTP's share of the profile's height.
   private var ftpLine: some View {
-    // The label sits just above the line, at the trailing end.
     ZStack(alignment: .bottomTrailing) {
       Line()
         .stroke(.tertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
@@ -41,11 +38,10 @@ struct WorkoutDetailChart: View {
         .foregroundStyle(.secondary)
         .padding(.bottom, 3)
     }
-    .padding(.bottom, height / WorkoutProfile.ceiling)
+    .padding(.bottom, height / WorkoutProfile.fullHeightIntensity)
   }
 }
 
-/// A horizontal line across the middle of its frame.
 private nonisolated struct Line: Shape {
   func path(in rect: CGRect) -> Path {
     Path { path in

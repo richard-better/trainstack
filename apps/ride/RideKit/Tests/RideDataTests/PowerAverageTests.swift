@@ -39,11 +39,16 @@ struct PowerAverageTests {
     readings.record(300, over: 2)
     readings.record(150, over: 1)
     #expect(readings.average(over: 3) == 250)
-    // Only the last second of a two-second reading falls in a two-second window.
-    #expect(readings.average(over: 2) == 225)
     readings.record(0, over: 0.5)
     readings.record(0, over: 0.5)
     #expect(readings.average(over: 3) == 150)
+  }
+
+  @Test func countsOnlyThePartOfAReadingInsideTheWindow() {
+    var readings = PowerAverage()
+    readings.record(300, over: 2)
+    readings.record(150, over: 1)
+    #expect(readings.average(over: 2) == 225)
   }
 
   @Test func leavesMissingReadingsOut() {

@@ -10,8 +10,6 @@ extension Intensity {
     }
   }
 
-  /// With Differentiate Without Color on, easier intensities are also fainter, so they tell
-  /// apart by more than hue.
   func color(differentiatingWithoutColor: Bool) -> Color {
     guard differentiatingWithoutColor else { return color }
     return switch self {

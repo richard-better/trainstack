@@ -1,8 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// Whether a paired sensor is connected, connecting, or out of range. Out of range it offers to
-/// connect again.
 struct SensorConnectionStatus: View {
   let device: DiscoveredDevice
   @Environment(BluetoothDevices.self) private var devices

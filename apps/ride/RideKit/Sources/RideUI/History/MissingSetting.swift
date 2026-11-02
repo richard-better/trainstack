@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// What the rider needs to set in Settings for something to show.
 struct MissingSetting: View {
   let message: LocalizedStringKey
 

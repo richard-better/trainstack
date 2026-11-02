@@ -11,7 +11,7 @@ struct SampleTransportTests {
     let (connections, continuation) = AsyncStream.makeStream(
       of: Void.self, bufferingPolicy: .bufferingNewest(1))
     transport?.onConnect = { _ in continuation.yield(()) }
-    transport?.connect(SampleTransport.trainer.id)
+    transport?.connectWhenInRange(SampleTransport.trainer.id)
     var iterator = connections.makeAsyncIterator()
     await iterator.next()
     transport = nil

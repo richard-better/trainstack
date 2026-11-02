@@ -8,34 +8,46 @@ struct FitnessMachineCommandTests {
     #expect(FitnessMachineCommand.requestControl.data == Data([0x00]))
     #expect(FitnessMachineCommand.reset.data == Data([0x01]))
     #expect(FitnessMachineCommand.start.data == Data([0x07]))
-    #expect(FitnessMachineCommand.targetPower(250).data == Data([0x05, 250, 0]))
-    #expect(FitnessMachineCommand.targetPower(300).data == Data([0x05, 0x2C, 0x01]))
+    #expect(FitnessMachineCommand.targetPower(watts: 250).data == Data([0x05, 250, 0]))
+    #expect(FitnessMachineCommand.targetPower(watts: 300).data == Data([0x05, 0x2C, 0x01]))
   }
 
   @Test func sendsResistanceInOneByteUnlessTheRangeNeedsTwo() {
-    #expect(FitnessMachineCommand.targetResistance(120, wide: false).data == Data([0x04, 120]))
     #expect(
-      FitnessMachineCommand.targetResistance(800, wide: true).data == Data([0x04, 0x20, 0x03]))
+      FitnessMachineCommand.targetResistance(level: 120, wide: false).data == Data([0x04, 120]))
+    #expect(
+      FitnessMachineCommand.targetResistance(level: 800, wide: true).data
+        == Data([0x04, 0x20, 0x03]))
   }
 
-  @Test func simulatesARoadOfTheGradeWithoutWind() {
+  @Test func simulatesARoadOfTheGradeWithoutWindAndTypicalResistance() {
     #expect(
-      FitnessMachineCommand.simulation(grade: 2.5).data == Data([0x11, 0, 0, 250, 0, 40, 51]))
+      FitnessMachineCommand.simulation(gradePercent: 2.5).data
+        == Data([0x11, 0, 0, 250, 0, 40, 51]))
     #expect(
-      FitnessMachineCommand.simulation(grade: -1).data
+      FitnessMachineCommand.simulation(gradePercent: -1).data
         == Data([0x11, 0, 0, 0x9C, 0xFF, 40, 51]))
   }
 
   @Test func readsResponsesToCommands() {
     #expect(
       FitnessMachineResponse(Data([0x80, 0x05, 0x01]))
-        == FitnessMachineResponse(opCode: 0x05, result: .success))
+        == FitnessMachineResponse(requestOpCode: 0x05, result: .success))
     #expect(
       FitnessMachineResponse(Data([0x80, 0x00, 0x05]))
-        == FitnessMachineResponse(opCode: 0x00, result: .notPermitted))
-    #expect(FitnessMachineResponse(Data([0x80, 0x11, 0x09]))?.result == .failed)
+        == FitnessMachineResponse(requestOpCode: 0x00, result: .notPermitted))
     #expect(FitnessMachineResponse(Data([0x05, 0x01, 0x01])) == nil)
     #expect(FitnessMachineResponse(Data([0x80, 0x05])) == nil)
+  }
+
+  @Test func treatsReservedResultCodesAsFailures() {
+    #expect(FitnessMachineResponse(Data([0x80, 0x11, 0x09]))?.result == .failed)
+  }
+
+  @Test func needsTwoBytesForARangeBeyondOneUnsignedByte() {
+    #expect(!FitnessMachineRange(minimum: 0, maximum: 255, increment: 1).needsTwoBytes)
+    #expect(FitnessMachineRange(minimum: 0, maximum: 256, increment: 1).needsTwoBytes)
+    #expect(FitnessMachineRange(minimum: -1, maximum: 100, increment: 1).needsTwoBytes)
   }
 
   @Test func readsSupportedRangesAndSnapsToTheirSteps() {

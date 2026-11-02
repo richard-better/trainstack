@@ -58,6 +58,16 @@ struct RiderSettingsTests {
     #expect(profile.value(of: .ftp, in: .all) == nil)
   }
 
+  @Test func keepsFTPTestsOldestFirst() {
+    let older = FTPTest(date: .distantPast, kind: .ramp, ftp: 200, scope: .all)
+    let newer = FTPTest(date: .now, kind: .ramp, ftp: 210, scope: .all)
+    var settings = RiderSettings(ftpTests: [newer, older])
+    #expect(settings.ftpTests == [older, newer])
+    let between = FTPTest(date: .now.addingTimeInterval(-86400), kind: .hour, ftp: 205, scope: .all)
+    settings.add(between, updatesFTP: false)
+    #expect(settings.ftpTests == [older, between, newer])
+  }
+
   @Test func setsFTPFromATestOnTheDayOfTheTest() throws {
     var settings = RiderSettings()
     settings.history.record([.threshold(.ftp, scope: .all, value: 200)], on: .distantPast)

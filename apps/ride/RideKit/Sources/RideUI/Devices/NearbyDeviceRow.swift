@@ -1,7 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// A fitness device in range that isn't paired, with a button to pair and connect it.
 struct NearbyDeviceRow: View {
   let device: DiscoveredDevice
   @Environment(BluetoothDevices.self) private var devices

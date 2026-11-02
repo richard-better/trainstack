@@ -7,9 +7,7 @@ final class CoreBluetoothWatchRelay: NSObject, WatchRelayTransport {
   private var central: CBCentralManager?
   private var wanted = false
   private var claim: RideClaim?
-  /// Relays found, kept so they reconnect when they come back in range. CoreBluetooth cancels a
-  /// connection whose peripheral is released.
-  private var peripherals: [UUID: CBPeripheral] = [:]
+  private var heldRelays: [UUID: CBPeripheral] = [:]
 
   func start(claim: RideClaim?) {
     wanted = true
@@ -17,7 +15,6 @@ final class CoreBluetoothWatchRelay: NSObject, WatchRelayTransport {
     if let central {
       scan(central)
     } else {
-      // CoreBluetooth delivers delegate callbacks on the main queue.
       central = CBCentralManager(delegate: self, queue: .main)
     }
   }
@@ -26,30 +23,27 @@ final class CoreBluetoothWatchRelay: NSObject, WatchRelayTransport {
     wanted = false
     guard let central, central.state == .poweredOn else { return }
     central.stopScan()
-    for peripheral in peripherals.values { central.cancelPeripheralConnection(peripheral) }
-    peripherals.removeAll()
+    for peripheral in heldRelays.values { central.cancelPeripheralConnection(peripheral) }
+    heldRelays.removeAll()
   }
 
   private func scan(_ central: CBCentralManager) {
     guard wanted, central.state == .poweredOn else { return }
-    // A relaying iPhone in the background only advertises its services to scans that ask for
-    // them by name.
     central.scanForPeripherals(withServices: [HeartRateRelay.service])
   }
 }
 
 extension CoreBluetoothWatchRelay: @preconcurrency CBCentralManagerDelegate {
   func centralManagerDidUpdateState(_ central: CBCentralManager) {
-    // Turning Bluetooth off ends every connection without a callback for each.
-    if central.state == .poweredOn { scan(central) } else { peripherals.removeAll() }
+    if central.state == .poweredOn { scan(central) } else { heldRelays.removeAll() }
   }
 
   func centralManager(
     _ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
     advertisementData: [String: Any], rssi: NSNumber
   ) {
-    guard wanted, peripherals[peripheral.identifier] == nil else { return }
-    peripherals[peripheral.identifier] = peripheral
+    guard wanted, heldRelays[peripheral.identifier] == nil else { return }
+    heldRelays[peripheral.identifier] = peripheral
     peripheral.delegate = self
     central.connect(peripheral)
   }
@@ -61,16 +55,18 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBCentralManagerDelegate {
   func centralManager(
     _ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?
   ) {
-    guard wanted, peripherals[peripheral.identifier] != nil else { return }
-    central.connect(peripheral)
+    reconnectWhenInRange(peripheral, through: central)
   }
 
   func centralManager(
     _ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
     error: (any Error)?
   ) {
-    // Connecting has no time limit, so the relay comes back as soon as it is in range again.
-    guard wanted, peripherals[peripheral.identifier] != nil else { return }
+    reconnectWhenInRange(peripheral, through: central)
+  }
+
+  private func reconnectWhenInRange(_ peripheral: CBPeripheral, through central: CBCentralManager) {
+    guard wanted, heldRelays[peripheral.identifier] != nil else { return }
     central.connect(peripheral)
   }
 }
@@ -82,7 +78,8 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
         peripheral.discoverCharacteristics([GATT.heartRateMeasurement], for: service)
       } else if service.uuid == HeartRateRelay.service, claim != nil {
         peripheral.discoverCharacteristics(
-          [HeartRateRelay.challenge, HeartRateRelay.rideRecorded], for: service)
+          [HeartRateRelay.challengeCharacteristic, HeartRateRelay.rideRecordedCharacteristic],
+          for: service)
       }
     }
   }
@@ -94,7 +91,7 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
     for characteristic in service.characteristics ?? [] {
       if characteristic.uuid == GATT.heartRateMeasurement {
         peripheral.setNotifyValue(true, for: characteristic)
-      } else if characteristic.uuid == HeartRateRelay.challenge {
+      } else if characteristic.uuid == HeartRateRelay.challengeCharacteristic {
         peripheral.readValue(for: characteristic)
       }
     }
@@ -105,7 +102,7 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
     error: (any Error)?
   ) {
     guard let data = characteristic.value else { return }
-    if characteristic.uuid == HeartRateRelay.challenge {
+    if characteristic.uuid == HeartRateRelay.challengeCharacteristic {
       claimRide(on: peripheral, challenge: data, in: characteristic.service)
     } else if characteristic.uuid == GATT.heartRateMeasurement,
       let measurement = HeartRateMeasurement(data)
@@ -114,11 +111,10 @@ extension CoreBluetoothWatchRelay: @preconcurrency CBPeripheralDelegate {
     }
   }
 
-  /// Signs the iPhone's challenge. An iPhone signed in to another account refuses it.
   private func claimRide(on peripheral: CBPeripheral, challenge: Data, in service: CBService?) {
     guard let claim,
       let rideRecorded = service?.characteristics?.first(where: {
-        $0.uuid == HeartRateRelay.rideRecorded
+        $0.uuid == HeartRateRelay.rideRecordedCharacteristic
       })
     else { return }
     peripheral.writeValue(claim.sign(challenge), for: rideRecorded, type: .withResponse)

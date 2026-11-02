@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// The target's label and zone, stacked when larger text leaves too little room for a row.
 struct PlayerTargetLabel: View {
   let zone: PowerZone?
 

@@ -1,7 +1,5 @@
 import Foundation
 
-/// Supported Resistance Level Range (0x2AD6) or Supported Power Range (0x2AD8): the lowest and
-/// highest target a trainer takes and its smallest step, in the characteristic's units.
 struct FitnessMachineRange: Equatable, Sendable {
   let minimum: Int
   let maximum: Int
@@ -23,7 +21,8 @@ struct FitnessMachineRange: Equatable, Sendable {
     self.increment = Int(increment)
   }
 
-  /// The nearest target to `value` the trainer takes.
+  var needsTwoBytes: Bool { minimum < 0 || maximum > Int(UInt8.max) }
+
   func nearest(_ value: Double) -> Int {
     let step = Double(max(increment, 1))
     let steps = ((value - Double(minimum)) / step).rounded()

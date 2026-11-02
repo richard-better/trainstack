@@ -66,8 +66,7 @@ app.get("/health", async (c) => {
   }
 });
 
-/** The rider a session token belongs to, read from the token alone. */
-const riderOf = async (token: string) => {
+const riderOfBearerToken = async (token: string) => {
   const auth = await createAuth();
   const session = await auth.api.getSession({
     headers: new Headers({ Authorization: `Bearer ${token}` }),
@@ -75,8 +74,8 @@ const riderOf = async (token: string) => {
   return session?.user.id;
 };
 
-app.route("/strava", stravaRoutes({ env: ENV, database: getDb, userId: riderOf }));
-app.route("/feedback", feedbackRoutes({ env: ENV, database: getDb, userId: riderOf }));
+app.route("/strava", stravaRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
+app.route("/feedback", feedbackRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 

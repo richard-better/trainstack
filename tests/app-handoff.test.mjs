@@ -34,8 +34,7 @@ function pkce() {
   return { verifier, challenge: createHash("sha256").update(verifier).digest("base64url") };
 }
 
-/** A web authentication session: keeps its own cookies and does not follow redirects. */
-function browser(target = runtime) {
+function webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects(target = runtime) {
   const jar = new Map();
   return {
     jar,
@@ -57,9 +56,8 @@ function browser(target = runtime) {
   };
 }
 
-/** Runs the app's browser sign-in up to the redirect that ends the web authentication session. */
 async function signInThroughBrowser({ challenge, approve = {}, deny = false } = {}) {
-  const session = browser();
+  const session = webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects();
   const start = await session.visit(
     `${api}/api/auth/app-handoff/apple?code_challenge=${challenge ?? pkce().challenge}`,
   );
@@ -111,10 +109,13 @@ test("a rider signs in through the browser and only the app that asked gets a se
   const authorize = new URL(start.headers.get("location"));
   assert.equal(authorize.searchParams.get("client_id"), "com.trainstackhq.ride.web");
 
-  // The browser leaves with a code for the app and nothing that signs it in.
   const code = codeOf(location);
   assert.match(code, /^[A-Za-z0-9_-]{43}$/);
-  assert.equal(new URL(location).searchParams.get("token"), null);
+  assert.equal(
+    new URL(location).searchParams.get("token"),
+    null,
+    "the browser leaves with a code for the app and nothing that signs it in",
+  );
   assert.equal(back.headers.get("set-auth-token"), null);
   assert.equal(back.headers.get("cache-control"), "no-store");
   assert.equal(back.headers.get("referrer-policy"), "no-referrer");
@@ -131,9 +132,12 @@ test("a rider signs in through the browser and only the app that asked gets a se
     "only the code's hash is kept",
   );
 
-  // Apple's token endpoint was called as the Services ID, with a client secret signed by the key.
   const exchange = apple.tokenRequests.at(-1);
-  assert.equal(exchange.get("client_id"), "com.trainstackhq.ride.web");
+  assert.equal(
+    exchange.get("client_id"),
+    "com.trainstackhq.ride.web",
+    "Apple's token endpoint is called as the Services ID",
+  );
   const [header, payload, signature] = exchange.get("client_secret").split(".");
   assert.deepEqual(JSON.parse(Buffer.from(header, "base64url")), {
     alg: "ES256",
@@ -230,7 +234,7 @@ test("a sign-in that does not finish sends the app an error and no code", async 
 });
 
 test("a sign-in that lost its state goes back to the app only from the app's browser", async () => {
-  const fromApp = browser();
+  const fromApp = webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects();
   const start = await fromApp.visit(
     `${api}/api/auth/app-handoff/apple?code_challenge=${pkce().challenge}`,
   );
@@ -240,20 +244,29 @@ test("a sign-in that lost its state goes back to the app only from the app's bro
   assert.equal(lost.status, 302);
   assert.match(lost.headers.get("location"), new RegExp(`^${APP}\\?error=[a-z_]+$`));
 
-  const elsewhere = await browser().visit(forged);
+  const elsewhere =
+    await webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects().visit(forged);
   assert.equal(elsewhere.status, 302);
   assert.ok(!elsewhere.headers.get("location").startsWith("trainstackride:"));
 });
 
 test("the handoff turns away bad requests", async () => {
   for (const query of ["", "?code_challenge=short", `?code_challenge=${"a".repeat(42)}!`]) {
-    const response = await browser().visit(`${api}/api/auth/app-handoff/apple${query}`);
+    const response =
+      await webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects().visit(
+        `${api}/api/auth/app-handoff/apple${query}`,
+      );
     assert.equal(response.status, 302);
     assert.equal(response.headers.get("location"), `${APP}?error=invalid_request`);
   }
-  const done = await browser().visit(`${api}/api/auth/app-handoff/done`);
+  const done = await webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects().visit(
+    `${api}/api/auth/app-handoff/done`,
+  );
   assert.equal(done.status, 400);
-  const doneWithError = await browser().visit(`${api}/api/auth/app-handoff/done?error=<script>`);
+  const doneWithError =
+    await webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects().visit(
+      `${api}/api/auth/app-handoff/done?error=<script>`,
+    );
   assert.equal(doneWithError.headers.get("location"), `${APP}?error=sign_in_failed`);
 });
 
@@ -268,7 +281,7 @@ test("a challenge sent to Better Auth directly does not make a handoff", async (
     }),
   });
   assert.equal(response.status, 200, await response.clone().text());
-  const session = browser();
+  const session = webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects();
   for (const raw of response.headers.getSetCookie()) {
     const pair = raw.split(";")[0];
     session.jar.set(pair.slice(0, pair.indexOf("=")), pair.slice(pair.indexOf("=") + 1));
@@ -305,9 +318,9 @@ test("without the key, the browser sign-in is off and native sign-in still works
   const plain = await startWorker({ outboundService: (r) => apple.fetch(r) });
   try {
     await migrate(plain.runtime);
-    const response = await browser(plain.runtime).visit(
-      `${api}/api/auth/app-handoff/apple?code_challenge=${pkce().challenge}`,
-    );
+    const response = await webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects(
+      plain.runtime,
+    ).visit(`${api}/api/auth/app-handoff/apple?code_challenge=${pkce().challenge}`);
     assert.equal(response.headers.get("location"), `${APP}?error=apple_web_not_configured`);
     const { user } = await apple.signIn(plain.runtime, { email: "native-only@example.com" });
     assert.equal(user.email, "native-only@example.com");

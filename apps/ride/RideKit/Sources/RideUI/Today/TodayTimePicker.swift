@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// How long the rider has, as a segmented control, with a button to shuffle the suggestions.
-/// The control keeps its natural width when there's room, otherwise it shares the row.
 struct TodayTimePicker: View {
   @Binding var minutes: Int
-  /// Whether the control always takes the width beside the button, as on iPhone.
   var fillsWidth = false
   let shuffle: () -> Void
 

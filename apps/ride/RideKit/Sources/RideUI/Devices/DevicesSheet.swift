@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The Devices page as a sheet, opened from a screen's device status.
 struct DevicesSheet: View {
   @Environment(\.dismiss) private var dismiss
 

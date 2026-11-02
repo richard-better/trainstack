@@ -8,86 +8,78 @@ import os
   import WatchKit
 #endif
 
-/// The watch's workout: it measures heart rate, sends it to the phone, and shows the ride the
-/// phone sends back. The workout is saved to Health as an indoor ride when it ends, unless Ride
-/// on the phone or a Mac recorded the ride and saves it instead.
 @Observable
 public final class WorkoutRelay {
   public static let shared = WorkoutRelay()
 
   private(set) var workout: WatchWorkout?
-  /// The latest heart rate the watch measured.
-  private(set) var heartRate: Int?
+  private(set) var measuredHeartRate: Int?
   private(set) var glance: ReceivedGlance?
-  /// Whether the workout reaches the phone.
   private(set) var isPhoneConnected = false
-  /// Plays a cue as an interval ends. Set by default to tap the wrist.
-  @ObservationIgnored var onCue: @MainActor (IntervalCue) -> Void = WorkoutRelay.tap
+  @ObservationIgnored var playCue: @MainActor (IntervalCue) -> Void = WorkoutRelay.tapTheWrist
   @ObservationIgnored private var countdown = IntervalCountdown()
   @ObservationIgnored private let log = Logger(
     subsystem: "com.trainstackhq.ride", category: "watch")
   #if os(watchOS)
     @ObservationIgnored private let store = HKHealthStore()
-    @ObservationIgnored private var session: HKWorkoutSession?
+    @ObservationIgnored private var slot = WorkoutSessionSlot<HKWorkoutSession>()
     @ObservationIgnored private var builder: HKLiveWorkoutBuilder?
-    @ObservationIgnored private var delegate: WorkoutDelegate?
+    @ObservationIgnored private var delegate: MainActorWorkoutDelegate?
     @ObservationIgnored private var startup: Task<Void, Never>?
+    @ObservationIgnored private var phoneWatchdog: Task<Void, Never>?
+    @ObservationIgnored private let defaults = UserDefaults.standard
+    private static let startedOnPhoneKey = "workoutStartedOnPhone"
+    private static let phoneWatchdogInterval = Duration.seconds(30)
   #endif
 
   init() {}
 
-  /// Takes in what the phone sent.
   func receive(_ message: LinkMessage, at date: Date = .now) {
     switch message {
     case .glance(let glance):
-      self.glance = ReceivedGlance(glance: glance, date: date)
-      if let cue = countdown.update(glance.interval, isPaused: glance.isPaused) { onCue(cue) }
+      self.glance = ReceivedGlance(glance: glance, receivedAt: date)
+      workout?.lastHeardFromPhone = date
+      if let cue = countdown.update(glance.interval, isPaused: glance.isPaused) { playCue(cue) }
     case .rideEnded:
       end()
     case .rideRecorded:
       workout?.isRecordedElsewhere = true
       #if os(watchOS)
-        // The workout saved in its place has the energy the trainer measured. Discarding a
-        // workout keeps the samples it collected, so stop collecting energy to not count it
-        // twice.
-        builder?.dataSource?.disableCollection(for: HKQuantityType(.activeEnergyBurned))
+        stopCollectingEnergyTheRecordingAlreadyHas()
       #endif
     case .heartRate:
       break
     }
   }
 
-  private static func tap(_ cue: IntervalCue) {
+  private static func tapTheWrist(_ cue: IntervalCue) {
     #if os(watchOS)
       switch cue {
       case .warning: WKInterfaceDevice.current().play(.notification)
-      case .count: WKInterfaceDevice.current().play(.start)
+      case .secondsLeft: WKInterfaceDevice.current().play(.start)
       }
     #endif
   }
 
   #if DEBUG
-    /// A workout with no session behind it, for a ride played in a debug build.
     func simulateWorkout() {
       workout = WatchWorkout(startDate: .now, startedOnPhone: true)
       isPhoneConnected = true
     }
 
-    func simulateHeartRate(_ bpm: Int?) { heartRate = bpm }
+    func simulateHeartRate(_ bpm: Int?) { measuredHeartRate = bpm }
   #endif
 
   private func reset() {
     workout = nil
-    heartRate = nil
+    measuredHeartRate = nil
     glance = nil
     isPhoneConnected = false
     countdown = IntervalCountdown()
   }
 
   #if os(watchOS)
-    /// Asks to save workouts and read heart rate, so the first ride the phone starts needs no
-    /// answer on the wrist.
-    func requestAuthorization() async {
+    func requestAuthorizationBeforeTheFirstRide() async {
       do {
         try await store.requestAuthorization(
           toShare: [HKObjectType.workoutType()],
@@ -97,27 +89,27 @@ public final class WorkoutRelay {
       }
     }
 
-    /// Starts the workout, unless one is running. `fromPhone` when starting a ride on the
-    /// phone opened the app.
     public func start(fromPhone: Bool) {
-      guard session == nil else { return }
+      guard slot.isEmpty else { return }
       do {
         let configuration = WorkoutKind.configuration
         let session = try HKWorkoutSession(healthStore: store, configuration: configuration)
         let builder = session.associatedWorkoutBuilder()
         builder.dataSource = HKLiveWorkoutDataSource(
           healthStore: store, workoutConfiguration: configuration)
-        attach(session, builder: builder)
+        guard attach(session, builder: builder) else { return }
         let startDate = Date.now
         workout = WatchWorkout(startDate: startDate, startedOnPhone: fromPhone)
+        defaults.set(fromPhone, forKey: Self.startedOnPhoneKey)
+        watchForASilentPhone(session)
         session.startActivity(with: startDate)
         startup = Task {
           do {
             try await builder.beginCollection(at: startDate)
-            guard !Task.isCancelled, self.session === session else { return }
+            guard !Task.isCancelled, slot.holds(session) else { return }
             await mirror(session)
           } catch {
-            guard !Task.isCancelled, self.session === session else { return }
+            guard !Task.isCancelled, slot.holds(session) else { return }
             log.error("Workout collection did not begin: \(error.localizedDescription)")
             session.end()
           }
@@ -127,59 +119,80 @@ public final class WorkoutRelay {
       }
     }
 
-    /// Picks up a workout that was running when the app quit.
     func recover() async {
-      guard session == nil else { return }
+      guard slot.isEmpty else { return }
       do {
-        let session = try await store.recoverActiveWorkoutSession()
-        guard let session, self.session == nil else { return }
-        attach(session, builder: session.associatedWorkoutBuilder())
-        workout = WatchWorkout(startDate: session.startDate ?? .now, startedOnPhone: false)
+        let recovered = try await store.recoverActiveWorkoutSession()
+        guard let session = recovered,
+          attach(session, builder: session.associatedWorkoutBuilder())
+        else { return }
+        workout = WatchWorkout(
+          startDate: session.startDate ?? .now,
+          startedOnPhone: defaults.bool(forKey: Self.startedOnPhoneKey), lastHeardFromPhone: .now)
+        watchForASilentPhone(session)
         await mirror(session)
       } catch {
         log.error("Workout not recovered: \(error.localizedDescription)")
       }
     }
 
-    /// Ends the workout. It is saved to Health once the session has stopped, unless the ride is
-    /// recorded elsewhere.
     public func end() {
-      if let session {
+      if let session = slot.session {
         session.end()
       } else {
         reset()
       }
     }
 
-    private func attach(_ session: HKWorkoutSession, builder: HKLiveWorkoutBuilder) {
-      let delegate = WorkoutDelegate(
+    private func attach(_ session: HKWorkoutSession, builder: HKLiveWorkoutBuilder) -> Bool {
+      guard slot.take(session) else { return false }
+      let delegate = MainActorWorkoutDelegate(
         heartRate: { [weak self, weak session] bpm in
-          guard let self, let session, self.session === session else { return }
+          guard let self, slot.holds(session) else { return }
           measured(bpm)
         },
         receive: { [weak self, weak session] data in
-          guard let self, let session, self.session === session else { return }
+          guard let self, slot.holds(session) else { return }
           for message in data.compactMap({ try? LinkMessage(data: $0) }) { receive(message) }
         },
         disconnect: { [weak self, weak session] in
-          guard let self, let session, self.session === session else { return }
+          guard let self, slot.holds(session) else { return }
           isPhoneConnected = false
         },
         end: { [weak self, weak session] date in
-          guard let self, let session, self.session === session else { return }
+          guard let self, slot.holds(session) else { return }
           finish(at: date)
         })
       session.delegate = delegate
       builder.delegate = delegate
-      self.session = session
       self.builder = builder
       self.delegate = delegate
+      return true
+    }
+
+    private func watchForASilentPhone(_ session: HKWorkoutSession) {
+      phoneWatchdog?.cancel()
+      phoneWatchdog = Task { [weak self, weak session] in
+        while !Task.isCancelled {
+          do { try await Task.sleep(for: Self.phoneWatchdogInterval) } catch { return }
+          guard let self, let session, slot.holds(session), let workout else { return }
+          if workout.hasLostThePhone(at: .now) {
+            log.info("Ending a workout the phone stopped sending to")
+            session.end()
+            return
+          }
+        }
+      }
+    }
+
+    private func stopCollectingEnergyTheRecordingAlreadyHas() {
+      builder?.dataSource?.disableCollection(for: HKQuantityType(.activeEnergyBurned))
     }
 
     private func mirror(_ session: HKWorkoutSession) async {
       do {
         try await session.startMirroringToCompanionDevice()
-        guard self.session === session else { return }
+        guard slot.holds(session) else { return }
         isPhoneConnected = true
       } catch {
         log.error("Workout not mirrored to iPhone: \(error.localizedDescription)")
@@ -187,8 +200,9 @@ public final class WorkoutRelay {
     }
 
     private func measured(_ bpm: Int) {
-      heartRate = bpm
-      guard isPhoneConnected, let session, let data = try? LinkMessage.heartRate(bpm).encoded()
+      measuredHeartRate = bpm
+      guard isPhoneConnected, let session = slot.session,
+        let data = try? LinkMessage.heartRate(bpm).encoded()
       else { return }
       Task {
         do {
@@ -201,17 +215,20 @@ public final class WorkoutRelay {
 
     private func finish(at date: Date) {
       guard let builder else { return }
-      let isRecordedElsewhere = workout?.isRecordedElsewhere ?? false
+      let savesToHealth = workout?.savesToHealthItself ?? true
       let startup = self.startup
       self.startup = nil
       startup?.cancel()
-      session = nil
+      phoneWatchdog?.cancel()
+      phoneWatchdog = nil
+      defaults.removeObject(forKey: Self.startedOnPhoneKey)
+      slot.empty()
       self.builder = nil
       delegate = nil
       reset()
       Task {
         await startup?.value
-        guard !isRecordedElsewhere else {
+        guard savesToHealth else {
           builder.discardWorkout()
           return
         }
@@ -233,9 +250,7 @@ public final class WorkoutRelay {
 }
 
 #if os(watchOS)
-  /// Hands the session's and builder's callbacks, which arrive on HealthKit's queues, to the
-  /// main actor.
-  private final class WorkoutDelegate: NSObject, HKWorkoutSessionDelegate,
+  private final class MainActorWorkoutDelegate: NSObject, HKWorkoutSessionDelegate,
     HKLiveWorkoutBuilderDelegate
   {
     private let heartRate: @MainActor (Int) -> Void

@@ -1,7 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// A device's kind as a symbol on a rounded tile, leading its row.
 struct DeviceIcon: View {
   let kind: FitnessService?
   @ScaledMetric private var size = 36.0

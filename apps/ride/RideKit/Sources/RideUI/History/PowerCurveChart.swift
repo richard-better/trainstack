@@ -2,12 +2,10 @@ import Charts
 import RideData
 import SwiftUI
 
-/// The best power held for each of a set of durations.
 struct PowerCurveChart: View {
   let points: [PowerCurvePoint]
 
   var body: some View {
-    // Durations are spaced evenly, since they are chosen to be readable rather than to scale.
     Chart(points) { point in
       LineMark(x: .value("Duration", point.duration.spokenString), y: .value("Power", point.power))
         .interpolationMethod(.monotone)

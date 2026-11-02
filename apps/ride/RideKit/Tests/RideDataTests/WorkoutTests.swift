@@ -35,8 +35,7 @@ struct WorkoutTests {
       ])
   }
 
-  @Test func countsTimeWithinTolerance() {
-    // 100 W target: 104 and 96 are within 5%, 106 and a missing reading are not.
+  @Test func countsTimeWithinFivePercentOfTheTargetAndAMissingReadingAsOff() {
     let powers: [Int?] = [100, 104, 96, 106, nil]
     let samples = powers.enumerated().map {
       RideRecording.Sample(elapsed: TimeInterval($0), power: $1, targetPower: 100)
@@ -55,7 +54,7 @@ struct WorkoutTests {
   @Test func theSampleRideFollowsItsTenSteps() throws {
     let ride = try RideRecording.sample()
     #expect(ride.workoutName == "Recovery 30")
-    #expect(ride.targetSegments.count == 9)  // the two 157 W steps merge
+    #expect(ride.targetSegments.count == 9)
     #expect(ride.targetSegments.first == .init(start: 0, end: 180, power: 116))
     #expect(ride.targetSegments.last == .init(start: 1620, end: 1800, power: 116))
     let onTarget = try #require(ride.timeOnTarget())

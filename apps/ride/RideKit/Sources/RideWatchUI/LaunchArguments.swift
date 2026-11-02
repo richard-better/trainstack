@@ -4,10 +4,6 @@
   import RideLink
 
   extension WorkoutRelay {
-    /// Debug builds started with `-ride "<workout name>"` play that ride as if the phone were
-    /// running it, with a pretend trainer and heart rate strap, so the watch can be tried
-    /// without a phone. `-ride-minutes <minutes>` starts that far in. Nothing is recorded in
-    /// Health.
     static var launchRide: WorkoutTemplate? {
       let arguments = CommandLine.arguments
       guard let flag = arguments.firstIndex(of: "-ride"), flag + 1 < arguments.count else {
@@ -41,8 +37,6 @@
       }
     }
 
-    /// Whether debug builds were started with `-always-on`, to show the screen as it looks
-    /// wrist down.
     static var showsAlwaysOn: Bool { CommandLine.arguments.contains("-always-on") }
   }
 #endif

@@ -1,7 +1,7 @@
-/** The few Strava API calls Ride makes. They return Strava's response for the caller to read. */
-
 const OAUTH = "https://www.strava.com/oauth";
 const API = "https://www.strava.com/api/v3";
+
+export const UPLOAD_SCOPE = "activity:write";
 
 export type StravaCredentials = { id: string; secret: string };
 
@@ -19,8 +19,7 @@ export function authorizeUrl(credentials: StravaCredentials, redirectUri: string
     redirect_uri: redirectUri,
     response_type: "code",
     approval_prompt: "auto",
-    // Uploading a ride is all Ride does with Strava.
-    scope: "activity:write",
+    scope: UPLOAD_SCOPE,
     state,
   }).toString();
   return url.toString();

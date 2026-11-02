@@ -16,7 +16,6 @@ struct DeviceRow: View {
     .accessibilityElement(children: .combine)
   }
 
-  /// The roles a fitness device advertises, or an identifier to tell unnamed devices apart.
   private var detail: String? {
     if device.isFitness {
       return FitnessService.allCases.filter { device.services.contains($0) }

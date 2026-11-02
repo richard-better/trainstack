@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// The ride's sensors in the player's toolbar, each showing whether it is connected and still
-/// sending, which opens the Devices sheet. Checked each second, since a sensor going quiet
-/// changes nothing that is observed.
 struct SensorStatusButton: View {
   let controller: RideController
   @State private var isShowingDevices = false
@@ -11,7 +8,6 @@ struct SensorStatusButton: View {
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       let icons = controller.sensorStatuses(at: context.date).map(SensorStatusIcon.init)
-      // A custom label rather than a `Label`, which a toolbar would reduce to a plain symbol.
       Button(action: showDevices) {
         HStack(spacing: spacing) {
           if icons.isEmpty {

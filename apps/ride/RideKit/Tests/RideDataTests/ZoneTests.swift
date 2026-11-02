@@ -12,7 +12,6 @@ struct ZoneTests {
 
   @Test func calculatesFrielCyclingZonesFromLactateThreshold() throws {
     let set = try #require(zones(.frielCycling, [.lactateThresholdHeartRate: 170]).zones)
-    // 81, 90, 94, 100, 103 and 107% of 170, rounded, start zones 2 to 5c.
     #expect(set.limits == [137, 152, 159, 169, 174, 181])
     #expect(set.zones.map(\.label) == ["1", "2", "3", "4", "5a", "5b", "5c"])
     #expect(set.zones.first?.start == nil)
@@ -23,7 +22,6 @@ struct ZoneTests {
   @Test func calculatesKarvonenZonesFromHeartRateReserve() throws {
     let set = try #require(
       zones(.karvonen, [.maxHeartRate: 190, .restingHeartRate: 50]).zones)
-    // 50 plus 60, 70, 80 and 90% of the 140 bpm reserve.
     #expect(set.limits == [133, 147, 161, 175])
   }
 
@@ -58,9 +56,9 @@ struct ZoneTests {
   }
 
   @Test func calculatesPaceZonesFromSlowToFast() throws {
-    // A threshold pace of 4:00 per kilometre.
-    let set = try #require(zones(.frielRunningPace, [.thresholdPace: 240]).zones)
-    // Zones 2 to 5c start at 129, 113, 105, 100, 96 and 90% of 240 seconds.
+    let fourMinutesPerKilometre = 240
+    let set = try #require(
+      zones(.frielRunningPace, [.thresholdPace: fourMinutesPerKilometre]).zones)
     #expect(set.limits == [311, 272, 253, 241, 231, 217])
     #expect(set.zones[1].start == 310)
     #expect(set.zone(containing: 400).index == 0)
@@ -80,6 +78,12 @@ struct ZoneTests {
     let custom = zones(.percentOfMax, [:], customLimits: [1, 2, 3, 4])
     #expect(try #require(custom.zones).limits == [1, 2, 3, 4])
     #expect(custom.missingThresholds.isEmpty)
+  }
+
+  @Test func customLimitsStayPutWhenThresholdsChange() throws {
+    var custom = zones(.percentOfMax, [.maxHeartRate: 200], customLimits: [110, 130, 150, 170])
+    custom.thresholds[.maxHeartRate] = 180
+    #expect(try #require(custom.zones).limits == [110, 130, 150, 170])
   }
 
   @Test func movesTheNextZoneWithAnEditedLimit() throws {

@@ -2,14 +2,10 @@ import Foundation
 import HealthKit
 import RideData
 
-/// A ride as Health keeps it: an indoor cycling workout with the power, cadence and heart rate
-/// of each second, and the energy the rider burned to turn the pedals.
 nonisolated struct HealthWorkout {
   let startDate: Date
   let endDate: Date
   let samples: [HKQuantitySample]
-  /// Names the workout by the ride's ID, so Health keeps one workout for a ride however many
-  /// devices save it.
   let metadata: [String: Any]
 
   init(_ ride: Ride) {
@@ -26,10 +22,9 @@ nonisolated struct HealthWorkout {
 
     let perMinute = HKUnit.count().unitDivided(by: .minute())
     var samples: [HKQuantitySample] = []
-    var energy = EnergyTally(rideID: ride.id, start: start)
+    var energy = MinuteEnergyTally(rideID: ride.id, start: start)
     var previous: TimeInterval?
     for sample in recording.samples {
-      // A sample covers the time since the one before it.
       let from = start.addingTimeInterval(previous ?? max(sample.elapsed - 1, 0))
       let to = start.addingTimeInterval(sample.elapsed)
       previous = sample.elapsed
@@ -52,8 +47,6 @@ nonisolated struct HealthWorkout {
     self.samples = samples
   }
 
-  /// A sample named by its ride, type and start, so Health keeps one of it however many devices
-  /// save the ride, and however many times one tries.
   private static func sample(
     _ identifier: HKQuantityTypeIdentifier, _ quantity: HKQuantity, from: Date, to: Date,
     of rideID: Ride.ID
@@ -67,11 +60,9 @@ nonisolated struct HealthWorkout {
       ])
   }
 
-  /// Active energy in a sample a minute, from the work done at the pedals.
-  private struct EnergyTally {
-    /// The share of the energy a rider burns that reaches the pedals.
+  private struct MinuteEnergyTally {
     private static let grossEfficiency = 0.24
-    private static let span: TimeInterval = 60
+    private static let sampleSpan: TimeInterval = 60
 
     private let rideID: Ride.ID
     private var start: Date
@@ -87,7 +78,7 @@ nonisolated struct HealthWorkout {
     mutating func add(joules: Double, until date: Date) -> [HKQuantitySample] {
       self.joules += joules
       end = date
-      return date.timeIntervalSince(start) >= Self.span ? finish() : []
+      return date.timeIntervalSince(start) >= Self.sampleSpan ? finish() : []
     }
 
     mutating func finish() -> [HKQuantitySample] {

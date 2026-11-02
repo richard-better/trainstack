@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// A choice between the ways of breaking down a ride, and the chosen breakdown.
 struct RideBreakdownSection: View {
   let recording: RideRecording
   @State private var choice: RideBreakdown?
@@ -12,7 +11,6 @@ struct RideBreakdownSection: View {
     if let shown = choice ?? available.first {
       let caption = basis(of: shown).map { Text($0).font(.caption).foregroundStyle(.secondary) }
       VStack(alignment: .leading, spacing: 14) {
-        // Side by side with room to spare, otherwise stacked, and as a menu on a narrow phone.
         ViewThatFits(in: .horizontal) {
           HStack {
             picker(available).pickerStyle(.segmented).fixedSize()
@@ -35,8 +33,6 @@ struct RideBreakdownSection: View {
         case .powerCurve: PowerCurveChart(points: recording.powerCurve())
         }
       }
-      // A ride without the chosen breakdown shows the first with what it needs from the
-      // rider's profile instead.
       .onChange(of: available, initial: true) { _, available in
         if let choice, available.contains(choice) { return }
         choice = available.first(where: isConfigured) ?? available.first
@@ -52,13 +48,12 @@ struct RideBreakdownSection: View {
   }
 
   private func isConfigured(_ breakdown: RideBreakdown) -> Bool {
-    guard let metric = breakdown.metric else { return true }
+    guard let metric = breakdown.zoneMetric else { return true }
     return store.zones(for: metric, of: recording) != nil
   }
 
-  /// What the zones of `breakdown` come from, such as `Zones from FTP 200 W`.
   private func basis(of breakdown: RideBreakdown) -> LocalizedStringResource? {
-    guard let metric = breakdown.metric,
+    guard let metric = breakdown.zoneMetric,
       let settings = store.settings(for: metric, of: recording), settings.zones != nil
     else { return nil }
     if settings.choice.isCustom { return "Custom zones" }

@@ -1,10 +1,8 @@
 import Foundation
 
-/// A workout written against FTP rather than in watts, so one template suits every rider.
 public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
   public struct Step: Hashable, Codable, Sendable {
     public var duration: TimeInterval
-    /// Target power as a fraction of FTP.
     public var intensity: Double
 
     public init(duration: TimeInterval, intensity: Double) {
@@ -16,10 +14,8 @@ public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
   }
 
   public var name: String
-  /// The zone the workout trains, used to label and filter it.
   public var category: PowerZone
   public var steps: [Step]
-  /// What the workout asks of the rider and what it is good for, in a sentence or two.
   public var about: String
 
   public var id: String { name }
@@ -33,12 +29,13 @@ public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
 
   public var duration: TimeInterval { steps.reduce(0) { $0 + $1.duration } }
 
-  /// Training stress score if ridden exactly as written: 100 for an hour at FTP.
   public var stressScore: Int {
-    Int((steps.reduce(0) { $0 + $1.duration * $1.intensity * $1.intensity } / 36).rounded())
+    let secondsInAnHour = 3600.0
+    let hoursAtFTP =
+      steps.reduce(0) { $0 + $1.duration * $1.intensity * $1.intensity } / secondsInAnHour
+    return Int((hoursAtFTP * 100).rounded())
   }
 
-  /// The workout in watts for a rider with this FTP.
   public func workout(ftp: Int) -> Workout {
     Workout(
       name: name,
@@ -47,8 +44,6 @@ public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
       })
   }
 
-  /// The same workout lasting `duration`. The easy steps stretch or shrink so the hard efforts
-  /// keep their length; only when the hard efforts alone do not fit does every step shrink.
   public func fitted(to duration: TimeInterval) -> WorkoutTemplate {
     let isEasy = { (step: Step) in step.intensity < Self.easyIntensity }
     let easy = steps.filter(isEasy).reduce(0) { $0 + $1.duration }
@@ -62,13 +57,12 @@ public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
       let length = stretches ? (step.duration * scale).rounded() : step.duration
       return length > 0 ? Step(duration: length, intensity: step.intensity) : nil
     }
-    // Rounding each step can leave a few seconds over or under; settle them on the longest step.
     if let longest = result.steps.indices.max(by: {
       result.steps[$0].duration < result.steps[$1].duration
     }) {
-      result.steps[longest].duration += duration - result.duration
+      let roundingLeftover = duration - result.duration
+      result.steps[longest].duration += roundingLeftover
     }
-    // "Recovery 30" fitted to 45 minutes becomes "Recovery 45".
     let suffix = " \(Int((self.duration / 60).rounded()))"
     if name.hasSuffix(suffix) {
       result.name = name.dropLast(suffix.count) + " \(Int((duration / 60).rounded()))"
@@ -76,12 +70,10 @@ public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
     return result
   }
 
-  /// Steps below this share of FTP are recovery and endurance, which can stretch or shrink.
-  public static let easyIntensity = 0.75
+  public static let easyIntensity = PowerZone.tempo.lowestIntensity
 }
 
 extension WorkoutTemplate {
-  /// The workouts that ship with the app.
   public static let library: [WorkoutTemplate] = [
     .init(
       name: "Zone 3 · 3×10", category: .tempo,
@@ -124,7 +116,7 @@ extension WorkoutTemplate {
     .init(
       name: "VO2 max booster", category: .vo2Max,
       steps: minutes(
-        [(5, 40), (3, 50), (3, 58), (3, 64), (6, 72), (5, 52), (6, 125), (25, 68), (4, 45)]),
+        [(5, 40), (3, 50), (3, 58), (3, 64), (6, 72), (5, 52), (6, 118), (25, 68), (4, 45)]),
       about:
         "A ramping warm-up, one six-minute effort well above threshold, then a long endurance spin. Raises the ceiling on your aerobic power."
     ),
@@ -170,12 +162,15 @@ extension WorkoutTemplate {
     library.first { $0.name == name }
   }
 
-  /// Steps from (minutes, percent of FTP) pairs.
-  private static func minutes(_ steps: [(Double, Double)]) -> [Step] {
-    steps.map { Step(duration: ($0.0 * 60).rounded(), intensity: $0.1 / 100) }
+  private typealias MinutesAtPercentOfFTP = (minutes: Double, percentOfFTP: Double)
+
+  private static func minutes(_ steps: [MinutesAtPercentOfFTP]) -> [Step] {
+    steps.map { Step(duration: ($0.minutes * 60).rounded(), intensity: $0.percentOfFTP / 100) }
   }
 
-  private static func repeated(_ count: Int, _ steps: [(Double, Double)]) -> [(Double, Double)] {
+  private static func repeated(_ count: Int, _ steps: [MinutesAtPercentOfFTP])
+    -> [MinutesAtPercentOfFTP]
+  {
     Array((0..<count).map { _ in steps }.joined())
   }
 }

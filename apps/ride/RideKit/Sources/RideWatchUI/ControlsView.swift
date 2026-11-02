@@ -1,7 +1,6 @@
 #if os(watchOS)
   import SwiftUI
 
-  /// A swipe from the ride: ends the workout on the watch.
   struct ControlsView: View {
     let end: () -> Void
 

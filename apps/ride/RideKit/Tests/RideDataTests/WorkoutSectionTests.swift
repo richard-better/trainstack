@@ -9,7 +9,6 @@ struct WorkoutSectionTests {
     #expect(sections.map(\.kind) == [.warmUp, .repeats(3), .coolDown])
     #expect(sections[0].steps.map(\.intensity) == [0.45, 0.55, 0.65, 0.72])
     #expect(sections[1].steps.map(\.intensity) == [0.95, 1.12, 0.6])
-    // No recovery after the last block.
     #expect(sections[1].skippedInLastRepeat == 1)
     #expect(sections[1].duration == (3 * 16 - 5) * 60)
     #expect(sections[2].steps.map(\.intensity) == [0.5])
@@ -27,7 +26,6 @@ struct WorkoutSectionTests {
   }
 
   @Test func needsTwoFullRepeatsToMakeASet() throws {
-    // Three blocks at rising targets, with the same recovery between them.
     let sections = try #require(WorkoutTemplate.named("Threshold waves 3×12")).sections
     #expect(
       sections.map(\.kind) == [.warmUp, .effort, .recovery, .effort, .recovery, .effort, .coolDown])

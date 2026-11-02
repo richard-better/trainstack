@@ -1,15 +1,12 @@
 import RideData
 import SwiftUI
 
-/// A scope's zones for one metric: the model menu and the zones it gives, with the end of each
-/// zone editable. Read-only for a sport that uses Default's zones.
 struct ZonesSection: View {
   let scope: ZoneScope
   let metric: ZoneMetric
   @Environment(RiderSettingsStore.self) private var store
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
-    /// A phone is too narrow for a percentage column, so there they go under each zone's name.
     private var hasPercentColumn: Bool { sizeClass == .regular }
   #else
     private let hasPercentColumn = true
@@ -39,7 +36,7 @@ struct ZonesSection: View {
           ForEach(zones.zones) { zone in
             ZoneRow(
               zones: zones, zone: zone, metric: metric, scope: scope, isEditable: isEditable,
-              reference: settings.thresholds[settings.choice.model.basis.reference],
+              percentageBase: settings.thresholds[settings.choice.model.basis.reference],
               hasPercentColumn: hasPercentColumn)
           }
         } else {
@@ -65,8 +62,6 @@ struct ZonesSection: View {
 
   private func restore(_ model: ZoneModel) { store.choose(model, in: scope) }
 
-  /// The values the scale spans, from easiest to hardest: from half to all of max heart rate,
-  /// up to 160% of FTP, or from 140% to 85% of threshold pace, when those are known.
   private func scaleRange(of zones: ZoneSet, thresholds: [Threshold: Int]) -> (Int, Int) {
     let firstEnd = zones.limits[0]
     let lastStart = zones.zones.last?.start ?? firstEnd

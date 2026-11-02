@@ -6,62 +6,46 @@
   import WatchConnectivity
   import os
 
-  /// The iPhone's end of the Apple Watch workout: the watch measures heart rate in a workout
-  /// session it mirrors to the phone, and the phone sends back the ride to show.
-  ///
-  /// Starting a ride opens Ride on the watch, which starts the session. The rider can also start
-  /// one on the watch to ride on a Mac; HealthKit then wakes the phone in the background, which
-  /// passes the heart rate on over Bluetooth for the Mac to use like a chest strap.
   @Observable
   final class WatchLink {
     static let shared = WatchLink()
 
-    /// The latest heart rate from the watch, while its workout runs.
     private(set) var heartRate: Int?
     private(set) var isConnected = false
-    /// Called with each heart rate the watch sends.
     @ObservationIgnored var onHeartRate: ((Int) -> Void)?
-    /// Whether this phone is recording a ride, which it saves to Health in place of the watch's
-    /// workout when it can.
     @ObservationIgnored var isRecordingRide = false {
-      didSet { claimRide() }
+      didSet { claimRideForHealth() }
     }
+    @ObservationIgnored private var isRelayingARideTheMacRecords = false
     @ObservationIgnored private let store = HKHealthStore()
     @ObservationIgnored private var session: HKWorkoutSession?
     @ObservationIgnored private var delegate: SessionDelegate?
     @ObservationIgnored private let relay = HeartRateRelay()
     @ObservationIgnored private let phoneWorkout = PhoneWorkout()
-    /// Says whether there is a watch with Ride on it.
     @ObservationIgnored private let pairing = WatchPairing()
     @ObservationIgnored private let log = Logger(
       subsystem: "com.trainstackhq.ride", category: "watch")
 
     private init() {
-      // Set at launch, since HealthKit may launch the app in the background just to hand over a
-      // session the rider started on the watch.
       store.workoutSessionMirroringStartHandler = { [weak self] session in
         Task { @MainActor in self?.attach(session) }
       }
       Task { [phoneWorkout] in await phoneWorkout.endLeftOverSession() }
       relay.claim = { AppSync.shared.claim }
       relay.onRideRecorded = { [weak self] in
-        // Ride on a Mac records the ride, and this phone saves it to Health once it syncs.
-        guard HealthRides.shared.canSave else { return }
-        self?.send(.rideRecorded)
+        self?.isRelayingARideTheMacRecords = true
+        self?.claimRideForHealth()
       }
     }
 
-    /// Makes sure the link is listening for the watch. See `WatchSupport.activate()`.
-    static func activate() { _ = shared }
+    static func activateAtLaunch() { _ = shared }
 
-    /// Asks for access to Health, then opens Ride on the watch and starts its workout, unless
-    /// one is already running. Without a watch, the phone runs the workout session itself.
     func startWorkout() {
       guard HKHealthStore.isHealthDataAvailable(), session == nil else { return }
       Task {
-        await HealthRides.shared.requestAccess()
+        await HealthRides.shared.requestAccessWhileInFront()
         guard session == nil else { return }
-        guard pairing.hasRide else {
+        guard pairing.hasWatchWithRideInstalled else {
           phoneWorkout.start()
           return
         }
@@ -74,11 +58,14 @@
       }
     }
 
-    /// Ends the phone's workout session, and tells the watch the ride is over, which ends its
-    /// workout.
     func endRide() {
       phoneWorkout.end()
       send(.rideEnded)
+    }
+
+    func sendGlance(_ glance: RideGlance) {
+      send(.glance(glance))
+      claimRideForHealth()
     }
 
     func send(_ message: LinkMessage) {
@@ -106,13 +93,12 @@
       self.delegate = delegate
       isConnected = true
       relay.start()
-      claimRide()
+      claimRideForHealth()
     }
 
-    /// Tells the watch this phone saves the ride to Health, so the watch does not save its
-    /// workout too.
-    private func claimRide() {
-      guard isRecordingRide, HealthRides.shared.canSave else { return }
+    private func claimRideForHealth() {
+      guard isRecordingRide || isRelayingARideTheMacRecords, HealthRides.shared.canSave
+      else { return }
       send(.rideRecorded)
     }
 
@@ -120,6 +106,7 @@
       guard session === self.session else { return }
       self.session = nil
       delegate = nil
+      isRelayingARideTheMacRecords = false
       isConnected = false
       heartRate = nil
       relay.stop()
@@ -131,10 +118,10 @@
         onHeartRate?(bpm)
         relay.send(bpm: bpm)
       }
+      if isRelayingARideTheMacRecords { claimRideForHealth() }
     }
   }
 
-  /// Whether a paired watch has Ride installed, from WatchConnectivity.
   private final class WatchPairing: NSObject, WCSessionDelegate {
     override init() {
       super.init()
@@ -143,7 +130,7 @@
       WCSession.default.activate()
     }
 
-    var hasRide: Bool {
+    var hasWatchWithRideInstalled: Bool {
       guard WCSession.isSupported() else { return false }
       let session = WCSession.default
       return session.activationState == .activated && session.isPaired
@@ -158,13 +145,10 @@
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
 
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
-      // A rider switching watches gets the new one.
       session.activate()
     }
   }
 
-  /// Hands the mirrored session's callbacks, which arrive on HealthKit's queue, to the main
-  /// actor.
   private final class SessionDelegate: NSObject, HKWorkoutSessionDelegate {
     private let receive: @MainActor ([Data]) -> Void
     private let end: @MainActor () -> Void

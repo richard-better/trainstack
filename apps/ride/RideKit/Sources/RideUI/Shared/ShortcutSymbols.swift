@@ -1,7 +1,6 @@
 import SwiftUI
 
 extension KeyboardShortcut {
-  /// The keys as a menu writes them, such as ⇧⌘E, for help tags.
   var symbols: String {
     let modifierSymbols: [(EventModifiers, String)] = [
       (.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘"),
@@ -12,7 +11,6 @@ extension KeyboardShortcut {
 }
 
 extension KeyEquivalent {
-  /// The key as a menu writes it.
   var symbol: String {
     switch self {
     case .space: "Space"
@@ -30,7 +28,6 @@ extension KeyEquivalent {
 }
 
 extension View {
-  /// A help tag that names the keys for `shortcut` too, such as "Pause (Space)".
   func help(_ text: String, shortcut: KeyboardShortcut?) -> some View {
     help(shortcut.map { "\(text) (\($0.symbols))" } ?? text)
   }

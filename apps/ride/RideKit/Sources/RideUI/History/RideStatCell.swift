@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A headline number with its label above and unit beside it.
 struct RideStatCell: View {
   let stat: RideStat
 

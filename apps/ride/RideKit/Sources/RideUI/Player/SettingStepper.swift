@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// − value +, for the setting of the current trainer mode. The up and down arrow keys work
-/// too, as do the Controls menu's shortcuts.
 struct SettingStepper: View {
   let label: String
   let decrease: () -> Void
@@ -43,7 +41,6 @@ struct SettingStepper: View {
     .help("\(keys(for: .decrease, arrow: "↓")), \(keys(for: .increase, arrow: "↑").lowercased())")
   }
 
-  /// Such as "Harder (↑ or ⌘+)".
   private func keys(for command: RideCommand, arrow: String) -> String {
     let menu = command.shortcut(playerPresented: true).map { " or \($0.symbols)" } ?? ""
     return "\(command.title(in: nil)) (\(arrow)\(menu))"

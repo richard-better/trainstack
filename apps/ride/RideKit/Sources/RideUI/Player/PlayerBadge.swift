@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Over the chart when the ride needs the rider's attention: it is paused, or the trainer is gone.
 struct PlayerBadge: View {
   let message: String
 

@@ -4,7 +4,6 @@ import Testing
 @testable import RideData
 
 struct RideAnalysisTests {
-  /// Zones at 60, 70, 80 and 90% of a max heart rate of 200.
   private let heartRateZones = MetricZones(
     thresholds: [.maxHeartRate: 200], choice: ZoneChoice(model: .percentOfMax)
   ).zones!
@@ -16,7 +15,6 @@ struct RideAnalysisTests {
         .init(elapsed: 1, heartRate: 100),
         .init(elapsed: 2, heartRate: 190),
         .init(elapsed: 3, heartRate: 190),
-        // Paused for a minute: the gap before this sample does not count.
         .init(elapsed: 63, heartRate: 190),
       ])
     let zones = ride.timeInZones(heartRateZones, of: .heartRate)
@@ -52,13 +50,12 @@ struct RideAnalysisTests {
     #expect(curve.map(\.power) == curve.map(\.power).sorted(by: >))
   }
 
-  @Test func sharesTimeAcrossPowerZones() throws {
+  @Test func sharesTheEasySampleRideAcrossPowerZonesBelowThreshold() throws {
     let powerZones = try #require(
       MetricZones(thresholds: [.ftp: 200], choice: ZoneChoice(model: .coggan6)).zones)
     let zones = try RideRecording.sample().timeInZones(powerZones, of: .power)
     #expect(zones.map(\.zone) == powerZones.zones)
     #expect(abs(zones.map(\.fraction).reduce(0, +) - 1) < 1e-9)
-    // The sample ride is an easy ride: nothing above tempo at an FTP of 200.
     #expect(zones[3].seconds == 0)
     #expect(zones[1].fraction > zones[2].fraction)
   }
@@ -67,12 +64,13 @@ struct RideAnalysisTests {
     let paceZones = try #require(
       MetricZones(thresholds: [.thresholdPace: 300], choice: ZoneChoice(model: .frielRunningPace))
         .zones)
+    let fiveMinutesPerKilometre = 1000.0 / 300
+    let sixFortyPerKilometre = 1000.0 / 400
     var run = recording([
-      // 5:00 per kilometre, then stopped, then 6:40 per kilometre.
-      .init(elapsed: 0, speed: 1000.0 / 300),
-      .init(elapsed: 1, speed: 0),
-      .init(elapsed: 2, speed: 2.5),
-      .init(elapsed: 3, speed: 2.5),
+      .init(elapsed: 0, speedMetresPerSecond: fiveMinutesPerKilometre),
+      .init(elapsed: 1, speedMetresPerSecond: 0),
+      .init(elapsed: 2, speedMetresPerSecond: sixFortyPerKilometre),
+      .init(elapsed: 3, speedMetresPerSecond: sixFortyPerKilometre),
     ])
     #expect(run.timeInZones(paceZones, of: .pace).isEmpty)
     run.sport = .running
@@ -83,7 +81,6 @@ struct RideAnalysisTests {
   @Test func scoresTrainingStressFromNormalizedPower() throws {
     let ride = try RideRecording.sample()
     #expect(ride.normalizedPower() == 139)
-    // About half an hour at 70% of FTP is a score of 24.
     #expect(ride.trainingStressScore(ftp: 200) == 24)
     #expect(try #require(ride.trainingStressScore(ftp: 150)) > 24)
   }
@@ -96,24 +93,21 @@ struct RideAnalysisTests {
     #expect(ride.intensityFactor(ftp: 0) == nil)
   }
 
-  @Test func addsUpWorkSecondBySecond() {
-    // A minute at 100 W, then a minute at 300 W: 6 kJ and 18 kJ.
+  @Test func addsAMinuteAt100WAndAMinuteAt300WUpTo24Kilojoules() {
     let ride = recording((0..<120).map { .init(elapsed: Double($0), power: $0 < 60 ? 100 : 300) })
-    #expect(ride.work() == 24)
-    #expect(recording([.init(elapsed: 0, heartRate: 120)]).work() == nil)
+    #expect(ride.workKilojoules() == 24)
+    #expect(recording([.init(elapsed: 0, heartRate: 120)]).workKilojoules() == nil)
   }
 
   @Test(arguments: [1.0, 1.2, 2.0])
   func addsUpTheSameWorkWhateverTheTimeBetweenSamples(interval: TimeInterval) {
-    // Two minutes at 200 W is 24 kJ, however often the trainer reported.
     let count = Int((120 / interval).rounded()) + 1
     let ride = recording((0..<count).map { .init(elapsed: Double($0) * interval, power: 200) })
-    #expect(ride.work() == 24)
+    #expect(ride.workKilojoules() == 24)
   }
 
   @Test(arguments: [1.0, 1.2, 2.0])
   func findsTheSamePowerWhateverTheTimeBetweenSamples(interval: TimeInterval) {
-    // Two minutes at 200 W, however often the trainer reported.
     let count = Int((120 / interval).rounded()) + 1
     let ride = recording((0..<count).map { .init(elapsed: Double($0) * interval, power: 200) })
     #expect(ride.normalizedPower() == 200)
@@ -121,16 +115,14 @@ struct RideAnalysisTests {
   }
 
   @Test func leavesPausesOutOfThePowerPerSecond() {
-    // Paused for a minute between two readings: the seconds between count as zero.
     let ride = recording([.init(elapsed: 0, power: 300), .init(elapsed: 60, power: 300)])
     #expect(ride.powerPerSecond().filter { $0 > 0 }.count == 2)
   }
 
   @Test func leavesPausesOutOfTheWork() {
-    // A minute at 300 W, paused for a minute, then the samples carry on.
     var samples = (0...60).map { RideRecording.Sample(elapsed: Double($0), power: 300) }
     samples.append(.init(elapsed: 120, power: 300))
-    #expect(recording(samples).work() == 18)
+    #expect(recording(samples).workKilojoules() == 18)
   }
 
   @Test func hasNoStressForAVeryShortRide() {

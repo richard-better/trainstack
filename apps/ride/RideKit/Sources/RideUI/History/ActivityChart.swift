@@ -2,9 +2,6 @@ import Charts
 import RideData
 import SwiftUI
 
-/// Power and heart rate over the ride. Both share one unlabeled scale, so the chart shows
-/// the shape of the effort rather than exact values; hover to read them. Each entry in the
-/// legend switches its series on and off. With an FTP, each target step is tinted by its zone.
 struct ActivityChart: View {
   let recording: RideRecording
   var ftp: Int?
@@ -104,8 +101,6 @@ struct ActivityChart: View {
     }
   }
 
-  /// The target step's zone colour, faint enough to read the lines over, or plain grey without
-  /// an FTP to place it in a zone.
   private func targetColor(_ power: Int) -> Color {
     guard let ftp, ftp > 0 else { return ActivityChartSeries.target.color }
     return PowerZone.zone(power: power, ftp: ftp).color.opacity(0.3)
@@ -144,7 +139,6 @@ struct ActivityChart: View {
     return (Double(peak ?? 100) * 1.1 / 50).rounded(.up) * 50
   }
 
-  /// A label every 5 minutes, spaced out for long rides so the axis stays readable.
   private var xStride: Double {
     let steps: [Double] = [300, 600, 900, 1800, 3600]
     return steps.first { recording.summary.duration / $0 <= 8 } ?? 3600

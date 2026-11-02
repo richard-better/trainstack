@@ -8,7 +8,6 @@ const GITHUB_TOKEN = "github-token-value";
 let worker;
 let runtime;
 let db;
-/** What the Worker asked GitHub for, and how GitHub answers. */
 let github;
 const appleAuth = mockApple();
 
@@ -180,14 +179,23 @@ test("a rider's words stay plain text, so they cannot notify, link or format", a
   assert.equal(response.status, 201);
   const { title, body } = github.requests[0].body;
   assert.equal(title, `Feedback: ${long.slice(0, 71).trimEnd()}…`);
-  // The whole message is one code block, fenced longer than any backticks inside it.
+  const fenceLongerThanAnyBackticksInTheMessage = "`````";
   const [fenced, details] = body.split("\n\n---\n\n");
-  assert.equal(fenced, `\`\`\`\`\`text\n${message}\n\`\`\`\`\``);
+  assert.equal(
+    fenced,
+    `${fenceLongerThanAnyBackticksInTheMessage}text\n${message}\n${fenceLongerThanAnyBackticksInTheMessage}`,
+  );
   const contextLines = details.split("\n").filter((line) => line.startsWith("- "));
   assert.deepEqual(contextLines, ["- Screen: History(httpsevil.example)- App fake"]);
 });
 
-test("a rider can send ten pieces of feedback a day", async () => {
+async function useUpTodaysFeedback(token) {
+  for (let i = 0; i < 10; i++)
+    assert.equal((await send(token, { message: `Idea ${i}` })).status, 201);
+  assert.equal((await send(token, { message: "One too many" })).status, 429);
+}
+
+test("a rider can send ten pieces of feedback a day, however fast they send them", async () => {
   const { token } = await appleAuth.signIn(runtime);
   const responses = await Promise.all(
     Array.from({ length: 12 }, (_, i) => send(token, { message: `Idea ${i}` })),
@@ -195,12 +203,17 @@ test("a rider can send ten pieces of feedback a day", async () => {
   const statuses = responses.map((response) => response.status).sort();
   assert.deepEqual(statuses, [...Array(10).fill(201), 429, 429]);
   assert.equal(github.requests.length, 10);
+});
 
-  // Another rider has their own allowance.
+test("each rider has a daily feedback allowance of their own", async () => {
+  await useUpTodaysFeedback((await appleAuth.signIn(runtime)).token);
   const other = await appleAuth.signIn(runtime);
   assert.equal((await send(other.token, { message: "Mine" })).status, 201);
+});
 
-  // Yesterday's feedback no longer counts.
+test("feedback sent more than a day ago no longer counts against the limit", async () => {
+  const { token } = await appleAuth.signIn(runtime);
+  await useUpTodaysFeedback(token);
   await db.prepare("UPDATE feedback SET created_at = created_at - 86401").run();
   assert.equal((await send(token, { message: "Next day" })).status, 201);
 });

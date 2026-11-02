@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Today's fitness, fatigue and form, and this week's riding. One row when it fits, otherwise
-/// two.
 struct LoadHeadline: View {
   let load: [TrainingLoad]
   let rides: [RideRecording]

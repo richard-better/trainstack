@@ -2,16 +2,12 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// How the player chart fills an interval's target: in its power zone's colour, faint while it
-/// is still to come, stronger once ridden and strongest for the current one, so the power and
-/// heart rate lines stay readable over it. Grey without an FTP to place it in a zone.
 struct WorkoutTargetShade: Equatable {
   enum Stage: Equatable {
     case ridden, current, upcoming
   }
 
   let stage: Stage
-  /// The zone of the interval's planned power, or nil without an FTP.
   let zone: PowerZone?
 
   init(interval: RideSession.Interval, position: TimeInterval, ftp: Int?) {

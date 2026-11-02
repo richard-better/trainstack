@@ -5,7 +5,6 @@ import Testing
 @testable import RideLink
 
 struct RideGlanceTests {
-  /// Warm up, three threshold efforts with recoveries, then an endurance spin, for a 200 W FTP.
   private let workout = Workout(
     name: "Threshold 3×10",
     steps: [

@@ -8,25 +8,21 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
   var onConnect: ((UUID) -> Void)?
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
-  var onBattery: ((UUID, Int) -> Void)?
+  var onBatteryPercent: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var onTrainerControlReady: ((UUID) -> Void)?
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
   private var central: CBCentralManager?
-  /// The peripherals connected or being connected to. CoreBluetooth drops a connection when
-  /// nothing holds its peripheral.
-  private var peripherals: [UUID: CBPeripheral] = [:]
+  private var heldPeripherals: [UUID: CBPeripheral] = [:]
 
   func start() {
     if central == nil {
-      // CoreBluetooth delivers delegate callbacks on the main queue.
       central = CBCentralManager(delegate: self, queue: .main)
     }
   }
 
-  // Scans unfiltered so the Devices pane can count the non-fitness devices it hides.
-  func scan() {
+  func scanAllDevices() {
     guard let central, central.state == .poweredOn else { return }
     central.scanForPeripherals(withServices: nil)
   }
@@ -36,27 +32,27 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
     central.stopScan()
   }
 
-  func connect(_ id: UUID) {
+  func connectWhenInRange(_ id: UUID) {
     guard let central, central.state == .poweredOn else { return }
     guard
-      let peripheral = peripherals[id]
+      let peripheral = heldPeripherals[id]
         ?? central.retrievePeripherals(withIdentifiers: [id]).first
     else {
       onConnectFailure?(id)
       return
     }
-    peripherals[id] = peripheral
+    heldPeripherals[id] = peripheral
     peripheral.delegate = self
     central.connect(peripheral)
   }
 
   func disconnect(_ id: UUID) {
-    guard let peripheral = peripherals.removeValue(forKey: id) else { return }
+    guard let peripheral = heldPeripherals.removeValue(forKey: id) else { return }
     central?.cancelPeripheralConnection(peripheral)
   }
 
   func writeTrainerControl(_ data: Data, to id: UUID) {
-    guard let peripheral = peripherals[id], peripheral.state == .connected,
+    guard let peripheral = heldPeripherals[id], peripheral.state == .connected,
       let controlPoint = peripheral.services?.first(where: { $0.uuid == GATT.trainer })?
         .characteristics?.first(where: { $0.uuid == GATT.fitnessMachineControlPoint })
     else { return }
@@ -67,8 +63,7 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
 extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
   func centralManagerDidUpdateState(_ central: CBCentralManager) {
     let availability = BluetoothAvailability(central.state)
-    // Peripherals are invalid once Bluetooth goes down, and must be retrieved again.
-    if availability != .ready { peripherals.removeAll() }
+    if availability != .ready { heldPeripherals.removeAll() }
     onAvailability?(availability)
   }
 
@@ -97,7 +92,7 @@ extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
   func centralManager(
     _ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?
   ) {
-    guard peripherals.removeValue(forKey: peripheral.identifier) != nil else { return }
+    guard heldPeripherals.removeValue(forKey: peripheral.identifier) != nil else { return }
     onConnectFailure?(peripheral.identifier)
   }
 
@@ -105,8 +100,8 @@ extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
     _ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
     error: (any Error)?
   ) {
-    // A disconnect that was asked for has already let the peripheral go.
-    guard peripherals[peripheral.identifier] != nil else { return }
+    let wasAskedToDisconnect = heldPeripherals[peripheral.identifier] == nil
+    guard !wasAskedToDisconnect else { return }
     onDisconnect?(peripheral.identifier)
   }
 }
@@ -162,11 +157,11 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
     error: (any Error)?
   ) {
     guard error == nil, let value = characteristic.value,
-      peripherals[peripheral.identifier] === peripheral, peripheral.state == .connected
+      heldPeripherals[peripheral.identifier] === peripheral, peripheral.state == .connected
     else { return }
     switch characteristic.uuid {
     case GATT.batteryLevel:
-      if let level = value.first { onBattery?(peripheral.identifier, min(Int(level), 100)) }
+      if let level = value.first { onBatteryPercent?(peripheral.identifier, min(Int(level), 100)) }
     case GATT.heartRateMeasurement:
       if let measurement = HeartRateMeasurement(value) {
         onHeartRate?(peripheral.identifier, measurement)
@@ -180,13 +175,13 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
     }
   }
 
-  /// The control point answers commands by indication, so it is ready once they are on.
   func peripheral(
     _ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic,
     error: (any Error)?
   ) {
-    guard error == nil, characteristic.uuid == GATT.fitnessMachineControlPoint,
-      characteristic.isNotifying, peripherals[peripheral.identifier] === peripheral
+    let controlPointIndicates =
+      characteristic.uuid == GATT.fitnessMachineControlPoint && characteristic.isNotifying
+    guard error == nil, controlPointIndicates, heldPeripherals[peripheral.identifier] === peripheral
     else { return }
     onTrainerControlReady?(peripheral.identifier)
   }

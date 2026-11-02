@@ -22,11 +22,44 @@ struct TrainingLoadTests {
     let afterBlock = load[6]
     #expect(afterBlock.fatigue > afterBlock.fitness)
     #expect(afterBlock.form < 0)
-    // Two weeks off: fatigue drains, most fitness stays, and form turns positive.
     let afterRest = load[20]
     #expect(afterRest.fatigue < afterBlock.fatigue / 4)
     #expect(afterRest.fitness > afterBlock.fitness * 0.6)
     #expect(afterRest.form > 0)
+  }
+
+  @Test func givesOneLoadForEachDayStartingFromNoLoad() {
+    let load = TrainingLoad.daily(
+      stress: [day(0): 10], from: day(0).addingTimeInterval(3600), through: day(2),
+      calendar: calendar)
+    #expect(load.map(\.date) == [day(0), day(1), day(2)])
+    #expect(load[0].fitness == 10 / TrainingLoad.fitnessDays)
+    #expect(load[0].fatigue == 10 / TrainingLoad.fatigueDays)
+  }
+
+  @Test func ignoresStressOutsideTheDays() {
+    let load = TrainingLoad.daily(
+      stress: [day(-1): 100, day(3): 100], from: day(0), through: day(2), calendar: calendar)
+    #expect(load.allSatisfy { $0.stress == 0 && $0.fitness == 0 && $0.fatigue == 0 })
+  }
+
+  @Test func addsUpEachDaysStressLeavingOutRidesWithoutAnFTPOrPower() throws {
+    let hourAtFTP = (0...3600).map { RideRecording.Sample(elapsed: Double($0), power: 200) }
+    let ride = RideRecording(
+      startDate: day(1).addingTimeInterval(3600), samples: hourAtFTP,
+      summary: .init(duration: 3600))
+    let laterThatDay = RideRecording(
+      startDate: day(1).addingTimeInterval(7200), samples: hourAtFTP,
+      summary: .init(duration: 3600))
+    let withoutPower = RideRecording(
+      startDate: day(2), samples: [.init(elapsed: 0, heartRate: 120)],
+      summary: .init(duration: 0))
+    let withoutFTP = RideRecording(
+      startDate: day(3), samples: hourAtFTP, summary: .init(duration: 3600))
+    let stress = [ride, laterThatDay, withoutPower, withoutFTP].stressByDay(calendar: calendar) {
+      $0.startDate < day(3) ? 200 : nil
+    }
+    #expect(stress == [day(1): 200])
   }
 
   @Test func settlesOnTheDailyAverage() {
@@ -38,11 +71,10 @@ struct TrainingLoadTests {
     #expect(abs((last?.form ?? 1)) < 0.1)
   }
 
-  @Test func addsUpZoneTimeAcrossRides() throws {
+  @Test func addsUpZoneTimeAcrossRidesEvenWhenTheFTPMovedTheZones() throws {
     func zones(ftp: Int) throws -> ZoneSet {
       try #require(MetricZones(thresholds: [.ftp: ftp], choice: ZoneChoice(model: .coggan6)).zones)
     }
-    // The FTP rose between the rides, which moves the zones but keeps them the same zones.
     let before = try zones(ftp: 200).zones
     let after = try zones(ftp: 220).zones
     let first = [
@@ -54,6 +86,11 @@ struct TrainingLoadTests {
     #expect(combined.map(\.zone.name) == ["Endurance", "Tempo"])
     #expect(combined.map(\.seconds) == [900, 100])
     #expect(combined.map(\.fraction) == [0.9, 0.1])
+  }
+
+  @Test func addsUpToNothingWhenNoRideHadZoneTime() {
+    #expect([[ZoneShare]]().combined().isEmpty)
+    #expect([[], []].combined().isEmpty)
   }
 
   @Test func groupsZonesIntoThreeIntensities() {

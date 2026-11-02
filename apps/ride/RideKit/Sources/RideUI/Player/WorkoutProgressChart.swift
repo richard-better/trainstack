@@ -2,14 +2,9 @@ import Charts
 import RideData
 import SwiftUI
 
-/// The workout's intervals in their zone colours, shaded as done, current and still to come,
-/// with power and heart rate drawn over the part already ridden and a line at the rider's FTP.
-/// Watts read off the leading axis and heart rate off the trailing one.
 struct WorkoutProgressChart: View {
   let session: RideSession
-  /// The FTP the workout's targets were set from, which places them in zones.
   let ftp: Int?
-  /// The rider's heart rate zones, which steady the heart rate axis before much is recorded.
   let heartRateZones: ZoneSet?
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -38,7 +33,7 @@ struct WorkoutProgressChart: View {
         if let power = point.sample.power {
           LineMark(
             x: .value("Time", point.position), y: .value("Value", power),
-            series: .value("Series", "Power \(point.run)")
+            series: .value("Series", "Power \(point.unbrokenRun)")
           )
           .foregroundStyle(Color.primary.opacity(0.85))
           .lineStyle(StrokeStyle(lineWidth: 1.2, lineJoin: .round))
@@ -46,8 +41,8 @@ struct WorkoutProgressChart: View {
         if let heartRate = point.sample.heartRate {
           LineMark(
             x: .value("Time", point.position),
-            y: .value("Value", scale.position(ofHeartRate: Double(heartRate))),
-            series: .value("Series", "Heart rate \(point.run)")
+            y: .value("Value", scale.watts(atHeartRate: Double(heartRate))),
+            series: .value("Series", "Heart rate \(point.unbrokenRun)")
           )
           .foregroundStyle(.red)
           .lineStyle(StrokeStyle(lineWidth: 1.6, lineJoin: .round))
@@ -94,32 +89,14 @@ struct WorkoutProgressChart: View {
         }
       }
     }
-    // Ideally as short as it can be, so the player only scrolls when even that doesn't fit.
     .frame(minHeight: 140, idealHeight: 140, maxHeight: 320)
     .accessibilityLabel("Workout progress")
     .accessibilityValue(
       "\(session.position.spokenString) of \(session.duration.spokenString) done")
   }
 
-  /// The recorded samples, thinned to about one every few seconds on long rides so the chart
-  /// stays quick to redraw every second.
-  private var trace: [WorkoutTracePoint] {
-    let samples = session.samples
-    let stride = max(1, samples.count / 600)
-    var points: [WorkoutTracePoint] = []
-    var run = 0
-    var previous: TimeInterval?
-    for index in Swift.stride(from: 0, to: samples.count, by: stride) {
-      let sample = samples[index]
-      if let previous, sample.position - previous > Double(stride) * 2 + 1 { run += 1 }
-      previous = sample.position
-      points.append(.init(position: sample.position, sample: sample.sample, run: run))
-    }
-    return points
-  }
+  private var trace: [WorkoutTracePoint] { WorkoutTracePoint.trace(of: session.samples) }
 
-  /// Room above the hardest target and the highest power so far, with heart rate on the same
-  /// gridlines.
   private var scale: WorkoutChartScale {
     let planned = session.intervals.map { session.adjusted($0.plannedPower) }.max() ?? 100
     let recorded = session.samples.compactMap(\.sample.power).max()
@@ -130,7 +107,6 @@ struct WorkoutProgressChart: View {
         zoneLimits: heartRateZones?.limits ?? []))
   }
 
-  /// An axis value, with its unit on the top gridline only so the axis stays narrow.
   private func label(_ value: Int, unit: String, isTop: Bool) -> String {
     isTop ? "\(value) \(unit)" : "\(value)"
   }

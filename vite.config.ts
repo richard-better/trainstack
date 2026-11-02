@@ -11,7 +11,6 @@ const hostedPackages = [
   .filter((manifest) => existsSync(manifest))
   .map((manifest) => JSON.parse(readFileSync(manifest, "utf8")).name);
 
-// See LICENSING.md: packages and the app must not depend on FSL-licensed hosted code.
 const noHostedImports = {
   "no-restricted-imports": [
     "error",
@@ -41,6 +40,8 @@ export default defineConfig({
       ".wrangler/**",
       "**/.wrangler/**",
     ],
+    jsPlugins: ["./packages/config/lint/trainstack.mjs"],
+    rules: { "trainstack/no-comments": "error" },
     options: {
       typeAware: false,
       typeCheck: false,

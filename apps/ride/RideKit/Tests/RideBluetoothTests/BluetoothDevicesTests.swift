@@ -7,7 +7,7 @@ import Testing
 struct BluetoothDevicesTests {
   @Test func pairingStartsBluetoothWithoutScanning() {
     let transport = FakeTransport()
-    let devices = BluetoothDevices(transport: transport, defaults: freshDefaults())
+    let devices = BluetoothDevices(transport: transport, defaults: isolatedDefaults())
     let trainer = DiscoveredDevice(id: UUID(), services: [.trainer])
     devices.pair(trainer)
     #expect(transport.started)
@@ -19,7 +19,7 @@ struct BluetoothDevicesTests {
 
   @Test func waitsForBluetoothBeforeScanning() {
     let transport = FakeTransport()
-    let devices = BluetoothDevices(transport: transport, defaults: freshDefaults())
+    let devices = BluetoothDevices(transport: transport, defaults: isolatedDefaults())
     devices.startScanning()
     #expect(transport.started)
     #expect(transport.scans == 0)
@@ -83,7 +83,7 @@ struct BluetoothDevicesTests {
   @Test(arguments: [BluetoothAvailability.unauthorized, .unsupported, .resetting])
   func unavailableBluetoothDoesNotScan(state: BluetoothAvailability) {
     let transport = FakeTransport()
-    let devices = BluetoothDevices(transport: transport, defaults: freshDefaults())
+    let devices = BluetoothDevices(transport: transport, defaults: isolatedDefaults())
     transport.onAvailability?(state)
     devices.startScanning()
     #expect(devices.availability == state)
@@ -91,8 +91,8 @@ struct BluetoothDevicesTests {
     #expect(transport.scans == 0)
   }
 
-  @Test func pairingConnectsAndRemembersTheDevice() {
-    let defaults = freshDefaults()
+  @Test func pairingConnectsAndTheNextLaunchReconnectsWithoutScanning() {
+    let defaults = isolatedDefaults()
     let (devices, transport) = scanningDevices(defaults: defaults)
     let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer, .power])
     transport.onDiscovery?(trainer)
@@ -102,8 +102,6 @@ struct BluetoothDevicesTests {
     #expect(devices.fitnessDevices.isEmpty)
     transport.onConnect?(trainer.id)
     #expect(devices.connectionState(of: trainer.id) == .connected)
-
-    // The next launch reconnects without scanning.
     let relaunched = FakeTransport()
     let restored = BluetoothDevices(transport: relaunched, defaults: defaults)
     #expect(restored.paired == [trainer])
@@ -114,9 +112,9 @@ struct BluetoothDevicesTests {
     #expect(relaunched.scans == 0)
   }
 
-  @Test func doesNotStartBluetoothWithNothingPaired() {
+  @Test func doesNotStartBluetoothOrAskForItsPermissionWithNothingPaired() {
     let transport = FakeTransport()
-    let devices = BluetoothDevices(transport: transport, defaults: freshDefaults())
+    let devices = BluetoothDevices(transport: transport, defaults: isolatedDefaults())
     devices.connectPaired()
     #expect(!transport.started)
   }
@@ -139,7 +137,7 @@ struct BluetoothDevicesTests {
     let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
     devices.pair(strap)
     transport.onConnect?(strap.id)
-    transport.onBattery?(strap.id, 78)
+    transport.onBatteryPercent?(strap.id, 78)
     #expect(devices.batteryLevel(of: strap.id) == 78)
     transport.onDisconnect?(strap.id)
     #expect(devices.connectionState(of: strap.id) == .connecting)
@@ -212,7 +210,7 @@ struct BluetoothDevicesTests {
   }
 
   @Test func theRidersPickIsUsedWhileItIsConnectedAndRemembered() {
-    let defaults = freshDefaults()
+    let defaults = isolatedDefaults()
     let transport = FakeTransport()
     let devices = BluetoothDevices(transport: transport, defaults: defaults)
     transport.onAvailability?(.ready)
@@ -385,16 +383,51 @@ struct BluetoothDevicesTests {
     devices.receiveCycling(
       Data([0x45, 0, 180, 0, 200, 0]), from: trainer.id, characteristic: .indoorBike, at: later)
     #expect(devices.lastHeard(from: trainer.id) == later)
-
-    // A strap without contact sends no reading, so it is not heard from.
-    let heard = devices.lastHeard(from: strap.id)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128, hasContact: false))
-    #expect(devices.lastHeard(from: strap.id) == heard)
-
     transport.onDisconnect?(trainer.id)
     #expect(devices.lastHeard(from: trainer.id) == nil)
     devices.forget(strap.id)
     #expect(devices.lastHeard(from: strap.id) == nil)
+  }
+
+  @Test func aStrapThatLostContactIsNotHeardFrom() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), services: [.heartRate])
+    devices.pair(strap)
+    transport.onConnect?(strap.id)
+    let heard = devices.lastHeard(from: strap.id)
+    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128, hasContact: false))
+    #expect(devices.lastHeard(from: strap.id) == heard)
+  }
+
+  @Test func reportsCyclingActivityForEachMeasurementFromAConnectedPairedSensor() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), services: [.trainer])
+    let packet = Data([0x45, 0, 180, 0, 200, 0])
+    var activity = 0
+    devices.onCyclingActivity = { activity += 1 }
+    devices.pair(trainer)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, packet)
+    #expect(activity == 0)
+    transport.onConnect?(trainer.id)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, packet)
+    transport.onCyclingMeasurement?(trainer.id, .indoorBike, packet)
+    transport.onCyclingMeasurement?(UUID(), .indoorBike, packet)
+    #expect(activity == 2)
+  }
+
+  @Test func readsSourcePicksSavedKeyedByMetricName() throws {
+    let defaults = isolatedDefaults()
+    let trainer = DiscoveredDevice(id: UUID(), services: [.trainer])
+    let meter = DiscoveredDevice(id: UUID(), services: [.power])
+    defaults.set(try JSONEncoder().encode([trainer, meter]), forKey: "bluetooth.paired")
+    defaults.set(
+      try JSONEncoder().encode(["power": trainer.id]), forKey: "bluetooth.sourcePicks")
+    let transport = FakeTransport()
+    let devices = BluetoothDevices(transport: transport, defaults: defaults)
+    transport.onAvailability?(.ready)
+    transport.onConnect?(trainer.id)
+    transport.onConnect?(meter.id)
+    #expect(devices.source(of: .power) == trainer)
   }
 
   @Test func passesOnEachHeartRateFromThePairedStrapOnly() {
@@ -427,7 +460,7 @@ struct BluetoothDevicesTests {
   }
 
   @Test func adoptsTheStrapPairedBeforeDevicesOfEachKind() throws {
-    let defaults = freshDefaults()
+    let defaults = isolatedDefaults()
     let id = UUID()
     defaults.set(
       try JSONEncoder().encode(["id": id.uuidString, "name": "Polar H10"]),
@@ -447,7 +480,7 @@ struct BluetoothDevicesTests {
     devices.pair(strap)
     transport.onConnect?(trainer.id)
     transport.onConnect?(strap.id)
-    devices.setTrainerTarget(.power(200))
+    devices.setTrainerTarget(.power(watts: 200))
     transport.onTrainerControlReady?(strap.id)
     #expect(transport.trainerWrites.isEmpty)
     transport.onTrainerControlReady?(trainer.id)
@@ -456,8 +489,8 @@ struct BluetoothDevicesTests {
     transport.onTrainerValue?(trainer.id, .controlPoint, Data([0x80, 0x07, 0x01]))
     #expect(transport.trainerWrites.last == Data([0x05, 200, 0]))
     transport.onTrainerValue?(trainer.id, .controlPoint, Data([0x80, 0x05, 0x01]))
-    devices.setTrainerTarget(.power(200))
-    devices.setTrainerTarget(.power(220))
+    devices.setTrainerTarget(.power(watts: 200))
+    devices.setTrainerTarget(.power(watts: 220))
     #expect(transport.trainerWrites.count == 4)
     #expect(transport.trainerWrites.last == Data([0x05, 220, 0]))
   }
@@ -467,11 +500,11 @@ struct BluetoothDevicesTests {
     let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
     devices.pair(trainer)
     transport.onConnect?(trainer.id)
-    devices.setTrainerTarget(.grade(2))
+    devices.setTrainerTarget(.grade(percent: 2))
     transport.onTrainerControlReady?(trainer.id)
     transport.onTrainerValue?(trainer.id, .controlPoint, Data([0x80, 0x00, 0x01]))
     transport.onDisconnect?(trainer.id)
-    devices.setTrainerTarget(.grade(3))
+    devices.setTrainerTarget(.grade(percent: 3))
     #expect(transport.trainerWrites == [Data([0x00]), Data([0x07])])
     transport.onConnect?(trainer.id)
     transport.onTrainerControlReady?(trainer.id)
@@ -479,7 +512,7 @@ struct BluetoothDevicesTests {
   }
 
   private func scanningDevices(
-    defaults: UserDefaults = freshDefaults()
+    defaults: UserDefaults = isolatedDefaults()
   ) -> (BluetoothDevices, FakeTransport) {
     let transport = FakeTransport()
     let devices = BluetoothDevices(transport: transport, defaults: defaults)
@@ -489,8 +522,7 @@ struct BluetoothDevicesTests {
   }
 }
 
-/// Settings of their own, so tests neither see nor leave paired devices.
-private func freshDefaults() -> UserDefaults {
+private func isolatedDefaults() -> UserDefaults {
   let suite = "RideBluetoothTests.\(UUID().uuidString)"
   let defaults = UserDefaults(suiteName: suite)!
   defaults.removePersistentDomain(forName: suite)
@@ -504,7 +536,7 @@ private final class FakeTransport: BluetoothTransport {
   var onConnect: ((UUID) -> Void)?
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
-  var onBattery: ((UUID, Int) -> Void)?
+  var onBatteryPercent: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var onTrainerControlReady: ((UUID) -> Void)?
@@ -517,9 +549,9 @@ private final class FakeTransport: BluetoothTransport {
   var disconnects: [UUID] = []
 
   func start() { started = true }
-  func scan() { scans += 1 }
+  func scanAllDevices() { scans += 1 }
   func stopScan() { stops += 1 }
-  func connect(_ id: UUID) { connects.append(id) }
+  func connectWhenInRange(_ id: UUID) { connects.append(id) }
   func disconnect(_ id: UUID) { disconnects.append(id) }
   func writeTrainerControl(_ data: Data, to id: UUID) { trainerWrites.append(data) }
 }

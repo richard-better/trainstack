@@ -56,6 +56,16 @@ struct RideSessionTests {
     #expect(session.intervalAveragePower == nil)
   }
 
+  @Test func aSampleEndingAtAnIntervalsStartBelongsToTheIntervalBefore() {
+    var session = RideSession(workout: workout)
+    ride(&session, seconds: 59, power: 100)
+    ride(&session, seconds: 1, power: 500)
+    #expect(session.samples.last?.position == session.currentInterval?.start)
+    #expect(session.intervalAveragePower == nil)
+    ride(&session, seconds: 1, power: 200)
+    #expect(session.intervalAveragePower == 200)
+  }
+
   @Test func skippingStartsTheIntervalAverageAfresh() {
     var session = RideSession(workout: workout)
     ride(&session, seconds: 20, power: 100)
@@ -75,25 +85,21 @@ struct RideSessionTests {
     let totals = RideTotals(session: session, ftp: 200)
     #expect(totals.averagePower == 200)
     #expect(totals.averageHeartRate == 140)
-    // A minute at 100 W and a minute at 300 W, without the pause between.
-    #expect(totals.work == 24)
+    #expect(totals.workKilojoules == 24)
     #expect(totals.intervalAveragePower == 300)
   }
 
   @Test func scoresTheRideSoFarAgainstFTP() throws {
     var session = RideSession(workout: workout)
     #expect(RideTotals(session: session, ftp: 200) == RideTotals())
-    // Under 30 seconds there is no normalized power yet.
     ride(&session, seconds: 20, power: 200)
     #expect(RideTotals(session: session, ftp: 200).normalizedPower == nil)
     ride(&session, seconds: 160, power: 200)
     let totals = RideTotals(session: session, ftp: 200)
     #expect(totals.normalizedPower == 200)
     #expect(totals.intensityFactor == 1)
-    // Three minutes at FTP: 3/60 of an hour's 100.
     #expect(totals.stressScore == 5)
-    #expect(totals.work == 36)
-    // Against a higher FTP the same ride is easier.
+    #expect(totals.workKilojoules == 36)
     let easier = RideTotals(session: session, ftp: 250)
     #expect(try #require(easier.intensityFactor) == 0.8)
     #expect(easier.stressScore == 3)
@@ -116,7 +122,6 @@ struct RideSessionTests {
     #expect(session.nextInterval?.plannedPower == 200)
     #expect(session.nextInterval.map { $0.end - $0.start } == 120)
     ride(&session, seconds: 60)
-    // On the last interval nothing follows.
     #expect(session.currentInterval?.index == 1)
     #expect(session.nextInterval == nil)
     ride(&session, seconds: 120)
@@ -124,8 +129,6 @@ struct RideSessionTests {
   }
 
   @Test func looksAheadThroughRepeats() throws {
-    // Four 40-second sprints at 340 W with 20 seconds at 80 W between, after 24 minutes of
-    // warm-up and before 5 minutes at 100 W.
     let tabata = try #require(WorkoutTemplate.named("Tabata 4×40/20")).workout(ftp: 200)
     var session = RideSession(workout: tabata)
     ride(&session, seconds: 1_490)
@@ -134,7 +137,6 @@ struct RideSessionTests {
     #expect(session.nextInterval?.plannedPower == 340)
     #expect(session.nextInterval.map { $0.end - $0.start } == 40)
     ride(&session, seconds: 170)
-    // The last rest leads into the cool-down, which is the last interval.
     #expect(session.currentInterval?.index == 11)
     #expect(session.nextInterval?.index == 12)
     #expect(session.nextInterval?.plannedPower == 100)
@@ -148,12 +150,10 @@ struct RideSessionTests {
     #expect(session.remaining == 180)
     ride(&session, seconds: 10)
     #expect(session.remaining == 170)
-    // Pausing stops the countdown with the ride clock.
     session.togglePause()
     session.advance(by: 5, reading: .init())
     #expect(session.remaining == 170)
     session.togglePause()
-    // Skipping takes the rest of the interval off.
     session.skipInterval()
     #expect(session.remaining == 120)
     #expect(session.elapsed == 10)
@@ -168,12 +168,14 @@ struct RideSessionTests {
     session.mode = .slope
     #expect(session.targetPower == nil)
     session.adjust(by: 3)
-    #expect(session.grade == 3.5)
+    #expect(session.slopeGradePercent == 3.5)
     session.mode = .level
+    session.adjust(by: 1)
+    #expect(session.level == 7)
     session.adjust(by: 100)
     #expect(session.level == RideSession.levelRange.upperBound)
-    // The other modes keep their settings.
     #expect(session.ergPercent == 95)
+    #expect(session.slopeGradePercent == 3.5)
   }
 
   @Test func recordsTheTargetOnlyInERG() {
@@ -193,33 +195,33 @@ struct RideSessionTests {
     #expect(recording.summary.duration == 60)
     #expect(recording.summary.averagePower == 150)
     #expect(recording.summary.maxPower == 200)
-    #expect(recording.summary.distance == session.distance)
-    #expect(recording.samples.last?.distance == session.distance)
-    #expect(recording.samples.last?.speed == session.speed)
+    #expect(recording.summary.distanceMetres == session.distanceMetres)
+    #expect(recording.samples.last?.distanceMetres == session.distanceMetres)
+    #expect(recording.samples.last?.speedMetresPerSecond == session.speedMetresPerSecond)
   }
 
   @Test func ridesAsFastAsThePowerMovesTheRider() {
     var session = RideSession(workout: workout)
-    #expect(session.speed == 0)
+    #expect(session.speedMetresPerSecond == 0)
     ride(&session, seconds: 120, power: 115)
-    #expect((26...29).contains(session.speed * 3.6))
-    let distance = session.distance
+    #expect((26...29).contains(session.speedMetresPerSecond * 3.6))
+    let distance = session.distanceMetres
     ride(&session, seconds: 60, power: 115)
-    #expect(abs(session.distance - distance - session.speed * 60) < 5)
+    #expect(abs(session.distanceMetres - distance - session.speedMetresPerSecond * 60) < 5)
   }
 
   @Test func ridesSlowerUpTheSetGradeInSlopeModeOnly() {
     var flat = RideSession(workout: workout)
     var climbing = RideSession(workout: workout)
     climbing.mode = .slope
-    #expect(climbing.grade == 2)
+    #expect(climbing.slopeGradePercent == 2)
     ride(&flat, seconds: 120)
     ride(&climbing, seconds: 120)
-    #expect(climbing.speed < flat.speed * 0.8)
+    #expect(climbing.speedMetresPerSecond < flat.speedMetresPerSecond * 0.8)
     var level = RideSession(workout: workout)
     level.mode = .level
     ride(&level, seconds: 120)
-    #expect(level.speed == flat.speed)
+    #expect(level.speedMetresPerSecond == flat.speedMetresPerSecond)
   }
 
   @Test func aHeavierRiderRidesSlowerUphill() {
@@ -229,7 +231,7 @@ struct RideSessionTests {
     heavy.mode = .slope
     ride(&light, seconds: 120)
     ride(&heavy, seconds: 120)
-    #expect(heavy.speed < light.speed)
+    #expect(heavy.speedMetresPerSecond < light.speedMetresPerSecond)
   }
 
   @Test func showsPowerSmoothedButRecordsEveryReading() {
@@ -254,5 +256,15 @@ struct RideSessionTests {
     }
     let average = Double(powers.reduce(0, +)) / Double(powers.count)
     #expect(abs(average - 100) < 10)
+  }
+
+  @Test func theSameSeedGivesTheSameSimulatedRide() {
+    func readings(seed: UInt64) -> [TrainerReading] {
+      var trainer = SimulatedTrainer(seed: seed)
+      let session = RideSession(workout: workout)
+      return (0..<30).map { _ in trainer.reading(for: session, after: 1) }
+    }
+    #expect(readings(seed: 3) == readings(seed: 3))
+    #expect(readings(seed: 3) != readings(seed: 4))
   }
 }

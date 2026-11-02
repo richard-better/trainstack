@@ -6,7 +6,6 @@ import Testing
 
 @testable import RideUI
 
-/// Answers each request with the next reply and remembers the requests.
 private actor FakeTransport: HTTPTransport {
   private(set) var requests: [URLRequest] = []
   private var replies: [(status: Int, body: String, headers: [String: String])]
@@ -32,8 +31,6 @@ private func reply(_ body: String = "{}", status: Int = 200, headers: [String: S
 
 private let session = AccountSession(token: "t", name: "Ada Rider")
 
-/// Keeps the session back until the test releases it, like the Keychain while it waits for the
-/// rider to answer a prompt.
 private final class HeldSessionStore: SessionStore {
   private let readsStarted: AsyncStream<Void>
   private let readStarted: AsyncStream<Void>.Continuation
@@ -46,8 +43,7 @@ private final class HeldSessionStore: SessionStore {
     (released, releaser) = AsyncStream.makeStream()
   }
 
-  /// How many times the session has been read.
-  var reads: Int { count.withLock { $0 } }
+  var readCount: Int { count.withLock { $0 } }
 
   func load() async -> AccountSession? {
     count.withLock { $0 += 1 }
@@ -58,8 +54,7 @@ private final class HeldSessionStore: SessionStore {
 
   func save(_ session: AccountSession?) {}
 
-  /// Returns once a read has started.
-  func asked() async {
+  func waitUntilAReadStarts() async {
     for await _ in readsStarted { return }
   }
 
@@ -86,16 +81,15 @@ struct TrainStackAccountTests {
     let account = TrainStackAccount(store: store, transport: FakeTransport([]))
     #expect(account.isRestoring)
     #expect(!account.isSignedIn)
-    #expect(store.reads == 0)
+    #expect(store.readCount == 0)
   }
 
   @Test func staysRestoringWhileTheStoreKeepsTheSessionBack() async {
     let store = HeldSessionStore()
     let account = TrainStackAccount(store: store, transport: FakeTransport([]))
     let restoring = Task { await account.restore() }
-    await store.asked()
+    await store.waitUntilAReadStarts()
 
-    // The main actor is free while the store holds on, as it is while a Keychain prompt waits.
     #expect(account.isRestoring)
     #expect(!account.isSignedIn)
 
@@ -146,6 +140,19 @@ struct TrainStackAccountTests {
       }
     }
     #expect(!account.isSignedIn)
+  }
+
+  @Test func aFailedStravaCheckLeavesTheConnectionAsShown() async {
+    let account = TrainStackAccount(
+      store: InMemorySessionStore(session),
+      transport: FakeTransport([
+        reply(#"{"connected":true,"athleteName":"Ada R"}"#), reply(status: 500),
+      ]))
+    await account.refreshStrava()
+    await account.refreshStrava()
+    #expect(account.isSignedIn)
+    #expect(account.isStravaConnected)
+    #expect(account.stravaAthleteName == "Ada R")
   }
 
   @Test func signingOutForgetsStravaToo() async {
@@ -226,22 +233,5 @@ struct TrainStackAccountTests {
     #expect(revoked.isStravaConnected)
     await #expect(throws: StravaError.notConnected) { try await revoked.upload(ride) }
     #expect(!revoked.isStravaConnected)
-  }
-}
-
-struct AppleSignInNonceTests {
-  @Test func hashesTheNonceTheWayAppleExpects() {
-    // SHA-256 of "abc" in hex.
-    #expect(
-      AppleSignInNonce(raw: "abc").hashed
-        == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-  }
-
-  @Test func makesANewHardToGuessNonceEveryTime() {
-    let first = AppleSignInNonce()
-    let second = AppleSignInNonce()
-    #expect(first.raw != second.raw)
-    #expect(first.raw.count == 64)
-    #expect(first.hashed.count == 64)
   }
 }

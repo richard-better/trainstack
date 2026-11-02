@@ -1,8 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// The rider's paired devices and what each reading comes from, then the fitness devices in
-/// range to pair. Searches for devices while on screen.
 struct DevicesView: View {
   @Environment(BluetoothDevices.self) private var devices
   @Environment(RideLauncher.self) private var launcher
@@ -30,13 +28,15 @@ struct DevicesView: View {
     }
   }
 
-  /// Whether the page can be seen. On iOS the player can cover it without it disappearing.
   private var isSearching: Bool {
-    guard isOnScreen, scenePhase == .active else { return false }
+    isOnScreen && scenePhase == .active && !isCoveredByPlayer
+  }
+
+  private var isCoveredByPlayer: Bool {
     #if os(iOS)
-      return !launcher.isPlayerPresented
+      launcher.isPlayerPresented
     #else
-      return true
+      false
     #endif
   }
 

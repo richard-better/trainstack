@@ -1,13 +1,8 @@
 import SwiftUI
 
-/// Shows the ride in progress. The player covers the app, and the rider can minimise it: on
-/// iOS to an accessory above the tab bar, on macOS to a bar over the bottom of the window, while
-/// the ride carries on.
 struct PlayerPresentation: ViewModifier {
   @Bindable var launcher: RideLauncher
-  /// Where a saved ride goes.
   let library: RideLibrary
-  /// Where the player zooms from and back to when it opens and minimises.
   let namespace: Namespace.ID
 
   func body(content: Content) -> some View {
@@ -42,7 +37,6 @@ struct PlayerPresentation: ViewModifier {
     #endif
   }
 
-  /// Ends the ride, and saves it unless it was thrown away or never got going.
   private func end(saving: Bool) {
     launcher.end(saveTo: saving ? library : nil)
   }

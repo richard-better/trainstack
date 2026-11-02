@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A secondary number on the player, with its label above.
 struct SmallStat: View {
   let label: String
   let value: String

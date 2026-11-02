@@ -2,8 +2,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// The chart's legend and where the ride is in the workout. Side by side when they fit,
-/// otherwise stacked.
 struct PlayerChartHeader: View {
   let controller: RideController
 
@@ -32,7 +30,6 @@ struct PlayerChartHeader: View {
     .foregroundStyle(.secondary)
   }
 
-  /// The run of zone colours the targets are drawn in, or grey without an FTP to place them.
   private var targetSwatch: AnyShapeStyle {
     guard controller.ftp > 0 else { return AnyShapeStyle(.primary.opacity(0.3)) }
     return AnyShapeStyle(

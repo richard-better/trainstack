@@ -2,8 +2,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// The workout a ride followed, as a compact card: its profile coloured by zone, its name and
-/// what it asks for. Click to open the workout.
 struct RideWorkoutCard: View {
   let template: WorkoutTemplate
   @Environment(\.openWorkout) private var openWorkout

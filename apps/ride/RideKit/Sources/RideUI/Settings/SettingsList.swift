@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Settings as a list that drills into each page, for iPhone.
 struct SettingsList: View {
   @Binding var path: [SettingsPage]
   @Environment(RiderSettingsStore.self) private var store
@@ -49,7 +48,6 @@ struct SettingsList: View {
     }
   }
 
-  /// Removes the sports at `offsets` from the list, along with their zones.
   private func unlistSports(at offsets: IndexSet) {
     let sports = store.current.listedSports
     for offset in offsets { store.setListed(false, sports[offset]) }

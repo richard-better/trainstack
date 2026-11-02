@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Lays out its subviews in rows, starting a new row when the next one does not fit.
 struct FlowLayout: Layout {
   var horizontalSpacing = 12.0
   var verticalSpacing = 4.0

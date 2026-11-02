@@ -1,25 +1,47 @@
 import Foundation
 
-/// Cycling Power Measurement (0x2A63), including the optional crank data for cadence.
 struct CyclingPowerMeasurement: Equatable, Sendable {
+  private struct Flags: OptionSet {
+    let rawValue: UInt16
+
+    static let pedalPowerBalance = Flags(rawValue: 1 << 0)
+    static let accumulatedTorque = Flags(rawValue: 1 << 2)
+    static let wheelRevolutions = Flags(rawValue: 1 << 4)
+    static let crankRevolutions = Flags(rawValue: 1 << 5)
+    static let extremeForceMagnitudes = Flags(rawValue: 1 << 6)
+    static let extremeTorqueMagnitudes = Flags(rawValue: 1 << 7)
+    static let extremeAngles = Flags(rawValue: 1 << 8)
+    static let topDeadSpotAngle = Flags(rawValue: 1 << 9)
+    static let bottomDeadSpotAngle = Flags(rawValue: 1 << 10)
+    static let accumulatedEnergy = Flags(rawValue: 1 << 11)
+
+    static let sizesBeforeCrank: [(Flags, Int)] = [
+      (.pedalPowerBalance, 1), (.accumulatedTorque, 2), (.wheelRevolutions, 6),
+    ]
+    static let sizesAfterCrank: [(Flags, Int)] = [
+      (.extremeForceMagnitudes, 4), (.extremeTorqueMagnitudes, 4), (.extremeAngles, 3),
+      (.topDeadSpotAngle, 2), (.bottomDeadSpotAngle, 2), (.accumulatedEnergy, 2),
+    ]
+  }
+
   let watts: Int
   let crank: CrankRevolution?
 
   init?(_ data: Data) {
     var reader = BluetoothValueReader(data)
-    guard let flags = reader.uint16(), let power = reader.uint16() else { return nil }
+    guard let rawFlags = reader.uint16(), let power = reader.uint16() else { return nil }
+    let flags = Flags(rawValue: rawFlags)
     watts = Int(Int16(bitPattern: power))
-    for (bit, size) in [(0, 1), (2, 2), (4, 6)] where flags & (1 << bit) != 0 {
+    for (field, size) in Flags.sizesBeforeCrank where flags.contains(field) {
       guard reader.skip(size) else { return nil }
     }
-    if flags & (1 << 5) != 0 {
+    if flags.contains(.crankRevolutions) {
       guard let count = reader.uint16(), let time = reader.uint16() else { return nil }
       crank = CrankRevolution(count: count, eventTime: time)
     } else {
       crank = nil
     }
-    for (bit, size) in [(6, 4), (7, 4), (8, 3), (9, 2), (10, 2), (11, 2)]
-    where flags & (1 << bit) != 0 {
+    for (field, size) in Flags.sizesAfterCrank where flags.contains(field) {
       guard reader.skip(size) else { return nil }
     }
   }

@@ -2,8 +2,6 @@ import AuthenticationServices
 import RideStrava
 import SwiftUI
 
-/// The TrainStack account and Strava. Ride works without either; an account is only for sending
-/// rides to Strava.
 struct AccountSettingsView: View {
   @Environment(TrainStackAccount.self) private var account
   @Environment(\.webAuthenticationSession) private var webAuthenticationSession
@@ -44,7 +42,6 @@ struct AccountSettingsView: View {
   @ViewBuilder private var accountSection: some View {
     Section {
       if account.isRestoring {
-        // Reading the sign-in can wait on a Keychain prompt, so say neither signed in nor out.
         ProgressView()
           .frame(maxWidth: .infinity)
           .accessibilityLabel("Checking your account")
@@ -91,12 +88,10 @@ struct AccountSettingsView: View {
     }
   }
 
-  // MARK: Actions
-
   private func prepare(_ request: ASAuthorizationAppleIDRequest) {
     nonce = AppleSignInNonce()
     request.requestedScopes = [.fullName, .email]
-    request.nonce = nonce.hashed
+    request.nonce = nonce.sha256ForApple
   }
 
   private func finish(_ result: Result<ASAuthorization, any Error>) {
@@ -143,7 +138,6 @@ struct AccountSettingsView: View {
     }
   }
 
-  /// Does `work` with the buttons held, and shows what went wrong unless the rider backed out.
   private func run(_ work: @escaping () async throws -> Void) {
     Task {
       isWorking = true
@@ -151,7 +145,6 @@ struct AccountSettingsView: View {
       do {
         try await work()
       } catch StravaError.cancelled {
-        // The rider backed out, which needs no explaining.
       } catch {
         errorMessage = error.localizedDescription
       }

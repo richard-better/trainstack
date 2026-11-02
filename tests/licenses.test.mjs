@@ -6,9 +6,7 @@ import { test } from "node:test";
 const hostedLicense = "FSL-1.1-ALv2";
 const defaultLicense = "AGPL-3.0-only";
 
-// Licenses that every part of the repository can depend on, and that a workspace outside
-// hosted/ can choose instead of the default by adding its own LICENSE file.
-const allowedDependencyLicenses = new Set([
+const permissiveLicenses = new Set([
   "0BSD",
   "Apache-2.0",
   "BlueOak-1.0.0",
@@ -23,8 +21,7 @@ const allowedDependencyLicenses = new Set([
   "Unlicense",
 ]);
 
-// Packages allowed despite their license, with the reason.
-const dependencyExceptions = [
+const dependenciesAllowedDespiteTheirLicense = [
   {
     name: /^@img\/sharp-libvips-/,
     license: "LGPL-3.0-or-later",
@@ -33,7 +30,7 @@ const dependencyExceptions = [
 ];
 
 function isPermissive(license) {
-  return allowedDependencyLicenses.has(license);
+  return permissiveLicenses.has(license);
 }
 
 async function exists(path) {
@@ -127,7 +124,7 @@ function licenseOf(manifest) {
 function isAllowed(expression) {
   const alternatives = expression.replace(/[()]/g, "").split(" OR ");
   return alternatives.some((alternative) =>
-    alternative.split(" AND ").every((license) => allowedDependencyLicenses.has(license.trim())),
+    alternative.split(" AND ").every((license) => permissiveLicenses.has(license.trim())),
   );
 }
 
@@ -165,7 +162,7 @@ test("third-party dependencies use licenses compatible with every part", async (
     count++;
     const license = licenseOf(manifest);
     if (license && isAllowed(license)) continue;
-    const exception = dependencyExceptions.find(
+    const exception = dependenciesAllowedDespiteTheirLicense.find(
       (exception) => exception.name.test(manifest.name) && exception.license === license,
     );
     if (!exception) violations.push(`${manifest.name}@${manifest.version}: ${license} (${path})`);

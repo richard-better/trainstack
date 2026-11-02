@@ -1,16 +1,5 @@
 import Foundation
 
-public enum FITError: Error, Equatable, Sendable {
-  case notAFITFile
-  case truncated
-  case badChecksum
-  case noRecords
-}
-
-/// Decodes the parts of a FIT activity file that Ride shows: records, session and workout name.
-///
-/// FIT is a stream of definition messages, which describe a message layout, and data messages
-/// that follow one. Everything else in the file is skipped without being interpreted.
 public enum FITDecoder {
   public static func decode(_ data: Data) throws -> RideRecording {
     var reader = try MessageReader(data)
@@ -22,10 +11,12 @@ public enum FITDecoder {
       switch message.kind {
       case .record: records.append(message)
       case .session: session = session ?? message
-      case .workout: workoutName = workoutName ?? message.string(8)
+      case .workout: workoutName = workoutName ?? message.string(FITProfile.WorkoutField.name)
       case .fieldDescription:
-        if message.string(3) == FITTargetPower.name, let index = message.integer(0),
-          let number = message.integer(1)
+        typealias Field = FITProfile.FieldDescriptionField
+        if message.string(Field.fieldName) == FITTargetPowerDeveloperField.name,
+          let index = message.integer(Field.developerDataIndex),
+          let number = message.integer(Field.fieldNumber)
         {
           targetPowerField = DeveloperField(index: index, number: number)
         }
@@ -42,45 +33,53 @@ public enum FITDecoder {
     records: [Message], session: Message?, workoutName: String?,
     targetPowerField: DeveloperField?
   ) -> RideRecording {
+    typealias Record = FITProfile.RecordField
+    typealias Session = FITProfile.SessionField
+    typealias Scale = FITProfile.Scale
+    let timestamp = FITProfile.CommonField.timestamp
     let startTimestamp =
-      session?.integer(2) ?? records.compactMap { $0.integer(253) }.first ?? 0
+      session?.integer(Session.startTime) ?? records.compactMap { $0.integer(timestamp) }.first
+      ?? 0
     let samples = records.compactMap { record -> RideRecording.Sample? in
-      guard let timestamp = record.integer(253) else { return nil }
+      guard let recordTimestamp = record.integer(timestamp) else { return nil }
       return RideRecording.Sample(
-        elapsed: TimeInterval(timestamp - startTimestamp),
-        power: record.integer(7),
-        targetPower: targetPowerField.flatMap { record.developer[$0] },
-        heartRate: record.integer(3),
-        cadence: record.integer(4),
-        speed: record.integer(6).map { Double($0) / 1000 },
-        distance: record.integer(5).map { Double($0) / 100 })
+        elapsed: TimeInterval(recordTimestamp - startTimestamp),
+        power: record.integer(Record.power),
+        targetPower: targetPowerField.flatMap { record.developerValues[$0] },
+        heartRate: record.integer(Record.heartRate),
+        cadence: record.integer(Record.cadence),
+        speedMetresPerSecond: record.integer(Record.speed).map { Double($0) / Scale.speed },
+        distanceMetres: record.integer(Record.distance).map { Double($0) / Scale.distance })
     }
 
     let powers = samples.compactMap(\.power)
     let heartRates = samples.compactMap(\.heartRate)
     let summary = RideRecording.Summary(
-      duration: session?.integer(7).map { TimeInterval($0) / 1000 }
+      duration: session?.integer(Session.totalElapsedTime).map { TimeInterval($0) / Scale.time }
         ?? samples.last?.elapsed ?? 0,
-      distance: session?.integer(9).map { Double($0) / 100 }
-        ?? samples.compactMap(\.distance).last,
-      averagePower: session?.integer(20) ?? mean(powers),
-      maxPower: session?.integer(21) ?? powers.max(),
-      averageHeartRate: session?.integer(16) ?? mean(heartRates),
-      maxHeartRate: session?.integer(17) ?? heartRates.max())
+      distanceMetres: session?.integer(Session.totalDistance).map { Double($0) / Scale.distance }
+        ?? samples.compactMap(\.distanceMetres).last,
+      averagePower: session?.integer(Session.averagePower) ?? mean(powers),
+      maxPower: session?.integer(Session.maxPower) ?? powers.max(),
+      averageHeartRate: session?.integer(Session.averageHeartRate) ?? mean(heartRates),
+      maxHeartRate: session?.integer(Session.maxHeartRate) ?? heartRates.max())
 
     return RideRecording(
-      startDate: Date(timeIntervalSince1970: TimeInterval(startTimestamp) + fitEpoch),
+      startDate: Date(
+        timeIntervalSince1970: TimeInterval(startTimestamp + FITProfile.epochInUnixTime)),
       workoutName: workoutName,
-      sport: session?.integer(5).flatMap { Sport(fitSport: $0, subSport: session?.integer(6)) },
+      sport: session?.integer(Session.sport).flatMap {
+        Sport(fitSport: $0, subSport: session?.integer(Session.subSport))
+      },
       samples: samples, summary: summary)
   }
 
-  /// Whether Ride recorded the file, rather than another app whose file was opened in Ride.
-  /// Ride names itself as the application of the developer fields it writes.
   public static func isRecordedByRide(_ data: Data) -> Bool {
     guard var reader = try? MessageReader(data) else { return false }
     while let message = try? reader.next() {
-      if message.kind == .developerDataID, message.bytes(1) == FITEncoder.applicationID {
+      if message.kind == .developerDataID,
+        message.bytes(FITProfile.DeveloperDataIDField.applicationID) == FITEncoder.applicationID
+      {
         return true
       }
     }
@@ -90,20 +89,14 @@ public enum FITDecoder {
   private static func mean(_ values: [Int]) -> Int? {
     values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
   }
-
-  /// FIT timestamps count seconds from 1989-12-31 00:00:00 UTC.
-  private static let fitEpoch: TimeInterval = 631_065_600
 }
-
-// MARK: - Message stream
 
 private struct Message {
   enum Kind { case record, session, workout, fieldDescription, developerDataID, other }
 
   let kind: Kind
   let fields: [Int: Field]
-  /// The integer developer fields the message carries.
-  var developer: [DeveloperField: Int] = [:]
+  var developerValues: [DeveloperField: Int] = [:]
 
   enum Field {
     case integer(Int)
@@ -130,7 +123,6 @@ private struct FieldDefinition {
   let baseType: Int
 }
 
-/// A field an application defined for itself, named by a `field_description` message.
 private struct DeveloperField: Hashable {
   let index: Int
   let number: Int
@@ -155,7 +147,6 @@ private struct MessageReader {
   var definitions: [Int: Definition] = [:]
   var lastTimestamp = 0
 
-  /// Checks the file's header and checksum, and starts at its first message.
   init(_ data: Data) throws {
     let bytes = [UInt8](data)
     guard bytes.count >= 14 else { throw FITError.truncated }
@@ -174,23 +165,10 @@ private struct MessageReader {
     self.end = end
   }
 
-  /// The next data message, or nil at the end of the data section.
   mutating func next() throws -> Message? {
     while position < end {
       let header = try byte()
-      if header & 0x80 != 0 {
-        // Compressed timestamp header: a data message with a 5-bit time offset.
-        guard let definition = definitions[Int((header >> 5) & 0x03)] else {
-          throw FITError.truncated
-        }
-        var message = try data(definition)
-        let offset = Int(header & 0x1F)
-        var timestamp = (lastTimestamp & ~0x1F) + offset
-        if offset < lastTimestamp & 0x1F { timestamp += 0x20 }
-        lastTimestamp = timestamp
-        message = message.settingTimestamp(timestamp)
-        return message
-      }
+      if header & 0x80 != 0 { return try compressedTimestampMessage(header: header) }
       let localType = Int(header & 0x0F)
       if header & 0x40 != 0 {
         definitions[localType] = try definition(hasDeveloperFields: header & 0x20 != 0)
@@ -198,14 +176,28 @@ private struct MessageReader {
       }
       guard let definition = definitions[localType] else { throw FITError.truncated }
       let message = try data(definition)
-      if let timestamp = message.integer(253) { lastTimestamp = timestamp }
+      if let timestamp = message.integer(FITProfile.CommonField.timestamp) {
+        lastTimestamp = timestamp
+      }
       return message
     }
     return nil
   }
 
+  private mutating func compressedTimestampMessage(header: UInt8) throws -> Message {
+    guard let definition = definitions[Int((header >> 5) & 0x03)] else {
+      throw FITError.truncated
+    }
+    let message = try data(definition)
+    let fiveBitTimeOffset = Int(header & 0x1F)
+    var timestamp = (lastTimestamp & ~0x1F) + fiveBitTimeOffset
+    if fiveBitTimeOffset < lastTimestamp & 0x1F { timestamp += 0x20 }
+    lastTimestamp = timestamp
+    return message.settingTimestamp(timestamp)
+  }
+
   private mutating func definition(hasDeveloperFields: Bool) throws -> Definition {
-    position += 1  // reserved
+    try skipReservedByte()
     let bigEndian = try byte() == 1
     let globalNumber = Int(try integer(size: 2, bigEndian: bigEndian))
     let fieldCount = Int(try byte())
@@ -242,27 +234,32 @@ private struct MessageReader {
       }
       position += field.size
     }
-    var developer: [DeveloperField: Int] = [:]
+    var developerValues: [DeveloperField: Int] = [:]
     for field in definition.developerFields {
       guard position + field.size <= end else { throw FITError.truncated }
       if (1...4).contains(field.size) {
         let raw = readInteger(
           bytes, at: position, size: field.size, bigEndian: definition.bigEndian)
-        // All ones marks a value as invalid.
-        if raw != (UInt64(1) << UInt64(field.size * 8)) - 1 { developer[field.field] = Int(raw) }
+        let invalidMarker = (UInt64(1) << UInt64(field.size * 8)) - 1
+        if raw != invalidMarker { developerValues[field.field] = Int(raw) }
       }
       position += field.size
     }
+    typealias Number = FITProfile.MessageNumber
     let kind: Message.Kind =
       switch definition.globalNumber {
-      case 20: .record
-      case 18: .session
-      case 26: .workout
-      case 206: .fieldDescription
-      case 207: .developerDataID
+      case Number.record: .record
+      case Number.session: .session
+      case Number.workout: .workout
+      case Number.fieldDescription: .fieldDescription
+      case Number.developerDataID: .developerDataID
       default: .other
       }
-    return Message(kind: kind, fields: fields, developer: developer)
+    return Message(kind: kind, fields: fields, developerValues: developerValues)
+  }
+
+  private mutating func skipReservedByte() throws {
+    _ = try byte()
   }
 
   private mutating func byte() throws -> UInt8 {
@@ -281,14 +278,12 @@ private struct MessageReader {
 extension Message {
   fileprivate func settingTimestamp(_ timestamp: Int) -> Message {
     var fields = fields
-    fields[253] = .integer(timestamp)
-    return Message(kind: kind, fields: fields, developer: developer)
+    fields[FITProfile.CommonField.timestamp] = .integer(timestamp)
+    return Message(kind: kind, fields: fields, developerValues: developerValues)
   }
 }
 
 private enum FITValue {
-  /// A single integer, string or byte array field, or nil when the field is another kind of
-  /// array, floats, or holds the base type's "invalid" marker.
   static func decode(
     _ bytes: [UInt8], at position: Int, size: Int, baseType: Int, bigEndian: Bool
   ) -> Message.Field? {

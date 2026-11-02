@@ -2,11 +2,8 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// What the ride in progress shows while the player is minimised: its colour, name and status,
-/// the power, and a pause button. Tap it to go back to the player.
 struct RideAccessoryContent: View {
   let controller: RideController
-  /// Whether it has room for one line only, as beside the tab bar on iPhone.
   var isInline = false
   let open: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion

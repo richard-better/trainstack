@@ -4,8 +4,8 @@ import SwiftUI
 @main
 struct RideApp: App {
   init() {
-    WatchSupport.activate()
-    SyncSupport.activate()
+    WatchSupport.activateAtLaunch()
+    SyncSupport.activateAtLaunch()
   }
 
   var body: some Scene {

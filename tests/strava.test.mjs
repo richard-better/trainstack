@@ -10,7 +10,6 @@ const fit = new Uint8Array([0x0e, 0x20, 0x01, 0x02, 0xff, 0x00, 0x7f]);
 let worker;
 let runtime;
 let db;
-/** What the Worker asked Strava for, and how Strava answers. */
 let strava;
 const appleAuth = mockApple();
 
@@ -33,6 +32,7 @@ function reset(overrides = {}) {
           }),
     upload: () => Response.json({ id: 7, error: null, activity_id: null }, { status: 201 }),
     status: () => Response.json({ id: 7, error: null, activity_id: 99 }),
+    deauthorize: () => Response.json({}),
     ...overrides,
   };
 }
@@ -65,7 +65,7 @@ async function stravaServer(request) {
   }
   strava.requests.push(entry);
   if (url.pathname.startsWith("/api/v3/uploads/")) return strava.status(entry);
-  if (url.pathname === "/oauth/deauthorize") return Response.json({});
+  if (url.pathname === "/oauth/deauthorize") return strava.deauthorize(entry);
   return new Response("unexpected", { status: 500 });
 }
 
@@ -86,9 +86,7 @@ before(
   { timeout: 60_000 },
 );
 
-// A Strava athlete is connected to one account and the budgets are shared, so each test starts
-// from nothing connected and nothing spent.
-beforeEach(async () => {
+beforeEach(async function forgetEveryConnectionSignInAndBudget() {
   await db.batch([
     db.prepare("DELETE FROM strava_connection"),
     db.prepare("DELETE FROM strava_link"),
@@ -100,11 +98,9 @@ after(async () => {
   await worker?.dispose();
 });
 
-/** Signs in through the native Apple flow, with Apple's keys served locally. */
-async function signUp({ apple = true } = {}) {
+async function signUp({ legacyEmailAccount = false } = {}) {
   const rider = await appleAuth.signIn(runtime);
-  if (!apple) {
-    // Model an account left over from when email signup was available.
+  if (legacyEmailAccount) {
     await db
       .prepare("UPDATE account SET provider_id = 'credential' WHERE user_id = ?")
       .bind(rider.user.id)
@@ -120,8 +116,7 @@ const call = (token, path, init = {}) =>
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
   });
 
-/** A verifier the app would keep to itself, and the challenge it sends the API. */
-function makeVerifier() {
+function makePkcePair() {
   const verifier = randomBytes(48).toString("base64url");
   return { verifier, challenge: createHash("sha256").update(verifier).digest("base64url") };
 }
@@ -133,8 +128,7 @@ const postJson = (token, path, body) =>
     body: JSON.stringify(body),
   });
 
-/** Starts connecting, as the app does, and returns the state Strava would hand back. */
-async function start(token, pkce = makeVerifier()) {
+async function startConnecting(token, pkce = makePkcePair()) {
   const response = await postJson(token, "/connect", { code_challenge: pkce.challenge });
   assert.equal(response.status, 200, await response.clone().text());
   const { url } = await response.json();
@@ -144,9 +138,8 @@ async function start(token, pkce = makeVerifier()) {
 const callback = (state, query = "code=the-code&scope=read,activity:write") =>
   call(null, `/callback?state=${encodeURIComponent(state)}&${query}`);
 
-/** Connects Strava the whole way: the page, the callback and the app collecting the result. */
 async function connect(token) {
-  const link = await start(token);
+  const link = await startConnecting(token);
   const response = await callback(link.state);
   assert.equal(response.status, 302);
   const completed = await postJson(token, "/connect/complete", { code_verifier: link.verifier });
@@ -154,8 +147,7 @@ async function connect(token) {
   return { ...link, response };
 }
 
-/** Sends a ride, with the budgets for calls to Strava topped up. */
-const upload = async (token, query = "name=Threshold%203x12&fileName=ride.fit") => {
+const uploadWithFreshBudgets = async (token, query = "name=Threshold%203x12&fileName=ride.fit") => {
   await db.prepare("DELETE FROM strava_budget").run();
   return call(token, `/uploads?${query}`, {
     method: "POST",
@@ -265,7 +257,7 @@ test("Strava authenticates only the bearer token when a different rider's cookie
 test("connecting sends the rider to Strava for upload permission only, tied to their account", async () => {
   reset();
   const { token } = await signUp();
-  const { url } = await start(token);
+  const { url } = await startConnecting(token);
   const location = new URL(url);
   assert.equal(`${location.origin}${location.pathname}`, "https://www.strava.com/oauth/authorize");
   assert.equal(location.searchParams.get("client_id"), "12345");
@@ -314,11 +306,11 @@ test("the callback alone connects nothing: the app that started has to collect t
   reset();
   const owner = await signUp();
   const other = await signUp();
-  const link = await start(owner.token);
+  const link = await startConnecting(owner.token);
   assert.equal((await callback(link.state)).status, 302);
   assert.deepEqual(await (await call(owner.token, "")).json(), { connected: false });
 
-  const wrong = makeVerifier();
+  const wrong = makePkcePair();
   assert.equal(
     (await postJson(owner.token, "/connect/complete", { code_verifier: wrong.verifier })).status,
     400,
@@ -345,25 +337,23 @@ test("the callback alone connects nothing: the app that started has to collect t
     connected: true,
     athleteName: "Ada Rider",
   });
-  // The link is used up.
   assert.equal(
     (await postJson(owner.token, "/connect/complete", { code_verifier: link.verifier })).status,
     400,
+    "the link is used up",
   );
 });
 
 test("someone who gets hold of a rider's state cannot link their own Strava to that account", async () => {
   reset();
   const victim = await signUp();
-  const link = await start(victim.token);
+  const link = await startConnecting(victim.token);
 
-  // The attacker reaches the callback first, with a code from their own Strava.
-  reset({
-    token: () =>
-      Response.json({ ...tokens("attacker"), athlete: { id: 666, firstname: "Mallory" } }),
-  });
-  assert.equal((await callback(link.state)).status, 302);
-  const attackerVerifier = makeVerifier();
+  const stravaAnswersTheAttackersCode = () =>
+    Response.json({ ...tokens("attacker"), athlete: { id: 666, firstname: "Mallory" } });
+  reset({ token: stravaAnswersTheAttackersCode });
+  assert.equal((await callback(link.state)).status, 302, "the attacker reaches the callback first");
+  const attackerVerifier = makePkcePair();
   assert.equal(
     (
       await postJson(victim.token, "/connect/complete", {
@@ -373,12 +363,10 @@ test("someone who gets hold of a rider's state cannot link their own Strava to t
     400,
   );
 
-  // The rider's own sign-in then fails rather than quietly connecting Mallory's Strava.
   reset();
-  const error = new URL((await callback(link.state)).headers.get("location")).searchParams.get(
-    "error",
-  );
-  assert.equal(error, "exchange_failed");
+  const ridersOwnSignIn = await callback(link.state);
+  const error = new URL(ridersOwnSignIn.headers.get("location")).searchParams.get("error");
+  assert.equal(error, "exchange_failed", "rather than quietly connecting Mallory's Strava");
   assert.deepEqual(await (await call(victim.token, "")).json(), { connected: false });
 });
 
@@ -388,21 +376,20 @@ test("the callback refuses state it did not sign, and tells the app why a sign-i
   assert.equal((await callback("forged")).status, 400);
   assert.equal((await call(null, "/callback?code=c&scope=activity:write")).status, 400);
 
-  const link = await start(token);
+  const link = await startConnecting(token);
   const [, signature] = link.state.split(".");
   const forged = `${Buffer.from(JSON.stringify({ link: "someone-else", expires: 4_102_444_800 })).toString("base64url")}.${signature}`;
   assert.equal((await callback(forged)).status, 400);
 
-  // Each sign-in gets one try, so every outcome needs a sign-in of its own.
-  const reason = async (query) => {
-    const { state } = await start(token);
+  const failureOfAFreshSignIn = async (query) => {
+    const { state } = await startConnecting(token);
     const response = await callback(state, query);
     return new URL(response.headers.get("location")).searchParams.get("error");
   };
-  assert.equal(await reason("error=access_denied"), "access_denied");
-  assert.equal(await reason("code=c&scope=read"), "insufficient_scope");
+  assert.equal(await failureOfAFreshSignIn("error=access_denied"), "access_denied");
+  assert.equal(await failureOfAFreshSignIn("code=c&scope=read"), "insufficient_scope");
   reset({ token: () => new Response("{}", { status: 400 }) });
-  assert.equal(await reason("code=bad&scope=activity:write"), "exchange_failed");
+  assert.equal(await failureOfAFreshSignIn("code=bad&scope=activity:write"), "exchange_failed");
   assert.deepEqual(await (await call(token, "")).json(), { connected: false });
 });
 
@@ -412,7 +399,7 @@ test("a ride goes to Strava with the rider's token, and the app can ask how it i
   await connect(token);
   strava.requests.length = 0;
 
-  const started = await upload(token);
+  const started = await uploadWithFreshBudgets(token);
   assert.equal(started.status, 202);
   assert.deepEqual(await started.json(), { id: 7, status: "processing" });
   const sent = strava.requests[0];
@@ -443,7 +430,7 @@ test("an upload Strava turns down says why, including a ride it already has", as
   });
   const { token } = await signUp();
   await connect(token);
-  const duplicate = await upload(token);
+  const duplicate = await uploadWithFreshBudgets(token);
   assert.deepEqual(await duplicate.json(), {
     id: 8,
     status: "error",
@@ -487,7 +474,7 @@ test("an access token about to run out is refreshed first, and the new one kept"
     .run();
   strava.requests.length = 0;
 
-  assert.equal((await upload(token)).status, 202);
+  assert.equal((await uploadWithFreshBudgets(token)).status, 202);
   assert.deepEqual(
     strava.requests.map((r) => r.path),
     ["/oauth/token", "/api/v3/uploads"],
@@ -497,7 +484,7 @@ test("an access token about to run out is refreshed first, and the new one kept"
   assert.equal(strava.requests[1].auth, "Bearer access-2");
 
   strava.requests.length = 0;
-  assert.equal((await upload(token)).status, 202);
+  assert.equal((await uploadWithFreshBudgets(token)).status, 202);
   assert.deepEqual(
     strava.requests.map((r) => r.path),
     ["/api/v3/uploads"],
@@ -523,7 +510,7 @@ test("a token Strava turns down is refreshed once and the upload tried again", a
   const { token } = await signUp();
   await connect(token);
   strava.requests.length = 0;
-  assert.equal((await upload(token)).status, 202);
+  assert.equal((await uploadWithFreshBudgets(token)).status, 202);
   assert.deepEqual(
     strava.requests.map((r) => r.path),
     ["/api/v3/uploads", "/oauth/token", "/api/v3/uploads"],
@@ -532,31 +519,33 @@ test("a token Strava turns down is refreshed once and the upload tried again", a
 });
 
 test("a rider who revoked Ride in Strava is disconnected, not retried", async () => {
-  reset({
-    upload: () => new Response("{}", { status: 401 }),
-    token: (body) =>
-      body.grant_type === "refresh_token"
-        ? new Response("{}", { status: 400 })
-        : Response.json({ ...tokens(1), athlete: { id: 42, firstname: "Ada" } }),
-  });
-  const { token } = await signUp();
-  await connect(token);
-  const response = await upload(token);
-  assert.equal(response.status, 409);
-  assert.deepEqual(await response.json(), { error: "not_connected" });
-  assert.deepEqual(await (await call(token, "")).json(), { connected: false });
+  for (const refusedRefresh of [400, 401]) {
+    reset({
+      upload: () => new Response("{}", { status: 401 }),
+      token: (body) =>
+        body.grant_type === "refresh_token"
+          ? new Response("{}", { status: refusedRefresh })
+          : Response.json({ ...tokens(1), athlete: { id: 42, firstname: "Ada" } }),
+    });
+    const { token } = await signUp();
+    await connect(token);
+    const response = await uploadWithFreshBudgets(token);
+    assert.equal(response.status, 409, `refresh refused with ${refusedRefresh}`);
+    assert.deepEqual(await response.json(), { error: "not_connected" });
+    assert.deepEqual(await (await call(token, "")).json(), { connected: false });
+  }
 });
 
 test("Strava being busy or down is reported as such", async () => {
   reset({ upload: () => new Response("{}", { status: 429 }) });
   const { token } = await signUp();
   await connect(token);
-  const limited = await upload(token);
+  const limited = await uploadWithFreshBudgets(token);
   assert.equal(limited.status, 429);
   assert.deepEqual(await limited.json(), { error: "rate_limited" });
 
   reset({ upload: () => new Response("{}", { status: 503 }) });
-  const down = await upload(token);
+  const down = await uploadWithFreshBudgets(token);
   assert.equal(down.status, 502);
   assert.deepEqual(await down.json(), { error: "strava_unavailable" });
 });
@@ -568,7 +557,7 @@ test("riders cannot see or use each other's Strava", async () => {
   await connect(owner.token);
   strava.requests.length = 0;
   assert.deepEqual(await (await call(other.token, "")).json(), { connected: false });
-  const response = await upload(other.token);
+  const response = await uploadWithFreshBudgets(other.token);
   assert.equal(response.status, 409);
   assert.deepEqual(strava.requests, []);
 });
@@ -585,7 +574,30 @@ test("disconnecting tells Strava and forgets the tokens", async () => {
   );
   assert.deepEqual(await (await call(token, "")).json(), { connected: false });
   assert.equal((await call(token, "", { method: "DELETE" })).status, 204);
-  assert.equal((await upload(token)).status, 409);
+  assert.equal((await uploadWithFreshBudgets(token)).status, 409);
+});
+
+test("disconnecting forgets the tokens even when Strava cannot be told", async () => {
+  for (const [stravaCannotBeTold, deauthorize] of [
+    ["Strava is down", () => new Response("{}", { status: 503 })],
+    [
+      "Strava cannot be reached",
+      () => {
+        throw new Error("connection refused");
+      },
+    ],
+  ]) {
+    reset({ deauthorize });
+    const { token } = await signUp();
+    await connect(token);
+    assert.equal((await call(token, "", { method: "DELETE" })).status, 204, stravaCannotBeTold);
+    assert.deepEqual(await (await call(token, "")).json(), { connected: false });
+    assert.deepEqual(
+      strava.requests.at(-1).path,
+      "/oauth/deauthorize",
+      `${stravaCannotBeTold}, but it was asked`,
+    );
+  }
 });
 
 test("deleting the account deletes the Strava connection with it", async () => {
@@ -608,7 +620,6 @@ test("deleting the account deletes the Strava connection with it", async () => {
   );
 });
 
-/** Sets how much of a budget has been used in the current window. */
 const setUsed = (key, used) =>
   db
     .prepare(
@@ -626,6 +637,21 @@ const expireToken = (email) =>
     .bind(Math.floor(Date.now() / 1000) + 10, email)
     .run();
 
+const callsPerAthlete = 30;
+
+const uploadOnce = (token) => call(token, "/uploads?name=Ride", { method: "POST", body: fit });
+
+function uploadRefusedOnceThenAccepted() {
+  let first = true;
+  return () => {
+    if (first) {
+      first = false;
+      return new Response("{}", { status: 401 });
+    }
+    return Response.json({ id: 7, error: null, activity_id: null }, { status: 201 });
+  };
+}
+
 test("an athlete can cause only so many calls to Strava, however fast they ask", async () => {
   reset();
   const { token } = await signUp();
@@ -635,63 +661,68 @@ test("an athlete can cause only so many calls to Strava, however fast they ask",
 
   const answers = await Promise.all(Array.from({ length: 40 }, () => call(token, "/uploads/7")));
   const statuses = answers.map((answer) => answer.status);
-  assert.equal(statuses.filter((status) => status === 200).length, 30);
-  assert.equal(statuses.filter((status) => status === 429).length, 10);
-  assert.equal(strava.requests.length, 30);
+  assert.equal(statuses.filter((status) => status === 200).length, callsPerAthlete);
+  assert.equal(statuses.filter((status) => status === 429).length, 40 - callsPerAthlete);
+  assert.equal(strava.requests.length, callsPerAthlete);
+});
 
-  // Uploads draw on the same share, and a rider who is out of it is told before the ride is read.
-  const refused = await call(token, "/uploads?name=Ride", { method: "POST", body: fit });
+test("an athlete out of calls is refused an upload before the ride is read", async () => {
+  reset();
+  const { token } = await signUp();
+  await connect(token);
+  await setUsed("athlete:42", callsPerAthlete);
+  strava.requests.length = 0;
+  const refused = await uploadOnce(token);
   assert.equal(refused.status, 429);
   assert.deepEqual(await refused.json(), { error: "rate_limited" });
-  assert.equal(strava.requests.length, 30);
+  assert.deepEqual(strava.requests, []);
+});
 
-  // The window opens again after fifteen minutes.
+test("an athlete's calls to Strava come back fifteen minutes later", async () => {
+  reset();
+  const { token } = await signUp();
+  await connect(token);
+  await setUsed("athlete:42", callsPerAthlete);
+  assert.equal((await call(token, "/uploads/7")).status, 429);
   await db.prepare("UPDATE strava_budget SET window_start = window_start - 901").run();
   assert.equal((await call(token, "/uploads/7")).status, 200);
 });
 
-test("every request to Strava counts, including the refresh and the retry behind a call", async () => {
+test("a token refresh counts as a call to Strava", async () => {
   reset();
   const { email, token } = await signUp();
   await connect(token);
-
-  // Two calls left: the refresh and the upload fit.
   await expireToken(email);
-  await setUsed("athlete:42", 28);
+  await setUsed("athlete:42", callsPerAthlete - 2);
   strava.requests.length = 0;
-  assert.equal((await upload(token, "name=Ride")).status, 202);
+  assert.equal((await uploadOnce(token)).status, 202);
   assert.deepEqual(
     strava.requests.map((r) => r.path),
     ["/oauth/token", "/api/v3/uploads"],
   );
+});
 
-  // One call left: the refresh is made, and the upload it was for is not.
+test("with one call left, the refresh is made and the upload it was for is not", async () => {
+  reset();
+  const { email, token } = await signUp();
+  await connect(token);
   await expireToken(email);
-  await db.prepare("DELETE FROM strava_budget").run();
-  await setUsed("athlete:42", 29);
+  await setUsed("athlete:42", callsPerAthlete - 1);
   strava.requests.length = 0;
-  const refused = await call(token, "/uploads?name=Ride", { method: "POST", body: fit });
-  assert.equal(refused.status, 429);
+  assert.equal((await uploadOnce(token)).status, 429);
   assert.deepEqual(
     strava.requests.map((r) => r.path),
     ["/oauth/token"],
   );
+});
 
-  // A token Strava turns down costs the call, the refresh and the retry.
-  let first = true;
-  reset({
-    upload: () => {
-      if (first) {
-        first = false;
-        return new Response("{}", { status: 401 });
-      }
-      return Response.json({ id: 7, error: null, activity_id: null }, { status: 201 });
-    },
-  });
-  await db.prepare("DELETE FROM strava_budget").run();
-  await setUsed("athlete:42", 28);
-  const retried = await call(token, "/uploads?name=Ride", { method: "POST", body: fit });
-  assert.equal(retried.status, 429);
+test("a token Strava turns down costs the call, the refresh and the retry", async () => {
+  reset({ upload: uploadRefusedOnceThenAccepted() });
+  const { token } = await signUp();
+  await connect(token);
+  await setUsed("athlete:42", callsPerAthlete - 2);
+  strava.requests.length = 0;
+  assert.equal((await uploadOnce(token)).status, 429);
   assert.deepEqual(
     strava.requests.map((r) => r.path),
     ["/api/v3/uploads", "/oauth/token"],
@@ -700,42 +731,50 @@ test("every request to Strava counts, including the refresh and the retry behind
 
 test("a Strava athlete is connected to one account, which a newcomer cannot take while Strava still trusts it", async () => {
   reset();
-  const first = await signUp();
-  const second = await signUp();
-  await connect(first.token);
+  const holder = await signUp();
+  const newcomer = await signUp();
+  await connect(holder.token);
 
-  // A second account whose rider agrees on Strava's page for the same athlete is turned away.
-  const link = await start(second.token);
+  const link = await startConnecting(newcomer.token);
   assert.equal((await callback(link.state)).status, 302);
   strava.requests.length = 0;
-  const refused = await postJson(second.token, "/connect/complete", {
+  const refused = await postJson(newcomer.token, "/connect/complete", {
     code_verifier: link.verifier,
   });
   assert.equal(refused.status, 409);
   assert.deepEqual(await refused.json(), { error: "athlete_in_use" });
-  // The holder was checked with Strava, and its new tokens kept.
   assert.deepEqual(
     strava.requests.map((r) => [r.path, r.body.grant_type, r.body.refresh_token]),
     [["/oauth/token", "refresh_token", "refresh-1"]],
+    "the holder was checked with Strava",
   );
-  assert.deepEqual(await (await call(second.token, "")).json(), { connected: false });
-  assert.deepEqual(await (await call(first.token, "")).json(), {
+  assert.deepEqual(await (await call(newcomer.token, "")).json(), { connected: false });
+  assert.deepEqual(await (await call(holder.token, "")).json(), {
     connected: true,
     athleteName: "Ada Rider",
   });
-  // The try is used up, and the first account still works with the tokens Strava just gave it.
   assert.equal(
-    (await postJson(second.token, "/connect/complete", { code_verifier: link.verifier })).status,
+    (await postJson(newcomer.token, "/connect/complete", { code_verifier: link.verifier })).status,
     400,
+    "the newcomer's try is used up",
   );
   strava.requests.length = 0;
-  assert.equal((await upload(first.token)).status, 202);
-  assert.equal(strava.requests[0].auth, "Bearer access-2");
+  assert.equal((await uploadWithFreshBudgets(holder.token)).status, 202);
+  assert.equal(
+    strava.requests[0].auth,
+    "Bearer access-2",
+    "the holder works with the tokens the check got from Strava",
+  );
+});
 
-  // The holder letting go frees the athlete for anyone.
-  assert.equal((await call(first.token, "", { method: "DELETE" })).status, 204);
-  await connect(second.token);
-  assert.deepEqual(await (await call(second.token, "")).json(), {
+test("a holder disconnecting frees the athlete for another account", async () => {
+  reset();
+  const holder = await signUp();
+  const newcomer = await signUp();
+  await connect(holder.token);
+  assert.equal((await call(holder.token, "", { method: "DELETE" })).status, 204);
+  await connect(newcomer.token);
+  assert.deepEqual(await (await call(newcomer.token, "")).json(), {
     connected: true,
     athleteName: "Ada Rider",
   });
@@ -751,7 +790,7 @@ test("a holder whose tokens cannot be read keeps the athlete rather than losing 
   await connect(holder.token);
   await db.prepare("UPDATE strava_connection SET refresh_token = 'not-a-valid-ciphertext'").run();
 
-  const link = await start(other.token);
+  const link = await startConnecting(other.token);
   await callback(link.state);
   strava.requests.length = 0;
   const refused = await postJson(other.token, "/connect/complete", {
@@ -762,24 +801,58 @@ test("a holder whose tokens cannot be read keeps the athlete rather than losing 
   assert.equal((await connections()).length, 1);
 });
 
+async function newcomerCompletesWhile(stravaCannotBeAsked) {
+  const holder = await signUp();
+  const newcomer = await signUp();
+  await connect(holder.token);
+  const link = await startConnecting(newcomer.token);
+  await callback(link.state);
+  await stravaCannotBeAsked();
+  const response = await postJson(newcomer.token, "/connect/complete", {
+    code_verifier: link.verifier,
+  });
+  return { holder, response };
+}
+
+test("a holder keeps the athlete when Strava is down", async () => {
+  reset();
+  const { holder, response } = await newcomerCompletesWhile(() =>
+    reset({ token: () => new Response("{}", { status: 503 }) }),
+  );
+  assert.equal(response.status, 409);
+  assert.deepEqual(await (await call(holder.token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+});
+
+test("a holder keeps the athlete when its calls to Strava are used up", async () => {
+  reset();
+  const { holder, response } = await newcomerCompletesWhile(async () => {
+    await setUsed("athlete:42", callsPerAthlete);
+    strava.requests.length = 0;
+  });
+  assert.equal(response.status, 409);
+  assert.deepEqual(strava.requests, []);
+  assert.deepEqual(await (await call(holder.token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+});
+
 test("a holder is not evicted because Strava refused a token another request had just replaced", async () => {
   reset();
   const holder = await signUp();
   const other = await signUp();
   await connect(holder.token);
 
-  const link = await start(other.token);
+  const link = await startConnecting(other.token);
   await callback(link.state);
-  // While the check is asking Strava, the holder's own request replaces the stored tokens, so
-  // Strava refuses the older refresh token the check was holding.
-  reset({
-    token: async () => {
-      await db
-        .prepare("UPDATE strava_connection SET refresh_token = 'replaced-by-the-holder'")
-        .run();
-      return new Response("{}", { status: 400 });
-    },
-  });
+  const holderReplacesItsTokensWhileTheCheckAsksStrava = async () => {
+    await db.prepare("UPDATE strava_connection SET refresh_token = 'replaced-by-the-holder'").run();
+    return new Response("{}", { status: 400 });
+  };
+  reset({ token: holderReplacesItsTokensWhileTheCheckAsksStrava });
   const refused = await postJson(other.token, "/connect/complete", {
     code_verifier: link.verifier,
   });
@@ -794,17 +867,15 @@ test("a rider's own request does not delete a connection that another request re
   const { email, token } = await signUp();
   await connect(token);
   await expireToken(email);
-  reset({
-    token: async () => {
-      await db
-        .prepare("UPDATE strava_connection SET refresh_token = 'replaced-by-another-request'")
-        .run();
-      return new Response("{}", { status: 400 });
-    },
-  });
-  // The ride still goes, with what the other request stored, and nothing is forgotten.
-  const response = await upload(token);
-  assert.equal(response.status, 202);
+  const anotherRequestRefreshesWhileThisOneAsksStrava = async () => {
+    await db
+      .prepare("UPDATE strava_connection SET refresh_token = 'replaced-by-another-request'")
+      .run();
+    return new Response("{}", { status: 400 });
+  };
+  reset({ token: anotherRequestRefreshesWhileThisOneAsksStrava });
+  const response = await uploadWithFreshBudgets(token);
+  assert.equal(response.status, 202, "the ride goes with what the other request stored");
   assert.equal((await connections()).length, 1);
   assert.deepEqual(await (await call(token, "")).json(), {
     connected: true,
@@ -818,16 +889,14 @@ test("a rider whose athlete was taken first gets it back by removing Ride in Str
   const rider = await signUp();
   await connect(squatter.token);
 
-  // Strava says the squatter's access is gone once the rider has removed Ride in their settings.
-  reset({
-    token: (body) =>
-      body.grant_type === "refresh_token"
-        ? new Response("{}", { status: 400 })
-        : Response.json({
-            ...tokens("rider"),
-            athlete: { id: 42, firstname: "Ada", lastname: "Rider" },
-          }),
-  });
+  const stravaRefusesTheSquattersTokensOnceRideIsRemoved = (body) =>
+    body.grant_type === "refresh_token"
+      ? new Response("{}", { status: 400 })
+      : Response.json({
+          ...tokens("rider"),
+          athlete: { id: 42, firstname: "Ada", lastname: "Rider" },
+        });
+  reset({ token: stravaRefusesTheSquattersTokensOnceRideIsRemoved });
   await connect(rider.token);
   assert.deepEqual(await (await call(rider.token, "")).json(), {
     connected: true,
@@ -840,7 +909,7 @@ test("disconnecting and connecting again does not start a fresh budget", async (
   reset();
   const { token } = await signUp();
   await connect(token);
-  await setUsed("athlete:42", 30);
+  await setUsed("athlete:42", callsPerAthlete);
   assert.equal((await call(token, "", { method: "DELETE" })).status, 204);
   await connect(token);
   strava.requests.length = 0;
@@ -850,9 +919,9 @@ test("disconnecting and connecting again does not start a fresh budget", async (
 
 test("only accounts made with Sign in with Apple can start connecting Strava", async () => {
   reset();
-  const emailOnly = await signUp({ apple: false });
+  const emailOnly = await signUp({ legacyEmailAccount: true });
   const response = await postJson(emailOnly.token, "/connect", {
-    code_challenge: makeVerifier().challenge,
+    code_challenge: makePkcePair().challenge,
   });
   assert.equal(response.status, 403);
   assert.deepEqual(await response.json(), { error: "apple_account_required" });
@@ -867,42 +936,50 @@ test("only accounts made with Sign in with Apple can start connecting Strava", a
     ).n,
     0,
   );
-  // Nothing else about Strava is closed to them: they just have nothing connected.
-  assert.deepEqual(await (await call(emailOnly.token, "")).json(), { connected: false });
+  assert.deepEqual(
+    await (await call(emailOnly.token, "")).json(),
+    { connected: false },
+    "the rest of Strava stays open to them, with nothing connected",
+  );
 });
 
 test("a sign-in gets one try with Strava, however the callback is reached", async () => {
   reset({ token: () => new Response("{}", { status: 400 }) });
   const { token } = await signUp();
-  const link = await start(token);
+  const link = await startConnecting(token);
   const bad = await callback(link.state, "code=garbage&scope=activity:write");
   assert.equal(new URL(bad.headers.get("location")).searchParams.get("error"), "exchange_failed");
   assert.equal(strava.requests.length, 1);
 
-  // The state cannot be used to try another code, good or bad.
   reset();
   assert.equal((await callback(link.state, "code=another&scope=activity:write")).status, 400);
   assert.equal((await callback(link.state, "error=access_denied")).status, 400);
-  assert.deepEqual(strava.requests, []);
-
-  // A rider who backs out has used their try too.
-  const second = await start(token);
-  await callback(second.state, "error=access_denied");
-  assert.equal((await callback(second.state, "code=c&scope=activity:write")).status, 400);
+  assert.deepEqual(strava.requests, [], "the state cannot be used to try another code");
 });
 
-test("starting to connect, and the code exchanges that follow, are limited", async () => {
+test("a rider who backs out on Strava's page has used their sign-in's one try", async () => {
   reset();
   const { token } = await signUp();
-  for (let attempt = 0; attempt < 10; attempt++) await start(token);
-  const eleventh = await postJson(token, "/connect", { code_challenge: makeVerifier().challenge });
+  const link = await startConnecting(token);
+  await callback(link.state, "error=access_denied");
+  assert.equal((await callback(link.state, "code=c&scope=activity:write")).status, 400);
+  assert.deepEqual(strava.requests, []);
+});
+
+test("an account can start connecting Strava only so many times", async () => {
+  reset();
+  const { token } = await signUp();
+  for (let attempt = 0; attempt < 10; attempt++) await startConnecting(token);
+  const eleventh = await postJson(token, "/connect", { code_challenge: makePkcePair().challenge });
   assert.equal(eleventh.status, 429);
   assert.deepEqual(await eleventh.json(), { error: "rate_limited" });
+});
 
-  // Whoever makes the attempts, the app as a whole makes only so many exchanges with Strava.
-  const other = await signUp();
+test("the app as a whole makes only so many code exchanges with Strava, whoever starts them", async () => {
+  reset();
+  const { token } = await signUp();
   await setUsed("app:exchange", 60);
-  const link = await start(other.token);
+  const link = await startConnecting(token);
   strava.requests.length = 0;
   const refused = await callback(link.state);
   assert.equal(
@@ -910,6 +987,39 @@ test("starting to connect, and the code exchanges that follow, are limited", asy
     "exchange_failed",
   );
   assert.deepEqual(strava.requests, []);
+});
+
+test("starting to connect again cancels the rider's unfinished sign-in", async () => {
+  reset();
+  const { token } = await signUp();
+  const abandoned = await startConnecting(token);
+  const current = await startConnecting(token);
+  assert.equal((await callback(abandoned.state)).status, 400);
+  assert.equal((await callback(current.state)).status, 302);
+  assert.equal(strava.requests.length, 1);
+});
+
+test("a sign-in has ten minutes to finish", async () => {
+  reset();
+  const { token } = await signUp();
+  const startedAt = Math.floor(Date.now() / 1000);
+  const link = await startConnecting(token);
+  const { expires_at } = await db.prepare("SELECT expires_at FROM strava_link").first();
+  assert.ok(expires_at - startedAt >= 600 && expires_at - startedAt <= 601, `${expires_at}`);
+
+  const expire = () => db.prepare("UPDATE strava_link SET expires_at = expires_at - 601").run();
+  await callback(link.state);
+  await expire();
+  assert.equal(
+    (await postJson(token, "/connect/complete", { code_verifier: link.verifier })).status,
+    400,
+    "the app collects the result too late",
+  );
+
+  const unfinished = await startConnecting(token);
+  await expire();
+  assert.equal((await callback(unfinished.state)).status, 400, "Strava's page finishes too late");
+  assert.deepEqual(await (await call(token, "")).json(), { connected: false });
 });
 
 test("a ride is never read past the size limit, even when it does not say how long it is", async () => {
@@ -926,8 +1036,7 @@ test("a ride is never read past the size limit, even when it does not say how lo
       controller.enqueue(chunk);
     },
   });
-  // The Worker answers before the body ends, so the client may still be writing when the
-  // connection closes and see that instead of the 413.
+  const workerClosedTheConnectionWhileTheClientWasStillSending = ["EPIPE", "ECONNRESET"];
   const status = await call(token, "/uploads?name=Ride", {
     method: "POST",
     body,
@@ -936,7 +1045,10 @@ test("a ride is never read past the size limit, even when it does not say how lo
     (response) => response.status,
     (error) => error.cause?.code,
   );
-  assert.ok([413, "EPIPE", "ECONNRESET"].includes(status), `got ${status}`);
+  assert.ok(
+    [413, ...workerClosedTheConnectionWhileTheClientWasStillSending].includes(status),
+    `got ${status}`,
+  );
   assert.ok(sent < 64, `${sent} MB were read`);
   assert.deepEqual(
     strava.requests.filter((r) => r.path.startsWith("/api")),

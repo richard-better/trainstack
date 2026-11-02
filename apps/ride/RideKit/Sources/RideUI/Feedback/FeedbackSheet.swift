@@ -1,8 +1,6 @@
 import RideStrava
 import SwiftUI
 
-/// Where a signed-in rider tells us what should change. It becomes a public GitHub issue, with
-/// `context` but without their name.
 struct FeedbackSheet: View {
   let context: FeedbackContext
   @Environment(TrainStackAccount.self) private var account
@@ -52,14 +50,8 @@ struct FeedbackSheet: View {
         .focused($isWriting)
         .disabled(isSending)
         .onChange(of: message) { _, text in
-          // The most the server takes, which it counts in UTF-16.
-          if text.utf16.count > 5000 {
-            var length = 0
-            message = String(
-              text.prefix { character in
-                length += character.utf16.count
-                return length <= 5000
-              })
+          if text.utf16.count > Self.serverLimitInUTF16Units {
+            message = Self.trimmedToServerLimit(text)
           }
         }
       } footer: {
@@ -70,6 +62,17 @@ struct FeedbackSheet: View {
     }
     .formStyle(.grouped)
     .onAppear { isWriting = true }
+  }
+
+  static let serverLimitInUTF16Units = 5000
+
+  static func trimmedToServerLimit(_ text: String) -> String {
+    var length = 0
+    return String(
+      text.prefix { character in
+        length += character.utf16.count
+        return length <= serverLimitInUTF16Units
+      })
   }
 
   private func thanks(for issue: FeedbackIssue) -> some View {

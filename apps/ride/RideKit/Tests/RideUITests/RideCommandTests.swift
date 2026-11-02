@@ -86,12 +86,12 @@ struct RideCommandTests {
     #expect(ride.mode == .slope)
     #expect(RideCommand.mode(.slope).isChecked(in: launcher))
     #expect(!RideCommand.mode(.erg).isChecked(in: launcher))
-    let grade = ride.session.grade
+    let grade = ride.session.slopeGradePercent
     RideCommand.increase.perform(in: launcher)
-    #expect(ride.session.grade == grade + 0.5)
+    #expect(ride.session.slopeGradePercent == grade + 0.5)
     RideCommand.decrease.perform(in: launcher)
     RideCommand.decrease.perform(in: launcher)
-    #expect(ride.session.grade == grade - 0.5)
+    #expect(ride.session.slopeGradePercent == grade - 0.5)
 
     let interval = ride.session.currentInterval
     RideCommand.skipInterval.perform(in: launcher)

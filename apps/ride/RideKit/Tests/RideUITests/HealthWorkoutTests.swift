@@ -47,13 +47,14 @@ struct HealthWorkoutTests {
 
   @Test func burnsEnergyForTheWorkDone() {
     let energy = samples(.activeEnergyBurned, in: HealthWorkout(ride()))
-    // 200 W for 90 s is 18 kJ of work, from about 75 kJ burned.
     #expect(energy.map(\.endDate) == [start.addingTimeInterval(60), start.addingTimeInterval(90)])
     let joules = energy.map { $0.quantity.doubleValue(for: .joule()) }.reduce(0, +)
-    #expect(abs(joules - 18_000 / 0.24) < 1)
+    let workAtThePedals = 200.0 * 90
+    let grossEfficiency = 0.24
+    #expect(abs(joules - workAtThePedals / grossEfficiency) < 1)
   }
 
-  @Test func namesEachSampleSoHealthKeepsOne() {
+  @Test func namesEachSampleSoHealthKeepsOneHoweverOftenItIsSaved() {
     let ride = ride()
     let names = HealthWorkout(ride).samples.map {
       $0.metadata?[HKMetadataKeySyncIdentifier] as? String
@@ -72,7 +73,7 @@ struct HealthWorkoutTests {
     #expect(samples(.heartRate, in: workout).count == 90)
   }
 
-  @Test func isNamedForTheRide() {
+  @Test func namesTheWorkoutByItsRideSoHealthKeepsOneWhicheverDeviceSavesIt() {
     let ride = ride()
     let metadata = HealthWorkout(ride).metadata
     #expect(metadata[HKMetadataKeySyncIdentifier] as? String == ride.id)

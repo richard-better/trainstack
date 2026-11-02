@@ -2,10 +2,8 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// A bar of the zones side by side, each as wide as the values it covers.
 struct ZoneScale: View {
   let zones: ZoneSet
-  /// The easiest and hardest values shown.
   let range: (easiest: Int, hardest: Int)
   let metric: ZoneMetric
   let sport: Sport?
@@ -36,8 +34,6 @@ struct ZoneScale: View {
     "\(metric.format(value)) \(metric.unit(in: sport))"
   }
 
-  /// The share of the scale `zone` covers, never less than a sliver so every zone shows. Pace
-  /// is flipped so that harder is always further along.
   private func width(of zone: Zone) -> Double {
     let sign = zones.isDescending ? -1 : 1
     let low = sign * range.easiest

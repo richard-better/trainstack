@@ -8,14 +8,12 @@ struct ZoneRow: View {
   let metric: ZoneMetric
   let scope: ZoneScope
   let isEditable: Bool
-  /// The threshold value percentages are shown against, or nil when it isn't set.
-  let reference: Int?
-  /// Whether percentages have a column of their own, rather than going under the name.
+  let percentageBase: Int?
   let hasPercentColumn: Bool
   @Environment(RiderSettingsStore.self) private var store
-  @ScaledMetric private var labelWidth = ZoneColumn.label
-  @ScaledMetric private var limitWidth = ZoneColumn.limit
-  @ScaledMetric private var percentWidth = ZoneColumn.percent
+  @ScaledMetric private var labelWidth = ZoneColumnWidth.label
+  @ScaledMetric private var limitWidth = ZoneColumnWidth.limit
+  @ScaledMetric private var percentWidth = ZoneColumnWidth.percent
 
   var body: some View {
     HStack(spacing: 10) {
@@ -25,8 +23,8 @@ struct ZoneRow: View {
         .frame(width: labelWidth, alignment: .leading)
       VStack(alignment: .leading, spacing: 2) {
         Text(zone.name).lineLimit(1)
-        if !hasPercentColumn, let reference {
-          Text(percentages(of: reference)).font(.caption).foregroundStyle(.secondary)
+        if !hasPercentColumn, let percentageBase {
+          Text(percentages(of: percentageBase)).font(.caption).foregroundStyle(.secondary)
         }
       }
       Spacer(minLength: 0)
@@ -51,8 +49,8 @@ struct ZoneRow: View {
         }
       }
       .frame(width: limitWidth, alignment: .leading)
-      if hasPercentColumn, let reference {
-        Text(percentages(of: reference))
+      if hasPercentColumn, let percentageBase {
+        Text(percentages(of: percentageBase))
           .foregroundStyle(.secondary)
           .frame(width: percentWidth, alignment: .trailing)
       }

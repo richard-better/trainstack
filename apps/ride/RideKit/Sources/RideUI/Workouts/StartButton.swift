@@ -1,15 +1,10 @@
 import RideData
 import SwiftUI
 
-/// Starts the selected workout. Return starts it too, unless another button on the page does.
-/// Targets are set from FTP, so without one
-/// there is nothing to start. The caller styles it.
 struct StartButton: View {
   let template: WorkoutTemplate?
   var title: String = "Start"
-  /// Whether the label stretches across the width it is offered, as at the foot of a page.
   var fillsWidth = false
-  /// Whether Return starts the workout. Only one button on a page should answer to it.
   var isDefaultAction = true
   @Environment(RideLauncher.self) private var launcher
   @Environment(RiderSettingsStore.self) private var settings

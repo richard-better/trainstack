@@ -31,11 +31,59 @@ struct RiderSettingsStoreTests {
     #expect(store[endOfZone: 0, for: .power, in: .all] == end + 5)
     #expect(store[modelFor: .power, in: .all] == nil)
 
-    // Choosing nothing leaves custom zones alone; choosing the model restores them.
-    store[modelFor: .power, in: .all] = nil
-    #expect(store[endOfZone: 0, for: .power, in: .all] == end + 5)
     store[modelFor: .power, in: .all] = model
     #expect(store[endOfZone: 0, for: .power, in: .all] == end)
+  }
+
+  @Test func choosingNoModelLeavesCustomZonesAsTheyAre() throws {
+    store[.ftp, .all] = 200
+    let end = try #require(store[endOfZone: 0, for: .power, in: .all])
+    store[endOfZone: 0, for: .power, in: .all] = end + 5
+
+    store[modelFor: .power, in: .all] = nil
+    #expect(store[endOfZone: 0, for: .power, in: .all] == end + 5)
+  }
+
+  @Test func ignoresAZoneEndThatWouldEmptyAZone() throws {
+    store[.ftp, .all] = 200
+    let firstEnd = try #require(store[endOfZone: 0, for: .power, in: .all])
+    let secondEnd = try #require(store[endOfZone: 1, for: .power, in: .all])
+
+    store[endOfZone: 0, for: .power, in: .all] = secondEnd
+    #expect(store[endOfZone: 0, for: .power, in: .all] == firstEnd)
+    #expect(store[modelFor: .power, in: .all] != nil)
+  }
+
+  @Test func theIndoorFTPIsCyclingsOwnOrElseDefaults() {
+    store[.ftp, .all] = 200
+    #expect(store.ftp == 200)
+    store.setListed(true, .cycling)
+    store[usesDefault: .power, in: .cycling] = false
+    store[.ftp, .sport(.cycling)] = 240
+    #expect(store.ftp == 240)
+  }
+
+  @Test func analysesARideWithTheFTPInEffectOnItsDay() throws {
+    let ride = try RideRecording.sample()
+    var settings = RiderSettings()
+    settings.history.record(
+      [.threshold(.ftp, scope: .all, value: 180)], on: ride.startDate.addingTimeInterval(-86_400))
+    let store = RiderSettingsStore(settings: settings)
+    store[.ftp, .all] = 260
+    #expect(store.ftp(for: ride) == 180)
+    #expect(store.ftp == 260)
+  }
+
+  @Test func savesEditsAsTheyAreMade() throws {
+    let name = "RiderSettingsStoreTests-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: name))
+    defer { defaults.removePersistentDomain(forName: name) }
+    let store = RiderSettingsStore(defaults: defaults)
+    store[.ftp, .all] = 230
+    store.weight = 70
+    let reopened = RiderSettingsStore(defaults: defaults)
+    #expect(reopened[.ftp, .all] == 230)
+    #expect(reopened.weight == 70)
   }
 
   @Test func switchesASportBetweenDefaultAndItsOwnZones() {

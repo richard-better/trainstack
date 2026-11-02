@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Pause, skip, the trainer mode and its setting. One row with room to spare, otherwise the
-/// transport above the trainer controls, which themselves stack when even that is too narrow.
 struct PlayerControls: View {
   @Bindable var controller: RideController
 
@@ -68,7 +66,7 @@ struct PlayerControls: View {
     let session = controller.session
     return switch session.mode {
     case .erg: "\(session.ergPercent)%"
-    case .slope: "\(session.grade.formatted(.oneDecimal))%"
+    case .slope: "\(session.slopeGradePercent.formatted(.oneDecimal))%"
     case .level: "Level \(session.level)"
     }
   }
@@ -77,7 +75,6 @@ struct PlayerControls: View {
 
   private var skip: KeyboardShortcut? { RideCommand.skipInterval.shortcut(playerPresented: true) }
 
-  /// Such as "Trainer mode (⌘1 ERG, ⌘2 Slope, ⌘3 Level)".
   private var modeHelp: String {
     let keys = TrainerMode.allCases.compactMap { mode in
       RideCommand.mode(mode).shortcut(playerPresented: true).map {

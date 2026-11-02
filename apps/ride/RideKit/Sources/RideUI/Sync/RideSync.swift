@@ -4,15 +4,6 @@ import RideBluetooth
 import RideData
 import os
 
-/// Keeps the rides in the rider's private iCloud database, so each device signed in to the same
-/// Apple Account has every ride. A ride is a record named by its ID holding its FIT file, and as
-/// a file never changes, records are only ever added and deleted.
-///
-/// Rides stay on the device without iCloud: the library is the source of truth, and the first
-/// time a device syncs it sends every ride it has.
-///
-/// Beside the rides, one record holds the secret behind the rider's `RideClaim`. The first
-/// device to send it wins, and every other device takes it from iCloud.
 final class RideSync {
   static let containerIdentifier = "iCloud.com.trainstackhq.ride"
   private static let zoneID = CKRecordZone.ID(zoneName: "Rides")
@@ -21,9 +12,9 @@ final class RideSync {
   private static let secretRecordType = "ClaimSecret"
   private static let secretRecordID = CKRecord.ID(recordName: "claim-secret", zoneID: zoneID)
   private static let secretKey = "secret"
+  private static let deletedRideRecordType = "DeletedRide"
+  private static let deletedRidePrefix = "deleted-"
 
-  /// Whether the app may use iCloud. Builds signed without the iCloud entitlement may not, and
-  /// CloudKit stops the app if they try.
   static var isEntitled: Bool {
     #if os(macOS)
       guard let task = SecTaskCreateFromSelf(nil) else { return false }
@@ -31,18 +22,14 @@ final class RideSync {
         task, "com.apple.developer.icloud-services" as CFString, nil)
       return (services as? [String])?.contains("CloudKit") == true
     #else
-      // iOS apps cannot read their entitlements, and every build that runs on a device is
-      // signed with them. See AGENTS.md for the simulator.
       return true
     #endif
   }
 
-  /// Proves to the rider's iPhone that this device is theirs, once it has the secret every
-  /// device signed in to their Apple Account shares.
   var claim: RideClaim? { secret.map(RideClaim.init(secret:)) }
   private var secret: Data?
-  /// Called with each ride that arrives from another device.
-  var onReceive: ((Ride.ID) -> Void)?
+  var beforeStoringRideFromAnotherDevice: (Ride) -> Void = { _ in }
+  var onRideFromAnotherDevice: ((Ride.ID) -> Void)?
   private let library: RideLibrary
   private let stateURL: URL
   private var engine: CKSyncEngine?
@@ -53,8 +40,29 @@ final class RideSync {
     self.stateURL = stateURL
   }
 
-  /// The device's copy of the claim secret, beside the sync state.
   private var secretURL: URL { stateURL.deletingLastPathComponent().appending(path: "ClaimSecret") }
+
+  private var deletedRidesURL: URL {
+    stateURL.deletingLastPathComponent().appending(path: "DeletedRides.json")
+  }
+
+  private lazy var deletedRides: Set<Ride.ID> = {
+    guard let data = try? Data(contentsOf: deletedRidesURL) else { return [] }
+    return (try? JSONDecoder().decode(Set<Ride.ID>.self, from: data)) ?? []
+  }()
+
+  @discardableResult
+  private func rememberDeleted(_ id: Ride.ID) -> Bool {
+    guard deletedRides.insert(id).inserted else { return false }
+    do {
+      try FileManager.default.createDirectory(
+        at: deletedRidesURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try JSONEncoder().encode(deletedRides).write(to: deletedRidesURL, options: .atomic)
+    } catch {
+      log.error("Deleted rides not saved: \(error.localizedDescription)")
+    }
+    return true
+  }
 
   static var defaultStateURL: URL {
     URL.applicationSupportDirectory.appending(path: "RideSync/State.json")
@@ -62,7 +70,7 @@ final class RideSync {
 
   func start() {
     guard engine == nil, Self.isEntitled, library.isStored else { return }
-    library.onChange = { [weak self] change in self?.send(change) }
+    library.onLocalChange = { [weak self] change in self?.send(change) }
     let state = loadState()
     let container = CKContainer(identifier: Self.containerIdentifier)
     let engine = CKSyncEngine(
@@ -70,12 +78,13 @@ final class RideSync {
         database: container.privateCloudDatabase, stateSerialization: state, delegate: self))
     self.engine = engine
     secret = try? Data(contentsOf: secretURL)
-    if secret == nil {
-      // Until iCloud says whether another device made one first.
-      store(RideClaim.secret())
-      engine.state.add(pendingRecordZoneChanges: [.saveRecord(Self.secretRecordID)])
-    }
+    if secret == nil { proposeNewSecret(with: engine) }
     if state == nil { sendEverything(with: engine) }
+  }
+
+  private func proposeNewSecret(with engine: CKSyncEngine) {
+    store(RideClaim.secret())
+    engine.state.add(pendingRecordZoneChanges: [.saveRecord(Self.secretRecordID)])
   }
 
   private func store(_ secret: Data) {
@@ -90,45 +99,66 @@ final class RideSync {
     }
   }
 
-  /// Takes the secret another device sent first.
   private func adoptSecret(from record: CKRecord?) {
     guard let secret = record?.encryptedValues[Self.secretKey] as? Data, secret != self.secret
     else { return }
     store(secret)
   }
 
-  /// Starts over with no sync state or claim secret, for another Apple Account or none. The
-  /// rides stay on the device, and go to the next account the rider signs in to.
-  private func restart() {
+  private func restartForAnotherAccount() {
     engine = nil
     secret = nil
+    deletedRides = []
     try? FileManager.default.removeItem(at: stateURL)
     try? FileManager.default.removeItem(at: secretURL)
+    try? FileManager.default.removeItem(at: deletedRidesURL)
     start()
   }
 
   private func send(_ change: RideLibrary.Change) {
+    engine?.state.add(pendingRecordZoneChanges: changes(toSendFor: change))
+  }
+
+  func changes(toSendFor change: RideLibrary.Change) -> [CKSyncEngine.PendingRecordZoneChange] {
     switch change {
-    case .added(let id): engine?.state.add(pendingRecordZoneChanges: [.saveRecord(recordID(id))])
+    case .added(let id):
+      return deletedRides.contains(id) ? [] : [.saveRecord(recordID(id))]
     case .removed(let id):
-      engine?.state.add(pendingRecordZoneChanges: [.deleteRecord(recordID(id))])
+      rememberDeleted(id)
+      return [.deleteRecord(recordID(id)), .saveRecord(deletedRecordID(id))]
     }
   }
 
-  /// Makes sure the zone exists and sends every ride, for a device that has not synced yet or
-  /// has just signed in.
   private func sendEverything(with engine: CKSyncEngine) {
     engine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
-    engine.state.add(
-      pendingRecordZoneChanges: [.saveRecord(Self.secretRecordID)]
-        + library.rides.map { .saveRecord(recordID($0.id)) })
+    engine.state.add(pendingRecordZoneChanges: everythingToSend())
   }
 
-  private func recordID(_ id: Ride.ID) -> CKRecord.ID {
+  func everythingToSend() -> [CKSyncEngine.PendingRecordZoneChange] {
+    [.saveRecord(Self.secretRecordID)]
+      + library.rides.filter { !deletedRides.contains($0.id) }.map { .saveRecord(recordID($0.id)) }
+      + deletedRides.sorted().map { .saveRecord(deletedRecordID($0)) }
+  }
+
+  func recordID(_ id: Ride.ID) -> CKRecord.ID {
     CKRecord.ID(recordName: id, zoneID: Self.zoneID)
   }
 
-  private func record(for recordID: CKRecord.ID) -> CKRecord? {
+  func deletedRecordID(_ id: Ride.ID) -> CKRecord.ID {
+    CKRecord.ID(recordName: Self.deletedRidePrefix + id, zoneID: Self.zoneID)
+  }
+
+  private func deletedRide(named recordName: String) -> Ride.ID? {
+    guard recordName.hasPrefix(Self.deletedRidePrefix) else { return nil }
+    return String(recordName.dropFirst(Self.deletedRidePrefix.count))
+  }
+
+  func record(for recordID: CKRecord.ID) -> CKRecord? {
+    if let id = deletedRide(named: recordID.recordName) {
+      guard deletedRides.contains(id) else { return nil }
+      return CKRecord(recordType: Self.deletedRideRecordType, recordID: recordID)
+    }
+    if deletedRides.contains(recordID.recordName) { return nil }
     if recordID == Self.secretRecordID {
       guard let secret else { return nil }
       let record = CKRecord(recordType: Self.secretRecordType, recordID: recordID)
@@ -156,19 +186,37 @@ final class RideSync {
     }
   }
 
-  private func receive(_ record: CKRecord) {
+  func receive(_ record: CKRecord) -> [CKSyncEngine.PendingRecordZoneChange] {
     if record.recordID == Self.secretRecordID {
       adoptSecret(from: record)
-      return
+      return []
+    }
+    if let id = deletedRide(named: record.recordID.recordName) {
+      if rememberDeleted(id) { library.removeReceived(id) }
+      return [.deleteRecord(recordID(id))]
+    }
+    if deletedRides.contains(record.recordID.recordName) {
+      return [.deleteRecord(record.recordID)]
     }
     guard let url = (record[Self.fileKey] as? CKAsset)?.fileURL,
       let data = try? Data(contentsOf: url)
-    else { return }
+    else { return [] }
     do {
-      if let id = try library.receive(data) { onReceive?(id) }
+      if let id = try library.receive(data, beforeStoring: beforeStoringRideFromAnotherDevice) {
+        onRideFromAnotherDevice?(id)
+      }
     } catch {
       log.error("Ride from iCloud not read: \(error.localizedDescription)")
     }
+    return []
+  }
+
+  func receiveDeletion(of recordID: CKRecord.ID) {
+    let name = recordID.recordName
+    guard recordID != Self.secretRecordID, deletedRide(named: name) == nil,
+      !deletedRides.contains(name)
+    else { return }
+    library.removeReceived(name)
   }
 
   private func handleFailedSaves(
@@ -179,14 +227,11 @@ final class RideSync {
       let recordID = failure.record.recordID
       switch failure.error.code {
       case .zoneNotFound, .userDeletedZone:
-        // The rider removed Ride's data from iCloud, or it has not been created yet.
         engine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
-        engine.state.add(
-          pendingRecordZoneChanges: [.saveRecord(recordID), .saveRecord(Self.secretRecordID)])
+        engine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID)] + everythingToSend())
       case .serverRecordChanged where recordID == Self.secretRecordID:
         adoptSecret(from: failure.error.serverRecord)
       case .serverRecordChanged:
-        // Another device sent the same ride, and a ride's record never changes.
         break
       default:
         log.error("Ride not sent to iCloud: \(failure.error.localizedDescription)")
@@ -204,16 +249,14 @@ extension RideSync: CKSyncEngineDelegate {
       switch change.changeType {
       case .signIn:
         sendEverything(with: syncEngine)
-      case .signOut, .switchAccounts: restart()
+      case .signOut, .switchAccounts: restartForAnotherAccount()
       @unknown default: break
       }
     case .fetchedRecordZoneChanges(let changes):
-      for modification in changes.modifications { receive(modification.record) }
-      // The claim secret is only deleted with the zone, and is sent again as the zone is made
-      // again.
-      for deletion in changes.deletions where deletion.recordID != Self.secretRecordID {
-        library.removeReceived(deletion.recordID.recordName)
+      for modification in changes.modifications {
+        syncEngine.state.add(pendingRecordZoneChanges: receive(modification.record))
       }
+      for deletion in changes.deletions { receiveDeletion(of: deletion.recordID) }
     case .sentRecordZoneChanges(let sent):
       handleFailedSaves(sent.failedRecordSaves, with: syncEngine)
     default:
@@ -230,7 +273,6 @@ extension RideSync: CKSyncEngineDelegate {
     return await CKSyncEngine.RecordZoneChangeBatch(pendingChanges: changes) { recordID in
       await MainActor.run {
         guard let record = self.record(for: recordID) else {
-          // The ride was removed, or never written to the device.
           syncEngine.state.remove(pendingRecordZoneChanges: [.saveRecord(recordID)])
           return nil
         }

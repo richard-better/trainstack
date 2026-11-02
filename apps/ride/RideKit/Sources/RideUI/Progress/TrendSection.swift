@@ -2,8 +2,6 @@ import Charts
 import RideData
 import SwiftUI
 
-/// Fitness day by day over the chosen span, over each week's average daily stress. Changing
-/// the span redraws only this section.
 struct TrendSection: View {
   let load: [TrainingLoad]
   @State private var span = ProgressSpan.sixMonths
@@ -14,7 +12,9 @@ struct TrendSection: View {
     let weeks = Dictionary(grouping: shown) {
       calendar.dateInterval(of: .weekOfYear, for: $0.date)?.start ?? $0.date
     }
-    .map { WeeklyStress(start: $0.key, dailyStress: $0.value.reduce(0) { $0 + $1.stress } / 7) }
+    .map {
+      WeeklyStress(start: $0.key, averageDailyStress: $0.value.reduce(0) { $0 + $1.stress } / 7)
+    }
     let legend = HStack(spacing: 16) {
       LegendSwatch(title: "Fitness", color: .primary, height: 2)
       LegendSwatch(title: "Stress per day, by week", color: .primary.opacity(0.25), height: 10)
@@ -44,7 +44,7 @@ struct TrendSection: View {
         ForEach(weeks) { week in
           BarMark(
             x: .value("Week", week.start, unit: .weekOfYear),
-            y: .value("Stress", week.dailyStress)
+            y: .value("Stress", week.averageDailyStress)
           )
           .foregroundStyle(Color.primary.opacity(0.25))
         }

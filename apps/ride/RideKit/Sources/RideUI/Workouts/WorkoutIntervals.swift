@@ -2,8 +2,6 @@ import RideData
 import RideStyle
 import SwiftUI
 
-/// A workout's sections as rows: the warm-up and cool-down as one ramp each, and each step of
-/// a repeated set once, with the target in watts when there is an FTP.
 struct WorkoutIntervals: View {
   let template: WorkoutTemplate
   let ftp: Int?
@@ -53,7 +51,6 @@ struct WorkoutIntervals: View {
       watts: watts(step.intensity).map { "\($0) W" }, duration: step.duration)
   }
 
-  /// Easy steps that climb or fall as one line: `Ramp 45 → 72% FTP` at `108–173 W`.
   private func ramp(_ name: String, _ section: WorkoutSection, zone: PowerZone) -> Interval {
     let first = section.steps[0]
     let last = section.steps[section.steps.count - 1]

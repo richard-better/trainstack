@@ -3,12 +3,9 @@ import CryptoKit
 import Foundation
 import RideData
 
-/// A finished ride in History.
 nonisolated struct Ride: Identifiable, Sendable {
-  /// The SHA-256 of the file, so the same ride has the same ID on every device it reaches.
   let id: String
   let recording: RideRecording
-  /// The file as it was opened, kept so the ride can be shared or exported unchanged.
   let fileData: Data
 
   init(recording: RideRecording, fileData: Data) {

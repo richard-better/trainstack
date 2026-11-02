@@ -20,7 +20,7 @@ struct WatchScreenTests {
   ) -> WatchScreen {
     WatchScreen(
       workout: WatchWorkout(startDate: start, startedOnPhone: startedOnPhone),
-      glance: glance.map { ReceivedGlance(glance: $0, date: start + received) },
+      glance: glance.map { ReceivedGlance(glance: $0, receivedAt: start + received) },
       at: start + seconds)
   }
 

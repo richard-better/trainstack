@@ -1,9 +1,5 @@
 import Foundation
 
-/// Pretend devices for previews and debug builds, where there is no Bluetooth to try the
-/// Devices sheet with: a trainer and two heart rate straps, which connect after a moment. A
-/// connected strap sends a heart rate each second. The trainer takes every command, and holds
-/// the power it is set to in ERG mode.
 @MainActor
 final class SampleTransport: BluetoothTransport {
   var onAvailability: ((BluetoothAvailability) -> Void)?
@@ -11,13 +7,12 @@ final class SampleTransport: BluetoothTransport {
   var onConnect: ((UUID) -> Void)?
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
-  var onBattery: ((UUID, Int) -> Void)?
+  var onBatteryPercent: ((UUID, Int) -> Void)?
   var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var onTrainerControlReady: ((UUID) -> Void)?
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
   private var heartbeats: [UUID: Task<Void, Never>] = [:]
-  /// The power the trainer was last set to, or nil outside ERG mode.
   private var ergWatts: Int?
 
   isolated deinit {
@@ -36,7 +31,7 @@ final class SampleTransport: BluetoothTransport {
 
   func start() { onAvailability?(.ready) }
 
-  func scan() {
+  func scanAllDevices() {
     for device in [Self.strap, Self.otherStrap, DiscoveredDevice(id: UUID(), name: "AirPods")] {
       onDiscovery?(device)
     }
@@ -44,7 +39,7 @@ final class SampleTransport: BluetoothTransport {
 
   func stopScan() {}
 
-  func connect(_ id: UUID) {
+  func connectWhenInRange(_ id: UUID) {
     heartbeats[id]?.cancel()
     heartbeats[id] = Task { [weak self] in
       do { try await Task.sleep(for: .seconds(1)) } catch { return }
@@ -55,7 +50,7 @@ final class SampleTransport: BluetoothTransport {
         self?.onTrainerValue?(id, .resistanceRange, Data([0, 0, 0xE8, 0x03, 10, 0]))
         self?.onTrainerControlReady?(id)
       } else {
-        self?.onBattery?(id, 78)
+        self?.onBatteryPercent?(id, 78)
       }
       var beat = 0
       while !Task.isCancelled, self != nil {
@@ -97,8 +92,6 @@ final class SampleTransport: BluetoothTransport {
 }
 
 extension BluetoothDevices {
-  /// Pretend devices with the trainer paired, for previews and debug builds. With `pairStrap`
-  /// a heart rate strap is paired too.
   public static func sample(pairStrap: Bool = false) -> BluetoothDevices {
     let defaults = UserDefaults(suiteName: "RideBluetooth.sample")!
     defaults.removePersistentDomain(forName: "RideBluetooth.sample")

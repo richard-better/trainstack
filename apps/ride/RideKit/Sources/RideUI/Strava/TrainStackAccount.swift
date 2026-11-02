@@ -3,12 +3,8 @@ import Foundation
 import Observation
 import RideStrava
 
-/// The rider's TrainStack account, which Ride needs only to send rides to Strava and feedback, and
-/// the Strava connection that hangs off it. Everything else in Ride works without either.
 @Observable
 final class TrainStackAccount {
-  /// Whether the sign-in kept from an earlier launch is still being read. Until it is, the account
-  /// is neither signed in nor out, as reading it can wait on a Keychain prompt.
   private(set) var isRestoring = true
   private(set) var isSignedIn = false
   private(set) var name: String?
@@ -16,7 +12,6 @@ final class TrainStackAccount {
   private(set) var stravaAthleteName: String?
   @ObservationIgnored private let client: TrainStackClient
 
-  /// Starts out restoring; `restore()` picks up the sign-in kept in `store`.
   init(
     server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
     transport: any HTTPTransport = URLSession.shared
@@ -24,25 +19,21 @@ final class TrainStackAccount {
     client = TrainStackClient(server: server, store: store, transport: transport)
   }
 
-  // MARK: Account
-
-  /// Picks up a sign-in kept from an earlier launch, off the main actor.
   func restore() async {
     guard isRestoring else { return }
-    await sync()
+    await refreshFromClient()
   }
 
   func signIn(identityToken: String, nonce: String, fullName: String?) async throws {
     try await client.signInWithApple(
       identityToken: identityToken, nonce: nonce, fullName: fullName)
-    await sync()
+    await refreshFromClient()
     await refreshStrava()
   }
 
-  /// Signs in through Apple's web flow, for builds that cannot use Sign in with Apple natively.
-  /// `authenticate` shows `url` and returns the address it ends at, as a web authentication
-  /// session does.
-  func signInThroughBrowser(authenticate: (URL) async throws -> URL) async throws {
+  func signInThroughBrowser(
+    showingInAWebAuthenticationSession authenticate: (URL) async throws -> URL
+  ) async throws {
     let attempt = await client.startAppleWebSignIn()
     let callback: URL
     do {
@@ -57,52 +48,46 @@ final class TrainStackAccount {
 
   func signOut() async {
     await client.signOut()
-    await sync()
+    await refreshFromClient()
     isStravaConnected = false
     stravaAthleteName = nil
   }
 
   func deleteAccount() async throws {
     try await client.deleteAccount()
-    await sync()
+    await refreshFromClient()
     isStravaConnected = false
     stravaAthleteName = nil
   }
 
-  /// Shows what the client holds, which it has restored by the time it answers.
-  private func sync() async {
+  private func refreshFromClient() async {
     isSignedIn = await client.isSignedIn
     name = await client.accountName
     isRestoring = false
   }
 
-  // MARK: Strava
-
-  /// Asks whether Strava is connected. A failure leaves what was shown as it was.
   func refreshStrava() async {
     await restore()
     guard isSignedIn else { return }
     do {
       apply(try await client.stravaStatus())
     } catch {
-      await sync()
+      await refreshFromClient()
     }
   }
 
-  /// Connects Strava. `authenticate` shows `url` and returns the address it ends at, as a web
-  /// authentication session does.
   func connectStrava(authenticate: (URL) async throws -> URL) async throws {
     do {
       let attempt = try await client.startStravaConnection()
       let callback: URL
       do {
-        callback = try await authenticate(attempt.url)
+        callback = try await authenticate(attempt.authorizationURL)
       } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
         throw StravaError.cancelled
       }
       apply(try await client.finishStravaConnection(attempt, callback: callback))
     } catch {
-      await sync()
+      await refreshFromClient()
       throw error
     }
   }
@@ -112,31 +97,27 @@ final class TrainStackAccount {
       try await client.disconnectStrava()
       apply(StravaStatus(isConnected: false))
     } catch {
-      await sync()
+      await refreshFromClient()
       throw error
     }
   }
 
-  /// Sends `ride` to Strava as an indoor trainer ride.
   func upload(_ ride: Ride) async throws -> StravaUpload {
     do {
       return try await client.upload(
         ride.fileData, name: ride.title, fileName: ride.exportFileName)
     } catch {
-      await sync()
+      await refreshFromClient()
       if case StravaError.notConnected = error { apply(StravaStatus(isConnected: false)) }
       throw error
     }
   }
 
-  // MARK: Feedback
-
-  /// Sends the rider's feedback, which becomes a public GitHub issue without their name.
   func sendFeedback(_ message: String, context: FeedbackContext) async throws -> FeedbackIssue {
     do {
       return try await client.sendFeedback(message, context: context)
     } catch {
-      await sync()
+      await refreshFromClient()
       throw error
     }
   }
@@ -146,7 +127,6 @@ final class TrainStackAccount {
     stravaAthleteName = status.athleteName
   }
 
-  /// Signed in with Strava connected, for previews.
   static var sample: TrainStackAccount {
     let account = TrainStackAccount(
       store: InMemorySessionStore(AccountSession(token: "t", name: "Ada Rider")))
@@ -158,7 +138,6 @@ final class TrainStackAccount {
     return account
   }
 
-  /// Not signed in, for previews.
   static var signedOut: TrainStackAccount {
     let account = TrainStackAccount(store: InMemorySessionStore())
     account.isRestoring = false

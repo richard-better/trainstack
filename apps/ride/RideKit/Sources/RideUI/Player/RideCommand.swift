@@ -1,8 +1,6 @@
 import RideData
 import SwiftUI
 
-/// What the Controls menu does to the ride in progress, with its keyboard shortcut. The player's
-/// buttons use the same shortcuts, so the menu shows the keys that work there.
 enum RideCommand: Hashable {
   case togglePause
   case skipInterval
@@ -12,7 +10,6 @@ enum RideCommand: Hashable {
   case togglePlayer
   case end
 
-  /// In the order the menu lists them.
   static let allCases: [RideCommand] =
     [.togglePause, .skipInterval] + TrainerMode.allCases.map(mode)
     + [.decrease, .increase, .togglePlayer, .end]
@@ -29,9 +26,6 @@ enum RideCommand: Hashable {
     }
   }
 
-  /// The keys for the command. Space pauses only while the player is showing, since
-  /// elsewhere it belongs to text fields and lists. Ending the ride takes two modifiers and
-  /// still asks first.
   func shortcut(playerPresented: Bool) -> KeyboardShortcut? {
     switch self {
     case .togglePause: playerPresented ? KeyboardShortcut(.space, modifiers: []) : nil
@@ -46,8 +40,6 @@ enum RideCommand: Hashable {
     }
   }
 
-  /// Whether the command can run now: only while a ride is on and the rider is not deciding
-  /// whether to end it.
   func isEnabled(in launcher: RideLauncher?) -> Bool {
     guard let launcher, let ride = launcher.ride, !launcher.isConfirmingEnd else { return false }
     return switch self {
@@ -56,7 +48,6 @@ enum RideCommand: Hashable {
     }
   }
 
-  /// Whether the menu shows the command ticked, as for the trainer's current mode.
   func isChecked(in launcher: RideLauncher?) -> Bool {
     if case .mode(let mode) = self { launcher?.ride?.mode == mode } else { false }
   }

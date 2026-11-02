@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// Workout cards in as many columns as fit. Click to select, double-click to open.
 struct WorkoutGrid: View {
   @Binding var state: WorkoutsState
   let shown: [WorkoutTemplate]

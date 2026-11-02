@@ -23,7 +23,18 @@ struct HeartRateMeasurementTests {
     #expect(HeartRateMeasurement(Data([0x02, 120]))?.hasContact == nil)
   }
 
-  @Test func hasNoReadingWithoutContact() {
+  @Test func encodesInOneByteWheneverTheHeartRateFits() {
+    #expect(HeartRateMeasurement(beatsPerMinute: 255).data == Data([0x00, 255]))
+    #expect(HeartRateMeasurement(beatsPerMinute: 256).data == Data([0x01, 0x00, 0x01]))
+  }
+
+  @Test func encodesSkinContactOnlyWhenKnown() {
+    #expect(HeartRateMeasurement(beatsPerMinute: 72, hasContact: true).data == Data([0x06, 72]))
+    #expect(HeartRateMeasurement(beatsPerMinute: 72, hasContact: false).data == Data([0x04, 72]))
+    #expect(HeartRateMeasurement(beatsPerMinute: 72).data == Data([0x00, 72]))
+  }
+
+  @Test func hasNoReadingWithoutContactOrAtZero() {
     #expect(HeartRateMeasurement(beatsPerMinute: 120, hasContact: false).reading == nil)
     #expect(HeartRateMeasurement(beatsPerMinute: 0).reading == nil)
     #expect(HeartRateMeasurement(beatsPerMinute: 120, hasContact: true).reading == 120)

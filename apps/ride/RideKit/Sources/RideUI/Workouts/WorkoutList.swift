@@ -1,16 +1,13 @@
 import RideData
 import SwiftUI
 
-/// The workout library as a list grouped by zone, small enough to scan on an iPhone. Each row
-/// opens the workout, where the ride starts.
 struct WorkoutList: View {
   @Binding var state: WorkoutsState
-  /// The workouts that pass the filters.
   let workouts: [WorkoutTemplate]
 
   var body: some View {
     List {
-      WorkoutFilterChips(state: $state, count: workouts.count)
+      WorkoutFilterChips(state: $state, matchingCount: workouts.count)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
       ForEach(groups, id: \.zone) { group in
@@ -30,7 +27,6 @@ struct WorkoutList: View {
     #endif
   }
 
-  /// The workouts by the zone they train, easiest first, each keeping the chosen order.
   private var groups: [(zone: PowerZone, workouts: [WorkoutTemplate])] {
     let byZone = Dictionary(grouping: workouts, by: \.category)
     return PowerZone.allCases.compactMap { zone in byZone[zone].map { (zone, $0) } }

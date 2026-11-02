@@ -1,11 +1,6 @@
 import RideBluetooth
 import SwiftUI
 
-/// A reading the ride takes, with the sensor it comes from and that sensor's live value.
-/// Where several connected sensors can supply the reading, the row has a chevron that opens them
-/// so the rider can pick one, and says how many are connected and which one is in use. With one
-/// connected sensor, or none, there is nothing to pick: the row shows that sensor's status with
-/// Connect and Forget, and the other remembered sensors below it.
 struct SensorMetricRow: View {
   let metric: RideMetric
   @Environment(BluetoothDevices.self) private var devices
@@ -54,10 +49,8 @@ struct SensorMetricRow: View {
     }
   }
 
-  /// Whether more than one connected sensor can supply the reading, so there is a choice.
   private var canPick: Bool { devices.connectedSensors(of: metric).count > 1 }
 
-  /// The sensor shown on the row: the one supplying the reading, or else the best remembered one.
   private var displayedSensor: DiscoveredDevice? {
     devices.source(of: metric) ?? devices.sensors(of: metric).first
   }

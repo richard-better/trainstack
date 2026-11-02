@@ -3,8 +3,6 @@
   import RideStyle
   import SwiftUI
 
-  /// The last seconds of an interval, counted down in a ring of the next interval's colour, with
-  /// what comes next. The wrist taps along.
   struct IntervalEndingView: View {
     let glance: RideGlance
     let seconds: Int
@@ -40,7 +38,6 @@
 
     private var color: Color { glance.next?.zone.color ?? .green }
 
-    /// Such as "Recovery · 120 W", or the end of the workout.
     private var nextTitle: String {
       guard let next = glance.next else { return "Finish" }
       guard let target = next.targetPower else { return next.zone.name }

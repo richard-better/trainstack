@@ -1,8 +1,6 @@
 import SwiftUI
 
 #if os(iOS)
-  /// The ride in progress, shown above the tab bar while the player is minimised, like the
-  /// track playing in Music. Tap it to go back to the player.
   struct RideAccessory: View {
     let controller: RideController
     let open: () -> Void

@@ -14,19 +14,15 @@ import * as z from "zod";
 import type { Database } from "../db";
 import { appHandoff as handoffTable } from "../db/schema";
 
-/** Where the browser goes when it is done, for the app's web authentication session to catch. */
-const APP_REDIRECT = "trainstackride://signed-in";
-/** How long the app has to collect a finished sign-in. It does so straight away. */
-const HANDOFF_LIFETIME_MS = 2 * 60 * 1000;
-/** SHA-256 of the app's verifier, base64url without padding. */
-const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
-const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
-/** 32 random bytes, base64url without padding. */
-const CODE = /^[A-Za-z0-9_-]{43}$/;
-const ERROR_CODE = /^[A-Za-z0-9_]{1,64}$/;
-/** Marks a browser that started from the app, so a sign-in that lost its state still goes back. */
-const MARKER_COOKIE = "app_handoff";
-const MARKER_LIFETIME_SECONDS = 10 * 60;
+const APP_WEB_AUTHENTICATION_SESSION_CALLBACK = "trainstackride://signed-in";
+const TIME_FOR_THE_APP_TO_COLLECT_A_SIGN_IN_MS = 2 * 60 * 1000;
+const UNPADDED_BASE64URL_SHA256 = /^[A-Za-z0-9_-]{43}$/;
+const PKCE_VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
+const CODE_BYTES = 32;
+const UNPADDED_BASE64URL_OF_32_BYTES = /^[A-Za-z0-9_-]{43}$/;
+const BETTER_AUTH_ERROR_CODE = /^[A-Za-z0-9_]{1,64}$/;
+const STARTED_FROM_THE_APP_COOKIE = "app_handoff";
+const STARTED_FROM_THE_APP_COOKIE_LIFETIME_SECONDS = 10 * 60;
 
 const toBase64Url = (bytes: ArrayBuffer | Uint8Array) =>
   btoa(String.fromCharCode(...new Uint8Array(bytes)))
@@ -38,20 +34,11 @@ const sha256 = async (text: string) =>
   toBase64Url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
 const toApp = (params: Record<string, string>) =>
-  `${APP_REDIRECT}?${new URLSearchParams(params).toString()}`;
+  `${APP_WEB_AUTHENTICATION_SESSION_CALLBACK}?${new URLSearchParams(params).toString()}`;
 
-/** Better Auth's error code, if it looks like one, for the app to show. */
-const appError = (error: string | null | undefined) =>
-  error && ERROR_CODE.test(error) ? error : "sign_in_failed";
+const errorCodeForTheApp = (error: string | null | undefined) =>
+  error && BETTER_AUTH_ERROR_CODE.test(error) ? error : "sign_in_failed";
 
-/**
- * Lets the app sign in with Apple's web flow, for builds that cannot hold the Sign in with Apple
- * entitlement. The app opens `/app-handoff/apple` with a PKCE challenge in a web authentication
- * session. Better Auth runs Apple's flow, and when it ends with a new session, this plugin swaps
- * the browser's session for a single-use code sent to the app. The app trades the code and its
- * verifier for a session of its own at `/app-handoff/token`. No session token ever reaches the
- * browser or a URL, and only the app that made the challenge can redeem the code.
- */
 export function appHandoff(options: { database: Database; enabled: boolean }) {
   return {
     id: "app-handoff",
@@ -64,11 +51,10 @@ export function appHandoff(options: { database: Database; enabled: boolean }) {
           c.setHeader("Referrer-Policy", "no-referrer");
           if (!options.enabled) throw c.redirect(toApp({ error: "apple_web_not_configured" }));
           const challenge = c.query.code_challenge;
-          if (!challenge || !CHALLENGE.test(challenge)) {
+          if (!challenge || !UNPADDED_BASE64URL_SHA256.test(challenge)) {
             throw c.redirect(toApp({ error: "invalid_request" }));
           }
-          // Kept with the OAuth state on the server, where no client can set it.
-          await addOAuthServerContext({ appChallenge: challenge });
+          await keepWithTheServerSideOAuthState({ appChallenge: challenge });
           const done = `${c.context.baseURL}/app-handoff/done`;
           let started;
           try {
@@ -92,8 +78,8 @@ export function appHandoff(options: { database: Database; enabled: boolean }) {
               c.setCookie(name, attributes.value, toCookieOptions(attributes));
             }
           }
-          const marker = c.context.createAuthCookie(MARKER_COOKIE, {
-            maxAge: MARKER_LIFETIME_SECONDS,
+          const marker = c.context.createAuthCookie(STARTED_FROM_THE_APP_COOKIE, {
+            maxAge: STARTED_FROM_THE_APP_COOKIE_LIFETIME_SECONDS,
           });
           c.setCookie(marker.name, "1", marker.attributes);
           if (!started.response.url) throw c.redirect(toApp({ error: "sign_in_failed" }));
@@ -101,16 +87,14 @@ export function appHandoff(options: { database: Database; enabled: boolean }) {
         },
       ),
 
-      // Better Auth needs somewhere to send the browser. The hook below sends it to the app
-      // first, so this is only reached if that did not happen.
-      appHandoffDone: createAuthEndpoint(
+      appHandoffDoneIfTheHookDidNotSendTheBrowserToTheApp: createAuthEndpoint(
         "/app-handoff/done",
         { method: "GET", query: z.object({ error: z.string().optional() }) },
         async (c) => {
           c.setHeader("Cache-Control", "no-store");
           c.setHeader("Referrer-Policy", "no-referrer");
           if (!c.query.error) throw APIError.from("BAD_REQUEST", INVALID_REQUEST);
-          throw c.redirect(toApp({ error: appError(c.query.error) }));
+          throw c.redirect(toApp({ error: errorCodeForTheApp(c.query.error) }));
         },
       ),
 
@@ -120,12 +104,10 @@ export function appHandoff(options: { database: Database; enabled: boolean }) {
         async (c) => {
           c.setHeader("Cache-Control", "no-store");
           const { code, code_verifier: verifier } = c.body;
-          if (!CODE.test(code) || !VERIFIER.test(verifier)) {
+          if (!UNPADDED_BASE64URL_OF_32_BYTES.test(code) || !PKCE_VERIFIER.test(verifier)) {
             throw APIError.from("BAD_REQUEST", INVALID_REQUEST);
           }
-          // One statement both checks and uses up the code, so it can only ever be redeemed once.
-          const [handoff] = await options.database
-            .delete(handoffTable)
+          const [handoff] = await checkAndUseUpInOneStatement(options.database)
             .where(
               and(
                 eq(handoffTable.codeHash, await sha256(code)),
@@ -148,16 +130,16 @@ export function appHandoff(options: { database: Database; enabled: boolean }) {
           matcher: (context) => context.path?.startsWith("/callback/") ?? false,
           handler: createAuthMiddleware(async (c) => {
             if (c.params?.id !== "apple") return;
-            // Apple posts to the callback, which sends the browser on to itself before reading
-            // the state. Only that second request says how the sign-in went.
-            if (c.request?.method === "POST") return;
+            if (isApplesPostBeforeTheCallbackRedirectsToItself(c.request?.method)) return;
             const location = c.context.responseHeaders?.get("location");
             if (!location) return;
             const state = await getOAuthState();
             const challenge = state?.serverContext?.appChallenge;
-            const marker = c.context.createAuthCookie(MARKER_COOKIE);
-            // Neither the state nor the browser says this sign-in came from the app.
-            if (state ? challenge === undefined : !c.getCookie(marker.name)) return;
+            const marker = c.context.createAuthCookie(STARTED_FROM_THE_APP_COOKIE);
+            const startedFromTheApp = state
+              ? challenge !== undefined
+              : Boolean(c.getCookie(marker.name));
+            if (!startedFromTheApp) return;
             c.setCookie(marker.name, "", { ...marker.attributes, maxAge: 0 });
             c.setHeader("Cache-Control", "no-store");
             c.setHeader("Referrer-Policy", "no-referrer");
@@ -165,21 +147,25 @@ export function appHandoff(options: { database: Database; enabled: boolean }) {
             const created = c.context.newSession;
             if (created) {
               await c.context.internalAdapter.deleteSession(created.session.token);
-              dropSessionHeaders(c.context);
+              dropSessionHeadersSoTheBrowserNeverGetsTheSession(c.context);
             }
-            if (!created || typeof challenge !== "string" || !CHALLENGE.test(challenge)) {
+            if (
+              !created ||
+              typeof challenge !== "string" ||
+              !UNPADDED_BASE64URL_SHA256.test(challenge)
+            ) {
               const error = new URL(location, c.context.baseURL).searchParams.get("error");
-              throw c.redirect(toApp({ error: appError(error) }));
+              throw c.redirect(toApp({ error: errorCodeForTheApp(error) }));
             }
 
-            const code = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+            const code = toBase64Url(crypto.getRandomValues(new Uint8Array(CODE_BYTES)));
             const now = Date.now();
             await options.database.delete(handoffTable).where(lt(handoffTable.expiresAt, now));
             await options.database.insert(handoffTable).values({
               codeHash: await sha256(code),
               challenge,
               userId: created.user.id,
-              expiresAt: now + HANDOFF_LIFETIME_MS,
+              expiresAt: now + TIME_FOR_THE_APP_TO_COLLECT_A_SIGN_IN_MS,
             });
             throw c.redirect(toApp({ code }));
           }),
@@ -197,14 +183,17 @@ export function appHandoff(options: { database: Database; enabled: boolean }) {
   } satisfies BetterAuthPlugin;
 }
 
+const keepWithTheServerSideOAuthState = addOAuthServerContext;
+
+const checkAndUseUpInOneStatement = (database: Database) => database.delete(handoffTable);
+
+const isApplesPostBeforeTheCallbackRedirectsToItself = (method: string | undefined) =>
+  method === "POST";
+
 const INVALID_REQUEST = { code: "INVALID_REQUEST", message: "Invalid request" };
 const INVALID_CODE = { code: "INVALID_CODE", message: "The sign-in code is not valid" };
 
-/**
- * Takes the browser's new session off the response, so neither its cookies nor the bearer
- * plugin's `set-auth-token` header carry it to the browser.
- */
-function dropSessionHeaders(context: {
+function dropSessionHeadersSoTheBrowserNeverGetsTheSession(context: {
   responseHeaders?: Headers;
   authCookies: { sessionToken: { name: string }; sessionData: { name: string } };
 }) {

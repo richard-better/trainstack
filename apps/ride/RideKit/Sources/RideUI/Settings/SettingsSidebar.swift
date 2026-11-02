@@ -8,7 +8,7 @@ struct SettingsSidebar: View {
   @Environment(\.sendFeedback) private var sendFeedback
 
   var body: some View {
-    List(selection: optionalPage) {
+    List(selection: selectionIgnoringDeselect) {
       Button(action: back) {
         Label("Back to app", systemImage: "chevron.left")
       }
@@ -55,8 +55,7 @@ struct SettingsSidebar: View {
     }
   }
 
-  /// The page as a list takes it. Deselecting keeps the current page.
-  private var optionalPage: Binding<SettingsPage?> {
+  private var selectionIgnoringDeselect: Binding<SettingsPage?> {
     Binding(get: { page }, set: { if let page = $0 { self.page = page } })
   }
 

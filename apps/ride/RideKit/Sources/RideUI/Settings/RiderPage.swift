@@ -1,7 +1,6 @@
 import RideData
 import SwiftUI
 
-/// What Ride knows about the rider beyond their zones.
 struct RiderPage: View {
   @Environment(RiderSettingsStore.self) private var store
 
