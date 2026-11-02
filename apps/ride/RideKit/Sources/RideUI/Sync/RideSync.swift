@@ -12,6 +12,8 @@ final class RideSync {
   private static let secretRecordType = "ClaimSecret"
   private static let secretRecordID = CKRecord.ID(recordName: "claim-secret", zoneID: zoneID)
   private static let secretKey = "secret"
+  private static let deletedRideRecordType = "DeletedRide"
+  private static let deletedRidePrefix = "deleted-"
 
   static var isEntitled: Bool {
     #if os(macOS)
@@ -39,6 +41,26 @@ final class RideSync {
   }
 
   private var secretURL: URL { stateURL.deletingLastPathComponent().appending(path: "ClaimSecret") }
+
+  private var deletedRidesURL: URL {
+    stateURL.deletingLastPathComponent().appending(path: "DeletedRides.json")
+  }
+
+  private lazy var deletedRides: Set<Ride.ID> = {
+    guard let data = try? Data(contentsOf: deletedRidesURL) else { return [] }
+    return (try? JSONDecoder().decode(Set<Ride.ID>.self, from: data)) ?? []
+  }()
+
+  private func rememberDeleted(_ id: Ride.ID) {
+    guard deletedRides.insert(id).inserted else { return }
+    do {
+      try FileManager.default.createDirectory(
+        at: deletedRidesURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try JSONEncoder().encode(deletedRides).write(to: deletedRidesURL, options: .atomic)
+    } catch {
+      log.error("Deleted rides not saved: \(error.localizedDescription)")
+    }
+  }
 
   static var defaultStateURL: URL {
     URL.applicationSupportDirectory.appending(path: "RideSync/State.json")
@@ -84,31 +106,57 @@ final class RideSync {
   private func restartForAnotherAccount() {
     engine = nil
     secret = nil
+    deletedRides = []
     try? FileManager.default.removeItem(at: stateURL)
     try? FileManager.default.removeItem(at: secretURL)
+    try? FileManager.default.removeItem(at: deletedRidesURL)
     start()
   }
 
   private func send(_ change: RideLibrary.Change) {
+    engine?.state.add(pendingRecordZoneChanges: changes(toSendFor: change))
+  }
+
+  func changes(toSendFor change: RideLibrary.Change) -> [CKSyncEngine.PendingRecordZoneChange] {
     switch change {
-    case .added(let id): engine?.state.add(pendingRecordZoneChanges: [.saveRecord(recordID(id))])
+    case .added(let id):
+      return deletedRides.contains(id) ? [] : [.saveRecord(recordID(id))]
     case .removed(let id):
-      engine?.state.add(pendingRecordZoneChanges: [.deleteRecord(recordID(id))])
+      rememberDeleted(id)
+      return [.deleteRecord(recordID(id)), .saveRecord(deletedRecordID(id))]
     }
   }
 
   private func sendEverything(with engine: CKSyncEngine) {
     engine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
-    engine.state.add(
-      pendingRecordZoneChanges: [.saveRecord(Self.secretRecordID)]
-        + library.rides.map { .saveRecord(recordID($0.id)) })
+    engine.state.add(pendingRecordZoneChanges: everythingToSend())
+  }
+
+  func everythingToSend() -> [CKSyncEngine.PendingRecordZoneChange] {
+    [.saveRecord(Self.secretRecordID)]
+      + library.rides.filter { !deletedRides.contains($0.id) }.map { .saveRecord(recordID($0.id)) }
+      + deletedRides.sorted().map { .saveRecord(deletedRecordID($0)) }
   }
 
   func recordID(_ id: Ride.ID) -> CKRecord.ID {
     CKRecord.ID(recordName: id, zoneID: Self.zoneID)
   }
 
+  func deletedRecordID(_ id: Ride.ID) -> CKRecord.ID {
+    CKRecord.ID(recordName: Self.deletedRidePrefix + id, zoneID: Self.zoneID)
+  }
+
+  private func deletedRide(named recordName: String) -> Ride.ID? {
+    guard recordName.hasPrefix(Self.deletedRidePrefix) else { return nil }
+    return String(recordName.dropFirst(Self.deletedRidePrefix.count))
+  }
+
   func record(for recordID: CKRecord.ID) -> CKRecord? {
+    if let id = deletedRide(named: recordID.recordName) {
+      guard deletedRides.contains(id) else { return nil }
+      return CKRecord(recordType: Self.deletedRideRecordType, recordID: recordID)
+    }
+    if deletedRides.contains(recordID.recordName) { return nil }
     if recordID == Self.secretRecordID {
       guard let secret else { return nil }
       let record = CKRecord(recordType: Self.secretRecordType, recordID: recordID)
@@ -136,14 +184,22 @@ final class RideSync {
     }
   }
 
-  private func receive(_ record: CKRecord) {
+  func receive(_ record: CKRecord) -> [CKSyncEngine.PendingRecordZoneChange] {
     if record.recordID == Self.secretRecordID {
       adoptSecret(from: record)
-      return
+      return []
+    }
+    if let id = deletedRide(named: record.recordID.recordName) {
+      rememberDeleted(id)
+      library.removeReceived(id)
+      return [.deleteRecord(recordID(id))]
+    }
+    if deletedRides.contains(record.recordID.recordName) {
+      return [.deleteRecord(record.recordID)]
     }
     guard let url = (record[Self.fileKey] as? CKAsset)?.fileURL,
       let data = try? Data(contentsOf: url)
-    else { return }
+    else { return [] }
     do {
       if let id = try library.receive(data, beforeStoring: beforeStoringRideFromAnotherDevice) {
         onRideFromAnotherDevice?(id)
@@ -151,6 +207,7 @@ final class RideSync {
     } catch {
       log.error("Ride from iCloud not read: \(error.localizedDescription)")
     }
+    return []
   }
 
   private func handleFailedSaves(
@@ -188,8 +245,13 @@ extension RideSync: CKSyncEngineDelegate {
       @unknown default: break
       }
     case .fetchedRecordZoneChanges(let changes):
-      for modification in changes.modifications { receive(modification.record) }
-      for deletion in changes.deletions where deletion.recordID != Self.secretRecordID {
+      for modification in changes.modifications {
+        syncEngine.state.add(pendingRecordZoneChanges: receive(modification.record))
+      }
+      for deletion in changes.deletions
+      where deletion.recordID != Self.secretRecordID
+        && deletedRide(named: deletion.recordID.recordName) == nil
+      {
         library.removeReceived(deletion.recordID.recordName)
       }
     case .sentRecordZoneChanges(let sent):
