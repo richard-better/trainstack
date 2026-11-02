@@ -13,17 +13,37 @@ permissions:
   contents: read
 
 jobs:
-  format:
-    name: Format
-    runs-on: xcode-27
+  protocols:
+    name: Protocol model checks
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Check protocols with TLC
+        run: apps/ride/Specs/check.sh
+
+  lint:
+    name: Lint
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Format
+        working-directory: apps/ride
+        run: swift format lint --strict --recursive --parallel Ride RideWatch RideKit Lint
+      - name: Test the lint rules
+        run: swift test --package-path apps/ride/Lint
       - name: Lint
         working-directory: apps/ride
-        run: swift format lint --strict --recursive --parallel Ride RideKit
+        run: swift run --package-path Lint ride-lint Ride RideWatch RideKit Lint
 
   build:
     name: Build (${{ matrix.platform }})
