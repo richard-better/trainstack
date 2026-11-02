@@ -26,6 +26,7 @@ final class RideSync {
 
   var claim: RideClaim? { secret.map(RideClaim.init(secret:)) }
   private var secret: Data?
+  var beforeStoringRideFromAnotherDevice: (Ride) -> Void = { _ in }
   var onRideFromAnotherDevice: ((Ride.ID) -> Void)?
   private let library: RideLibrary
   private let stateURL: URL
@@ -144,7 +145,9 @@ final class RideSync {
       let data = try? Data(contentsOf: url)
     else { return }
     do {
-      if let id = try library.receive(data) { onRideFromAnotherDevice?(id) }
+      if let id = try library.receive(data, beforeStoring: beforeStoringRideFromAnotherDevice) {
+        onRideFromAnotherDevice?(id)
+      }
     } catch {
       log.error("Ride from iCloud not read: \(error.localizedDescription)")
     }

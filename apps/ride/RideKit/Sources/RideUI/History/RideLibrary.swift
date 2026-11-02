@@ -60,19 +60,20 @@ final class RideLibrary {
   }
 
   @discardableResult
-  func add(_ data: Data) throws -> Ride.ID {
+  func add(_ data: Data, beforeStoring: (Ride) -> Void = { _ in }) throws -> Ride.ID {
     let ride = Ride(recording: try FITDecoder.decode(data), fileData: data)
-    if insertIfNew(ride) { onLocalChange?(.added(ride.id)) }
+    if insertIfNew(ride, beforeStoring: beforeStoring) { onLocalChange?(.added(ride.id)) }
     return ride.id
   }
 
-  func receive(_ data: Data) throws -> Ride.ID? {
+  func receive(_ data: Data, beforeStoring: (Ride) -> Void = { _ in }) throws -> Ride.ID? {
     let ride = Ride(recording: try FITDecoder.decode(data), fileData: data)
-    return insertIfNew(ride) ? ride.id : nil
+    return insertIfNew(ride, beforeStoring: beforeStoring) ? ride.id : nil
   }
 
-  private func insertIfNew(_ ride: Ride) -> Bool {
+  private func insertIfNew(_ ride: Ride, beforeStoring: (Ride) -> Void = { _ in }) -> Bool {
     guard self[ride.id] == nil else { return false }
+    beforeStoring(ride)
     rides.append(ride)
     rides.sort { $0.recording.startDate > $1.recording.startDate }
     store(ride)
@@ -80,9 +81,9 @@ final class RideLibrary {
   }
 
   @discardableResult
-  func save(_ recording: RideRecording) -> Ride.ID? {
+  func save(_ recording: RideRecording, beforeStoring: (Ride) -> Void = { _ in }) -> Ride.ID? {
     do {
-      return try add(FITEncoder.encode(recording))
+      return try add(FITEncoder.encode(recording), beforeStoring: beforeStoring)
     } catch {
       storageProblem = "The ride could not be turned into a FIT file."
       return nil

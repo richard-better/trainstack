@@ -141,6 +141,25 @@ struct RideLibraryTests {
     }
   }
 
+  @Test func letsARideBeQueuedForHealthBeforeItsFileIsWrittenSoACrashCannotSkipIt() throws {
+    try withDirectory { directory in
+      let library = RideLibrary(directory: directory)
+      var queued: [Ride.ID] = []
+      let recording = try quickTest()
+      let id = library.save(recording) { ride in
+        #expect((try? fileNames(in: directory)) ?? [] == [])
+        queued.append(ride.id)
+      }
+      #expect(queued == [try #require(id)])
+      #expect(try fileNames(in: directory).count == 1)
+
+      library.save(recording) { queued.append($0.id) }
+      let received = try library.receive(FITEncoder.encode(recording)) { queued.append($0.id) }
+      #expect(received == nil)
+      #expect(queued.count == 1)
+    }
+  }
+
   @Test func doesNotSaveTheSameRideTwice() throws {
     try withDirectory { directory in
       let ride = try quickTest()

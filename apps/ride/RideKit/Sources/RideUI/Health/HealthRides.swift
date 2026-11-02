@@ -44,9 +44,12 @@
       }
     }
 
-    func save(_ id: Ride.ID, from library: RideLibrary) {
+    func queue(_ id: Ride.ID, in library: RideLibrary) {
       guard HKHealthStore.isHealthDataAvailable(), library.isStored else { return }
       pending.insert(id)
+    }
+
+    func saveQueuedSoon(from library: RideLibrary) {
       Task { await savePending(from: library) }
     }
 

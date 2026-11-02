@@ -92,7 +92,8 @@ final class RideLauncher {
 
   private func keep(_ recording: RideRecording, in library: RideLibrary) {
     #if os(iOS)
-      if let id = library.save(recording) { HealthRides.shared.save(id, from: library) }
+      library.save(recording) { HealthRides.shared.queue($0.id, in: library) }
+      HealthRides.shared.saveQueuedSoon(from: library)
     #else
       library.save(recording)
     #endif
