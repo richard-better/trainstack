@@ -103,6 +103,11 @@ public final class RideJournal {
     return InterruptedRide(trace: trace)
   }
 
+  public static func finish(in directory: URL = defaultDirectory) {
+    keepAsTrace(
+      directory.appending(path: fileName), in: tracesDirectory(besideJournalIn: directory))
+  }
+
   public static func discard(in directory: URL = defaultDirectory) {
     try? FileManager.default.removeItem(at: directory.appending(path: fileName))
   }

@@ -80,7 +80,9 @@ used with temporal checking. Each model explores all schedules in its bounds.
   record again if a stale device sends it back. Checked: a device that knows of
   the deletion never holds the ride, every device converges with the cloud, and
   a deleted ride is eventually gone everywhere for good. A stale device can still
-  re-upload the record for a moment before it fetches the deletion.
+  re-upload the record for a moment before it fetches the deletion. Recreating a lost zone sends
+  every ride and deletion record again (`handleFailedSaves`), and a deleted ride imported again
+  stays on that device: neither a refetched deletion record nor the record's deletion removes it.
 - `TrainerPause`: `RideCore/RideEngine.swift` maps `.togglePause` to `Toggle`,
   and `pauseIfTrainerDropped` plus `session.advance` in `.tick` to atomic `Tick`.
   Connection changes, manual toggles and ticks interleave arbitrarily.

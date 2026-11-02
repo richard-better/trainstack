@@ -51,8 +51,9 @@ final class RideSync {
     return (try? JSONDecoder().decode(Set<Ride.ID>.self, from: data)) ?? []
   }()
 
-  private func rememberDeleted(_ id: Ride.ID) {
-    guard deletedRides.insert(id).inserted else { return }
+  @discardableResult
+  private func rememberDeleted(_ id: Ride.ID) -> Bool {
+    guard deletedRides.insert(id).inserted else { return false }
     do {
       try FileManager.default.createDirectory(
         at: deletedRidesURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -60,6 +61,7 @@ final class RideSync {
     } catch {
       log.error("Deleted rides not saved: \(error.localizedDescription)")
     }
+    return true
   }
 
   static var defaultStateURL: URL {
@@ -190,8 +192,7 @@ final class RideSync {
       return []
     }
     if let id = deletedRide(named: record.recordID.recordName) {
-      rememberDeleted(id)
-      library.removeReceived(id)
+      if rememberDeleted(id) { library.removeReceived(id) }
       return [.deleteRecord(recordID(id))]
     }
     if deletedRides.contains(record.recordID.recordName) {
@@ -210,6 +211,14 @@ final class RideSync {
     return []
   }
 
+  func receiveDeletion(of recordID: CKRecord.ID) {
+    let name = recordID.recordName
+    guard recordID != Self.secretRecordID, deletedRide(named: name) == nil,
+      !deletedRides.contains(name)
+    else { return }
+    library.removeReceived(name)
+  }
+
   private func handleFailedSaves(
     _ failures: [CKSyncEngine.Event.SentRecordZoneChanges.FailedRecordSave],
     with engine: CKSyncEngine
@@ -219,8 +228,7 @@ final class RideSync {
       switch failure.error.code {
       case .zoneNotFound, .userDeletedZone:
         engine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
-        engine.state.add(
-          pendingRecordZoneChanges: [.saveRecord(recordID), .saveRecord(Self.secretRecordID)])
+        engine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID)] + everythingToSend())
       case .serverRecordChanged where recordID == Self.secretRecordID:
         adoptSecret(from: failure.error.serverRecord)
       case .serverRecordChanged:
@@ -248,12 +256,7 @@ extension RideSync: CKSyncEngineDelegate {
       for modification in changes.modifications {
         syncEngine.state.add(pendingRecordZoneChanges: receive(modification.record))
       }
-      for deletion in changes.deletions
-      where deletion.recordID != Self.secretRecordID
-        && deletedRide(named: deletion.recordID.recordName) == nil
-      {
-        library.removeReceived(deletion.recordID.recordName)
-      }
+      for deletion in changes.deletions { receiveDeletion(of: deletion.recordID) }
     case .sentRecordZoneChanges(let sent):
       handleFailedSaves(sent.failedRecordSaves, with: syncEngine)
     default:

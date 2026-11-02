@@ -116,7 +116,8 @@ final class RideLauncher {
   func saveInterrupted(to library: RideLibrary) {
     guard let interrupted else { return }
     keep(interrupted.session.recording(), in: library)
-    discardInterrupted()
+    self.interrupted = nil
+    RideJournal.finish(in: journalDirectory)
   }
 
   func discardInterrupted() {

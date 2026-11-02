@@ -90,6 +90,8 @@ struct InterruptedRideTests {
       #expect(ride.recording.hasTarget)
       #expect(launcher.interrupted == nil)
       #expect(RideJournal.recover(from: directory) == nil)
+      let traces = RideJournal.tracesDirectory(besideJournalIn: directory)
+      #expect(try FileManager.default.contentsOfDirectory(atPath: traces.path).count == 1)
     }
   }
 

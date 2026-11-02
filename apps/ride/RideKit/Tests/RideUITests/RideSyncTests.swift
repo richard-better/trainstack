@@ -93,6 +93,20 @@ struct RideSyncTests {
     }
   }
 
+  @Test func aDeletedRideImportedAgainStaysOnThisDevice() throws {
+    try withLibrary { library, stateURL in
+      let data = try RideRecording.sampleFITData()
+      let id = try library.add(data)
+      let sync = RideSync(library: library, stateURL: stateURL)
+      _ = sync.changes(toSendFor: .removed(id))
+      library.remove(id)
+      try library.add(data)
+      sync.receiveDeletion(of: sync.recordID(id))
+      _ = sync.receive(CKRecord(recordType: "DeletedRide", recordID: sync.deletedRecordID(id)))
+      #expect(library[id] != nil)
+    }
+  }
+
   private func writeTemporaryFile(_ data: Data) throws -> URL {
     let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).fit")
     try data.write(to: url)
