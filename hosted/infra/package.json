@@ -14,11 +14,11 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@effect/platform-bun": "4.0.0",
-    "@effect/platform-node": "4.0.0",
+    "@effect/platform-bun": "4.0.7",
+    "@effect/platform-node": "4.0.7",
     "@trainstack/config": "workspace:*",
     "alchemy": "2.0.0-beta.80",
-    "effect": "4.0.0",
+    "effect": "4.0.7",
     "typescript": "catalog:",
     "varlock": "catalog:"
   }
