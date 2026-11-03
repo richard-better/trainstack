@@ -73,22 +73,12 @@ jobs:
       - name: Import the Developer ID certificate
         run: |
           keychain="$RUNNER_TEMP/developer-id.keychain-db"
-          password="$(openssl rand -hex 24)"
-          security create-keychain -p "$password" "$keychain"
-          security set-keychain-settings -lut 3600 "$keychain"
-          security unlock-keychain -p "$password" "$keychain"
           (umask 077 && echo "$DEVELOPER_ID_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/developer-id.p12")
-          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -f pkcs12 -x \
-            -P "$DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign
+          apps/ride/scripts/import-developer-id.sh "$RUNNER_TEMP/developer-id.p12" "$keychain"
           rm -f "$RUNNER_TEMP/developer-id.p12"
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
           existing=()
           while read -r line; do existing+=("$(echo "$line" | tr -d '"' | xargs)"); done < <(security list-keychains -d user)
           security list-keychains -d user -s "$keychain" "${existing[@]}"
-          security find-identity -v -p codesigning "$keychain" | grep -q '"Developer ID Application: .* (S64PDPJKMJ)"' || {
-            echo "::error::DEVELOPER_ID_P12_BASE64 holds no Developer ID Application identity for team S64PDPJKMJ."
-            exit 1
-          }
       - name: Build, notarize and staple
         env:
           ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
