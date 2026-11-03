@@ -114,12 +114,14 @@ struct TrainStackAccountTests {
     #expect(account.stravaAthleteName == "Ada R")
   }
 
-  @Test func signsInThroughTheWebSession() async throws {
+  @Test func signsInThroughTheWebSessionAfterTheLaunchRestoredNoSession() async throws {
     let transport = FakeTransport([
       reply(#"{"token":"t","user":{"name":"Ada Rider"}}"#),
       reply(#"{"connected":false}"#),
     ])
     let account = TrainStackAccount(store: InMemorySessionStore(), transport: transport)
+    await account.restore()
+    #expect(!account.isSignedIn)
     var opened: URL?
     try await account.signInThroughBrowser { url in
       opened = url
