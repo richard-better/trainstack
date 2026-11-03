@@ -63,17 +63,17 @@ Apple, which Developer ID builds cannot have.
 
    Paste the values straight into GitHub. Never put them in chat, files or command arguments.
 
-   Add the Developer ID certificate as two more secrets. In Keychain Access, open My
-   Certificates, export `Developer ID Application: Richard Borcsik (S64PDPJKMJ)` with its private
-   key as a `.p12` with a password, then send both straight to GitHub and delete the file:
+   Add the Developer ID certificate as two more secrets. In Keychain Access, open the login
+   keychain's My Certificates tab, which pairs each certificate with its private key, export
+   `Developer ID Application: Richard Borcsik (S64PDPJKMJ)` as a `.p12` with a password, and run:
 
    ```sh
-   base64 -i DeveloperID.p12 | gh secret set DEVELOPER_ID_P12_BASE64 --env testflight --repo richard-better/trainstack
-   gh secret set DEVELOPER_ID_P12_PASSWORD --env testflight --repo richard-better/trainstack
-   rm DeveloperID.p12
+   apps/ride/scripts/set-developer-id-secrets.sh DeveloperID.p12
    ```
 
-   The second command prompts for the password. The certificate expires in September 2031.
+   It asks for the password, imports the `.p12` into a throwaway keychain the way CI does, and
+   only if that yields the signing identity sets `DEVELOPER_ID_P12_BASE64` and
+   `DEVELOPER_ID_P12_PASSWORD` and deletes the file. The certificate expires in September 2031.
 
    Add `HOMEBREW_TAP_TOKEN`: a fine-grained personal access token for
    `richard-better/homebrew-tap` only, with read and write access to Actions. It lets the
