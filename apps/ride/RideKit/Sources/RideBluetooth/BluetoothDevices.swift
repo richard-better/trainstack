@@ -11,9 +11,9 @@ public final class BluetoothDevices {
     sorted(discovered.values.filter { $0.isFitness && !isPaired($0.id) })
   }
   public var otherDevices: [DiscoveredDevice] { sorted(discovered.values.filter { !$0.isFitness }) }
-  public var heartRate: Int? { reading(for: .heartRate) }
-  public var power: Int? { reading(for: .power) }
-  public var cadence: Int? { reading(for: .cadence) }
+  public var heartRate: Int? { reading(for: .heartRate, at: now()) }
+  public var power: Int? { reading(for: .power, at: now()) }
+  public var cadence: Int? { reading(for: .cadence, at: now()) }
   @ObservationIgnored public var onHeartRate: ((Int) -> Void)?
   @ObservationIgnored public var onCyclingActivity: (() -> Void)?
 
@@ -26,6 +26,7 @@ public final class BluetoothDevices {
   private var sourcePicks: [RideMetric: UUID] = [:]
   @ObservationIgnored private let transport: any BluetoothTransport
   @ObservationIgnored private let defaults: UserDefaults
+  @ObservationIgnored private let now: () -> Date
   @ObservationIgnored private var wantsScan = false
   @ObservationIgnored private var hasStarted = false
   @ObservationIgnored private var expiryTask: Task<Void, Never>?
@@ -41,9 +42,13 @@ public final class BluetoothDevices {
     self.init(transport: CoreBluetoothTransport(), defaults: .standard)
   }
 
-  init(transport: any BluetoothTransport, defaults: UserDefaults) {
+  init(
+    transport: any BluetoothTransport, defaults: UserDefaults,
+    now: @escaping () -> Date = { .now }
+  ) {
     self.transport = transport
     self.defaults = defaults
+    self.now = now
     paired =
       defaults.data(forKey: Self.pairedKey).flatMap {
         try? JSONDecoder().decode([DiscoveredDevice].self, from: $0)
@@ -65,11 +70,11 @@ public final class BluetoothDevices {
     transport.onCyclingMeasurement = { [weak self] id, characteristic, data in
       self?.receiveCycling(data, from: id, characteristic: characteristic)
     }
-    transport.onTrainerControlReady = { [weak self] id in
-      self?.updateTrainerControl(id) { $0.becameReady(at: .now) }
+    transport.onTrainerControlReady = { [weak self, now] id in
+      self?.updateTrainerControl(id) { $0.becameReady(at: now()) }
     }
-    transport.onTrainerValue = { [weak self] id, characteristic, data in
-      self?.updateTrainerControl(id) { $0.receive(data, from: characteristic, at: .now) }
+    transport.onTrainerValue = { [weak self, now] id, characteristic, data in
+      self?.updateTrainerControl(id) { $0.receive(data, from: characteristic, at: now()) }
     }
   }
 
@@ -262,7 +267,7 @@ public final class BluetoothDevices {
       return
     }
     connections[id] = .connected
-    lastHeard[id] = .now
+    lastHeard[id] = now()
   }
 
   private func didDisconnect(_ id: UUID) {
@@ -291,15 +296,17 @@ public final class BluetoothDevices {
       let measurement = HeartRateMeasurement(data)
     else { return }
     let bpm = measurement.reading
-    heartRateReadings[id] = bpm.map { ($0, .now) }
-    if bpm != nil { lastHeard[id] = .now }
+    let date = now()
+    heartRateReadings[id] = bpm.map { ($0, date) }
+    if bpm != nil { lastHeard[id] = date }
     if let bpm, source(of: .heartRate)?.id == id { onHeartRate?(bpm) }
     startExpiringReadings()
   }
 
   func receiveCycling(
-    _ data: Data, from id: UUID, characteristic: CyclingCharacteristic, at date: Date = .now
+    _ data: Data, from id: UUID, characteristic: CyclingCharacteristic, at date: Date? = nil
   ) {
+    let date = date ?? now()
     guard isPaired(id), connectionState(of: id) == .connected else { return }
     cyclingReadings[id, default: CyclingSensorReadings()].receive(
       data, from: characteristic, at: date)
@@ -324,9 +331,10 @@ public final class BluetoothDevices {
       while !Task.isCancelled {
         do { try await Task.sleep(for: .seconds(1)) } catch { break }
         guard let self else { break }
-        for id in cyclingReadings.keys { cyclingReadings[id]?.expire(at: .now) }
+        let date = now()
+        for id in cyclingReadings.keys { cyclingReadings[id]?.expire(at: date) }
         heartRateReadings = heartRateReadings.filter {
-          Date.now.timeIntervalSince($0.value.date) <= Self.heartRateMaxAge
+          date.timeIntervalSince($0.value.date) <= Self.heartRateMaxAge
         }
         if cyclingReadings.isEmpty, heartRateReadings.isEmpty {
           expiryTask = nil

@@ -520,6 +520,24 @@ struct BluetoothDevicesTests {
     #expect(transport.trainerWrites.last == Data([0x05, 220, 0]))
   }
 
+  @Test func timesOutAnUnansweredTrainerCommandOnTheClockItIsGiven() {
+    var now = Date(timeIntervalSince1970: 1_791_296_475)
+    let transport = FakeTransport()
+    let devices = BluetoothDevices(transport: transport, defaults: isolatedDefaults()) { now }
+    transport.onAvailability?(.ready)
+    let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
+    devices.pair(trainer)
+    transport.onConnect?(trainer.id)
+    devices.setTrainerTarget(.power(watts: 200), at: now)
+    transport.onTrainerControlReady?(trainer.id)
+    now += 1.5
+    transport.onTrainerValue?(trainer.id, .status, Data([0x04]))
+    #expect(transport.trainerWrites == [Data([0x00])])
+    now += 1
+    transport.onTrainerValue?(trainer.id, .status, Data([0x04]))
+    #expect(transport.trainerWrites == [Data([0x00]), Data([0x00])])
+  }
+
   @Test func takesControlAgainAfterTheTrainerReconnects() {
     let (devices, transport) = scanningDevices()
     let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
