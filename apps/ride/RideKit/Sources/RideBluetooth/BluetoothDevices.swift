@@ -137,6 +137,7 @@ public final class BluetoothDevices {
     guard sensors(of: metric).contains(where: { $0.id == device.id }) else { return }
     sourcePicks[metric] = device.id
     saveSourcePicks()
+    transport.recordPick(of: device.id, for: metric, at: now())
   }
 
   public func setTrainerTarget(_ target: TrainerTarget?, at date: Date = .now) {

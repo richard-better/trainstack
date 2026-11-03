@@ -181,8 +181,10 @@ shows up as a diff.
 Every ride also records its Bluetooth traffic beside the journal (`BluetoothLog`), and the log
 is kept and shared with the trace as `<trace>.bluetooth.jsonl`. `BluetoothDevices` records
 through a `RecordingTransport` around the real transport: the state of each connected device
-when the ride starts (its connection, trainer ranges and readiness, and its last packet of each
-kind), then every packet as raw bytes, every trainer target and command, and each ride tick.
+when the ride starts (its connection, trainer ranges and readiness, its battery, and its
+measurement packets from the last `RecordingTransport.measurementHistory` seconds, enough to
+rebuild crank cadence), then every packet as raw bytes, every trainer target and command, each
+power or cadence source the rider picks, and each ride tick.
 Devices are numbered, and names and identifiers stay out. `BluetoothReplay` feeds a log through
 a fresh `BluetoothDevices` on the recorded clock and gives the readings at each tick and the
 trainer commands it sends. `RideTraceReplayTests` checks that every log in `Traces` replays to

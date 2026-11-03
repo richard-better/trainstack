@@ -4,7 +4,7 @@
 {"d":1,"e":"connected","t":815000000}
 {"c":"2AD8","d":0,"e":"trainer","t":815000000,"x":"AADQBwEA"}
 {"d":0,"e":"trainerReady","t":815000000}
-{"e":"target","t":815431594.265941,"target":{"power":{"watts":125}}}
+{"e":"target","t":815432256.958063,"target":{"power":{"watts":125}}}
 {"d":0,"e":"write","t":815000000,"x":"AA=="}
 {"c":"2AD9","d":0,"e":"trainer","t":815000000.25,"x":"gAAB"}
 {"d":0,"e":"write","t":815000000.25,"x":"Bw=="}

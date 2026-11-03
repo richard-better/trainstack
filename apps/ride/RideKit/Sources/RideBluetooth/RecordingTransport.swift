@@ -20,6 +20,10 @@ final class RecordingTransport: BluetoothTransport {
   private var availability: Observation?
   private var observations = 0
   private var stateOfConnected: [UUID: [String: Observation]] = [:]
+  private var recentMeasurements: [UUID: [Observation]] = [:]
+
+  static let measurementHistory =
+    CrankCadence.staleAfter + CrankCadence.stoppedAfter + CyclingSensorReadings.maxAge
 
   init(wrapping inner: any BluetoothTransport, now: @escaping () -> Date) {
     self.inner = inner
@@ -85,7 +89,9 @@ final class RecordingTransport: BluetoothTransport {
       BluetoothLogHeader(
         paired: paired.map { .init(device: alias(of: $0.id), services: $0.services) },
         picks: picks.mapValues(alias(of:))))
-    let connected = stateOfConnected.values.flatMap(\.values).sorted { $0.order < $1.order }
+    let connected =
+      (stateOfConnected.values.flatMap(\.values)
+      + recentMeasurements.values.joined()).sorted { $0.order < $1.order }
     for observation in [availability].compactMap(\.self) + connected {
       record(observation.happening, at: observation.time)
     }
@@ -98,6 +104,10 @@ final class RecordingTransport: BluetoothTransport {
 
   func recordTarget(_ target: TrainerTarget?, at date: Date) {
     record(.init(event: .target, target: target), at: date)
+  }
+
+  func recordPick(of id: UUID, for metric: RideMetric, at date: Date) {
+    record(.init(event: .pick, device: id, metric: metric), at: date)
   }
 
   func recordTick(at date: Date) {
@@ -116,19 +126,33 @@ final class RecordingTransport: BluetoothTransport {
     switch happening.event {
     case .availability:
       availability = observation
-      if happening.availability != .ready { stateOfConnected = [:] }
+      if happening.availability != .ready {
+        stateOfConnected = [:]
+        recentMeasurements = [:]
+      }
     case .connected:
-      if let id = happening.device { stateOfConnected[id] = ["connected": observation] }
+      if let id = happening.device {
+        stateOfConnected[id] = ["connected": observation]
+        recentMeasurements[id] = nil
+      }
     case .disconnected, .connectFailed:
-      if let id = happening.device { stateOfConnected[id] = nil }
+      if let id = happening.device {
+        stateOfConnected[id] = nil
+        recentMeasurements[id] = nil
+      }
+    case .heartRate, .cycling:
+      guard let id = happening.device, stateOfConnected[id] != nil else { return }
+      let oldest = observation.time - Self.measurementHistory
+      recentMeasurements[id, default: []].removeAll { $0.time < oldest }
+      recentMeasurements[id]?.append(observation)
     case .trainer where happening.characteristic == TrainerCharacteristic.controlPoint.rawValue:
       break
-    case .battery, .heartRate, .cycling, .trainerReady, .trainer:
+    case .battery, .trainerReady, .trainer:
       guard let id = happening.device, stateOfConnected[id] != nil else { return }
       let key = [happening.event.rawValue, happening.characteristic].compactMap(\.self)
         .joined(separator: "/")
       stateOfConnected[id]?[key] = observation
-    case .target, .write, .tick:
+    case .target, .pick, .write, .tick:
       break
     }
   }
@@ -139,7 +163,7 @@ final class RecordingTransport: BluetoothTransport {
       BluetoothLogEntry(
         time: time, event: happening.event, device: happening.device.map(alias(of:)),
         characteristic: happening.characteristic, bytes: happening.bytes,
-        availability: happening.availability, target: happening.target))
+        availability: happening.availability, target: happening.target, metric: happening.metric))
   }
 
   private func alias(of id: UUID) -> Int {
@@ -157,6 +181,7 @@ private struct Happening {
   var bytes: Data?
   var availability: BluetoothAvailability?
   var target: TrainerTarget?
+  var metric: RideMetric?
 }
 
 private struct Observation {

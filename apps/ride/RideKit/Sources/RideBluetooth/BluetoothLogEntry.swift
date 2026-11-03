@@ -3,7 +3,7 @@ import Foundation
 struct BluetoothLogEntry: Codable, Equatable, Sendable {
   enum Event: String, Codable, Sendable {
     case availability, connected, disconnected, connectFailed, battery, heartRate, cycling
-    case trainerReady, trainer, target, write, tick
+    case trainerReady, trainer, target, pick, write, tick
   }
 
   var time: Date
@@ -13,6 +13,7 @@ struct BluetoothLogEntry: Codable, Equatable, Sendable {
   var bytes: Data?
   var availability: BluetoothAvailability?
   var target: TrainerTarget?
+  var metric: RideMetric?
 
   private enum CodingKeys: String, CodingKey {
     case time = "t"
@@ -22,5 +23,6 @@ struct BluetoothLogEntry: Codable, Equatable, Sendable {
     case bytes = "x"
     case availability = "a"
     case target
+    case metric = "m"
   }
 }

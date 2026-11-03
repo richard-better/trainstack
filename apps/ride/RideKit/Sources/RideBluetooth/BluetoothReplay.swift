@@ -85,6 +85,8 @@ private final class Segment {
     case .target:
       recording = true
       devices.setTrainerTarget(entry.target, at: clock)
+    case .pick:
+      entry.metric.map { devices.select(.init(id: id, name: nil, services: []), for: $0) }
     case .write:
       if recording { recordedWrites.append(bytes) }
     case .tick:

@@ -143,4 +143,63 @@ struct BluetoothRecordingTests {
       }
     }
   }
+
+  @Test func rebuildsCrankCadenceFromBeforeTheRideStarted() throws {
+    try withDirectory { directory in
+      let bench = Bench()
+      let crank = DiscoveredDevice(id: UUID(), services: [.speedAndCadence])
+      bench.transport.onAvailability?(.ready)
+      bench.devices.pair(crank)
+      bench.transport.onConnect?(crank.id)
+      @MainActor func turn(_ revolutions: UInt16) {
+        let time = revolutions &* 1024
+        bench.transport.onCyclingMeasurement?(
+          crank.id, .speedAndCadence,
+          Data([
+            0x02, UInt8(revolutions & 0xFF), UInt8(revolutions >> 8), UInt8(time & 0xFF),
+            UInt8(time >> 8),
+          ]))
+      }
+      for revolutions in 0..<30 {
+        bench.now += 1
+        turn(UInt16(revolutions))
+      }
+      bench.devices.startRecording(to: try #require(BluetoothLog(directory: directory)))
+      bench.now += 0.5
+      turn(29)
+      bench.tick(target: .power(watts: 150))
+      bench.now += 1
+      turn(30)
+      bench.tick(target: .power(watts: 150))
+      bench.devices.stopRecording()
+
+      #expect(bench.liveTicks.map(\.cadence) == [60, 60])
+      #expect(BluetoothReplay(jsonLines: try log(in: directory)).ticks == bench.liveTicks)
+    }
+  }
+
+  @Test func replaysTheSourceTheRiderPicksDuringTheRide() throws {
+    try withDirectory { directory in
+      let bench = Bench()
+      let meter = DiscoveredDevice(id: UUID(), services: [.power])
+      bench.transport.onAvailability?(.ready)
+      bench.devices.pair(trainer)
+      bench.devices.pair(meter)
+      bench.transport.onConnect?(trainer.id)
+      bench.transport.onConnect?(meter.id)
+      bench.devices.startRecording(to: try #require(BluetoothLog(directory: directory)))
+      for second in 0..<4 {
+        bench.now += 1
+        bench.transport.onCyclingMeasurement?(
+          trainer.id, .indoorBike, Data([0x45, 0, 0, 0, 200, 0]))
+        bench.transport.onCyclingMeasurement?(meter.id, .power, Data([0, 0, 100, 0]))
+        if second == 2 { bench.devices.select(meter, for: .power) }
+        bench.tick(target: .power(watts: 150))
+      }
+      bench.devices.stopRecording()
+
+      #expect(bench.liveTicks.map(\.power) == [200, 200, 100, 100])
+      #expect(BluetoothReplay(jsonLines: try log(in: directory)).ticks == bench.liveTicks)
+    }
+  }
 }
