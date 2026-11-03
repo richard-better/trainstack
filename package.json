@@ -9,19 +9,21 @@
       "hosted/infra"
     ],
     "catalog": {
-      "zod": "^4.5.4",
+      "zod": "^4.6.7",
       "typescript": "^6.0.3",
-      "@types/node": "^26.4.1",
-      "varlock": "1.18.0",
-      "@cloudflare/workers-types": "^5.20260906.1",
-      "@orpc/server": "^1.15.0",
-      "@orpc/contract": "^1.15.0",
-      "@orpc/openapi": "^1.15.0",
-      "@orpc/zod": "^1.15.0",
-      "better-auth": "1.7.7",
-      "evlog": "^2.28.1",
-      "@orpc/client": "^1.15.0",
-      "drizzle-orm": "1.0.0-rc.4"
+      "@types/node": "^26.6.6",
+      "varlock": "1.24.0",
+      "@cloudflare/workers-types": "^5.20261103.1",
+      "@orpc/server": "^1.16.1",
+      "@orpc/contract": "^1.16.1",
+      "@orpc/openapi": "^1.16.1",
+      "@orpc/zod": "^1.16.1",
+      "better-auth": "1.7.15",
+      "evlog": "^2.34.0",
+      "@orpc/client": "^1.16.1",
+      "drizzle-orm": "1.0.0-rc.5",
+      "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+      "vite-plus": "1.4.0"
     }
   },
   "type": "module",
@@ -52,13 +54,14 @@
     "@trainstack/config": "workspace:*",
     "@types/node": "catalog:",
     "miniflare": "4.20260730.0",
-    "rolldown": "1.2.7",
+    "rolldown": "1.2.16",
     "typescript": "catalog:",
     "varlock": "catalog:",
-    "vite-plus": "0.3.1"
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.1"
+    "vite": "catalog:"
   },
-  "packageManager": "bun@1.4.2"
+  "packageManager": "bun@1.4.4"
 }

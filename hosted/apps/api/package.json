@@ -5,15 +5,15 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc -b ../../../packages/contract && tsdown",
+    "build": "tsc -b ../../../packages/contract && vp pack",
     "check-types": "tsc -b ../../../packages/contract && tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile api",
     "env:generate": "varlock codegen",
     "db:generate": "cd db && drizzle-kit generate"
   },
   "dependencies": {
-    "@better-auth/core": "1.7.7",
-    "@better-auth/drizzle-adapter": "1.7.7",
+    "@better-auth/core": "1.7.15",
+    "@better-auth/drizzle-adapter": "1.7.15",
     "@libsql/client": "0.18.0",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
@@ -22,8 +22,8 @@
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "evlog": "catalog:",
-    "hono": "^4.13.7",
-    "jose": "6.2.12",
+    "hono": "^4.13.16",
+    "jose": "6.2.15",
     "libsql": "0.5.29",
     "varlock": "catalog:",
     "zod": "catalog:"
@@ -33,8 +33,7 @@
     "@trainstack/config": "workspace:*",
     "@trainstack/hosted-infra": "workspace:*",
     "@types/node": "catalog:",
-    "drizzle-kit": "1.0.0-rc.4",
-    "tsdown": "^0.23.0",
+    "drizzle-kit": "1.0.0-rc.5",
     "typescript": "catalog:"
   }
 }

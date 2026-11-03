@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { after, before, test } from "node:test";
 import { promisify } from "node:util";
 
-const oxlint = resolve("node_modules/.bin/oxlint");
+const oxlint = join(
+  dirname(
+    createRequire(resolve("node_modules/vite-plus/package.json")).resolve("oxlint/package.json"),
+  ),
+  "bin/oxlint",
+);
 const plugin = resolve("packages/config/lint/trainstack.mjs");
 
 let directory;
