@@ -105,7 +105,7 @@ struct RideLibraryTests {
 
   @Test func aRidesIDIsTheSHA256OfItsFileSoEveryDeviceAgreesOnIt() throws {
     let recording = try quickTest(startDate: .init(timeIntervalSince1970: 1_800_000_000))
-    let data = try FITEncoder.encode(recording)
+    let data = FITEncoder.encode(recording)
     let expected = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     #expect(Ride(recording: recording, fileData: data).id == expected)
     #expect(try RideLibrary().receive(data) == expected)

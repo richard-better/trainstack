@@ -68,6 +68,7 @@ jobs:
           -scheme Ride
           -destination '${{ matrix.destination }}'
           CODE_SIGNING_ALLOWED=NO
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
       - name: Test
         if: matrix.platform == 'macOS'
-        run: swift test --package-path apps/ride/RideKit
+        run: swift test --package-path apps/ride/RideKit -Xswiftc -warnings-as-errors
