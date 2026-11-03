@@ -170,13 +170,32 @@ randomness in `RideCore`, so the same inputs always give the same ride.
 
 `RideJournal` writes the header and every input as JSON lines while a ride is on. Recovering a
 crashed ride replays the journal. A finished ride's journal is kept as a trace in
-`Application Support/Ride traces`, the latest `RideJournal.tracesKept` of them. To reproduce a
-ride from the field, copy its trace from the device (on a Mac it is in the app's container) into
-`RideKit/Tests/RideCoreTests/Traces`, record its golden FIT with
+`Application Support/Ride traces`, the latest `RideJournal.tracesKept` of them, named by start
+time and the ID of the ride it saved. To reproduce a ride from the field, get its trace with Share
+Ride Trace in the ride's More menu, put it in `RideKit/Tests/RideCoreTests/Traces`, record its golden FIT with
 `RIDE_RECORD_TRACES=1 swift test --package-path apps/ride/RideKit --filter RideTraceReplayTests`,
 and write a test that replays it to the behaviour you expect. `RideTraceReplayTests` replays
 every trace there and compares it with its golden FIT, so any change to how a ride is recorded
 shows up as a diff.
+
+Every ride also records its Bluetooth traffic beside the journal (`BluetoothLog`), and the log
+is kept and shared with the trace as `<trace>.bluetooth.jsonl`. `BluetoothDevices` records
+through a `RecordingTransport` around the real transport: the state of each connected device
+when the ride starts (its connection, trainer ranges and readiness, its battery, and its
+measurement packets from the last `RecordingTransport.measurementHistory` seconds, enough to
+rebuild crank cadence), then every packet as raw bytes, every trainer target and command, each
+power or cadence source the rider picks, and each ride tick.
+Devices are numbered, and names and identifiers stay out. `BluetoothReplay` feeds a log through
+a fresh `BluetoothDevices` on the recorded clock and gives the readings at each tick and the
+trainer commands it sends. `RideTraceReplayTests` checks that every log in `Traces` replays to
+the power and cadence its trace recorded and to the commands the trainer was sent.
+`RideBluetoothLogTests` writes the `trainer-and-strap` log with `RIDE_RECORD_TRACES=1`.
+
+Some things a log cannot replay. Commands are compared from the ride's first target, assuming
+the trainer was not under control when the ride started, as it is once the previous ride has
+let it go. Heart rate from the watch never passes through `BluetoothDevices`, so the trace's
+heart rate is not compared. A heart rate source the rider picks during the ride is not
+recorded.
 
 ## Simulated riders
 

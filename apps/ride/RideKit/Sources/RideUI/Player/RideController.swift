@@ -107,6 +107,7 @@ final class RideController {
   private static let minimumTick: TimeInterval = 0.9
 
   func tick(seconds: TimeInterval, at date: Date = .now) {
+    devices?.recordTick(at: date)
     var reading = simulator?.reading(for: session, after: seconds) ?? TrainerReading()
     if let power = devices?.reading(for: .power, at: date) { reading.power = power }
     if let cadence = devices?.reading(for: .cadence, at: date) { reading.cadence = cadence }

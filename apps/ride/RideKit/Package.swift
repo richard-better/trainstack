@@ -28,7 +28,8 @@ let package = Package(
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
-    .testTarget(name: "RideCoreTests", dependencies: ["RideCore"], exclude: ["Traces"]),
+    .testTarget(
+      name: "RideCoreTests", dependencies: ["RideBluetooth", "RideCore"], exclude: ["Traces"]),
     .testTarget(name: "RideDataTests", dependencies: ["RideData"]),
     .testTarget(name: "RideLinkTests", dependencies: ["RideLink"]),
     .testTarget(name: "RideStravaTests", dependencies: ["RideStrava"]),

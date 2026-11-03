@@ -7,8 +7,8 @@ final class SampleTransport: BluetoothTransport {
   var onConnect: ((UUID) -> Void)?
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
-  var onBatteryPercent: ((UUID, Int) -> Void)?
-  var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
+  var onBatteryLevel: ((UUID, Data) -> Void)?
+  var onHeartRateMeasurement: ((UUID, Data) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var onTrainerControlReady: ((UUID) -> Void)?
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
@@ -50,7 +50,7 @@ final class SampleTransport: BluetoothTransport {
         self?.onTrainerValue?(id, .resistanceRange, Data([0, 0, 0xE8, 0x03, 10, 0]))
         self?.onTrainerControlReady?(id)
       } else {
-        self?.onBatteryPercent?(id, 78)
+        self?.onBatteryLevel?(id, Data([78]))
       }
       var beat = 0
       while !Task.isCancelled, self != nil {
@@ -64,7 +64,8 @@ final class SampleTransport: BluetoothTransport {
               UInt8(watts & 0xFF), UInt8(watts >> 8),
             ]))
         } else {
-          self?.onHeartRate?(id, .init(beatsPerMinute: 124 + beat % 7, hasContact: true))
+          self?.onHeartRateMeasurement?(
+            id, HeartRateMeasurement(beatsPerMinute: 124 + beat % 7, hasContact: true).data)
         }
         beat += 1
         do { try await Task.sleep(for: .seconds(1)) } catch { break }

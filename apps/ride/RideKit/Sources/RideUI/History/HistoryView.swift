@@ -78,5 +78,6 @@ struct HistoryView: View {
   HistoryView(library: .sample(), selection: $selection)
     .environment(RiderSettingsStore.sample)
     .environment(TrainStackAccount.sample)
+    .environment(RideLauncher(simulated: true))
     .frame(width: 1100, height: 760)
 }

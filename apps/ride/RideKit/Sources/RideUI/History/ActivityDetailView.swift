@@ -13,6 +13,7 @@ struct ActivityDetailView: View {
   @State private var isSendingToStrava = false
   @Environment(RiderSettingsStore.self) private var store
   @Environment(TrainStackAccount.self) private var account
+  @Environment(RideLauncher.self) private var launcher
   @Environment(\.openURL) private var openURL
 
   private var recording: RideRecording { ride.recording }
@@ -106,6 +107,12 @@ struct ActivityDetailView: View {
       .disabled(isSendingToStrava)
     }
     Button("Export FIT…", systemImage: "square.and.arrow.down", action: export)
+    let traces = launcher.traces(of: ride)
+    if !traces.isEmpty {
+      ShareLink(items: traces) {
+        Label("Share Ride Trace", systemImage: "waveform.path.ecg")
+      }
+    }
     Divider()
     Button("Remove from History", systemImage: "trash", role: .destructive, action: confirmRemove)
   }
@@ -179,5 +186,6 @@ struct ActivityDetailView: View {
   }
   .environment(RiderSettingsStore.sample)
   .environment(TrainStackAccount.sample)
+  .environment(RideLauncher(simulated: true))
   .frame(width: 800, height: 760)
 }

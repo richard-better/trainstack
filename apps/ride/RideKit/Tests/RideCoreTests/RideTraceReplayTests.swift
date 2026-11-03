@@ -2,6 +2,7 @@ import Foundation
 import RideData
 import Testing
 
+@testable import RideBluetooth
 @testable import RideCore
 
 struct RideTraceReplayTests {
@@ -24,10 +25,17 @@ struct RideTraceReplayTests {
       ]),
   ]
 
+  static let bluetoothSuffix = "." + BluetoothLog.fileName
+
   static var traceNames: [String] {
+    names(endingWith: ".jsonl").filter { !$0.hasSuffix(bluetoothSuffix.dropLast(".jsonl".count)) }
+  }
+
+  static var bluetoothLogNames: [String] { names(endingWith: bluetoothSuffix) }
+
+  private static func names(endingWith suffix: String) -> [String] {
     let names = (try? FileManager.default.contentsOfDirectory(atPath: traces.path)) ?? []
-    return names.filter { $0.hasSuffix(".jsonl") }.map { String($0.dropLast(".jsonl".count)) }
-      .sorted()
+    return names.filter { $0.hasSuffix(suffix) }.map { String($0.dropLast(suffix.count)) }.sorted()
   }
 
   @Test(.enabled(if: recordingGoldens))
@@ -51,5 +59,22 @@ struct RideTraceReplayTests {
     let golden = Self.traces.appending(path: "\(name).fit")
     if Self.recordingGoldens { try fit.write(to: golden) }
     #expect(fit == (try Data(contentsOf: golden)))
+  }
+
+  @MainActor
+  @Test(arguments: bluetoothLogNames)
+  func replaysEachBluetoothLogToTheReadingsItsRideRecorded(_ name: String) throws {
+    let trace = try #require(
+      RideTrace(jsonLines: Data(contentsOf: Self.traces.appending(path: "\(name).jsonl"))))
+    let replay = BluetoothReplay(
+      jsonLines: try Data(
+        contentsOf: Self.traces.appending(path: "\(name)\(Self.bluetoothSuffix)")))
+    let recorded = trace.inputs.compactMap { input -> TrainerReading? in
+      guard case .tick(_, let reading, _) = input else { return nil }
+      return reading
+    }
+    #expect(replay.ticks.map(\.power) == recorded.map(\.power))
+    #expect(replay.ticks.map(\.cadence) == recorded.map(\.cadence))
+    #expect(replay.replayedWrites == replay.recordedWrites)
   }
 }

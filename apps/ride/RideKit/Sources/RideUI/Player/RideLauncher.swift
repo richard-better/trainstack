@@ -45,6 +45,7 @@ final class RideLauncher {
       directory: journalDirectory,
       header: .init(
         template: template, ftp: ftp, startDate: session.startDate, riderWeight: riderWeight))
+    recordBluetooth(resuming: false)
     begin(
       RideController(
         template: template, ftp: ftp, heartRateZones: heartRateZones, heartRate: heartRate,
@@ -72,11 +73,13 @@ final class RideLauncher {
   }
 
   func end(saveTo library: RideLibrary? = nil) {
+    var rideID: Ride.ID?
     if let recording = ride?.session.recording(), !recording.samples.isEmpty, let library {
-      keep(recording, in: library)
+      rideID = keep(recording, in: library)
     }
     ride?.stop()
-    ride?.journal?.finish()
+    devices.stopRecording()
+    ride?.journal?.finish(keepingFor: rideID)
     ride = nil
     isPlayerPresented = false
     isConfirmingEnd = false
@@ -90,13 +93,23 @@ final class RideLauncher {
     #endif
   }
 
-  private func keep(_ recording: RideRecording, in library: RideLibrary) {
+  private func keep(_ recording: RideRecording, in library: RideLibrary) -> Ride.ID? {
     #if os(iOS)
-      library.save(recording) { HealthRides.shared.queue($0.id, in: library) }
+      let id = library.save(recording) { HealthRides.shared.queue($0.id, in: library) }
       HealthRides.shared.saveQueuedSoon(from: library)
+      return id
     #else
-      library.save(recording)
+      return library.save(recording)
     #endif
+  }
+
+  func traces(of ride: Ride) -> [URL] {
+    RideJournal.traces(ofRide: ride.id, besideJournalIn: journalDirectory)
+  }
+
+  private func recordBluetooth(resuming: Bool) {
+    guard let log = BluetoothLog(directory: journalDirectory, resuming: resuming) else { return }
+    devices.startRecording(to: log)
   }
 
   func checkForInterruptedRide() {
@@ -107,6 +120,7 @@ final class RideLauncher {
   func resumeInterrupted(heartRateZones: ZoneSet?) {
     guard ride == nil, let interrupted else { return }
     self.interrupted = nil
+    recordBluetooth(resuming: true)
     begin(
       RideController(
         resuming: interrupted, heartRateZones: heartRateZones, heartRate: heartRate,
@@ -115,9 +129,9 @@ final class RideLauncher {
 
   func saveInterrupted(to library: RideLibrary) {
     guard let interrupted else { return }
-    keep(interrupted.session.recording(), in: library)
+    let rideID = keep(interrupted.session.recording(), in: library)
     self.interrupted = nil
-    RideJournal.finish(in: journalDirectory)
+    RideJournal.finish(in: journalDirectory, keepingFor: rideID)
   }
 
   func discardInterrupted() {
