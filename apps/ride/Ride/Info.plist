@@ -7,7 +7,6 @@
 		<string>bluetooth-central</string>
 		<string>bluetooth-peripheral</string>
 		<string>remote-notification</string>
-		<string>workout-processing</string>
 	</array>
 </dict>
 </plist>

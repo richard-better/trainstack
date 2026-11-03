@@ -42,7 +42,7 @@ final class TrainStackAccount {
       throw StravaError.cancelled
     }
     try await client.finishAppleWebSignIn(attempt, callback: callback)
-    await sync()
+    await refreshFromClient()
     await refreshStrava()
   }
 
