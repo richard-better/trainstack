@@ -1,4 +1,4 @@
-enum TrainerCharacteristic: String, CaseIterable, Sendable {
+enum TrainerCharacteristic: String, CaseIterable, Codable, Sendable {
   case controlPoint = "2AD9"
   case status = "2ADA"
   case resistanceRange = "2AD6"

@@ -1,4 +1,5 @@
 import Foundation
+import RideBluetooth
 import RideData
 
 public final class RideJournal {
@@ -14,6 +15,7 @@ public final class RideJournal {
   public static let tracesKept = 10
 
   private static let fileName = "ride.jsonl"
+  private static let sidecarFileNames = [BluetoothLog.fileName]
 
   private let directory: URL
   private var handle: FileHandle?
@@ -26,6 +28,7 @@ public final class RideJournal {
     do {
       try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
       FileManager.default.createFile(atPath: url.path, contents: nil)
+      Self.removeSidecars(in: directory)
       handle = try FileHandle(forWritingTo: url)
     } catch {
       return nil
@@ -57,18 +60,32 @@ public final class RideJournal {
 
   private static func keepAsTrace(_ journal: URL, for rideID: String?, in traces: URL) {
     let files = FileManager.default
+    let directory = journal.deletingLastPathComponent()
     guard let data = try? Data(contentsOf: journal), let trace = RideTrace(jsonLines: data) else {
       try? files.removeItem(at: journal)
+      removeSidecars(in: directory)
       return
     }
     try? files.createDirectory(at: traces, withIntermediateDirectories: true)
-    let destination = traces.appending(
-      path: traceFileName(startingAt: trace.header.startDate, rideID: rideID))
-    try? files.removeItem(at: destination)
-    if (try? files.moveItem(at: journal, to: destination)) == nil {
-      try? files.removeItem(at: journal)
+    let name = traceFileName(startingAt: trace.header.startDate, rideID: rideID)
+    let stem = traceStem(of: name)
+    let moves =
+      [(journal, name)]
+      + sidecarFileNames.map { (directory.appending(path: $0), "\(stem).\($0)") }
+    for (file, kept) in moves where files.fileExists(atPath: file.path) {
+      let destination = traces.appending(path: kept)
+      try? files.removeItem(at: destination)
+      if (try? files.moveItem(at: file, to: destination)) == nil {
+        try? files.removeItem(at: file)
+      }
     }
     removeOldTraces(in: traces)
+  }
+
+  private static func removeSidecars(in directory: URL) {
+    for name in sidecarFileNames {
+      try? FileManager.default.removeItem(at: directory.appending(path: name))
+    }
   }
 
   static func traceFileName(startingAt date: Date, rideID: String? = nil) -> String {
@@ -135,5 +152,6 @@ public final class RideJournal {
 
   public static func discard(in directory: URL = defaultDirectory) {
     try? FileManager.default.removeItem(at: directory.appending(path: fileName))
+    removeSidecars(in: directory)
   }
 }

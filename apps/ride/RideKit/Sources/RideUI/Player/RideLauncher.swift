@@ -45,6 +45,7 @@ final class RideLauncher {
       directory: journalDirectory,
       header: .init(
         template: template, ftp: ftp, startDate: session.startDate, riderWeight: riderWeight))
+    recordBluetooth(resuming: false)
     begin(
       RideController(
         template: template, ftp: ftp, heartRateZones: heartRateZones, heartRate: heartRate,
@@ -77,6 +78,7 @@ final class RideLauncher {
       rideID = keep(recording, in: library)
     }
     ride?.stop()
+    devices.stopRecording()
     ride?.journal?.finish(keepingFor: rideID)
     ride = nil
     isPlayerPresented = false
@@ -105,6 +107,11 @@ final class RideLauncher {
     RideJournal.traces(ofRide: ride.id, besideJournalIn: journalDirectory)
   }
 
+  private func recordBluetooth(resuming: Bool) {
+    guard let log = BluetoothLog(directory: journalDirectory, resuming: resuming) else { return }
+    devices.startRecording(to: log)
+  }
+
   func checkForInterruptedRide() {
     guard ride == nil, interrupted == nil else { return }
     interrupted = RideJournal.recover(from: journalDirectory)
@@ -113,6 +120,7 @@ final class RideLauncher {
   func resumeInterrupted(heartRateZones: ZoneSet?) {
     guard ride == nil, let interrupted else { return }
     self.interrupted = nil
+    recordBluetooth(resuming: true)
     begin(
       RideController(
         resuming: interrupted, heartRateZones: heartRateZones, heartRate: heartRate,

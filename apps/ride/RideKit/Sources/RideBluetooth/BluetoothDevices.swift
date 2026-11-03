@@ -24,7 +24,7 @@ public final class BluetoothDevices {
   private var cyclingReadings: [UUID: CyclingSensorReadings] = [:]
   @ObservationIgnored private var lastHeard: [UUID: Date] = [:]
   private var sourcePicks: [RideMetric: UUID] = [:]
-  @ObservationIgnored private let transport: any BluetoothTransport
+  @ObservationIgnored private let transport: RecordingTransport
   @ObservationIgnored private let defaults: UserDefaults
   @ObservationIgnored private let now: () -> Date
   @ObservationIgnored private var wantsScan = false
@@ -46,7 +46,7 @@ public final class BluetoothDevices {
     transport: any BluetoothTransport, defaults: UserDefaults,
     now: @escaping () -> Date = { .now }
   ) {
-    self.transport = transport
+    self.transport = RecordingTransport(wrapping: transport, now: now)
     self.defaults = defaults
     self.now = now
     paired =
@@ -58,22 +58,24 @@ public final class BluetoothDevices {
         try? JSONDecoder().decode([RideMetric: UUID].self, from: $0)
       } ?? [:]
     adoptLegacyHeartRateSensor()
-    transport.onAvailability = { [weak self] state in self?.updateAvailability(state) }
-    transport.onDiscovery = { [weak self] device in self?.receive(device) }
-    transport.onConnect = { [weak self] id in self?.didConnect(id) }
-    transport.onDisconnect = { [weak self] id in self?.didDisconnect(id) }
-    transport.onConnectFailure = { [weak self] id in self?.didFailToConnect(id) }
-    transport.onBatteryLevel = { [weak self] id, data in self?.receiveBatteryLevel(data, from: id) }
-    transport.onHeartRateMeasurement = { [weak self] id, data in
+    self.transport.onAvailability = { [weak self] state in self?.updateAvailability(state) }
+    self.transport.onDiscovery = { [weak self] device in self?.receive(device) }
+    self.transport.onConnect = { [weak self] id in self?.didConnect(id) }
+    self.transport.onDisconnect = { [weak self] id in self?.didDisconnect(id) }
+    self.transport.onConnectFailure = { [weak self] id in self?.didFailToConnect(id) }
+    self.transport.onBatteryLevel = { [weak self] id, data in
+      self?.receiveBatteryLevel(data, from: id)
+    }
+    self.transport.onHeartRateMeasurement = { [weak self] id, data in
       self?.receiveHeartRate(data, from: id)
     }
-    transport.onCyclingMeasurement = { [weak self] id, characteristic, data in
+    self.transport.onCyclingMeasurement = { [weak self] id, characteristic, data in
       self?.receiveCycling(data, from: id, characteristic: characteristic)
     }
-    transport.onTrainerControlReady = { [weak self, now] id in
+    self.transport.onTrainerControlReady = { [weak self, now] id in
       self?.updateTrainerControl(id) { $0.becameReady(at: now()) }
     }
-    transport.onTrainerValue = { [weak self, now] id, characteristic, data in
+    self.transport.onTrainerValue = { [weak self, now] id, characteristic, data in
       self?.updateTrainerControl(id) { $0.receive(data, from: characteristic, at: now()) }
     }
   }
@@ -138,11 +140,20 @@ public final class BluetoothDevices {
   }
 
   public func setTrainerTarget(_ target: TrainerTarget?, at date: Date = .now) {
+    transport.recordTarget(target, at: date)
     trainerTarget = target
     for id in trainerControls.keys {
       updateTrainerControl(id) { $0.set(target, at: date) }
     }
   }
+
+  public func startRecording(to log: BluetoothLog) {
+    transport.startRecording(to: log, paired: paired, picks: sourcePicks)
+  }
+
+  public func stopRecording() { transport.stopRecording() }
+
+  public func recordTick(at date: Date) { transport.recordTick(at: date) }
 
   public func connectPaired() {
     guard !paired.isEmpty else { return }

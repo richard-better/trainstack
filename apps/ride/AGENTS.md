@@ -178,6 +178,23 @@ and write a test that replays it to the behaviour you expect. `RideTraceReplayTe
 every trace there and compares it with its golden FIT, so any change to how a ride is recorded
 shows up as a diff.
 
+Every ride also records its Bluetooth traffic beside the journal (`BluetoothLog`), and the log
+is kept and shared with the trace as `<trace>.bluetooth.jsonl`. `BluetoothDevices` records
+through a `RecordingTransport` around the real transport: the state of each connected device
+when the ride starts (its connection, trainer ranges and readiness, and its last packet of each
+kind), then every packet as raw bytes, every trainer target and command, and each ride tick.
+Devices are numbered, and names and identifiers stay out. `BluetoothReplay` feeds a log through
+a fresh `BluetoothDevices` on the recorded clock and gives the readings at each tick and the
+trainer commands it sends. `RideTraceReplayTests` checks that every log in `Traces` replays to
+the power and cadence its trace recorded and to the commands the trainer was sent.
+`RideBluetoothLogTests` writes the `trainer-and-strap` log with `RIDE_RECORD_TRACES=1`.
+
+Some things a log cannot replay. Commands are compared from the ride's first target, assuming
+the trainer was not under control when the ride started, as it is once the previous ride has
+let it go. Heart rate from the watch never passes through `BluetoothDevices`, so the trace's
+heart rate is not compared. A heart rate source the rider picks during the ride is not
+recorded.
+
 ## Simulated riders
 
 `SimulatedRider` rides like a person with a critical power and W′, spending W′ above critical
