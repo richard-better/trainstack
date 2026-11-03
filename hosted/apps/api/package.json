@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc -b ../../../packages/contract && tsdown",
+    "build": "tsc -b ../../../packages/contract && vp pack",
     "check-types": "tsc -b ../../../packages/contract && tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile api",
     "env:generate": "varlock codegen",
@@ -34,7 +34,6 @@
     "@trainstack/hosted-infra": "workspace:*",
     "@types/node": "catalog:",
     "drizzle-kit": "1.0.0-rc.5",
-    "tsdown": "^0.23.5",
     "typescript": "catalog:"
   }
 }
