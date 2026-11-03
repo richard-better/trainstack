@@ -72,11 +72,12 @@ final class RideLauncher {
   }
 
   func end(saveTo library: RideLibrary? = nil) {
+    var rideID: Ride.ID?
     if let recording = ride?.session.recording(), !recording.samples.isEmpty, let library {
-      keep(recording, in: library)
+      rideID = keep(recording, in: library)
     }
     ride?.stop()
-    ride?.journal?.finish()
+    ride?.journal?.finish(keepingFor: rideID)
     ride = nil
     isPlayerPresented = false
     isConfirmingEnd = false
@@ -90,13 +91,18 @@ final class RideLauncher {
     #endif
   }
 
-  private func keep(_ recording: RideRecording, in library: RideLibrary) {
+  private func keep(_ recording: RideRecording, in library: RideLibrary) -> Ride.ID? {
     #if os(iOS)
-      library.save(recording) { HealthRides.shared.queue($0.id, in: library) }
+      let id = library.save(recording) { HealthRides.shared.queue($0.id, in: library) }
       HealthRides.shared.saveQueuedSoon(from: library)
+      return id
     #else
-      library.save(recording)
+      return library.save(recording)
     #endif
+  }
+
+  func traces(of ride: Ride) -> [URL] {
+    RideJournal.traces(ofRide: ride.id, besideJournalIn: journalDirectory)
   }
 
   func checkForInterruptedRide() {
@@ -115,9 +121,9 @@ final class RideLauncher {
 
   func saveInterrupted(to library: RideLibrary) {
     guard let interrupted else { return }
-    keep(interrupted.session.recording(), in: library)
+    let rideID = keep(interrupted.session.recording(), in: library)
     self.interrupted = nil
-    RideJournal.finish(in: journalDirectory)
+    RideJournal.finish(in: journalDirectory, keepingFor: rideID)
   }
 
   func discardInterrupted() {

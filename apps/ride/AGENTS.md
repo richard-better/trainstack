@@ -170,9 +170,9 @@ randomness in `RideCore`, so the same inputs always give the same ride.
 
 `RideJournal` writes the header and every input as JSON lines while a ride is on. Recovering a
 crashed ride replays the journal. A finished ride's journal is kept as a trace in
-`Application Support/Ride traces`, the latest `RideJournal.tracesKept` of them. To reproduce a
-ride from the field, copy its trace from the device (on a Mac it is in the app's container) into
-`RideKit/Tests/RideCoreTests/Traces`, record its golden FIT with
+`Application Support/Ride traces`, the latest `RideJournal.tracesKept` of them, named by start
+time and the ID of the ride it saved. To reproduce a ride from the field, get its trace with Share
+Ride Trace in the ride's More menu, put it in `RideKit/Tests/RideCoreTests/Traces`, record its golden FIT with
 `RIDE_RECORD_TRACES=1 swift test --package-path apps/ride/RideKit --filter RideTraceReplayTests`,
 and write a test that replays it to the behaviour you expect. `RideTraceReplayTests` replays
 every trace there and compares it with its golden FIT, so any change to how a ride is recorded

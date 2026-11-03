@@ -76,7 +76,7 @@ struct InterruptedRideTests {
     }
   }
 
-  @Test func savingWhatWasRiddenKeepsItInHistoryAndClearsTheJournal() throws {
+  @Test func savingWhatWasRiddenKeepsItInHistoryWithItsTrace() throws {
     try withDirectory { directory in
       try crashedRide(30, in: directory)
       let launcher = launcher(journalDirectory: directory)
@@ -90,8 +90,10 @@ struct InterruptedRideTests {
       #expect(ride.recording.hasTarget)
       #expect(launcher.interrupted == nil)
       #expect(RideJournal.recover(from: directory) == nil)
-      let traces = RideJournal.tracesDirectory(besideJournalIn: directory)
-      #expect(try FileManager.default.contentsOfDirectory(atPath: traces.path).count == 1)
+      let trace = try #require(launcher.traces(of: ride).first)
+      #expect(launcher.traces(of: ride).count == 1)
+      let replayed = try #require(RideTrace(jsonLines: Data(contentsOf: trace))).replay()
+      #expect(replayed.session.samples.count == 30)
     }
   }
 

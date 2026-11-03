@@ -49,20 +49,21 @@ public final class RideJournal {
 
   public func append(_ input: RideInput) { write(input) }
 
-  public func finish() {
+  public func finish(keepingFor rideID: String? = nil) {
     try? handle?.close()
     handle = nil
-    Self.keepAsTrace(url, in: Self.tracesDirectory(besideJournalIn: directory))
+    Self.keepAsTrace(url, for: rideID, in: Self.tracesDirectory(besideJournalIn: directory))
   }
 
-  private static func keepAsTrace(_ journal: URL, in traces: URL) {
+  private static func keepAsTrace(_ journal: URL, for rideID: String?, in traces: URL) {
     let files = FileManager.default
     guard let data = try? Data(contentsOf: journal), let trace = RideTrace(jsonLines: data) else {
       try? files.removeItem(at: journal)
       return
     }
     try? files.createDirectory(at: traces, withIntermediateDirectories: true)
-    let destination = traces.appending(path: traceFileName(startingAt: trace.header.startDate))
+    let destination = traces.appending(
+      path: traceFileName(startingAt: trace.header.startDate, rideID: rideID))
     try? files.removeItem(at: destination)
     if (try? files.moveItem(at: journal, to: destination)) == nil {
       try? files.removeItem(at: journal)
@@ -70,15 +71,36 @@ public final class RideJournal {
     removeOldTraces(in: traces)
   }
 
-  static func traceFileName(startingAt date: Date) -> String {
-    date.formatted(.iso8601).replacing(":", with: "-") + ".jsonl"
+  static func traceFileName(startingAt date: Date, rideID: String? = nil) -> String {
+    let started = date.formatted(.iso8601).replacing(":", with: "-")
+    return [started, rideID].compactMap(\.self).joined(separator: " ") + ".jsonl"
+  }
+
+  public static func traces(
+    ofRide rideID: String, besideJournalIn directory: URL = defaultDirectory
+  ) -> [URL] {
+    let traces = tracesDirectory(besideJournalIn: directory)
+    let names = (try? FileManager.default.contentsOfDirectory(atPath: traces.path)) ?? []
+    return names.filter { rideName(of: $0) == rideID }.sorted().map { traces.appending(path: $0) }
+  }
+
+  private static func rideName(of fileName: String) -> String? {
+    let stem = traceStem(of: fileName)
+    guard let space = stem.firstIndex(of: " ") else { return nil }
+    return String(stem[stem.index(after: space)...])
+  }
+
+  private static func traceStem(of fileName: String) -> Substring {
+    fileName.prefix { $0 != "." }
   }
 
   private static func removeOldTraces(in traces: URL) {
     let files = FileManager.default
     let names = (try? files.contentsOfDirectory(atPath: traces.path)) ?? []
-    for old in names.filter({ $0.hasSuffix(".jsonl") }).sorted().dropLast(tracesKept) {
-      try? files.removeItem(at: traces.appending(path: old))
+    let stems = Set(names.filter { $0.hasSuffix(".jsonl") }.map(traceStem(of:)))
+    let old = Set(stems.sorted().dropLast(tracesKept))
+    for name in names where old.contains(traceStem(of: name)) {
+      try? files.removeItem(at: traces.appending(path: name))
     }
   }
 
@@ -103,9 +125,12 @@ public final class RideJournal {
     return InterruptedRide(trace: trace)
   }
 
-  public static func finish(in directory: URL = defaultDirectory) {
+  public static func finish(
+    in directory: URL = defaultDirectory, keepingFor rideID: String? = nil
+  ) {
     keepAsTrace(
-      directory.appending(path: fileName), in: tracesDirectory(besideJournalIn: directory))
+      directory.appending(path: fileName), for: rideID,
+      in: tracesDirectory(besideJournalIn: directory))
   }
 
   public static func discard(in directory: URL = defaultDirectory) {

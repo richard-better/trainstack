@@ -166,6 +166,17 @@ struct RideJournalTests {
     }
   }
 
+  @Test func findsTheTraceOfTheRideItWasKeptFor() throws {
+    try withDirectory { directory in
+      let journal = try journal(in: directory)
+      ride(4, journaling: journal)
+      journal.finish(keepingFor: "ride-a")
+      #expect(RideJournal.traces(ofRide: "ride-a", besideJournalIn: directory).count == 1)
+      #expect(RideJournal.traces(ofRide: "ride-b", besideJournalIn: directory).isEmpty)
+      #expect(RideJournal.traces(ofRide: "ride", besideJournalIn: directory).isEmpty)
+    }
+  }
+
   @Test func discardingDeletesTheJournal() throws {
     try withDirectory { directory in
       ride(4, journaling: try journal(in: directory))
