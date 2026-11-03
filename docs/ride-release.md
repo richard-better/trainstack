@@ -54,13 +54,13 @@ goes up.
 
 ## Releasing
 
-Run `Ride release` from the Actions tab on `main` with the marketing version, such as `1.0.1`:
+Run `Ride release` from the Actions tab on `main` with the marketing version, such as `0.1.1`:
 
 ```bash
-gh workflow run ride-release.yml --repo richard-better/trainstack -f version=1.0.1
+gh workflow run ride-release.yml --repo richard-better/trainstack -f version=0.1.1
 ```
 
-The release creates the tag `ride-v1.0.1` itself. Alphas need nothing: merging to `main` publishes
+The release creates the tag `ride-v0.1.1` itself. Alphas need nothing: merging to `main` publishes
 one.
 
 Once a build shows up in TestFlight, answer the export compliance question (Ride uses only the

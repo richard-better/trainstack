@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       version:
-        description: The marketing version of a stable release, such as 1.0.1.
+        description: The marketing version of a stable release, such as 0.1.1.
         required: false
         type: string
 
