@@ -8,8 +8,8 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
   var onConnect: ((UUID) -> Void)?
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
-  var onBatteryPercent: ((UUID, Int) -> Void)?
-  var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
+  var onBatteryLevel: ((UUID, Data) -> Void)?
+  var onHeartRateMeasurement: ((UUID, Data) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var onTrainerControlReady: ((UUID) -> Void)?
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
@@ -160,12 +160,8 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
       heldPeripherals[peripheral.identifier] === peripheral, peripheral.state == .connected
     else { return }
     switch characteristic.uuid {
-    case GATT.batteryLevel:
-      if let level = value.first { onBatteryPercent?(peripheral.identifier, min(Int(level), 100)) }
-    case GATT.heartRateMeasurement:
-      if let measurement = HeartRateMeasurement(value) {
-        onHeartRate?(peripheral.identifier, measurement)
-      }
+    case GATT.batteryLevel: onBatteryLevel?(peripheral.identifier, value)
+    case GATT.heartRateMeasurement: onHeartRateMeasurement?(peripheral.identifier, value)
     default:
       if let cycling = CyclingCharacteristic(rawValue: characteristic.uuid.uuidString) {
         onCyclingMeasurement?(peripheral.identifier, cycling, value)

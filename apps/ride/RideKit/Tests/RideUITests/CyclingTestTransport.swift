@@ -8,8 +8,8 @@ final class CyclingTestTransport: BluetoothTransport {
   var onConnect: ((UUID) -> Void)?
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
-  var onBatteryPercent: ((UUID, Int) -> Void)?
-  var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
+  var onBatteryLevel: ((UUID, Data) -> Void)?
+  var onHeartRateMeasurement: ((UUID, Data) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var onTrainerControlReady: ((UUID) -> Void)?
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?

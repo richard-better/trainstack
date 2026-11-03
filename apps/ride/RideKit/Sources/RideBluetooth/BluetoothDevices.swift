@@ -58,8 +58,10 @@ public final class BluetoothDevices {
     transport.onConnect = { [weak self] id in self?.didConnect(id) }
     transport.onDisconnect = { [weak self] id in self?.didDisconnect(id) }
     transport.onConnectFailure = { [weak self] id in self?.didFailToConnect(id) }
-    transport.onBatteryPercent = { [weak self] id, percent in self?.batteryLevels[id] = percent }
-    transport.onHeartRate = { [weak self] id, measurement in self?.receive(measurement, from: id) }
+    transport.onBatteryLevel = { [weak self] id, data in self?.receiveBatteryLevel(data, from: id) }
+    transport.onHeartRateMeasurement = { [weak self] id, data in
+      self?.receiveHeartRate(data, from: id)
+    }
     transport.onCyclingMeasurement = { [weak self] id, characteristic, data in
       self?.receiveCycling(data, from: id, characteristic: characteristic)
     }
@@ -279,8 +281,15 @@ public final class BluetoothDevices {
     connections[id] = .disconnected
   }
 
-  private func receive(_ measurement: HeartRateMeasurement, from id: UUID) {
-    guard isPaired(id), connectionState(of: id) == .connected else { return }
+  private func receiveBatteryLevel(_ data: Data, from id: UUID) {
+    guard let level = data.first else { return }
+    batteryLevels[id] = min(Int(level), 100)
+  }
+
+  private func receiveHeartRate(_ data: Data, from id: UUID) {
+    guard isPaired(id), connectionState(of: id) == .connected,
+      let measurement = HeartRateMeasurement(data)
+    else { return }
     let bpm = measurement.reading
     heartRateReadings[id] = bpm.map { ($0, .now) }
     if bpm != nil { lastHeard[id] = .now }

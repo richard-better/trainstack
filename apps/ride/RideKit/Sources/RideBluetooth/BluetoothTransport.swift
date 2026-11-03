@@ -7,8 +7,8 @@ protocol BluetoothTransport: AnyObject {
   var onConnect: ((UUID) -> Void)? { get set }
   var onDisconnect: ((UUID) -> Void)? { get set }
   var onConnectFailure: ((UUID) -> Void)? { get set }
-  var onBatteryPercent: ((UUID, Int) -> Void)? { get set }
-  var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)? { get set }
+  var onBatteryLevel: ((UUID, Data) -> Void)? { get set }
+  var onHeartRateMeasurement: ((UUID, Data) -> Void)? { get set }
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)? { get set }
   var onTrainerControlReady: ((UUID) -> Void)? { get set }
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)? { get set }

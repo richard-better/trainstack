@@ -137,7 +137,7 @@ struct BluetoothDevicesTests {
     let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
     devices.pair(strap)
     transport.onConnect?(strap.id)
-    transport.onBatteryPercent?(strap.id, 78)
+    transport.onBatteryLevel?(strap.id, Data([78]))
     #expect(devices.batteryLevel(of: strap.id) == 78)
     transport.onDisconnect?(strap.id)
     #expect(devices.connectionState(of: strap.id) == .connecting)
@@ -266,13 +266,35 @@ struct BluetoothDevicesTests {
     let (devices, transport) = scanningDevices()
     let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
     devices.pair(strap)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 120))
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 120).data)
     #expect(devices.heartRate == nil)
     transport.onConnect?(strap.id)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 128).data)
     #expect(devices.heartRate == 128)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 131, hasContact: false))
+    transport.onHeartRateMeasurement?(
+      strap.id, HeartRateMeasurement(beatsPerMinute: 131, hasContact: false).data)
     #expect(devices.heartRate == nil)
+  }
+
+  @Test func ignoresAHeartRatePacketCutShort() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), services: [.heartRate])
+    devices.pair(strap)
+    transport.onConnect?(strap.id)
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 128).data)
+    transport.onHeartRateMeasurement?(strap.id, Data([0x01, 0x90]))
+    #expect(devices.heartRate == 128)
+  }
+
+  @Test func capsTheBatteryLevelAtAHundred() {
+    let (devices, transport) = scanningDevices()
+    let strap = DiscoveredDevice(id: UUID(), services: [.heartRate])
+    devices.pair(strap)
+    transport.onConnect?(strap.id)
+    transport.onBatteryLevel?(strap.id, Data([180]))
+    #expect(devices.batteryLevel(of: strap.id) == 100)
+    transport.onBatteryLevel?(strap.id, Data())
+    #expect(devices.batteryLevel(of: strap.id) == 100)
   }
 
   @Test func expiresHeartRateWhenAConnectedSensorStopsReporting() {
@@ -281,7 +303,7 @@ struct BluetoothDevicesTests {
     devices.pair(strap)
     transport.onConnect?(strap.id)
     let now = Date.now
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 128).data)
     #expect(devices.reading(for: .heartRate, at: now) == 128)
     #expect(devices.reading(for: .heartRate, at: now.addingTimeInterval(6)) == nil)
   }
@@ -294,13 +316,14 @@ struct BluetoothDevicesTests {
     devices.pair(trainer)
     transport.onConnect?(strap.id)
     transport.onConnect?(trainer.id)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
-    transport.onHeartRate?(trainer.id, .init(beatsPerMinute: 140))
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 128).data)
+    transport.onHeartRateMeasurement?(trainer.id, HeartRateMeasurement(beatsPerMinute: 140).data)
     #expect(devices.heartRate == 128)
     #expect(devices.reading(for: .heartRate, from: trainer.id) == 140)
     devices.select(trainer, for: .heartRate)
     #expect(devices.heartRate == 140)
-    transport.onHeartRate?(trainer.id, .init(beatsPerMinute: 140, hasContact: false))
+    transport.onHeartRateMeasurement?(
+      trainer.id, HeartRateMeasurement(beatsPerMinute: 140, hasContact: false).data)
     #expect(devices.heartRate == nil)
     #expect(devices.reading(for: .heartRate, from: strap.id) == 128)
   }
@@ -395,7 +418,8 @@ struct BluetoothDevicesTests {
     devices.pair(strap)
     transport.onConnect?(strap.id)
     let heard = devices.lastHeard(from: strap.id)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128, hasContact: false))
+    transport.onHeartRateMeasurement?(
+      strap.id, HeartRateMeasurement(beatsPerMinute: 128, hasContact: false).data)
     #expect(devices.lastHeard(from: strap.id) == heard)
   }
 
@@ -437,10 +461,11 @@ struct BluetoothDevicesTests {
     transport.onConnect?(strap.id)
     var readings: [Int] = []
     devices.onHeartRate = { readings.append($0) }
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128, hasContact: false))
-    transport.onHeartRate?(UUID(), .init(beatsPerMinute: 90))
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 130))
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 128).data)
+    transport.onHeartRateMeasurement?(
+      strap.id, HeartRateMeasurement(beatsPerMinute: 128, hasContact: false).data)
+    transport.onHeartRateMeasurement?(UUID(), HeartRateMeasurement(beatsPerMinute: 90).data)
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 130).data)
     #expect(readings == [128, 130])
   }
 
@@ -449,12 +474,12 @@ struct BluetoothDevicesTests {
     let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
     devices.pair(strap)
     transport.onConnect?(strap.id)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 128).data)
     transport.onDisconnect?(strap.id)
     #expect(devices.heartRate == nil)
     transport.onConnect?(strap.id)
     #expect(devices.heartRate == nil)
-    transport.onHeartRate?(strap.id, .init(beatsPerMinute: 128))
+    transport.onHeartRateMeasurement?(strap.id, HeartRateMeasurement(beatsPerMinute: 128).data)
     devices.forget(strap.id)
     #expect(devices.heartRate == nil)
   }
@@ -536,8 +561,8 @@ private final class FakeTransport: BluetoothTransport {
   var onConnect: ((UUID) -> Void)?
   var onDisconnect: ((UUID) -> Void)?
   var onConnectFailure: ((UUID) -> Void)?
-  var onBatteryPercent: ((UUID, Int) -> Void)?
-  var onHeartRate: ((UUID, HeartRateMeasurement) -> Void)?
+  var onBatteryLevel: ((UUID, Data) -> Void)?
+  var onHeartRateMeasurement: ((UUID, Data) -> Void)?
   var onCyclingMeasurement: ((UUID, CyclingCharacteristic, Data) -> Void)?
   var onTrainerControlReady: ((UUID) -> Void)?
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
