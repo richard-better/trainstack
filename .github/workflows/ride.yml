@@ -67,8 +67,11 @@ jobs:
           -project apps/ride/Ride.xcodeproj
           -scheme Ride
           -destination '${{ matrix.destination }}'
+          -derivedDataPath "$RUNNER_TEMP/DerivedData"
           CODE_SIGNING_ALLOWED=NO
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+      - name: Check the Info.plist App Store Connect accepts
+        run: apps/ride/scripts/check-store-info.sh "$(echo "$RUNNER_TEMP"/DerivedData/Build/Products/*/Ride.app)"
       - name: Test
         if: matrix.platform == 'macOS'
         run: swift test --package-path apps/ride/RideKit -Xswiftc -warnings-as-errors

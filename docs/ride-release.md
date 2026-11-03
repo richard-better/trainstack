@@ -70,7 +70,9 @@ beta review for the first build of each version.
 
 ## Known gaps
 
-The workflows have not been run yet. Expect to fix small things on the first release, such as the
-runner image, a missing capability on the app ID, or the role of the API key. Cloud-managed
-Developer ID signing is the least proven part. If it fails, the fallback is to import the existing
-Developer ID certificate as a `.p12`, as Switcheroo does, and let Xcode still make the profile.
+App Store signing works: the first release run archived and signed both apps, and App Store Connect's
+validation then caught two Info.plist mistakes, which `apps/ride/scripts/check-store-info.sh` now
+checks on every CI build. Developer ID signing, which the Homebrew builds use, still fails with
+`Cloud signing permission error` until the App Store Connect key has the Admin role (step 2
+above). If an Admin key still fails, the fallback is to import the existing Developer ID
+certificate as a `.p12`, as Switcheroo does, and let Xcode still make the profile.
