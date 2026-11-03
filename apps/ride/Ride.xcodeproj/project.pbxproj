@@ -380,7 +380,7 @@
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = Ride/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ride;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				"INFOPLIST_KEY_LSApplicationCategoryType[sdk=macosx*]" = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Ride connects to your smart trainer and heart rate monitor over Bluetooth, and passes on heart rate from your Apple Watch.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ride reads heart rate from your Apple Watch during a ride, and checks your workouts so it never saves a ride Health already has.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ride saves your rides to Health as indoor cycling workouts, with their power, cadence, heart rate and energy.";
@@ -436,7 +436,7 @@
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = Ride/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ride;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				"INFOPLIST_KEY_LSApplicationCategoryType[sdk=macosx*]" = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Ride connects to your smart trainer and heart rate monitor over Bluetooth, and passes on heart rate from your Apple Watch.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ride reads heart rate from your Apple Watch during a ride, and checks your workouts so it never saves a ride Health already has.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ride saves your rides to Health as indoor cycling workouts, with their power, cadence, heart rate and energy.";
