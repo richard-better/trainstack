@@ -28,6 +28,22 @@ will not issue a Developer ID certificate to an API key, even an Admin one, so t
 signs with the team's Developer ID certificate from GitHub and only makes its profile with the key. The build number is the UTC time of the run (`yyMMddHHmm`), so it only ever
 goes up.
 
+### Building the Homebrew app locally
+
+`apps/ride/scripts/build-notarized.sh <version> <build number> <output directory>` builds Ride for
+macOS with Developer ID, notarizes and staples it, and writes `Ride-<version>.zip` and `SHA256SUMS`
+to the output directory. The version is a named release such as `0.1.0`, or an alpha such as
+`0.1.0-alpha.2611031230`; the app's marketing version is the part before any suffix.
+
+In CI, the workflow imports the Developer ID certificate into a keychain first and sets
+`ASC_KEY_PATH`, `ASC_KEY_ID` and `ASC_ISSUER_ID`: Xcode makes the provisioning profile with that key
+and notarytool submits with it. Locally, leave those unset so Xcode signs with your Xcode account,
+and set `NOTARY_KEYCHAIN_PROFILE` to a profile saved with `xcrun notarytool store-credentials`.
+
+The script checks that the app is signed by a Developer ID Application certificate of team
+`S64PDPJKMJ`, holds the application identifier the keychain needs, and does not hold Sign in with
+Apple, which Developer ID builds cannot have.
+
 ## One-time setup
 
 1. In [App Store Connect](https://appstoreconnect.apple.com/apps), create the app record for the

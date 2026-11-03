@@ -1,18 +1,4 @@
 #!/usr/bin/env bash
-# Builds Ride for macOS signed with Developer ID, notarizes and staples it, and writes
-# Ride-<version>.zip and SHA256SUMS to the output directory. Homebrew installs that ZIP.
-#
-# Usage: build-notarized.sh <version> <build number> <output directory>
-#
-# The version is a named release such as 1.2.0, or an alpha such as 1.2-alpha.2610151230. The app's
-# marketing version is the part before any suffix.
-#
-# In CI, import the Developer ID certificate into a keychain first, and set ASC_KEY_PATH, ASC_KEY_ID
-# and ASC_ISSUER_ID to an App Store Connect API key: Xcode makes the provisioning profile with it
-# and notarytool submits with it. Apple's cloud signing will not issue Developer ID certificates to
-# an API key, even an Admin one. Locally, leave them unset to
-# sign with the Xcode account and set NOTARY_KEYCHAIN_PROFILE to a profile saved with
-# `xcrun notarytool store-credentials`.
 set -euo pipefail
 
 [[ $# == 3 ]] || { echo "Usage: $0 <version> <build number> <output directory>" >&2; exit 64; }
@@ -61,11 +47,8 @@ plist="$app/Contents/Info.plist"
 [[ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$plist")" == com.trainstackhq.ride ]] || { echo 'Unexpected bundle ID' >&2; exit 1; }
 [[ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$plist")" == "$marketing" ]] || { echo 'Unexpected marketing version' >&2; exit 1; }
 [[ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$plist")" == "$build" ]] || { echo 'Unexpected build number' >&2; exit 1; }
-# Developer ID Application, issued to the TrainStack team.
-requirement='anchor apple generic and identifier "com.trainstackhq.ride" and certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = "S64PDPJKMJ"'
-codesign --verify --deep --strict --verbose=2 --test-requirement="=$requirement" "$app"
-# Developer ID cannot hold Sign in with Apple, but the keychain needs the application identifier.
-# PlistBuddy, unlike plutil, does not split these keys at their dots.
+developer_id_application_for_trainstack_team='anchor apple generic and identifier "com.trainstackhq.ride" and certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = "S64PDPJKMJ"'
+codesign --verify --deep --strict --verbose=2 --test-requirement="=$developer_id_application_for_trainstack_team" "$app"
 codesign --display --entitlements "$work/entitlements.plist" --xml "$app"
 for key in com.apple.application-identifier com.apple.security.app-sandbox com.apple.security.device.bluetooth; do
   /usr/libexec/PlistBuddy -c "Print :$key" "$work/entitlements.plist" > /dev/null || { echo "Missing entitlement $key" >&2; exit 1; }
