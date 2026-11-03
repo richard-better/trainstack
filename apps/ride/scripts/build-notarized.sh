@@ -7,8 +7,10 @@
 # The version is a named release such as 1.2.0, or an alpha such as 1.2-alpha.2610151230. The app's
 # marketing version is the part before any suffix.
 #
-# In CI, set ASC_KEY_PATH, ASC_KEY_ID and ASC_ISSUER_ID to an App Store Connect API key with the
-# Admin role: Xcode signs with it and notarytool submits with it. Locally, leave them unset to
+# In CI, import the Developer ID certificate into a keychain first, and set ASC_KEY_PATH, ASC_KEY_ID
+# and ASC_ISSUER_ID to an App Store Connect API key: Xcode makes the provisioning profile with it
+# and notarytool submits with it. Apple's cloud signing will not issue Developer ID certificates to
+# an API key, even an Admin one. Locally, leave them unset to
 # sign with the Xcode account and set NOTARY_KEYCHAIN_PROFILE to a profile saved with
 # `xcrun notarytool store-credentials`.
 set -euo pipefail
