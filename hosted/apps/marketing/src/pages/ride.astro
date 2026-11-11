@@ -1,33 +1,11 @@
 ---
-import PlatformCopy, { type InstallTab, type Platform } from "../components/site/PlatformCopy.astro";
 import SiteFooter from "../components/site/SiteFooter.astro";
 import SiteHeader from "../components/site/SiteHeader.astro";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { brewInstall, links } from "../lib/links";
-import { interactiveTile, liftOnHover, tile } from "../lib/tile";
+import { tile } from "../lib/tile";
 
-const platforms = {
-  mac: {
-    name: "Mac",
-    body: "The whole workout on a big screen, with keyboard shortcuts for pause, skip and nudge.",
-    action: { label: "Install for Mac", tab: "macos" },
-  },
-  iphone: {
-    name: "iPhone",
-    body: "Clip it to the bars. The ride keeps going with the screen locked or the app in the background.",
-    action: { label: "Get the alpha", tab: "ios" },
-  },
-  ipad: {
-    name: "iPad",
-    body: "History with power, heart rate, zones and a power curve for every ride.",
-    action: { label: "Get the alpha", tab: "ios" },
-  },
-  watch: {
-    name: "Apple Watch",
-    body: "Heart rate straight from your wrist, with the current interval at a glance.",
-    action: { note: "Comes with the iPhone app" },
-  },
-} satisfies Record<string, Platform>;
+type InstallTab = "macos" | "ios";
 
 const reasons = [
   { title: "Trainer control", body: "ERG, Slope and Level on any Bluetooth FTMS trainer. Ride sets the resistance, you pedal." },
@@ -75,112 +53,218 @@ const installRows: Record<InstallTab, InstallRow[]> = {
   description="Ride is an open-source indoor cycling app for Mac, iPhone, iPad and Apple Watch. Pick a structured workout and Ride sets your smart trainer's resistance for every interval."
 >
   <div class="min-h-screen overflow-x-clip bg-[#0b0b0c] font-geist text-ts-mist">
-    <SiteHeader product={{ name: "Ride", href: "/ride" }} installHref="#install" />
+    <SiteHeader product={{ name: "Ride", href: "/ride" }} />
 
     <main>
-      <section class="mx-auto max-w-[1240px] px-4 pt-10 md:px-8 md:pt-16">
-        <p style="--reveal-delay: 0ms" class="reveal m-0 font-geist-mono text-[11px] tracking-[0.28em] text-ts-muted uppercase">
-          Trainstack Ride · Open source
-        </p>
-        <h1 style="--reveal-delay: 60ms" class="reveal m-0 mt-5 max-w-[860px] text-[44px] leading-[0.98] font-medium tracking-[-0.04em] text-balance md:text-[76px]">
-          Indoor training, minus the game.
-        </h1>
-        <p style="--reveal-delay: 120ms" class="reveal m-0 mt-6 max-w-[620px] text-[17px] leading-[1.55] text-pretty text-[#a8aaaf]">
-          Pick a structured workout and Ride sets your smart trainer's resistance for every interval. It
-          runs on your Mac, iPhone, iPad and Apple Watch, and keeps every ride as a file you own.
-        </p>
+      <section
+        id="install"
+        class="relative px-4 pt-10 pb-24 md:pt-14 md:pb-32"
+        style="background: radial-gradient(ellipse 55% 50% at 50% 0%, #1b1c1f, rgba(11, 11, 12, 0) 70%)"
+      >
+        <div class="mx-auto flex max-w-[680px] flex-col items-center text-center">
+          <img
+            src="/trainstack-logo.svg"
+            alt=""
+            class="reveal mb-6 size-12 brightness-[1.4] invert drop-shadow-[0_20px_30px_rgba(0,0,0,0.8)]"
+          />
+          <p style="--reveal-delay: 40ms" class="reveal m-0 font-geist-mono text-[11px] tracking-[0.28em] text-ts-muted uppercase">
+            Trainstack Ride · Open source
+          </p>
+          <h1
+            style="--reveal-delay: 80ms"
+            class="reveal m-0 mt-4 text-[44px] leading-[0.98] font-medium tracking-[-0.04em] text-balance md:text-[68px]"
+          >
+            Indoor training, minus the game.
+          </h1>
+          <p style="--reveal-delay: 120ms" class="reveal m-0 mt-6 max-w-[520px] text-[17px] leading-[1.55] text-pretty text-[#a8aaaf]">
+            Pick a structured workout and Ride sets your smart trainer's resistance for every interval. Free on Mac,
+            iPhone, iPad and Apple Watch.
+          </p>
 
-        <h2 style="--reveal-delay: 200ms" class="reveal m-0 mt-16 font-geist-mono text-[11px] font-normal tracking-[0.28em] text-ts-muted uppercase">
-          Pick your device
-        </h2>
-        <ul style="--reveal-delay: 200ms" class="reveal m-0 mt-5 grid list-none gap-x-4 gap-y-12 p-0 sm:grid-cols-2 lg:grid-cols-4">
-          <li class="flex flex-col">
-            <a href="#install" data-install-tab="macos" class={interactiveTile} aria-label="Ride on Mac">
-              <img
-                src="/screenshots/ride-mac-player.png"
-                alt="Ride on Mac, running a threshold workout in ERG mode"
-                width="1600"
-                height="1080"
-                loading="eager"
-                class:list={[
-                  "absolute top-[22%] left-[12%] w-[190%] max-w-none rounded-[10px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)] ring-1 ring-white/10",
-                  liftOnHover,
-                ]}
-              />
-            </a>
-            <PlatformCopy platform={platforms.mac} />
-          </li>
-
-          <li class="flex flex-col">
-            <a href="#install" data-install-tab="ios" class={interactiveTile} aria-label="Ride on iPhone">
+          <div style="--reveal-delay: 180ms" class="reveal w-full">
+            <div class="mt-9 w-full" data-install>
               <div
-                class:list={[
-                  "absolute top-[12%] left-1/2 w-[58%] -translate-x-1/2 rounded-[34px] border border-[#3a3c40] bg-black p-[6px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]",
-                  liftOnHover,
-                ]}
+                role="tablist"
+                aria-label="Platform"
+                class="mx-auto inline-flex gap-1 rounded-[12px] border border-[#232427] bg-[#111213] p-1"
               >
-                <img
-                  src="/screenshots/ride-iphone-player.png"
-                  alt="Ride on iPhone, mid workout"
-                  width="414"
-                  height="900"
-                  class="block h-auto w-full rounded-[28px]"
-                />
+                {
+                  installTabs.map((tab, index) => (
+                    <button
+                      type="button"
+                      role="tab"
+                      id={`install-tab-${tab.id}`}
+                      aria-controls={`install-panel-${tab.id}`}
+                      aria-selected={index === 0 ? "true" : "false"}
+                      tabindex={index === 0 ? 0 : -1}
+                      data-tab={tab.id}
+                      class="h-9 cursor-pointer rounded-[9px] px-5 text-[14px] text-[#8e9096] transition-colors hover:text-ts-mist aria-selected:bg-[#222326] aria-selected:text-ts-mist"
+                    >
+                      {tab.label}
+                    </button>
+                  ))
+                }
               </div>
-            </a>
-            <PlatformCopy platform={platforms.iphone} />
-          </li>
-
-          <li class="flex flex-col">
-            <a href="#install" data-install-tab="ios" class={interactiveTile} aria-label="Ride on iPad">
-              <div
-                class:list={[
-                  "absolute top-[10%] left-[14%] w-[96%] rounded-[22px] border border-[#3a3c40] bg-black p-[7px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]",
-                  liftOnHover,
-                ]}
-              >
-                <img
-                  src="/screenshots/ride-ipad-history.png"
-                  alt="Ride on iPad, showing a recovery ride's power, heart rate and zones"
-                  width="1103"
-                  height="1600"
-                  loading="lazy"
-                  class="block h-auto w-full rounded-[16px]"
-                />
-              </div>
-            </a>
-            <PlatformCopy platform={platforms.ipad} />
-          </li>
-
-          <li class="flex flex-col">
-            <div class={tile} role="img" aria-label="Ride on Apple Watch, showing interval 2 of 13 at 110 watts and 120 bpm">
-              <div class:list={["absolute inset-0 flex items-center justify-center", liftOnHover]} aria-hidden="true">
-                <div class="relative w-[48%]">
-                  <div class="absolute inset-x-[16%] -top-[70%] h-[80%] rounded-t-[10px] bg-linear-to-b from-transparent to-[#1d1e21]"></div>
-                  <div class="absolute inset-x-[16%] -bottom-[70%] h-[80%] rounded-b-[10px] bg-linear-to-t from-transparent to-[#1d1e21]"></div>
-                  <div class="absolute top-[26%] -right-[5px] h-[16%] w-[6px] rounded-full bg-[#3a3c40]"></div>
-                  <div class="relative aspect-[41/49] rounded-[32%/27%] border-[3px] border-[#2e3034] bg-black p-[14%] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
-                    <div class="flex h-full flex-col justify-between font-geist text-white">
-                      <div class="flex items-center justify-between text-[10px] text-[#9a9ca1]">
-                        <span>2 of 13</span>
-                        <span class="text-[#7aa7ff]">Z2</span>
+  
+              {
+                installTabs.map((tab, index) => (
+                  <div
+                    role="tabpanel"
+                    id={`install-panel-${tab.id}`}
+                    aria-labelledby={`install-tab-${tab.id}`}
+                    hidden={index !== 0}
+                    class="mt-5 overflow-hidden rounded-[12px] border border-[#232427] bg-[#0f1011] text-left"
+                  >
+                    {installRows[tab.id].map((row) => (
+                      <div class="flex min-h-[56px] items-center gap-4 border-[#1d1e20] px-4 py-2.5 not-first:border-t sm:gap-6 sm:px-5">
+                        <span class="w-[76px] flex-none text-[14px] font-medium sm:w-[104px]">{row.label}</span>
+                        {"command" in row ? (
+                          <>
+                            <code class="min-w-0 flex-1 overflow-x-auto font-geist-mono text-[13px] whitespace-nowrap text-[#c3c5c9] [scrollbar-width:none]" title={row.command}>
+                              {row.command}
+                            </code>
+                            <button
+                              type="button"
+                              data-copy={row.command}
+                              aria-label={`Copy ${row.label} command`}
+                              class="group/copy grid size-9 flex-none cursor-pointer place-items-center rounded-[8px] border border-[#2a2b2f] text-[#c3c5c9] transition-colors hover:border-[#3a3c40] hover:text-ts-mist"
+                            >
+                              <svg class="size-4 group-data-copied/copy:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="9" y="9" width="12" height="12" rx="2" />
+                                <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                              </svg>
+                              <svg class="hidden size-4 group-data-copied/copy:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M5 12.5l4.5 4.5L19 7.5" />
+                              </svg>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span class="min-w-0 flex-1 text-[13px] text-[#8e9096]">{row.detail}</span>
+                            {"href" in row && (
+                              <a
+                                href={row.href}
+                                aria-label={row.linkLabel}
+                                class="grid size-9 flex-none place-items-center rounded-[8px] bg-ts-mist text-ts-night transition-opacity hover:opacity-80"
+                              >
+                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  {row.label === "Download" ? <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" /> : <path d="M7 17 17 7M8 7h9v9" />}
+                                </svg>
+                              </a>
+                            )}
+                          </>
+                        )}
                       </div>
-                      <div class="font-geist-mono text-[26px] leading-none tracking-[-0.04em]">1:21</div>
-                      <div class="flex items-baseline justify-between text-[13px] leading-none">
-                        <span>110<span class="text-[9px] text-[#9a9ca1]"> W</span></span>
-                        <span class="text-[#ff5b55]">♥ 120</span>
+                    ))}
+                  </div>
+                ))
+              }
+            </div>
+  
+            <p class="m-0 mt-6 text-[13px] text-[#6e7177]">
+              Or <a href={links.github} class="text-[#a8aaaf] underline underline-offset-3 hover:text-ts-mist">build it from source</a>.
+              Ride is an early alpha, so please <a href={`${links.github}/issues/new?template=ride-bug.yml`} class="text-[#a8aaaf] underline underline-offset-3 hover:text-ts-mist">tell us what breaks</a>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-[1240px] px-4 md:px-8" aria-labelledby="screens-heading">
+        <h2 id="screens-heading" class="m-0 font-geist-mono text-[11px] font-normal tracking-[0.28em] text-ts-muted uppercase">
+          On every screen
+        </h2>
+        <figure class="m-0 mt-5">
+          <div class="overflow-hidden rounded-[14px] border border-[#222326] bg-[#121314] p-3 md:p-5">
+            <img
+              src="/screenshots/ride-mac-player.png"
+              alt="Ride on Mac, running a threshold workout in ERG mode"
+              width="1600"
+              height="1080"
+              loading="lazy"
+              class="block h-auto w-full rounded-[10px] ring-1 ring-white/10"
+            />
+          </div>
+          <figcaption class="mt-4 flex flex-col gap-1 sm:flex-row sm:gap-3">
+            <span class="font-geist-mono text-[14px] font-medium">Mac</span>
+            <span class="text-[14px] text-[#8e9096]">The whole workout on a big screen, with keyboard shortcuts for pause, skip and nudge.</span>
+          </figcaption>
+        </figure>
+
+        <ul class="m-0 mt-12 grid list-none gap-x-4 gap-y-12 p-0 md:grid-cols-3">
+          <li>
+            <figure class="m-0">
+              <div class={tile}>
+                <div class="absolute top-[10%] left-1/2 w-[56%] -translate-x-1/2 rounded-[34px] border border-[#3a3c40] bg-black p-[6px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+                  <img
+                    src="/screenshots/ride-iphone-player.png"
+                    alt="Ride on iPhone, mid workout"
+                    width="414"
+                    height="900"
+                    loading="lazy"
+                    class="block h-auto w-full rounded-[28px]"
+                  />
+                </div>
+              </div>
+              <figcaption class="mt-4 flex flex-col gap-1">
+                <span class="font-geist-mono text-[14px] font-medium">iPhone</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">Clip it to the bars. The ride keeps going with the screen locked.</span>
+              </figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure class="m-0">
+              <div class={tile}>
+                <div class="absolute top-[8%] left-[12%] w-[96%] rounded-[22px] border border-[#3a3c40] bg-black p-[7px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+                  <img
+                    src="/screenshots/ride-ipad-history.png"
+                    alt="Ride on iPad, showing a recovery ride's power, heart rate and zones"
+                    width="1103"
+                    height="1600"
+                    loading="lazy"
+                    class="block h-auto w-full rounded-[16px]"
+                  />
+                </div>
+              </div>
+              <figcaption class="mt-4 flex flex-col gap-1">
+                <span class="font-geist-mono text-[14px] font-medium">iPad</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">Power, heart rate, zones and a power curve for every ride.</span>
+              </figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure class="m-0">
+              <div class={`${tile} flex items-center justify-center`} role="img" aria-label="Ride on Apple Watch, showing interval 2 of 13 at 110 watts and 120 bpm">
+                <div class="contents" aria-hidden="true">
+                  <div class="relative w-[48%]">
+                    <div class="absolute inset-x-[16%] -top-[70%] h-[80%] rounded-t-[10px] bg-linear-to-b from-transparent to-[#1d1e21]"></div>
+                    <div class="absolute inset-x-[16%] -bottom-[70%] h-[80%] rounded-b-[10px] bg-linear-to-t from-transparent to-[#1d1e21]"></div>
+                    <div class="absolute top-[26%] -right-[5px] h-[16%] w-[6px] rounded-full bg-[#3a3c40]"></div>
+                    <div class="relative aspect-[41/49] rounded-[32%/27%] border-[3px] border-[#2e3034] bg-black p-[14%] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+                      <div class="flex h-full flex-col justify-between font-geist text-white">
+                        <div class="flex items-center justify-between text-[10px] text-[#9a9ca1]">
+                          <span>2 of 13</span>
+                          <span class="text-[#7aa7ff]">Z2</span>
+                        </div>
+                        <div class="font-geist-mono text-[26px] leading-none tracking-[-0.04em]">1:21</div>
+                        <div class="flex items-baseline justify-between text-[13px] leading-none">
+                          <span>110<span class="text-[9px] text-[#9a9ca1]"> W</span></span>
+                          <span class="text-[#ff5b55]">♥ 120</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <PlatformCopy platform={platforms.watch} />
+              <figcaption class="mt-4 flex flex-col gap-1">
+                <span class="font-geist-mono text-[14px] font-medium">Apple Watch</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">Heart rate from your wrist, with the current interval at a glance.</span>
+              </figcaption>
+            </figure>
           </li>
         </ul>
       </section>
 
-      <section class="mx-auto mt-24 grid max-w-[1240px] gap-10 border-t border-[#1d1e20] px-4 pt-14 md:mt-32 md:px-8 lg:grid-cols-[1fr_3fr]">
+      <section class="mx-auto mt-24 mb-24 grid max-w-[1240px] gap-10 border-t border-[#1d1e20] px-4 pt-14 md:mt-32 md:mb-32 md:px-8 lg:grid-cols-[1fr_3fr]">
         <h2 class="m-0 text-[22px] font-medium tracking-[-0.02em]">What is Ride?</h2>
         <ul class="m-0 grid list-none gap-x-4 gap-y-9 p-0 sm:grid-cols-2">
           {
@@ -192,111 +276,6 @@ const installRows: Record<InstallTab, InstallRow[]> = {
             ))
           }
         </ul>
-      </section>
-
-      <section
-        id="install"
-        class="relative mt-24 scroll-mt-6 px-4 pt-24 pb-28 md:mt-32 md:pt-32 md:pb-36"
-        style="background: radial-gradient(ellipse 50% 45% at 50% 0%, #1b1c1f, rgba(11, 11, 12, 0) 70%)"
-      >
-        <div class="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[#2a2b2f] to-transparent"></div>
-        <div class="mx-auto flex max-w-[680px] flex-col items-center text-center">
-          <img
-            src="/trainstack-logo.svg"
-            alt=""
-            class="mb-8 size-16 brightness-[1.4] invert drop-shadow-[0_20px_30px_rgba(0,0,0,0.8)]"
-          />
-          <h2 class="m-0 text-[44px] leading-none font-medium tracking-[-0.04em] text-balance md:text-[64px]">
-            Ride tonight.
-          </h2>
-          <p class="m-0 mt-5 max-w-[460px] text-[17px] leading-[1.55] text-pretty text-[#a8aaaf]">
-            Free and open source. Install it, pair your trainer and pick a workout.
-          </p>
-
-          <div class="mt-9 w-full" data-install>
-            <div
-              role="tablist"
-              aria-label="Platform"
-              class="mx-auto inline-flex gap-1 rounded-[12px] border border-[#232427] bg-[#111213] p-1"
-            >
-              {
-                installTabs.map((tab, index) => (
-                  <button
-                    type="button"
-                    role="tab"
-                    id={`install-tab-${tab.id}`}
-                    aria-controls={`install-panel-${tab.id}`}
-                    aria-selected={index === 0 ? "true" : "false"}
-                    tabindex={index === 0 ? 0 : -1}
-                    data-tab={tab.id}
-                    class="h-9 cursor-pointer rounded-[9px] px-5 text-[14px] text-[#8e9096] transition-colors hover:text-ts-mist aria-selected:bg-[#222326] aria-selected:text-ts-mist"
-                  >
-                    {tab.label}
-                  </button>
-                ))
-              }
-            </div>
-
-            {
-              installTabs.map((tab, index) => (
-                <div
-                  role="tabpanel"
-                  id={`install-panel-${tab.id}`}
-                  aria-labelledby={`install-tab-${tab.id}`}
-                  hidden={index !== 0}
-                  class="mt-5 overflow-hidden rounded-[12px] border border-[#232427] bg-[#0f1011] text-left"
-                >
-                  {installRows[tab.id].map((row) => (
-                    <div class="flex min-h-[56px] items-center gap-4 border-[#1d1e20] px-4 py-2.5 not-first:border-t sm:gap-6 sm:px-5">
-                      <span class="w-[76px] flex-none text-[14px] font-medium sm:w-[104px]">{row.label}</span>
-                      {"command" in row ? (
-                        <>
-                          <code class="min-w-0 flex-1 overflow-x-auto font-geist-mono text-[13px] whitespace-nowrap text-[#c3c5c9] [scrollbar-width:none]" title={row.command}>
-                            {row.command}
-                          </code>
-                          <button
-                            type="button"
-                            data-copy={row.command}
-                            aria-label={`Copy ${row.label} command`}
-                            class="group/copy grid size-9 flex-none cursor-pointer place-items-center rounded-[8px] border border-[#2a2b2f] text-[#c3c5c9] transition-colors hover:border-[#3a3c40] hover:text-ts-mist"
-                          >
-                            <svg class="size-4 group-data-copied/copy:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                              <rect x="9" y="9" width="12" height="12" rx="2" />
-                              <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-                            </svg>
-                            <svg class="hidden size-4 group-data-copied/copy:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                              <path d="M5 12.5l4.5 4.5L19 7.5" />
-                            </svg>
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span class="min-w-0 flex-1 text-[13px] text-[#8e9096]">{row.detail}</span>
-                          {"href" in row && (
-                            <a
-                              href={row.href}
-                              aria-label={row.linkLabel}
-                              class="grid size-9 flex-none place-items-center rounded-[8px] bg-ts-mist text-ts-night transition-opacity hover:opacity-80"
-                            >
-                              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                {row.label === "Download" ? <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" /> : <path d="M7 17 17 7M8 7h9v9" />}
-                              </svg>
-                            </a>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))
-            }
-          </div>
-
-          <p class="m-0 mt-6 text-[13px] text-[#6e7177]">
-            Or <a href={links.github} class="text-[#a8aaaf] underline underline-offset-3 hover:text-ts-mist">build it from source</a>.
-            Ride is an early alpha, so please <a href={`${links.github}/issues/new?template=ride-bug.yml`} class="text-[#a8aaaf] underline underline-offset-3 hover:text-ts-mist">tell us what breaks</a>.
-          </p>
-        </div>
       </section>
     </main>
 
@@ -330,8 +309,8 @@ const installRows: Record<InstallTab, InstallRow[]> = {
     });
   }
 
-  for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-install-tab]")) {
-    link.addEventListener("click", () => selectTab(link.dataset.installTab ?? ""));
+  if (/iPhone|iPad/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))) {
+    selectTab("ios");
   }
 
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
