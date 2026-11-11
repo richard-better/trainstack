@@ -1,0 +1,47 @@
+---
+interface Props {
+  name: string;
+  label: string;
+  width: number;
+  height: number;
+  class?: string;
+}
+
+const { name, label, width, height, class: className } = Astro.props;
+---
+
+<video
+  data-demo-video
+  class:list={["block h-auto w-full", className]}
+  width={width}
+  height={height}
+  poster={`/videos/${name}.jpg`}
+  aria-label={label}
+  muted
+  loop
+  playsinline
+  preload="none"
+>
+  <source src={`/videos/${name}.mp4`} type="video/mp4" />
+</video>
+
+<script>
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const videos = document.querySelectorAll<HTMLVideoElement>("[data-demo-video]");
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const video = entry.target as HTMLVideoElement;
+        if (entry.isIntersecting && !reducedMotion.matches) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+    },
+    { threshold: 0.35 },
+  );
+
+  for (const video of videos) observer.observe(video);
+</script>

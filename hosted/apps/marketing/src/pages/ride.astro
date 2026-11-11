@@ -1,4 +1,5 @@
 ---
+import DemoVideo from "../components/site/DemoVideo.astro";
 import SiteFooter from "../components/site/SiteFooter.astro";
 import SiteHeader from "../components/site/SiteHeader.astro";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
@@ -175,13 +176,12 @@ const installRows: Record<InstallTab, InstallRow[]> = {
         </h2>
         <figure class="m-0 mt-5">
           <div class="overflow-hidden rounded-[14px] border border-[#222326] bg-[#121314] p-3 md:p-5">
-            <img
-              src="/screenshots/ride-mac-player.png"
-              alt="Ride on Mac, running a threshold workout in ERG mode"
-              width="1600"
-              height="1080"
-              loading="lazy"
-              class="block h-auto w-full rounded-[10px] ring-1 ring-white/10"
+            <DemoVideo
+              name="ride-mac"
+              label="Ride on Mac: a threshold workout in ERG mode steps up to the next interval"
+              width={1600}
+              height={920}
+              class="rounded-[10px] ring-1 ring-white/10"
             />
           </div>
           <figcaption class="mt-4 flex flex-col gap-1 sm:flex-row sm:gap-3">
@@ -195,13 +195,12 @@ const installRows: Record<InstallTab, InstallRow[]> = {
             <figure class="m-0">
               <div class={tile}>
                 <div class="absolute top-[10%] left-1/2 w-[56%] -translate-x-1/2 rounded-[34px] border border-[#3a3c40] bg-black p-[6px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
-                  <img
-                    src="/screenshots/ride-iphone-player.png"
-                    alt="Ride on iPhone, mid workout"
-                    width="414"
-                    height="900"
-                    loading="lazy"
-                    class="block h-auto w-full rounded-[28px]"
+                  <DemoVideo
+                    name="ride-iphone"
+                    label="Ride on iPhone: picking a workout for the time you have and starting the ride"
+                    width={600}
+                    height={1304}
+                    class="rounded-[28px]"
                   />
                 </div>
               </div>
@@ -215,13 +214,12 @@ const installRows: Record<InstallTab, InstallRow[]> = {
             <figure class="m-0">
               <div class={tile}>
                 <div class="absolute top-[8%] left-[12%] w-[96%] rounded-[22px] border border-[#3a3c40] bg-black p-[7px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
-                  <img
-                    src="/screenshots/ride-ipad-history.png"
-                    alt="Ride on iPad, showing a recovery ride's power, heart rate and zones"
-                    width="1103"
-                    height="1600"
-                    loading="lazy"
-                    class="block h-auto w-full rounded-[16px]"
+                  <DemoVideo
+                    name="ride-ipad"
+                    label="Ride on iPad: a ride's zones and power curve, then the workout library and Today"
+                    width={900}
+                    height={1306}
+                    class="rounded-[16px]"
                   />
                 </div>
               </div>
@@ -233,22 +231,22 @@ const installRows: Record<InstallTab, InstallRow[]> = {
           </li>
           <li>
             <figure class="m-0">
-              <div class={`${tile} flex items-center justify-center`} role="img" aria-label="Ride on Apple Watch, showing interval 2 of 13 at 110 watts and 120 bpm">
+              <div class={`${tile} flex items-center justify-center`} role="img" aria-label="Ride on Apple Watch, counting down each interval with its zone, power and heart rate">
                 <div class="contents" aria-hidden="true">
                   <div class="relative w-[48%]">
                     <div class="absolute inset-x-[16%] -top-[70%] h-[80%] rounded-t-[10px] bg-linear-to-b from-transparent to-[#1d1e21]"></div>
                     <div class="absolute inset-x-[16%] -bottom-[70%] h-[80%] rounded-b-[10px] bg-linear-to-t from-transparent to-[#1d1e21]"></div>
                     <div class="absolute top-[26%] -right-[5px] h-[16%] w-[6px] rounded-full bg-[#3a3c40]"></div>
                     <div class="relative aspect-[41/49] rounded-[32%/27%] border-[3px] border-[#2e3034] bg-black p-[14%] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
-                      <div class="flex h-full flex-col justify-between font-geist text-white">
+                      <div data-watch class="flex h-full flex-col justify-between font-geist text-white">
                         <div class="flex items-center justify-between text-[10px] text-[#9a9ca1]">
-                          <span>2 of 13</span>
-                          <span class="text-[#7aa7ff]">Z2</span>
+                          <span data-watch-interval>2 of 13</span>
+                          <span data-watch-zone class="text-[#7aa7ff] transition-colors">Z2</span>
                         </div>
-                        <div class="font-geist-mono text-[26px] leading-none tracking-[-0.04em]">1:21</div>
+                        <div data-watch-time class="font-geist-mono text-[26px] leading-none tracking-[-0.04em] tabular-nums">0:21</div>
                         <div class="flex items-baseline justify-between text-[13px] leading-none">
-                          <span>110<span class="text-[9px] text-[#9a9ca1]"> W</span></span>
-                          <span class="text-[#ff5b55]">♥ 120</span>
+                          <span><span data-watch-power class="tabular-nums">110</span><span class="text-[9px] text-[#9a9ca1]"> W</span></span>
+                          <span class="text-[#ff5b55]">♥ <span data-watch-heart-rate class="tabular-nums">120</span></span>
                         </div>
                       </div>
                     </div>
@@ -308,6 +306,55 @@ const installRows: Record<InstallTab, InstallRow[]> = {
       selectTab(next?.dataset.tab ?? "", true);
     });
   }
+
+  const watch = document.querySelector<HTMLElement>("[data-watch]");
+  const watchIntervals = [
+    { number: 2, zone: "Z2", color: "#7aa7ff", watts: 110, seconds: 21, heartRate: 122 },
+    { number: 3, zone: "Z4", color: "#f5c84c", watts: 190, seconds: 24, heartRate: 151 },
+  ];
+
+  function animateWatch(face: HTMLElement) {
+    const field = (name: string) => face.querySelector<HTMLElement>(`[data-watch-${name}]`);
+    let index = 0;
+    let remaining = watchIntervals[0]?.seconds ?? 0;
+    let heartRate = 120;
+    let timer: number | undefined;
+
+    function render() {
+      const interval = watchIntervals[index];
+      if (!interval) return;
+      const zone = field("zone");
+      if (zone) {
+        zone.textContent = interval.zone;
+        zone.style.color = interval.color;
+      }
+      field("interval")!.textContent = `${interval.number} of 13`;
+      field("time")!.textContent = `0:${String(remaining).padStart(2, "0")}`;
+      const wobble = Math.round(Math.sin(remaining * 1.7) * 3);
+      field("power")!.textContent = String(interval.watts + wobble);
+      heartRate += Math.sign(interval.heartRate - heartRate) * Math.min(2, Math.abs(interval.heartRate - heartRate));
+      field("heart-rate")!.textContent = String(Math.round(heartRate));
+    }
+
+    function tick() {
+      remaining -= 1;
+      if (remaining < 0) {
+        index = (index + 1) % watchIntervals.length;
+        remaining = watchIntervals[index]?.seconds ?? 0;
+      }
+      render();
+    }
+
+    new IntersectionObserver(([entry]) => {
+      window.clearInterval(timer);
+      timer = undefined;
+      if (entry?.isIntersecting && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        timer = window.setInterval(tick, 1000);
+      }
+    }).observe(face);
+  }
+
+  if (watch) animateWatch(watch);
 
   if (/iPhone|iPad/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))) {
     selectTab("ios");
