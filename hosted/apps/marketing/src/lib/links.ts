@@ -1,4 +1,3 @@
-const unpublishedStoreListing = "#download";
 const repository = "https://github.com/richard-better/trainstack";
 
 export const links = {
@@ -6,8 +5,6 @@ export const links = {
   docs: `${repository}/tree/main/docs`,
   rideAlphaGuide: `${repository}/blob/main/docs/ride-alpha.md`,
   rideMacDownload: `${repository}/releases/latest`,
-  appStore: unpublishedStoreListing,
-  macAppStore: unpublishedStoreListing,
 };
 
 export const brewInstall = {

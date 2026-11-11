@@ -1,25 +1,7 @@
 ---
 import { links } from "../../lib/links";
-
-interface Props {
-  label: string;
-  class?: string;
-}
-
-const { label, class: className } = Astro.props;
 ---
 
-<footer
-  class:list={[
-    "flex flex-col gap-4 px-6 py-7 text-sm text-ts-stone sm:flex-row sm:items-center sm:justify-between md:px-16",
-    className,
-  ]}
->
-  <div class="flex items-center gap-2.5">
-    <img src="/trainstack-logo.svg" alt="" class="size-5" />
-    <span>{label}</span>
-  </div>
-  <nav class="flex gap-6">
-    <a href={links.github} class="hover:opacity-75">GitHub</a>
-  </nav>
+<footer class="border-t border-[#161718] px-4 py-9 text-center text-[12px] text-[#6e7177]">
+  © 2026 Trainstack. Open source on <a href={links.github} class="text-[#a8aaaf] hover:text-ts-mist">GitHub</a>.
 </footer>
