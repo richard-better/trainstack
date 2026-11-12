@@ -1,0 +1,38 @@
+---
+import { links } from "../../lib/links";
+import GitHubIcon from "./GitHubIcon.astro";
+
+interface Props {
+  product?: { name: string; href: string };
+  installHref?: string;
+}
+
+const { product, installHref } = Astro.props;
+---
+
+<header class="mx-auto flex max-w-[1240px] items-center justify-between px-4 py-6 md:px-8">
+  <div class="flex items-center gap-2.5 text-[15px] font-semibold tracking-[0.01em]">
+    <a href="/" class="flex items-center gap-2.5 hover:opacity-75">
+      <img src="/trainstack-logo.svg" alt="" class="size-6 brightness-[1.4] invert" />
+      Trainstack
+    </a>
+    {
+      product && (
+        <>
+          <span class="font-normal text-[#4a4c51]">/</span>
+          <a href={product.href} class="font-medium hover:opacity-75">
+            {product.name}
+          </a>
+        </>
+      )
+    }
+  </div>
+  <nav class="flex items-center gap-6 text-[13px] text-[#a8aaaf]">
+    {installHref && <a href={installHref} class="hover:text-ts-mist max-sm:hidden">Install</a>}
+    <a href={links.docs} class="hover:text-ts-mist max-sm:hidden">Docs</a>
+    <a href={links.github} class="flex items-center gap-2 hover:text-ts-mist">
+      <GitHubIcon class="size-4" />
+      GitHub
+    </a>
+  </nav>
+</header>

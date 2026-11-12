@@ -1,8 +1,13 @@
-const unpublishedStoreListing = "#download";
+const repository = "https://github.com/richard-better/trainstack";
 
 export const links = {
-  github: "https://github.com/richard-better/trainstack",
-  docs: "https://github.com/richard-better/trainstack/tree/main/docs",
-  appStore: unpublishedStoreListing,
-  macAppStore: unpublishedStoreListing,
+  github: repository,
+  docs: `${repository}/tree/main/docs`,
+  rideAlphaGuide: `${repository}/blob/main/docs/ride-alpha.md`,
+  rideMacDownload: `${repository}/releases/latest`,
+};
+
+export const brewInstall = {
+  stable: "brew install --cask richard-better/tap/trainstack-ride",
+  alpha: "brew install --cask richard-better/tap/trainstack-ride@alpha",
 };

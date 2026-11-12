@@ -1,192 +1,298 @@
 ---
-import AppIcon from "../components/site/AppIcon.astro";
 import GitHubIcon from "../components/site/GitHubIcon.astro";
+import SiteFooter from "../components/site/SiteFooter.astro";
+import SiteHeader from "../components/site/SiteHeader.astro";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import { links } from "../lib/links";
+import { interactiveTile, liftOnHover, primaryButton, quietPill, tile } from "../lib/tile";
 
-const values = [
-  { label: "Open source", icon: ["M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z", "M9 15l3-6 3 6"] },
-  { label: "Built for athletes", icon: ["M13 2L3 14h9l-1 8 10-12h-9l1-8z"] },
-  { label: "Runs on your devices", icon: ["M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z", "M11 18h2"] },
+const products = {
+  ride: {
+    name: "Ride",
+    body: "Indoor cycling. Pick a structured workout and your smart trainer holds every interval.",
+  },
+  pre: {
+    name: "Pre",
+    body: "Prehab and rehab programmes that keep you training through niggles and injuries.",
+  },
+  plan: {
+    name: "Plan",
+    body: "Plans built from your goals and race dates, and kept up to date as life happens.",
+  },
+  recover: {
+    name: "Recover",
+    body: "Sleep and wearable data feeding your training load, right next to your plan.",
+  },
+};
+
+const preExercises = [
+  { name: "Glute bridge", dose: "3 × 12", done: true },
+  { name: "Copenhagen plank", dose: "3 × 20 s", done: true },
+  { name: "Single-leg RDL", dose: "3 × 8", done: false },
+  { name: "Tibialis raise", dose: "2 × 15", done: false },
+];
+
+const planWeek = [
+  { day: "M", load: 0 },
+  { day: "T", load: 70 },
+  { day: "W", load: 35 },
+  { day: "T", load: 85, today: true },
+  { day: "F", load: 0 },
+  { day: "S", load: 100 },
+  { day: "S", load: 45 },
+];
+
+const sleepNights = [62, 78, 54, 81, 88, 70, 84];
+
+const principles = [
   {
-    label: "No lock-in",
-    icon: [
-      "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z",
-    ],
+    title: "One system",
+    body: "Riding, planning and recovery share one history, so the plan knows how you slept and what's in your calendar.",
+  },
+  {
+    title: "Open source",
+    body: "The apps are open source and the server is source-available. The community can extend it, and anyone can self-host it.",
+  },
+  {
+    title: "Your data",
+    body: "Workouts are standard files, saved to Apple Health and your own iCloud. Export them whenever you like.",
+  },
+  {
+    title: "Ride comes first",
+    body: "Ride is useful on its own today, and every session produces the data the rest of the stack builds on.",
   },
 ];
 
-const nav = [
-  { label: "Apps", href: "#apps" },
-  { label: "Docs", href: links.docs },
-];
+const comingSoonTile = `${tile} flex items-center justify-center`;
 ---
 
 <MarketingLayout
   title="Trainstack - The last training app you'll need"
   description="A growing set of open-source apps for every part of your training. First up is Ride, which drives your smart trainer through structured workouts."
 >
-  <div class="min-h-screen bg-ts-night font-geist text-ts-mist">
-    <div class="px-3 pt-3 md:px-5 md:pt-5">
-      <div
-        class="rounded-t-[18px] border border-b-0 border-[#26272a]"
-        style="background: radial-gradient(ellipse 50% 55% at 50% 22%, #2a2b2e, rgba(15, 16, 17, 0) 70%), linear-gradient(180deg, #151618, var(--color-ts-night))"
-      >
-        <header class="flex items-center justify-between gap-6 px-5 py-5 md:px-7">
-          <a href="/" class="flex items-center gap-2.5 text-[17px] font-semibold">
-            <img src="/trainstack-logo.svg" alt="" class="size-7 brightness-[1.4] invert" />
-            <span>Trainstack</span>
-          </a>
-          <nav class="flex items-center gap-5 text-[13px] text-[#b4b6bb] sm:gap-8">
-            {nav.map((item) => <a href={item.href} class="hover:opacity-75">{item.label}</a>)}
-            <a
-              href={links.github}
-              class="flex items-center gap-2 rounded-[9px] border border-[#3a3c40] bg-ts-night/60 px-4 py-[9px] text-ts-mist hover:opacity-75"
-            >
-              <GitHubIcon />
-              <span class="max-sm:sr-only">GitHub</span>
-            </a>
-          </nav>
-        </header>
+  <div class="min-h-screen overflow-x-clip bg-[#0b0b0c] font-geist text-ts-mist">
+    <SiteHeader />
 
-        <section class="flex flex-col items-center px-6 pt-4 pb-10 text-center">
-          <p class="m-0 font-geist-mono text-[11px] tracking-[0.32em] text-ts-muted">OPEN SOURCE TRAINING</p>
-          <img
-            src="/trainstack-logo.svg"
-            alt="Trainstack"
-            class="mt-7 mb-6 size-28 brightness-[1.4] invert drop-shadow-[0_26px_30px_rgba(0,0,0,0.7)] md:size-[140px]"
-          />
-          <h1 class="m-0 text-[40px] leading-none font-medium tracking-[-0.035em] md:text-[56px]">
-            The last training app you'll need.
-          </h1>
-          <p class="m-0 mt-[18px] max-w-[500px] text-[17px] leading-normal text-pretty text-[#b4b6bb]">
-            A growing set of open-source apps for every part of your training.
-          </p>
-          <div class="mt-7 flex flex-wrap justify-center gap-3">
-            <a
-              href={links.github}
-              class="flex items-center gap-2.5 rounded-[10px] bg-ts-mist px-[22px] py-[13px] text-sm font-medium text-ts-night hover:opacity-75"
-            >
-              <GitHubIcon />
-              View on GitHub
-            </a>
-            <a
-              href="#apps"
-              class="flex items-center gap-2.5 rounded-[10px] border border-[#3a3c40] bg-ts-night/50 px-[22px] py-[13px] text-sm font-medium hover:opacity-75"
-            >
-              See the apps
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </a>
-          </div>
-          <ul class="m-0 mt-11 flex list-none flex-wrap justify-center gap-y-3 p-0 text-xs text-[#b4b6bb]">
-            {
-              values.map((value) => (
-                <li class="flex items-center gap-2.5 border-[#2a2b2e] px-6 md:[&:not(:first-child)]:border-l">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e9096" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    {value.icon.map((d) => <path d={d} />)}
-                  </svg>
-                  {value.label}
-                </li>
-              ))
-            }
-          </ul>
-        </section>
-      </div>
-    </div>
-
-    <section
-      id="apps"
-      class="grid items-center gap-12 border-t border-[#232427] px-6 pt-11 pb-13 md:px-13 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-13"
-      style="background: radial-gradient(ellipse 60% 70% at 70% 40%, #1a1b1d, var(--color-ts-night) 70%)"
-    >
-      <div class="flex flex-col gap-[18px]">
-        <p class="m-0 font-geist-mono text-[11px] tracking-[0.32em] text-ts-muted">THE APPS</p>
-        <h2 class="m-0 font-serif text-5xl leading-none font-normal md:text-[54px]">One layer at a time.</h2>
-        <p class="m-0 max-w-[380px] text-[15px] leading-[1.55] text-[#b4b6bb]">
-          Each app covers one part of training, and they all share a single history.
+    <main>
+      <section class="mx-auto max-w-[1240px] px-4 pt-10 md:px-8 md:pt-16">
+        <p class="reveal m-0 font-geist-mono text-[11px] tracking-[0.28em] text-ts-muted uppercase">
+          Open source training
         </p>
-        <ul class="m-0 mt-2.5 flex list-none flex-col gap-2 p-0">
-          <li>
-            <a
-              href="/ride"
-              class="flex items-center gap-5 rounded-xl border border-[#4a4c51] bg-linear-to-r from-[#1e1f22] to-[#17181a] px-[22px] py-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:opacity-75"
-            >
-              <AppIcon name="ride" size={24} />
-              <span class="flex flex-1 flex-col gap-[3px]">
-                <span class="text-[17px] font-medium">Ride</span>
-                <span class="text-[13px] text-ts-muted">Indoor cycling, structured workouts, trainer control</span>
-              </span>
-              <span class="flex-none rounded-full bg-ts-mist px-[11px] py-[5px] text-[11px] font-medium whitespace-nowrap text-ts-night max-sm:hidden">
-                Available now
-              </span>
-              <span aria-hidden="true" class="text-[#b4b6bb]">→</span>
+        <h1
+          style="--reveal-delay: 60ms"
+          class="reveal m-0 mt-5 max-w-[900px] text-[44px] leading-[0.98] font-medium tracking-[-0.04em] text-balance md:text-[76px]"
+        >
+          The last training app you'll need.
+        </h1>
+        <p style="--reveal-delay: 120ms" class="reveal m-0 mt-6 max-w-[600px] text-[17px] leading-[1.55] text-pretty text-[#a8aaaf]">
+          A growing set of open-source apps for every part of your training, sharing one history. Ride is the first,
+          and the rest are on the way.
+        </p>
+
+        <h2
+          style="--reveal-delay: 200ms"
+          class="reveal m-0 mt-16 font-geist-mono text-[11px] font-normal tracking-[0.28em] text-ts-muted uppercase"
+        >
+          The apps
+        </h2>
+        <ul style="--reveal-delay: 200ms" class="reveal m-0 mt-5 grid list-none gap-x-4 gap-y-12 p-0 sm:grid-cols-2 lg:grid-cols-4">
+          <li class="flex flex-col">
+            <a href="/ride" class={interactiveTile} aria-label="Ride">
+              <img
+                src="/screenshots/ride-mac-player.png"
+                alt="Ride on Mac, running a threshold workout in ERG mode"
+                width="1600"
+                height="1080"
+                loading="eager"
+                class:list={[
+                  "absolute top-[18%] left-[12%] w-[190%] max-w-none rounded-[10px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)] ring-1 ring-white/10",
+                  liftOnHover,
+                ]}
+              />
+              <div
+                class:list={[
+                  "absolute bottom-[-18%] left-[8%] w-[34%] rounded-[22px] border border-[#3a3c40] bg-black p-[4px] shadow-[0_24px_50px_-10px_rgba(0,0,0,0.95)]",
+                  liftOnHover,
+                ]}
+              >
+                <img
+                  src="/screenshots/ride-iphone-player.png"
+                  alt=""
+                  width="414"
+                  height="900"
+                  class="block h-auto w-full rounded-[18px]"
+                />
+              </div>
             </a>
-          </li>
-          <li class="flex items-center gap-5 rounded-xl border border-[#26272a] bg-[#141517] px-[22px] py-[18px]">
-            <AppIcon name="pre" size={24} class="text-[#b4b6bb]" />
-            <span class="flex flex-1 flex-col gap-[3px]">
-              <span class="text-[17px] font-medium">Pre</span>
-              <span class="text-[13px] text-ts-muted">Prehab and rehab programmes</span>
-            </span>
-            <span class="flex-none rounded-full border border-[#3a3c40] px-[11px] py-[5px] text-[11px] whitespace-nowrap text-[#b4b6bb]">
-              Coming soon
-            </span>
-          </li>
-          <li>
-            <a
-              href={links.github}
-              class="flex items-center gap-5 rounded-xl border border-[#26272a] bg-[#141517] px-[22px] py-[18px] hover:opacity-75"
-            >
-              <AppIcon name="more" size={24} class="text-[#b4b6bb]" />
-              <span class="flex flex-1 flex-col gap-[3px]">
-                <span class="text-[17px] font-medium">More layers</span>
-                <span class="text-[13px] text-ts-muted">More apps are on the way</span>
+            <h3 class="m-0 mt-5 flex items-center gap-2.5 font-geist-mono text-[15px] font-medium tracking-[-0.01em]">
+              {products.ride.name}
+              <span class="rounded-full bg-[#1f3a26] px-2 py-0.5 font-geist text-[11px] font-medium tracking-normal text-[#7ee39b]">
+                Available
               </span>
-              <span class="flex-none text-xs whitespace-nowrap text-[#b4b6bb] max-sm:hidden">Follow the roadmap</span>
-              <span aria-hidden="true" class="text-[#b4b6bb]">→</span>
-            </a>
+            </h3>
+            <p class="m-0 mt-2 flex-1 text-[14px] leading-[1.55] text-pretty text-[#8e9096]">{products.ride.body}</p>
+            <div class="mt-5">
+              <a href="/ride" class={primaryButton}>
+                Get Ride
+                <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14m-6-6 6 6-6 6" />
+                </svg>
+              </a>
+            </div>
+          </li>
+
+          <li class="flex flex-col">
+            <div class={comingSoonTile} role="img" aria-label="Pre preview: today's prehab session, two of four exercises done">
+              <div class="w-[78%] rounded-[12px] border border-[#26272a] bg-[#0f1011] p-4 opacity-80" aria-hidden="true">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[13px] font-medium">Knee and hip</span>
+                  <span class="font-geist-mono text-[11px] text-[#6e7177]">2 / 4</span>
+                </div>
+                <ul class="m-0 mt-3 flex list-none flex-col gap-2.5 p-0">
+                  {
+                    preExercises.map((exercise) => (
+                      <li class="flex items-center gap-2.5 text-[12px]">
+                        <span
+                          class:list={[
+                            "grid size-4 flex-none place-items-center rounded-full border",
+                            exercise.done ? "border-[#8e9096] bg-[#8e9096] text-[#0f1011]" : "border-[#3a3c40]",
+                          ]}
+                        >
+                          {exercise.done && (
+                            <svg class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M5 12.5l4.5 4.5L19 7.5" />
+                            </svg>
+                          )}
+                        </span>
+                        <span class:list={["flex-1", exercise.done ? "text-[#6e7177] line-through" : "text-[#c3c5c9]"]}>
+                          {exercise.name}
+                        </span>
+                        <span class="font-geist-mono text-[11px] text-[#6e7177]">{exercise.dose}</span>
+                      </li>
+                    ))
+                  }
+                </ul>
+              </div>
+            </div>
+            <h3 class="m-0 mt-5 font-geist-mono text-[15px] font-medium tracking-[-0.01em]">{products.pre.name}</h3>
+            <p class="m-0 mt-2 flex-1 text-[14px] leading-[1.55] text-pretty text-[#8e9096]">{products.pre.body}</p>
+            <div class="mt-5"><span class={quietPill}>Coming soon</span></div>
+          </li>
+
+          <li class="flex flex-col">
+            <div class={comingSoonTile} role="img" aria-label="Plan preview: week 3 of a base block, with today's session highlighted">
+              <div class="w-[78%] opacity-80" aria-hidden="true">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[13px] font-medium">Base · Week 3 of 8</span>
+                  <span class="font-geist-mono text-[11px] text-[#6e7177]">412 TSS</span>
+                </div>
+                <div class="mt-4 flex h-[120px] items-end gap-[6px]">
+                  {
+                    planWeek.map((day) => (
+                      <div class="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                        <div
+                          class:list={[
+                            "w-full rounded-[4px]",
+                            day.load === 0 ? "h-[3px] bg-[#26272a]" : day.today ? "bg-ts-mist" : "bg-[#3a3c40]",
+                          ]}
+                          style={day.load === 0 ? undefined : { height: `${day.load}%` }}
+                        />
+                        <span class:list={["font-geist-mono text-[10px]", day.today ? "text-ts-mist" : "text-[#6e7177]"]}>
+                          {day.day}
+                        </span>
+                      </div>
+                    ))
+                  }
+                </div>
+                <div class="mt-4 rounded-[10px] border border-[#26272a] bg-[#0f1011] px-3 py-2.5 text-[12px]">
+                  <div class="text-[#6e7177]">Today</div>
+                  <div class="mt-0.5 text-[#c3c5c9]">Sweet spot · 3 × 12 min</div>
+                </div>
+              </div>
+            </div>
+            <h3 class="m-0 mt-5 font-geist-mono text-[15px] font-medium tracking-[-0.01em]">{products.plan.name}</h3>
+            <p class="m-0 mt-2 flex-1 text-[14px] leading-[1.55] text-pretty text-[#8e9096]">{products.plan.body}</p>
+            <div class="mt-5"><span class={quietPill}>Coming soon</span></div>
+          </li>
+
+          <li class="flex flex-col">
+            <div class={comingSoonTile} role="img" aria-label="Recover preview: readiness 84 after a good week of sleep">
+              <div class="flex w-[78%] flex-col items-center opacity-80" aria-hidden="true">
+                <div class="relative size-[132px]">
+                  <svg class="size-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#1d1e21" stroke-width="7" />
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#c3c5c9" stroke-width="7" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="44" />
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-[34px] leading-none font-medium tracking-[-0.04em]">84</span>
+                    <span class="mt-1 text-[11px] text-[#6e7177]">Ready to train</span>
+                  </div>
+                </div>
+                <div class="mt-6 w-full">
+                  <div class="flex items-baseline justify-between text-[11px] text-[#6e7177]">
+                    <span>Sleep</span>
+                    <span class="font-geist-mono">7 h 42 m</span>
+                  </div>
+                  <div class="mt-2 flex h-[40px] items-end gap-[5px]">
+                    {sleepNights.map((night) => <div class="flex-1 rounded-[3px] bg-[#3a3c40]" style={{ height: `${night}%` }} />)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <h3 class="m-0 mt-5 font-geist-mono text-[15px] font-medium tracking-[-0.01em]">{products.recover.name}</h3>
+            <p class="m-0 mt-2 flex-1 text-[14px] leading-[1.55] text-pretty text-[#8e9096]">{products.recover.body}</p>
+            <div class="mt-5"><span class={quietPill}>Coming soon</span></div>
           </li>
         </ul>
-      </div>
+      </section>
 
-      <div class="relative pr-10 pb-12 sm:pr-14">
-        <img
-          src="/screenshots/ride-mac-player.png"
-          alt="Ride on Mac, running a threshold workout in ERG mode"
-          width="1600"
-          height="1080"
-          class="block h-auto w-full rounded-xl shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] ring-1 ring-[#2f3134]"
-        />
-        <div
-          class="absolute right-0 bottom-0 w-[26%] min-w-[96px] rounded-[22px] border-2 border-[#3a3c40] bg-[#0b0c0d] p-1.5 shadow-[0_30px_50px_-10px_rgba(0,0,0,0.9)]"
-        >
+      <section class="mx-auto mt-24 grid max-w-[1240px] gap-10 border-t border-[#1d1e20] px-4 pt-14 md:mt-32 md:px-8 lg:grid-cols-[1fr_3fr]">
+        <h2 class="m-0 text-[22px] font-medium tracking-[-0.02em]">What is Trainstack?</h2>
+        <ul class="m-0 grid list-none gap-x-4 gap-y-9 p-0 sm:grid-cols-2">
+          {
+            principles.map((principle) => (
+              <li class="flex flex-col gap-1.5">
+                <span class="text-[15px] font-medium">{principle.title}</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">{principle.body}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section
+        class="relative mt-24 px-4 pt-24 pb-28 md:mt-32 md:pt-32 md:pb-36"
+        style="background: radial-gradient(ellipse 50% 45% at 50% 0%, #1b1c1f, rgba(11, 11, 12, 0) 70%)"
+      >
+        <div class="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[#2a2b2f] to-transparent"></div>
+        <div class="mx-auto flex max-w-[680px] flex-col items-center text-center">
           <img
-            src="/screenshots/ride-iphone-player.png"
-            alt="Ride on iPhone, mid workout"
-            width="414"
-            height="900"
-            class="block h-auto w-full rounded-[16px]"
+            src="/trainstack-logo.svg"
+            alt=""
+            class="mb-8 size-16 brightness-[1.4] invert drop-shadow-[0_20px_30px_rgba(0,0,0,0.8)]"
           />
+          <h2 class="m-0 text-[44px] leading-none font-medium tracking-[-0.04em] text-balance md:text-[64px]">
+            Start with Ride.
+          </h2>
+          <p class="m-0 mt-5 max-w-[460px] text-[17px] leading-[1.55] text-pretty text-[#a8aaaf]">
+            Free and open source, on Mac, iPhone, iPad and Apple Watch.
+          </p>
+          <div class="mt-9 flex flex-wrap justify-center gap-3">
+            <a href="/ride" class="inline-flex h-11 items-center gap-2 rounded-[10px] bg-ts-mist px-5 text-[14px] font-medium text-ts-night transition-opacity hover:opacity-80">
+              Get Ride
+              <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14m-6-6 6 6-6 6" />
+              </svg>
+            </a>
+            <a href={links.github} class="inline-flex h-11 items-center gap-2 rounded-[10px] border border-[#2a2b2f] px-5 text-[14px] font-medium transition-colors hover:border-[#3a3c40]">
+              <GitHubIcon class="size-4" />
+              Star on GitHub
+            </a>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </main>
 
-    <footer class="px-6 md:px-13">
-      <div class="flex flex-col gap-4 border-t border-[#232427] pt-[22px] pb-[18px] sm:flex-row sm:items-center sm:justify-between">
-        <a href="/" class="flex items-center gap-2.5 text-[15px] font-semibold">
-          <img src="/trainstack-logo.svg" alt="" class="size-[22px] brightness-[1.4] invert" />
-          Trainstack
-        </a>
-        <nav class="flex gap-10 text-[13px] text-[#b4b6bb]">
-          {nav.map((item) => <a href={item.href} class="hover:opacity-75">{item.label}</a>)}
-          <a href={links.github} class="hover:opacity-75">GitHub</a>
-        </nav>
-      </div>
-      <div class="border-t border-[#1c1d1f] pt-4 pb-[22px] text-[11px] text-ts-stone">
-        © 2026 Trainstack. Open source.
-      </div>
-    </footer>
+    <SiteFooter />
   </div>
 </MarketingLayout>

@@ -1,152 +1,370 @@
 ---
+import DemoVideo from "../components/site/DemoVideo.astro";
 import SiteFooter from "../components/site/SiteFooter.astro";
-import StoreButtons from "../components/site/StoreButtons.astro";
+import SiteHeader from "../components/site/SiteHeader.astro";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
-import { links } from "../lib/links";
+import { brewInstall, links } from "../lib/links";
+import { tile } from "../lib/tile";
 
-const metrics = [
-  { label: "Target", value: "245" },
-  { label: "Power", value: "247" },
-  { label: "Cadence", value: "88" },
+type InstallTab = "macos" | "ios";
+
+const reasons = [
+  { title: "Trainer control", body: "ERG, Slope and Level on any Bluetooth FTMS trainer. Ride sets the resistance, you pedal." },
+  { title: "Workouts that fit", body: "Today suggests a session for the time you have, written against your FTP." },
+  { title: "Your data, your files", body: "Every ride is a standard .fit file, saved to Apple Health and synced with your own iCloud." },
+  { title: "Open source", body: "No account needed and no lock-in. Read the code, file an issue, or build it yourself." },
 ];
 
-const warmUp = { flex: 4, height: "30%", fill: "bg-ts-graphite" };
-const riddenEffort = { flex: 7, height: "80%", fill: "bg-linear-to-b from-ts-silver to-ts-steel" };
-const riddenRecovery = { flex: 2, height: "35%", fill: "bg-ts-steel" };
-const recoveryAhead = { flex: 2, height: "35%", fill: "bg-ts-graphite" };
-const effortAhead = { flex: 7, height: "80%", fill: "bg-ts-charcoal" };
-const coolDown = { flex: 4, height: "25%", fill: "bg-ts-graphite" };
-const sweetSpot3x12WithPlayheadInSecondEffort = [
-  warmUp,
-  riddenEffort,
-  riddenRecovery,
-  riddenEffort,
-  recoveryAhead,
-  effortAhead,
-  coolDown,
+const installTabs: { id: InstallTab; label: string }[] = [
+  { id: "macos", label: "macOS" },
+  { id: "ios", label: "iPhone & iPad" },
 ];
 
-const features = [
-  {
-    title: "Trainer control",
-    body: "Pair your smart trainer, heart rate strap and power meter. Resistance follows your targets automatically.",
-  },
-  {
-    title: "Training plans",
-    body: "Multi-week plans for base, threshold and racing. Today's session is always ready to go.",
-  },
-  {
-    title: "Yours, openly",
-    body: "Open source, with your data on your device. Sync with third-party tools if you want.",
-  },
-];
+type InstallRow =
+  | { label: string; command: string }
+  | { label: string; detail: string; href: string; linkLabel: string }
+  | { label: string; detail: string };
+
+const installRows: Record<InstallTab, InstallRow[]> = {
+  macos: [
+    { label: "Homebrew", command: brewInstall.stable },
+    {
+      label: "Download",
+      detail: "Universal app, macOS 26 or later",
+      href: links.rideMacDownload,
+      linkLabel: "Download Ride for Mac from GitHub releases",
+    },
+    { label: "Nightly", command: brewInstall.alpha },
+  ],
+  ios: [
+    {
+      label: "TestFlight",
+      detail: "Invite-only alpha, iOS 27 or later",
+      href: links.rideAlphaGuide,
+      linkLabel: "Read the Ride alpha guide",
+    },
+    { label: "App Store", detail: "Coming soon" },
+  ],
+};
+
 ---
 
 <MarketingLayout
-  title="Ride - Trainstack"
-  description="Pair your smart trainer and pick a workout or plan. Ride sets the resistance for every interval, so you just pedal."
+  title="Trainstack Ride - Indoor training, minus the game"
+  description="Ride is an open-source indoor cycling app for Mac, iPhone, iPad and Apple Watch. Pick a structured workout and Ride sets your smart trainer's resistance for every interval."
 >
-  <div class="bg-ts-ink text-ts-paper">
-    <header class="flex items-center justify-between gap-6 px-6 py-6 md:px-16">
-      <div class="flex items-center gap-2.5 text-lg font-semibold">
-        <a href="/" class="flex items-center gap-2.5 hover:opacity-75">
-          <img src="/trainstack-logo.svg" alt="" class="size-7 brightness-[1.4] invert" />
-          <span>Trainstack</span>
-        </a>
-        <span class="font-normal text-ts-stone">/</span>
-        <span class="font-medium">Ride</span>
-      </div>
-      <nav class="flex items-center gap-5 text-[15px] text-ts-ash sm:gap-8">
-        <a href="#features" class="hover:opacity-75 max-sm:hidden">Features</a>
-        <a href="/#pricing" class="hover:opacity-75 max-sm:hidden">Pricing</a>
-        <a
-          href="#download"
-          class="rounded-lg bg-ts-paper px-[18px] py-2.5 font-medium text-ts-ink hover:opacity-75"
-        >
-          Download
-        </a>
-      </nav>
-    </header>
+  <div class="min-h-screen overflow-x-clip bg-[#0b0b0c] font-geist text-ts-mist">
+    <SiteHeader product={{ name: "Ride", href: "/ride" }} />
 
-    <section
-      class="grid items-center gap-12 px-6 pt-12 pb-20 md:px-16 md:pt-[72px] md:pb-[104px] lg:grid-cols-[1fr_1.2fr] lg:gap-16"
-    >
-      <div class="flex flex-col gap-6">
-        <div class="text-[13px] text-ts-ash">Trainstack Ride</div>
-        <h1 class="m-0 font-serif text-[56px] leading-[0.98] font-normal md:text-[80px]">
-          Indoor training, minus the game.
-        </h1>
-        <p class="m-0 text-lg leading-relaxed text-ts-ash">
-          Pair your smart trainer and pick a workout or plan. Ride sets the resistance for every
-          interval, so you just pedal.
-        </p>
-        <div class="mt-1">
-          <StoreButtons tone="dark" />
-        </div>
-      </div>
-
-      <figure
-        class="m-0 flex flex-col gap-6 rounded-[18px] border border-ts-graphite bg-ts-black p-6 md:p-7"
-        aria-label="Ride workout screen mid-session"
+    <main>
+      <section
+        id="install"
+        class="relative px-4 pt-10 pb-24 md:pt-14 md:pb-32"
+        style="background: radial-gradient(ellipse 55% 50% at 50% 0%, #1b1c1f, rgba(11, 11, 12, 0) 70%)"
       >
-        <div class="flex justify-between gap-4 text-[15px] text-ts-ash">
-          <div>Sweet spot · 3 × 12 min</div>
-          <div class="font-geist-mono">32:10 / 60:00</div>
-        </div>
-        <dl class="m-0 flex gap-8 md:gap-10">
-          {
-            metrics.map((metric) => (
-              <div class="flex flex-col gap-0.5">
-                <dt class="text-xs text-ts-stone uppercase">{metric.label}</dt>
-                <dd class="m-0 font-geist-mono text-4xl md:text-[46px]">{metric.value}</dd>
-              </div>
-            ))
-          }
-        </dl>
-        <div class="relative flex h-[150px] items-end gap-[3px]" aria-hidden="true">
-          {
-            sweetSpot3x12WithPlayheadInSecondEffort.map((interval) => (
+        <div class="mx-auto flex max-w-[680px] flex-col items-center text-center">
+          <img
+            src="/trainstack-logo.svg"
+            alt=""
+            class="reveal mb-6 size-12 brightness-[1.4] invert drop-shadow-[0_20px_30px_rgba(0,0,0,0.8)]"
+          />
+          <p style="--reveal-delay: 40ms" class="reveal m-0 font-geist-mono text-[11px] tracking-[0.28em] text-ts-muted uppercase">
+            Trainstack Ride · Open source
+          </p>
+          <h1
+            style="--reveal-delay: 80ms"
+            class="reveal m-0 mt-4 text-[44px] leading-[0.98] font-medium tracking-[-0.04em] text-balance md:text-[68px]"
+          >
+            Indoor training, minus the game.
+          </h1>
+          <p style="--reveal-delay: 120ms" class="reveal m-0 mt-6 max-w-[520px] text-[17px] leading-[1.55] text-pretty text-[#a8aaaf]">
+            Pick a structured workout and Ride sets your smart trainer's resistance for every interval. Free on Mac,
+            iPhone, iPad and Apple Watch.
+          </p>
+
+          <div style="--reveal-delay: 180ms" class="reveal w-full">
+            <div class="mt-9 w-full" data-install>
               <div
-                class:list={["rounded-t-[3px]", interval.fill]}
-                style={{ flex: interval.flex, height: interval.height }}
-              />
+                role="tablist"
+                aria-label="Platform"
+                class="mx-auto inline-flex gap-1 rounded-[12px] border border-[#232427] bg-[#111213] p-1"
+              >
+                {
+                  installTabs.map((tab, index) => (
+                    <button
+                      type="button"
+                      role="tab"
+                      id={`install-tab-${tab.id}`}
+                      aria-controls={`install-panel-${tab.id}`}
+                      aria-selected={index === 0 ? "true" : "false"}
+                      tabindex={index === 0 ? 0 : -1}
+                      data-tab={tab.id}
+                      class="h-9 cursor-pointer rounded-[9px] px-5 text-[14px] text-[#8e9096] transition-colors hover:text-ts-mist aria-selected:bg-[#222326] aria-selected:text-ts-mist"
+                    >
+                      {tab.label}
+                    </button>
+                  ))
+                }
+              </div>
+  
+              {
+                installTabs.map((tab, index) => (
+                  <div
+                    role="tabpanel"
+                    id={`install-panel-${tab.id}`}
+                    aria-labelledby={`install-tab-${tab.id}`}
+                    hidden={index !== 0}
+                    class="mt-5 overflow-hidden rounded-[12px] border border-[#232427] bg-[#0f1011] text-left"
+                  >
+                    {installRows[tab.id].map((row) => (
+                      <div class="flex min-h-[56px] items-center gap-4 border-[#1d1e20] px-4 py-2.5 not-first:border-t sm:gap-6 sm:px-5">
+                        <span class="w-[76px] flex-none text-[14px] font-medium sm:w-[104px]">{row.label}</span>
+                        {"command" in row ? (
+                          <>
+                            <code class="min-w-0 flex-1 overflow-x-auto font-geist-mono text-[13px] whitespace-nowrap text-[#c3c5c9] [scrollbar-width:none]" title={row.command}>
+                              {row.command}
+                            </code>
+                            <button
+                              type="button"
+                              data-copy={row.command}
+                              aria-label={`Copy ${row.label} command`}
+                              class="group/copy grid size-9 flex-none cursor-pointer place-items-center rounded-[8px] border border-[#2a2b2f] text-[#c3c5c9] transition-colors hover:border-[#3a3c40] hover:text-ts-mist"
+                            >
+                              <svg class="size-4 group-data-copied/copy:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="9" y="9" width="12" height="12" rx="2" />
+                                <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                              </svg>
+                              <svg class="hidden size-4 group-data-copied/copy:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M5 12.5l4.5 4.5L19 7.5" />
+                              </svg>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span class="min-w-0 flex-1 text-[13px] text-[#8e9096]">{row.detail}</span>
+                            {"href" in row && (
+                              <a
+                                href={row.href}
+                                aria-label={row.linkLabel}
+                                class="grid size-9 flex-none place-items-center rounded-[8px] bg-ts-mist text-ts-night transition-opacity hover:opacity-80"
+                              >
+                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  {row.label === "Download" ? <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" /> : <path d="M7 17 17 7M8 7h9v9" />}
+                                </svg>
+                              </a>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              }
+            </div>
+  
+            <p class="m-0 mt-6 text-[13px] text-[#6e7177]">
+              Or <a href={links.github} class="text-[#a8aaaf] underline underline-offset-3 hover:text-ts-mist">build it from source</a>.
+              Ride is an early alpha, so please <a href={`${links.github}/issues/new?template=ride-bug.yml`} class="text-[#a8aaaf] underline underline-offset-3 hover:text-ts-mist">tell us what breaks</a>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-[1240px] px-4 md:px-8" aria-labelledby="screens-heading">
+        <h2 id="screens-heading" class="m-0 font-geist-mono text-[11px] font-normal tracking-[0.28em] text-ts-muted uppercase">
+          On every screen
+        </h2>
+        <figure class="m-0 mt-5">
+          <div class="overflow-hidden rounded-[14px] border border-[#222326] bg-[#121314] p-3 md:p-5">
+            <DemoVideo
+              name="ride-mac"
+              label="Ride on Mac: a threshold workout in ERG mode steps up to the next interval"
+              width={1600}
+              height={920}
+              class="rounded-[10px] ring-1 ring-white/10"
+            />
+          </div>
+          <figcaption class="mt-4 flex flex-col gap-1 sm:flex-row sm:gap-3">
+            <span class="font-geist-mono text-[14px] font-medium">Mac</span>
+            <span class="text-[14px] text-[#8e9096]">The whole workout on a big screen, with keyboard shortcuts for pause, skip and nudge.</span>
+          </figcaption>
+        </figure>
+
+        <ul class="m-0 mt-12 grid list-none gap-x-4 gap-y-12 p-0 md:grid-cols-3">
+          <li>
+            <figure class="m-0">
+              <div class={tile}>
+                <div class="absolute top-[10%] left-1/2 w-[56%] -translate-x-1/2 rounded-[34px] border border-[#3a3c40] bg-black p-[6px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+                  <DemoVideo
+                    name="ride-iphone"
+                    label="Ride on iPhone: picking a workout for the time you have and starting the ride"
+                    width={600}
+                    height={1304}
+                    class="rounded-[28px]"
+                  />
+                </div>
+              </div>
+              <figcaption class="mt-4 flex flex-col gap-1">
+                <span class="font-geist-mono text-[14px] font-medium">iPhone</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">Clip it to the bars. The ride keeps going with the screen locked.</span>
+              </figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure class="m-0">
+              <div class={tile}>
+                <div class="absolute top-[8%] left-[12%] w-[96%] rounded-[22px] border border-[#3a3c40] bg-black p-[7px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+                  <DemoVideo
+                    name="ride-ipad"
+                    label="Ride on iPad: a ride's zones and power curve, then the workout library and Today"
+                    width={900}
+                    height={1306}
+                    class="rounded-[16px]"
+                  />
+                </div>
+              </div>
+              <figcaption class="mt-4 flex flex-col gap-1">
+                <span class="font-geist-mono text-[14px] font-medium">iPad</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">Power, heart rate, zones and a power curve for every ride.</span>
+              </figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure class="m-0">
+              <div class={`${tile} flex items-center justify-center`} role="img" aria-label="Ride on Apple Watch, counting down each interval with its zone, power and heart rate">
+                <div class="contents" aria-hidden="true">
+                  <div class="relative w-[48%]">
+                    <div class="absolute inset-x-[16%] -top-[70%] h-[80%] rounded-t-[10px] bg-linear-to-b from-transparent to-[#1d1e21]"></div>
+                    <div class="absolute inset-x-[16%] -bottom-[70%] h-[80%] rounded-b-[10px] bg-linear-to-t from-transparent to-[#1d1e21]"></div>
+                    <div class="absolute top-[26%] -right-[5px] h-[16%] w-[6px] rounded-full bg-[#3a3c40]"></div>
+                    <div class="relative aspect-[41/49] rounded-[32%/27%] border-[3px] border-[#2e3034] bg-black p-[14%] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+                      <div data-watch class="flex h-full flex-col justify-between font-geist text-white">
+                        <div class="flex items-center justify-between text-[10px] text-[#9a9ca1]">
+                          <span data-watch-interval>2 of 13</span>
+                          <span data-watch-zone class="text-[#7aa7ff] transition-colors">Z2</span>
+                        </div>
+                        <div data-watch-time class="font-geist-mono text-[26px] leading-none tracking-[-0.04em] tabular-nums">0:21</div>
+                        <div class="flex items-baseline justify-between text-[13px] leading-none">
+                          <span><span data-watch-power class="tabular-nums">110</span><span class="text-[9px] text-[#9a9ca1]"> W</span></span>
+                          <span class="text-[#ff5b55]">♥ <span data-watch-heart-rate class="tabular-nums">120</span></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <figcaption class="mt-4 flex flex-col gap-1">
+                <span class="font-geist-mono text-[14px] font-medium">Apple Watch</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">Heart rate from your wrist, with the current interval at a glance.</span>
+              </figcaption>
+            </figure>
+          </li>
+        </ul>
+      </section>
+
+      <section class="mx-auto mt-24 mb-24 grid max-w-[1240px] gap-10 border-t border-[#1d1e20] px-4 pt-14 md:mt-32 md:mb-32 md:px-8 lg:grid-cols-[1fr_3fr]">
+        <h2 class="m-0 text-[22px] font-medium tracking-[-0.02em]">What is Ride?</h2>
+        <ul class="m-0 grid list-none gap-x-4 gap-y-9 p-0 sm:grid-cols-2">
+          {
+            reasons.map((reason) => (
+              <li class="flex flex-col gap-1.5">
+                <span class="text-[15px] font-medium">{reason.title}</span>
+                <span class="text-[14px] leading-[1.55] text-[#8e9096]">{reason.body}</span>
+              </li>
             ))
           }
-          <div class="absolute -top-1.5 bottom-0 left-[53%] w-0.5 bg-ts-paper"></div>
-        </div>
-      </figure>
-    </section>
+        </ul>
+      </section>
+    </main>
+
+    <SiteFooter />
   </div>
-
-  <section
-    id="features"
-    class="grid gap-10 px-6 py-20 md:grid-cols-3 md:px-16 md:py-[104px]"
-  >
-    {
-      features.map((feature, index) => (
-        <div class="flex flex-col gap-2.5 border-t border-ts-rule pt-5">
-          <span class="font-geist-mono text-[13px] text-ts-stone">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <h2 class="m-0 font-serif text-[32px] font-normal">{feature.title}</h2>
-          <p class="m-0 text-base leading-[1.55] text-ts-slate">{feature.body}</p>
-        </div>
-      ))
-    }
-  </section>
-
-  <section
-    id="download"
-    class="mx-6 mb-20 flex scroll-mt-6 flex-col gap-8 rounded-[18px] bg-ts-card p-8 md:mx-16 md:mb-[104px] md:flex-row md:items-center md:justify-between md:gap-10 md:p-14"
-  >
-    <div class="flex flex-col gap-2">
-      <h2 class="m-0 font-serif text-5xl leading-none font-normal">Ride is free.</h2>
-      <p class="m-0 text-base text-ts-slate">
-        On iPhone, iPad and Mac. Or <a href={links.github} class="underline underline-offset-2 hover:opacity-75">build it from source</a>.
-      </p>
-    </div>
-    <StoreButtons tone="light" />
-  </section>
-
-  <SiteFooter label="Part of Trainstack" class="border-t border-ts-edge" />
 </MarketingLayout>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-install]");
+  const tabs = [...(root?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [])];
+
+  function selectTab(id: string, focus = false) {
+    for (const tab of tabs) {
+      const selected = tab.dataset.tab === id;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      const panel = document.getElementById(tab.getAttribute("aria-controls") ?? "");
+      if (panel) panel.hidden = !selected;
+      if (selected && focus) tab.focus();
+    }
+  }
+
+  for (const [index, tab] of tabs.entries()) {
+    tab.addEventListener("click", () => selectTab(tab.dataset.tab ?? ""));
+    tab.addEventListener("keydown", (event) => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+      if (!step) return;
+      event.preventDefault();
+      const next = tabs[(index + step + tabs.length) % tabs.length];
+      selectTab(next?.dataset.tab ?? "", true);
+    });
+  }
+
+  const watch = document.querySelector<HTMLElement>("[data-watch]");
+  const watchIntervals = [
+    { number: 2, zone: "Z2", color: "#7aa7ff", watts: 110, seconds: 21, heartRate: 122 },
+    { number: 3, zone: "Z4", color: "#f5c84c", watts: 190, seconds: 24, heartRate: 151 },
+  ];
+
+  function animateWatch(face: HTMLElement) {
+    const field = (name: string) => face.querySelector<HTMLElement>(`[data-watch-${name}]`);
+    let index = 0;
+    let remaining = watchIntervals[0]?.seconds ?? 0;
+    let heartRate = 120;
+    let timer: number | undefined;
+
+    function render() {
+      const interval = watchIntervals[index];
+      if (!interval) return;
+      const zone = field("zone");
+      if (zone) {
+        zone.textContent = interval.zone;
+        zone.style.color = interval.color;
+      }
+      field("interval")!.textContent = `${interval.number} of 13`;
+      field("time")!.textContent = `0:${String(remaining).padStart(2, "0")}`;
+      const wobble = Math.round(Math.sin(remaining * 1.7) * 3);
+      field("power")!.textContent = String(interval.watts + wobble);
+      heartRate += Math.sign(interval.heartRate - heartRate) * Math.min(2, Math.abs(interval.heartRate - heartRate));
+      field("heart-rate")!.textContent = String(Math.round(heartRate));
+    }
+
+    function tick() {
+      remaining -= 1;
+      if (remaining < 0) {
+        index = (index + 1) % watchIntervals.length;
+        remaining = watchIntervals[index]?.seconds ?? 0;
+      }
+      render();
+    }
+
+    new IntersectionObserver(([entry]) => {
+      window.clearInterval(timer);
+      timer = undefined;
+      if (entry?.isIntersecting && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        timer = window.setInterval(tick, 1000);
+      }
+    }).observe(face);
+  }
+
+  if (watch) animateWatch(watch);
+
+  if (/iPhone|iPad/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))) {
+    selectTab("ios");
+  }
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+    button.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      button.dataset.copied = "";
+      setTimeout(() => delete button.dataset.copied, 1600);
+    });
+  }
+</script>
