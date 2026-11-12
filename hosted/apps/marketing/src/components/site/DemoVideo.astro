@@ -10,38 +10,76 @@ interface Props {
 const { name, label, width, height, class: className } = Astro.props;
 ---
 
-<video
-  data-demo-video
-  class:list={["block h-auto w-full", className]}
-  width={width}
-  height={height}
-  poster={`/videos/${name}.jpg`}
-  aria-label={label}
-  muted
-  loop
-  playsinline
-  preload="none"
->
-  <source src={`/videos/${name}.mp4`} type="video/mp4" />
-</video>
+<div class="group relative">
+  <video
+    data-demo-video
+    class:list={["block h-auto w-full", className]}
+    width={width}
+    height={height}
+    poster={`/videos/${name}.jpg`}
+    aria-label={label}
+    muted
+    loop
+    playsinline
+    preload="none"
+  >
+    <source src={`/videos/${name}.mp4`} type="video/mp4" />
+  </video>
+  <button
+    type="button"
+    data-demo-video-toggle
+    aria-pressed="false"
+    class="absolute right-3 bottom-3 flex size-8 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-black/60 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100 aria-pressed:opacity-100"
+  >
+    <span class="sr-only">Pause video</span>
+    <svg data-icon="pause" class="size-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <rect x="3" y="2" width="3.5" height="12" rx="1"></rect>
+      <rect x="9.5" y="2" width="3.5" height="12" rx="1"></rect>
+    </svg>
+    <svg data-icon="play" class="hidden size-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M4 2.5v11a1 1 0 0 0 1.5.86l9-5.5a1 1 0 0 0 0-1.72l-9-5.5A1 1 0 0 0 4 2.5Z"></path>
+    </svg>
+  </button>
+</div>
 
 <script>
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const videos = document.querySelectorAll<HTMLVideoElement>("[data-demo-video]");
+  const visible = new Set<HTMLVideoElement>();
+  const pausedByVisitor = new Set<HTMLVideoElement>();
+
+  function sync(video: HTMLVideoElement) {
+    if (visible.has(video) && !pausedByVisitor.has(video) && !reducedMotion.matches) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }
 
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         const video = entry.target as HTMLVideoElement;
-        if (entry.isIntersecting && !reducedMotion.matches) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
+        if (entry.isIntersecting) visible.add(video);
+        else visible.delete(video);
+        sync(video);
       }
     },
     { threshold: 0.35 },
   );
 
-  for (const video of videos) observer.observe(video);
+  for (const video of videos) {
+    observer.observe(video);
+    const toggle = video.parentElement?.querySelector<HTMLButtonElement>("[data-demo-video-toggle]");
+    if (reducedMotion.matches) toggle?.classList.add("hidden");
+    toggle?.addEventListener("click", () => {
+      const pause = !pausedByVisitor.has(video);
+      if (pause) pausedByVisitor.add(video);
+      else pausedByVisitor.delete(video);
+      toggle.setAttribute("aria-pressed", String(pause));
+      toggle.querySelector("[data-icon=pause]")?.classList.toggle("hidden", pause);
+      toggle.querySelector("[data-icon=play]")?.classList.toggle("hidden", !pause);
+      sync(video);
+    });
+  }
 </script>
