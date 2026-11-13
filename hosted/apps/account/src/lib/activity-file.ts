@@ -1,20 +1,27 @@
 import type { ActivityDetail } from "@trainstack/contract";
 import {
-  type FitActivity,
-  type FitDecodeErrorCode,
-  FitDecodeError,
-  decodeFit,
-} from "@trainstack/fit";
+  type ActivityFileErrorCode,
+  type ActivityFileFormat,
+  type DecodedActivity,
+  ActivityFileError,
+  decodeActivityFile,
+} from "@trainstack/activity-file";
 
 export type Reading =
-  | { readonly kind: "decoded"; readonly fit: FitActivity }
-  | { readonly kind: "unreadable"; readonly code: FitDecodeErrorCode };
+  | { readonly kind: "decoded"; readonly activity: DecodedActivity }
+  | {
+      readonly kind: "unreadable";
+      readonly code: ActivityFileErrorCode;
+      readonly format: ActivityFileFormat | undefined;
+    };
 
-export function readFit(bytes: Uint8Array): Reading {
+export function readActivityFile(bytes: Uint8Array): Reading {
   try {
-    return { kind: "decoded", fit: decodeFit(bytes) };
+    return { kind: "decoded", activity: decodeActivityFile(bytes) };
   } catch (error) {
-    if (error instanceof FitDecodeError) return { kind: "unreadable", code: error.code };
+    if (error instanceof ActivityFileError) {
+      return { kind: "unreadable", code: error.code, format: error.format };
+    }
     throw error;
   }
 }

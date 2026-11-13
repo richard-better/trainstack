@@ -1,4 +1,4 @@
-import type { ActivitySummary } from "@trainstack/fit";
+import type { ActivitySummary } from "@trainstack/activity-file";
 
 export const statisticNames = [
   "timer_s",

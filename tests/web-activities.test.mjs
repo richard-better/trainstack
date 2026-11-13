@@ -3,7 +3,7 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { ORPCError } from "@orpc/client";
-import { readFit } from "../hosted/apps/account/src/lib/activity-file.ts";
+import { readActivityFile } from "../hosted/apps/account/src/lib/activity-file.ts";
 import { ACTIVITIES_PER_PAGE, createApiClient } from "../hosted/apps/account/src/lib/client.ts";
 import { lapsOf, traceOf } from "../hosted/apps/account/src/lib/series.ts";
 import { activityTitle } from "../hosted/apps/account/src/lib/sports.ts";
@@ -158,11 +158,11 @@ test("the detail page charts the activity's own FIT file when the server has no 
   assert.equal(detail.summarizedAt, null);
   assert.deepEqual(detail.statistics, {});
   const file = await webApp.activities.file({ id });
-  const reading = readFit(new Uint8Array(await file.arrayBuffer()));
+  const reading = readActivityFile(new Uint8Array(await file.arrayBuffer()));
   assert.equal(reading.kind, "decoded");
 
   const figures = Object.fromEntries(
-    summaryFigures(statisticsFromFit(reading.fit.summary)).map((f) => [
+    summaryFigures(statisticsFromFit(reading.activity.summary)).map((f) => [
       f.label,
       `${f.value} ${f.unit}`.trim(),
     ]),
@@ -184,7 +184,7 @@ test("the detail page charts the activity's own FIT file when the server has no 
     },
   );
 
-  const trace = traceOf(reading.fit);
+  const trace = traceOf(reading.activity);
   assert.deepEqual(
     trace.channels.map((channel) => channel.key),
     ["power", "heartRate", "cadence", "speed"],
@@ -192,24 +192,52 @@ test("the detail page charts the activity's own FIT file when the server has no 
   assert.equal(trace.seconds.length, 1801);
   assert.equal(trace.duration, 1800);
   assert.equal(trace.channels[0].target, null, "a free ride has no target power");
-  const laps = lapsOf(reading.fit);
+  const laps = lapsOf(reading.activity);
   assert.equal(laps.length, 10);
   assert.equal(laps[0].startSecond, 0);
   assert.equal(Math.round(laps.at(-1).startSecond + laps.at(-1).seconds), 1800);
 });
 
 test("a workout ride charts its target power and needs no laps table for its one lap", async () => {
-  const reading = readFit(new Uint8Array(await readFile(WORKOUT_RIDE)));
+  const reading = readActivityFile(new Uint8Array(await readFile(WORKOUT_RIDE)));
   assert.equal(reading.kind, "decoded");
-  const power = traceOf(reading.fit).channels.find((channel) => channel.key === "power");
+  const power = traceOf(reading.activity).channels.find((channel) => channel.key === "power");
   assert.ok(power.target.some((value) => value > 0));
-  assert.deepEqual(lapsOf(reading.fit), []);
+  assert.deepEqual(lapsOf(reading.activity), []);
 });
 
-test("a damaged FIT file reads as unreadable instead of breaking the page", async () => {
+test("a GPX run gets charts too, with its speed worked out from its distances", async () => {
+  const { webApp, ride } = await signInOnTheWeb();
+  const bytes = await readFile("packages/activity-file/test/files/garmin-connect-run.gpx");
+  const { id } = await ride.activities.upload({
+    file: new File([bytes], "run.gpx"),
+    source: "upload",
+  });
+
+  const file = await webApp.activities.file({ id });
+  const reading = readActivityFile(new Uint8Array(await file.arrayBuffer()));
+  assert.equal(reading.kind, "decoded");
+  assert.equal(reading.activity.format, "gpx");
+  const trace = traceOf(reading.activity);
+  assert.deepEqual(
+    trace.channels.map((channel) => channel.key),
+    ["heartRate", "cadence", "speed"],
+  );
+  const speed = trace.channels.find((channel) => channel.key === "speed");
+  assert.ok(
+    speed.values.every((value) => value > 5 && value < 20),
+    `${speed.values}`,
+  );
+});
+
+test("a damaged activity file reads as unreadable instead of breaking the page", async () => {
   const bytes = new Uint8Array(await readFile(SAMPLE_RIDE));
-  assert.deepEqual(readFit(bytes.subarray(0, 4000)), { kind: "unreadable", code: "truncated" });
-  assert.equal(readFit(new TextEncoder().encode("<gpx/>")).kind, "unreadable");
+  assert.deepEqual(readActivityFile(bytes.subarray(0, 4000)), {
+    kind: "unreadable",
+    code: "truncated",
+    format: "fit",
+  });
+  assert.equal(readActivityFile(new TextEncoder().encode("<gpx/>")).kind, "unreadable");
 });
 
 test("the athlete deletes an activity on the web, and it is gone from the list and detail", async () => {

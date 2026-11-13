@@ -1,4 +1,6 @@
-import type { FitActivity, FitLap, FitRecord } from "@trainstack/fit";
+import type { ActivityLap, ActivityRecord, DecodedActivity } from "@trainstack/activity-file";
+
+type Decoded = Pick<DecodedActivity, "summary" | "laps" | "records">;
 
 export type ChannelKey = "power" | "heartRate" | "cadence" | "speed";
 
@@ -24,7 +26,7 @@ const channelSpecs: readonly {
   label: string;
   unit: string;
   digits: number;
-  read: (record: FitRecord) => number | undefined;
+  read: (record: ActivityRecord) => number | undefined;
 }[] = [
   { key: "power", label: "Power", unit: "W", digits: 0, read: (record) => record.power },
   {
@@ -45,7 +47,40 @@ const channelSpecs: readonly {
   },
 ];
 
-function targetPower(records: readonly FitRecord[]) {
+const SPEED_WINDOW_SECONDS = 5;
+
+function speedFromDistance(records: readonly ActivityRecord[]) {
+  let back = 0;
+  let ahead = 0;
+  return records.map((record) => {
+    while (records[back]!.elapsedSeconds < record.elapsedSeconds - SPEED_WINDOW_SECONDS) back++;
+    while (
+      ahead + 1 < records.length &&
+      records[ahead + 1]!.elapsedSeconds <= record.elapsedSeconds + SPEED_WINDOW_SECONDS
+    ) {
+      ahead++;
+    }
+    const from = records[back]!;
+    const to = records[ahead]!;
+    const seconds = to.elapsedSeconds - from.elapsedSeconds;
+    if (seconds <= 0 || from.distanceMetres === undefined || to.distanceMetres === undefined) {
+      return null;
+    }
+    return ((to.distanceMetres - from.distanceMetres) / seconds) * 3.6;
+  });
+}
+
+function valuesOf(
+  key: ChannelKey,
+  read: (record: ActivityRecord) => number | undefined,
+  records: readonly ActivityRecord[],
+) {
+  const values = records.map((record) => read(record) ?? null);
+  if (key !== "speed" || values.some((value) => value !== null)) return values;
+  return speedFromDistance(records);
+}
+
+function targetPower(records: readonly ActivityRecord[]) {
   const values = records.map((record) => {
     const value = record.developerFields.target_power;
     return typeof value === "number" ? value : null;
@@ -53,11 +88,11 @@ function targetPower(records: readonly FitRecord[]) {
   return values.some((value) => value !== null) ? values : null;
 }
 
-export function traceOf(activity: FitActivity): Trace {
+export function traceOf(activity: Decoded): Trace {
   const records = activity.records;
   const seconds = records.map((record) => record.elapsedSeconds);
   const channels = channelSpecs.flatMap(({ read, ...spec }): Channel[] => {
-    const values = records.map((record) => read(record) ?? null);
+    const values = valuesOf(spec.key, read, records);
     const present = values.filter((value): value is number => value !== null);
     if (present.length === 0) return [];
     return [
@@ -139,9 +174,9 @@ export interface LapRow {
   readonly averageSpeedKmh: number | undefined;
 }
 
-export function lapsOf(activity: FitActivity): LapRow[] {
+export function lapsOf(activity: Decoded): LapRow[] {
   const start = activity.summary.startTime.getTime();
-  const rows = activity.laps.map((lap: FitLap, index): LapRow => ({
+  const rows = activity.laps.map((lap: ActivityLap, index): LapRow => ({
     number: index + 1,
     startSecond: lap.startTime ? (lap.startTime.getTime() - start) / 1000 : 0,
     seconds: lap.timerSeconds ?? lap.elapsedSeconds,

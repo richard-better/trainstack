@@ -5,7 +5,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { api, queryClient } from "../api";
-import { type Reading, downloadName, fileSize, readFit } from "../lib/activity-file";
+import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
 import { activityDateInFull } from "../lib/dates";
 import { lapsOf, traceOf } from "../lib/series";
 import { activityTitle, sportFromFit, sportName } from "../lib/sports";
@@ -99,34 +99,32 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function useFitReading(activity: ActivityDetail) {
+function useActivityFile(activity: ActivityDetail) {
   return useQuery({
     queryKey: [...activityKey(activity.id), "file"],
-    enabled: activity.file?.format === "fit",
+    enabled: activity.file !== null,
     staleTime: Infinity,
     queryFn: async (): Promise<{ file: File; reading: Reading }> => {
       const file = await api.activities.file({ id: activity.id });
-      return { file, reading: readFit(new Uint8Array(await file.arrayBuffer())) };
+      return { file, reading: readActivityFile(new Uint8Array(await file.arrayBuffer())) };
     },
   });
 }
 
 function Activity({ activity }: { activity: ActivityDetail }) {
-  const fitFile = useFitReading(activity);
-  const fit = fitFile.data?.reading.kind === "decoded" ? fitFile.data.reading.fit : null;
+  const activityFile = useActivityFile(activity);
+  const decoded =
+    activityFile.data?.reading.kind === "decoded" ? activityFile.data.reading.activity : null;
   const sport =
-    activity.sport ?? (fit ? sportFromFit(fit.summary.sport, fit.summary.subSport) : null);
-  const startedAt = activity.startedAt ?? fit?.summary.startTime ?? null;
-  const title = activityTitle({
-    name: activity.name ?? fit?.workoutName ?? null,
-    sport,
-    startedAt,
-  });
+    activity.sport ??
+    (decoded ? sportFromFit(decoded.summary.sport, decoded.summary.subSport) : null);
+  const startedAt = activity.startedAt ?? decoded?.summary.startTime ?? null;
+  const title = activityTitle({ name: activity.name, sport, startedAt });
   const statistics =
     Object.keys(activity.statistics).length > 0
       ? activity.statistics
-      : fit
-        ? statisticsFromFit(fit.summary)
+      : decoded
+        ? statisticsFromFit(decoded.summary)
         : {};
   const figures = summaryFigures(statistics);
   const { label, family } = sportName(sport);
@@ -155,17 +153,17 @@ function Activity({ activity }: { activity: ActivityDetail }) {
           activity={activity}
           title={title}
           startedAt={startedAt}
-          file={fitFile.data?.file}
+          file={activityFile.data?.file}
         />
       </header>
 
       {figures.length > 0 ? (
         <Figures figures={figures} />
-      ) : fitFile.isPending && activity.file?.format === "fit" ? (
+      ) : activityFile.isPending && activity.file ? (
         <FiguresSkeleton />
       ) : null}
 
-      <Analysis activity={activity} fitFile={fitFile} />
+      <Analysis activity={activity} activityFile={activityFile} />
     </Shell>
   );
 }
@@ -201,10 +199,10 @@ function FiguresSkeleton() {
 
 function Analysis({
   activity,
-  fitFile,
+  activityFile,
 }: {
   activity: ActivityDetail;
-  fitFile: ReturnType<typeof useFitReading>;
+  activityFile: ReturnType<typeof useActivityFile>;
 }) {
   if (!activity.file) {
     return (
@@ -213,30 +211,24 @@ function Analysis({
       </Note>
     );
   }
-  if (activity.file.format !== "fit") {
-    return (
-      <Note title={`This activity is a ${activity.file.format.toUpperCase()} file.`}>
-        Charts and laps are drawn from FIT files for now. Download the original to open it in
-        another app.
-      </Note>
-    );
-  }
-  if (fitFile.isPending) {
+  if (activityFile.isPending) {
     return <div className="traces-loading" aria-busy="true" aria-label="Loading charts" />;
   }
-  if (fitFile.isError) {
+  if (activityFile.isError) {
     return (
       <Note title="The activity's file did not load.">
-        <button type="button" className="secondary" onClick={() => fitFile.refetch()}>
+        <button type="button" className="secondary" onClick={() => activityFile.refetch()}>
           Try again
         </button>
       </Note>
     );
   }
-  const { reading } = fitFile.data;
+  const { reading } = activityFile.data;
   if (reading.kind === "unreadable") {
     return (
-      <Note title="This FIT file could not be read.">
+      <Note
+        title={`This ${(reading.format ?? activity.file.format).toUpperCase()} file could not be read.`}
+      >
         {reading.code === "noActivity"
           ? "It holds no recorded activity, so there is nothing to chart."
           : "It looks damaged or incomplete, so there are no charts or laps."}{" "}
@@ -244,8 +236,8 @@ function Analysis({
       </Note>
     );
   }
-  const trace = traceOf(reading.fit);
-  const laps = lapsOf(reading.fit);
+  const trace = traceOf(reading.activity);
+  const laps = lapsOf(reading.activity);
   return (
     <>
       {trace.channels.length > 0 ? (

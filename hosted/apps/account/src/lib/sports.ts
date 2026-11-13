@@ -1,4 +1,4 @@
-import type { Sport, SubSport } from "@trainstack/fit";
+import type { Sport, SubSport } from "@trainstack/activity-file";
 
 export type SportFamily = "ride" | "run" | "swim" | "strength" | "climb" | "other";
 
