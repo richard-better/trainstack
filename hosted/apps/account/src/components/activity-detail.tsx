@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { activitiesQueryKey, activityKey, api, queryClient } from "../api";
 import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
 import { activityDateInFull } from "../lib/dates";
+import { localDay } from "../lib/settings";
 import { lapsOf, traceOf } from "../lib/series";
 import { activityTitle, sportFromFit, sportName } from "../lib/sports";
 import {
@@ -21,6 +22,7 @@ import {
   summaryFigures,
 } from "../lib/statistics";
 import { SportIcon } from "./sport-icon";
+import { TimeInZones } from "./time-in-zones";
 import { Traces } from "./traces";
 
 const refused = (error: Error) => error instanceof ORPCError && error.status < 500;
@@ -172,7 +174,12 @@ function Activity({ activity }: { activity: ActivityDetail }) {
           </p>
         )}
 
-      <Analysis activity={activity} activityFile={activityFile} />
+      <Analysis
+        activity={activity}
+        activityFile={activityFile}
+        sport={sport}
+        day={localDay(startedAt ?? activity.createdAt)}
+      />
     </Shell>
   );
 }
@@ -222,9 +229,13 @@ function FiguresSkeleton() {
 function Analysis({
   activity,
   activityFile,
+  sport,
+  day,
 }: {
   activity: ActivityDetail;
   activityFile: ReturnType<typeof useActivityFile>;
+  sport: string | null;
+  day: string;
 }) {
   if (!activity.file) {
     return (
@@ -272,6 +283,7 @@ function Analysis({
       ) : (
         <Note title="This file has no power, heart rate, cadence or speed to chart." />
       )}
+      <TimeInZones activity={reading.activity} sport={sport} day={day} trace={trace} />
       {laps.length > 0 && <Laps laps={laps} />}
     </>
   );
