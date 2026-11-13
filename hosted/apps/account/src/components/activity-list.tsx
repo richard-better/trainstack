@@ -25,7 +25,7 @@ export function ActivityList() {
       <h1 className="page-title">Activities</h1>
       {activities.isPending ? (
         <ListSkeleton />
-      ) : activities.isError ? (
+      ) : activities.data === undefined ? (
         <div className="state" role="alert">
           <p className="state-title">Your activities did not load.</p>
           <p className="lede">Check your connection and try again.</p>
