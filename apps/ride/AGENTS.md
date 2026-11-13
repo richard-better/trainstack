@@ -54,6 +54,20 @@ the others adopt it. The Mac has no Health, so an
 iPhone saves the Mac's rides as they sync, and the Mac tells a relaying iPhone it records the
 ride so the watch discards its workout then too.
 
+Signed in to a TrainStack account, `ActivitySync` also sends the library to the hosted API's
+activities (`docs/deployment.md`), beside iCloud, which stays for riders without an account. An
+activity is named by the same SHA-256. Each pass sends the deletions it owes, lists the
+account's activities, and uploads every ride the account does not have, so it survives being
+offline, relaunches and failures (it retries with backoff, and again when the app becomes
+active). It hears of rides and deletions from iCloud too (`RideLibrary.onChange`), so a ride
+deleted through either reaches the other. When the server answers that a ride was deleted
+(`410`), or a ride the account had is gone from it, the device drops the ride with
+`RideLibrary.remove`, which also leaves an iCloud `DeletedRide`, and a deleted ride imported
+again stays on that device. State is kept per account (`Application Support/ActivitySync`), and
+every request is bound to the session it started with, so signing out stops uploads and one
+account's deletions never reach another. A ride removed while signed out is deleted from the
+account this device last signed in to, when it signs in again.
+
 HealthKit and iCloud can launch the app in the background with no window, so `RideApp.init`
 calls `WatchSupport.activateAtLaunch()` and `SyncSupport.activateAtLaunch()`.
 
