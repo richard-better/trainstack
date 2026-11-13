@@ -339,7 +339,7 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
     headers: auth,
   });
   assert.equal(list.status, 200);
-  assert.deepEqual(await list.json(), { activities: [activity], nextCursor: null });
+  assert.deepEqual((await list.json()).activities, [activity]);
 
   const file = await runtime.dispatchFetch(`${api}/api-reference/activities/${activity.id}/file`, {
     headers: auth,
@@ -368,4 +368,22 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
     headers: { Origin: origin, "Access-Control-Request-Method": "DELETE" },
   });
   assert.match(preflight.headers.get("access-control-allow-methods"), /DELETE/);
+});
+
+test("a full page of two hundred activities lists in one request", async () => {
+  const { client, user } = await rider();
+  const insert = db.prepare(
+    "INSERT INTO activity (user_id, id, source, started_at) VALUES (?, ?, 'strava', ?)",
+  );
+  await db.batch(
+    Array.from({ length: 201 }, (_, i) =>
+      insert.bind(user.id, sha256(`activity ${i}`), Date.UTC(2025, 0, 1) + i * 86_400_000),
+    ),
+  );
+  const page = await client.activities.list({ limit: 200 });
+  assert.equal(page.activities.length, 200);
+  assert.ok(page.nextCursor);
+  const rest = await client.activities.list({ limit: 200, cursor: page.nextCursor });
+  assert.deepEqual(rest.activities.length, 1);
+  assert.equal(rest.nextCursor, null);
 });

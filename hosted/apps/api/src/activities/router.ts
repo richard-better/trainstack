@@ -17,7 +17,15 @@ async function statisticsOf(db: Database, userId: string, ids: string[]) {
   const rows = await db
     .select()
     .from(activityStatistic)
-    .where(and(eq(activityStatistic.userId, userId), inArray(activityStatistic.activityId, ids)));
+    .where(
+      and(
+        eq(activityStatistic.userId, userId),
+        inArray(
+          activityStatistic.activityId,
+          sql`(SELECT value FROM json_each(${JSON.stringify(ids)}))`,
+        ),
+      ),
+    );
   for (const row of rows) byActivity.get(row.activityId)![row.name] = row.value;
   return byActivity;
 }
@@ -67,6 +75,22 @@ function decodeCursor(cursor: string) {
   return { occurredAt: Number(match[1]), id: match[2]! };
 }
 
+const SAME_KEY_WRITE_ATTEMPTS = 3;
+const R2_SAME_KEY_WRITE_INTERVAL_MS = 1000;
+
+async function storeFile(key: string, bytes: Uint8Array, contentType: string) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await ENV.ACTIVITY_FILES.put(key, bytes, { httpMetadata: { contentType } });
+      return;
+    } catch (error) {
+      if (await ENV.ACTIVITY_FILES.head(key)) return;
+      if (attempt === SAME_KEY_WRITE_ATTEMPTS) throw error;
+      await scheduler.wait(R2_SAME_KEY_WRITE_INTERVAL_MS);
+    }
+  }
+}
+
 export const activitiesRouter = {
   upload: signedIn.activities.upload.handler(async ({ context, input, errors }) => {
     const db = getDb();
@@ -87,11 +111,8 @@ export const activitiesRouter = {
     const existing = await findActivity(db, userId, id);
     if (existing) return withStatistics(db, existing);
 
-    await ENV.ACTIVITY_FILES.put(fileKey(userId, id), bytes, {
-      httpMetadata: { contentType: contentTypes[format] },
-      sha256: id,
-    });
-    const inserted = await db.run(sql`
+    await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
+    await db.run(sql`
       INSERT INTO ${activity} (user_id, id, source, source_id, sport, name, started_at, file_format, file_size)
       SELECT ${userId}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${input.sport ?? null},
         ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength}
@@ -100,14 +121,11 @@ export const activitiesRouter = {
       )
       ON CONFLICT DO NOTHING
     `);
-    if (inserted.meta.changes === 0) {
-      const deletedDuringUpload = await deletedRefusal();
-      if (deletedDuringUpload) {
-        await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
-        throw deletedDuringUpload;
-      }
-    }
-    return withStatistics(db, (await findActivity(db, userId, id))!);
+    const stored = await findActivity(db, userId, id);
+    if (stored) return withStatistics(db, stored);
+    const deletedDuringUpload = await deletedRefusal();
+    await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+    throw deletedDuringUpload ?? new Error(`Activity ${id} was neither stored nor deleted`);
   }),
 
   list: signedIn.activities.list.handler(async ({ context, input }) => {
