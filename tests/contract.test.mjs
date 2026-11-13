@@ -25,7 +25,7 @@ test("shared contract bundles for browser clients without server implementations
 });
 
 test("every statistic is named <what>_<unit> once, with average_ and max_ spelled out", async () => {
-  const { activityStatistics } = await import("../packages/contract/src/statistics.ts");
+  const { activityStatistics } = await import("../packages/contract/src/index.ts");
   const suffixes = { s: "s", m: "m", kcal: "kcal", "m/s": "mps", bpm: "bpm", rpm: "rpm", W: "w" };
   const names = activityStatistics.map(({ name }) => name);
   assert.equal(new Set(names).size, names.length);

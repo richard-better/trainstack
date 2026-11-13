@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS `activity_summary_error_idx`;

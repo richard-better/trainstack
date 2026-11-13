@@ -8,7 +8,8 @@ import { denseRide, manyLaps, pausedRun } from "./helpers/fit-files.mjs";
 
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const TRACES = "apps/ride/RideKit/Tests/RideCoreTests/Traces";
-const MAX_SUMMARIZED_FILE_BYTES = 2 * 1024 * 1024;
+const SUMMARY_VERSION = 2;
+const MAX_ACTIVITY_FILE_BYTES = 25 * 1024 * 1024;
 
 let worker;
 let runtime;
@@ -51,9 +52,9 @@ async function runCronUntilNothingIsDue() {
   for (let run = 0; run < 20; run++) {
     const due = await db
       .prepare(
-        "SELECT count(*) AS n FROM activity WHERE file_format IS NOT NULL AND (summary_version IS NULL OR (summary_error = 'too_large' AND file_size <= ?))",
+        "SELECT count(*) AS n FROM activity WHERE file_format IS NOT NULL AND (summary_version IS NULL OR summary_version < ?)",
       )
-      .bind(MAX_SUMMARIZED_FILE_BYTES)
+      .bind(SUMMARY_VERSION)
       .first();
     if (due.n === 0) return;
     await runCron();
@@ -207,7 +208,7 @@ test("Ride's golden files summarise as indoor cycling, named after their workout
   }
 });
 
-test("a pause in the file becomes a pause event between its laps", async () => {
+test("a pause in the file is left out of its timer time", async () => {
   const { client } = await rider();
   const uploaded = await client.activities.upload({ file: fitFile(pausedRun()), source: "upload" });
   assert.equal(uploaded.sport, "running");
@@ -218,15 +219,7 @@ test("a pause in the file becomes a pause event between its laps", async () => {
     average_heart_rate_bpm: 154,
     max_heart_rate_bpm: 165,
   });
-  const { events } = await client.activities.get({ id: uploaded.id });
-  assert.deepEqual(events, [
-    {
-      type: "pause",
-      startedAt: new Date("2026-09-01T06:10:00Z"),
-      endedAt: new Date("2026-09-01T06:11:00Z"),
-      data: {},
-    },
-  ]);
+  assert.deepEqual((await client.activities.get({ id: uploaded.id })).events, []);
 });
 
 test("an activity keeps at most two thousand events, however many laps its file has", async () => {
@@ -268,7 +261,7 @@ test("a FIT file that will not decode stays stored, listed and downloadable, wit
   assert.equal((await client.activities.list({})).activities.length, 2);
 });
 
-test("GPX and TCX files are summarised the same way, pauses included", async () => {
+test("GPX and TCX files are summarised the same way, a pause left out of timer time", async () => {
   const { client } = await rider();
   const fixture = (name) => readFile(`packages/activity-file/test/files/${name}`);
   const run = await client.activities.upload({
@@ -284,14 +277,7 @@ test("GPX and TCX files are summarised the same way, pauses included", async () 
   assert.equal(run.statistics.elapsed_s, 68);
   assert.equal(run.statistics.timer_s, 8);
   assert.equal(run.statistics.max_heart_rate_bpm, 142);
-  assert.deepEqual((await client.activities.get({ id: run.id })).events, [
-    {
-      type: "pause",
-      startedAt: new Date("2026-10-03T16:30:04.000Z"),
-      endedAt: new Date("2026-10-03T16:31:04.000Z"),
-      data: {},
-    },
-  ]);
+  assert.deepEqual((await client.activities.get({ id: run.id })).events, []);
 
   const tcx = await client.activities.upload({
     file: new File([await fixture("strava-run.tcx")], "run.tcx"),
@@ -371,26 +357,45 @@ test("an activity summarised by older logic is summarised again, replacing what 
   assert.equal(resummarised.events.length, 10);
 });
 
-test("a file over the summary limit says so, and is summarised once the limit covers it", async () => {
+test("a file at the upload limit is summarised, and one the 2 MB limit left too large is summarised again", async () => {
   const { client, user } = await rider();
-  const big = denseRide(MAX_SUMMARIZED_FILE_BYTES + 1024);
-  const uploaded = await client.activities.upload({ file: fitFile(big), source: "upload" });
-  assert.equal(uploaded.summaryError, "too_large");
-  assert.equal(uploaded.summarizedAt, null);
-  assert.equal((await client.activities.file({ id: uploaded.id })).size, big.byteLength);
+  const full = denseRide(MAX_ACTIVITY_FILE_BYTES - 1024);
+  const uploaded = await client.activities.upload({ file: fitFile(full), source: "upload" });
+  assert.equal(uploaded.summaryError, null);
+  assert.ok(uploaded.summarizedAt instanceof Date);
+  assert.equal(uploaded.statistics.max_power_w, 249);
 
   await runCronUntilNothingIsDue();
-  assert.equal((await client.activities.get({ id: uploaded.id })).summaryError, "too_large");
-
+  const leftTooLarge = await storedBeforeSummaries(
+    user.id,
+    denseRide(3 * 1024 * 1024, "2026-05-05T05:00:00Z"),
+  );
   await db
-    .prepare("UPDATE activity SET file_size = ? WHERE user_id = ? AND id = ?")
-    .bind(MAX_SUMMARIZED_FILE_BYTES, user.id, uploaded.id)
+    .prepare(
+      "UPDATE activity SET summary_version = 1, summary_error = 'too_large' WHERE user_id = ? AND id = ?",
+    )
+    .bind(user.id, leftTooLarge)
     .run();
   await runCronUntilNothingIsDue();
-  const summarised = await client.activities.get({ id: uploaded.id });
+  const summarised = await client.activities.get({ id: leftTooLarge });
   assert.equal(summarised.summaryError, null);
   assert.ok(summarised.summarizedAt instanceof Date);
-  assert.equal(summarised.statistics.max_power_w, 249);
+});
+
+test("a file with more laps than an activity can have says so, and is not retried", async () => {
+  const { client, user } = await rider();
+  const uploaded = await client.activities.upload({
+    file: fitFile(manyLaps(10_001)),
+    source: "upload",
+  });
+  assert.equal(uploaded.summaryError, "too_large");
+  assert.equal(uploaded.summarizedAt, null);
+  await runCron();
+  const row = await db
+    .prepare("SELECT summary_version, summary_attempts FROM activity WHERE user_id = ? AND id = ?")
+    .bind(user.id, uploaded.id)
+    .first();
+  assert.deepEqual(row, { summary_version: SUMMARY_VERSION, summary_attempts: 0 });
 });
 
 test("a summary that keeps dying is retried a bounded number of times, then reported as failed", async () => {
@@ -427,7 +432,7 @@ test("each scheduled run takes a small batch, and a file that dies goes to the b
   const dying = await storedBeforeSummaries(user.id, denseRide(10_000, "2026-07-01T00:00:00Z"));
   await bucket.delete(`activities/${user.id}/${dying}`);
   const healthy = [];
-  for (let day = 1; day <= 12; day++) {
+  for (let day = 1; day <= 6; day++) {
     healthy.push(
       await storedBeforeSummaries(
         user.id,
@@ -446,9 +451,9 @@ test("each scheduled run takes a small batch, and a file that dies goes to the b
         .first()
     ).n;
   await runCron();
-  assert.equal(await summarised(), 9);
+  assert.equal(await summarised(), 4);
   await runCron();
-  assert.equal(await summarised(), 12);
+  assert.equal(await summarised(), 6);
 });
 
 test("a scheduled run working from a stale view does not overwrite a newer outcome", async () => {
@@ -465,7 +470,7 @@ test("a scheduled run working from a stale view does not overwrite a newer outco
       `CREATE TRIGGER another_run_finishes_first AFTER UPDATE OF summary_attempts ON activity
        WHEN NEW.id = '${first}' AND NEW.summary_attempts = 1
        BEGIN
-         UPDATE activity SET summary_attempts = 0, summary_version = 1, summarized_at = 1
+         UPDATE activity SET summary_attempts = 0, summary_version = 2, summarized_at = 1
            WHERE user_id = NEW.user_id AND id = '${exhausted}';
          INSERT INTO activity_statistic (user_id, activity_id, name, value)
            VALUES (NEW.user_id, '${exhausted}', 'elapsed_s', 42);

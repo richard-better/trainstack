@@ -50,7 +50,6 @@ export const activity = sqliteTable(
     index("activity_user_occurred_idx").on(table.userId, table.occurredAt, table.id),
     index("activity_user_source_idx").on(table.userId, table.source, table.sourceId),
     index("activity_summary_version_idx").on(table.summaryVersion),
-    index("activity_summary_error_idx").on(table.summaryError),
   ],
 );
 

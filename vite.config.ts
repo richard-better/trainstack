@@ -48,7 +48,10 @@ export default defineConfig({
       typeAware: false,
       typeCheck: false,
     },
-    overrides: [{ files: ["packages/**", "apps/**"], rules: noHostedImports }],
+    overrides: [
+      { files: ["packages/**", "apps/**"], rules: noHostedImports },
+      { files: ["packages/**"], rules: { "trainstack/relative-import-extensions": "error" } },
+    ],
   },
   fmt: {
     ignorePatterns: [
