@@ -1,6 +1,7 @@
 # @trainstack/workout
 
-The typed workout model TrainStack stores, edits and plays. It has no Node-only APIs, so it runs
+The typed workout model TrainStack stores, edits and plays, with import and export of `.zwo`,
+`.erg` and `.mrc` files. It has no Node-only APIs, so it runs
 in Cloudflare Workers and the browser.
 
 ## The model
@@ -43,3 +44,29 @@ from the repeat's start.
 
 `flatten` expands repeats into the plain sequence of steps a player runs, placing each repeat
 cue on the step it falls in. `totals` adds up a workout's time and distance.
+
+## Files
+
+`parseZwo`, `parseErg` and `parseMrc` read a file into a workout, and `writeZwo`, `writeErg` and
+`writeMrc` write one out. `parseWorkoutFile(fileName, text)` picks the reader from the
+extension, and `parseWorkout` and `writeWorkout` take the format by name.
+
+Every conversion returns `{ value, warnings }`. It throws a `WorkoutFormatError`, listing every
+issue it found, when the file is malformed or the target format cannot express what the workout
+asks the athlete to do: a target type, a range, a distance step. What does not change the effort
+but has nowhere to go (names, notes, intensity, cadence in `.erg`, tags, repeat structure) is left
+out and reported in `warnings`. Converting a workout to a format and back keeps its `flatten`ed
+timeline.
+
+Power in watts and power as a share of FTP convert into each other only when the writer is given
+an `ftp`. Readers keep targets as the file states them.
+
+| Format | Holds                                                                                                                                                                                                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.zwo` | Zwift workouts for bike (power as a share of FTP) and run (pace as a share of threshold), timed or by distance, with ramps, ranges, `IntervalsT` repeats, free ride, max efforts, cadence and text events. Other repeats are written out step by step. |
+| `.erg` | Timed power in watts, constant or ramped, with course text.                                                                                                                                                                                            |
+| `.mrc` | Timed power as a percentage of FTP, constant or ramped, with course text.                                                                                                                                                                              |
+
+Zwift's `pace` attribute picks a reference pace for run workouts (one mile, 5 km and so on).
+The model has one threshold pace, so a run file's reference pace is read as threshold and
+reported. Zwift writes `pace="0"` on bike steps too, where it means nothing and is ignored.
