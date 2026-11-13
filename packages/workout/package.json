@@ -1,0 +1,20 @@
+{
+  "name": "@trainstack/workout",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -p . && tsc -p test",
+    "test": "vp test run"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@trainstack/config": "workspace:*",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

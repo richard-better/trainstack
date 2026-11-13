@@ -13,6 +13,8 @@ Packages that chose a permissive license:
 - `packages/contract` (Apache-2.0): the API contract. `hosted/` implements it, and clients build on it.
 - `packages/config` (Apache-2.0): shared TypeScript configuration that `hosted/` builds with.
 - `packages/fit` (Apache-2.0): the FIT decoder. `hosted/` derives activity summaries with it.
+- `packages/workout` (Apache-2.0): the workout model and its file formats. `hosted/` stores
+  workouts in it, and the web app edits them.
 
 Each workspace `package.json` declares its license as an SPDX identifier, and `bun run test`
 checks it against these rules.
