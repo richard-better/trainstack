@@ -397,7 +397,8 @@ function Actions({
       >
         <h2 id="confirm-title">Delete this activity?</h2>
         <p className="lede">
-          {title} is removed from your account, along with its file. Ride will not upload it again.
+          {title} is removed from your account, along with its file. It will not be added again,
+          from Ride or by uploading the same file.
         </p>
         {remove.isError && (
           <p role="alert" className="notice">
