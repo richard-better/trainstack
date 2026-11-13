@@ -57,34 +57,37 @@ const tcx = new File(
 
 test("a rider uploads a ride's FIT file and reads it back by its SHA-256", async () => {
   const { client, user } = await rider();
-  const startedAt = new Date("2026-11-01T07:30:00Z");
   const uploaded = await client.activities.upload({
     file: fitFile(),
     source: "trainstack",
     sport: "indoor_cycling",
     name: "Sweet spot",
-    startedAt,
   });
   const id = sha256(rideBytes);
   assert.deepEqual(
-    { ...uploaded, createdAt: undefined },
+    { ...uploaded, createdAt: undefined, summarizedAt: undefined, statistics: undefined },
     {
       id,
       source: "trainstack",
       sourceId: null,
       sport: "indoor_cycling",
       name: "Sweet spot",
-      startedAt,
+      startedAt: new Date("2026-10-06T14:21:15.000Z"),
       file: { format: "fit", size: rideBytes.byteLength },
-      summarizedAt: null,
-      statistics: {},
+      summarizedAt: undefined,
+      summaryError: null,
+      statistics: undefined,
       createdAt: undefined,
     },
   );
   assert.ok(uploaded.createdAt instanceof Date);
+  assert.ok(uploaded.summarizedAt instanceof Date);
+  assert.equal(uploaded.statistics.elapsed_s, 1800);
 
   assert.deepEqual(await client.activities.list({}), { activities: [uploaded], nextCursor: null });
-  assert.deepEqual(await client.activities.get({ id }), { ...uploaded, events: [] });
+  const { events, ...detail } = await client.activities.get({ id });
+  assert.deepEqual(detail, uploaded);
+  assert.equal(events.length, 10);
 
   const file = await client.activities.file({ id });
   assert.equal(file.name, `${id}.fit`);
@@ -223,7 +226,7 @@ test("the list pages through activities, newest first", async () => {
       }),
     );
   }
-  const notYetSummarized = await client.activities.upload({
+  const summarizedRide = await client.activities.upload({
     file: fitFile(),
     source: "trainstack",
   });
@@ -236,7 +239,7 @@ test("the list pages through activities, newest first", async () => {
     seen.push(...page.activities.map((activity) => activity.id));
     cursor = page.nextCursor ?? undefined;
   } while (cursor);
-  assert.deepEqual(seen, [notYetSummarized.id, uploaded[1].id, uploaded[2].id, uploaded[0].id]);
+  assert.deepEqual(seen, [summarizedRide.id, uploaded[1].id, uploaded[2].id, uploaded[0].id]);
   await assert.rejects(client.activities.list({ cursor: "nonsense" }), { code: "BAD_REQUEST" });
 });
 
@@ -331,7 +334,7 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
   form.set("file", fitFile());
   form.set("source", "trainstack");
   form.set("sport", "indoor_cycling");
-  form.set("startedAt", "2026-06-01T05:00:00.000Z");
+  form.set("name", "Sweet spot");
   const upload = await send(
     runtime,
     new Request(`${api}/api-reference/activities`, { method: "POST", headers: auth, body: form }),
@@ -339,7 +342,9 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
   assert.equal(upload.status, 200, await upload.clone().text());
   const activity = await upload.json();
   assert.equal(activity.id, sha256(rideBytes));
-  assert.equal(activity.startedAt, "2026-06-01T05:00:00.000Z");
+  assert.equal(activity.name, "Sweet spot");
+  assert.equal(activity.startedAt, "2026-10-06T14:21:15.000Z");
+  assert.equal(activity.statistics.average_power_w, 137);
 
   const list = await runtime.dispatchFetch(`${api}/api-reference/activities?limit=1`, {
     headers: auth,

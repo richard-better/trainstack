@@ -57,6 +57,7 @@
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
         "@trainstack/contract": "workspace:*",
+        "@trainstack/fit": "workspace:*",
         "@trainstack/zones": "workspace:*",
         "better-auth": "catalog:",
         "drizzle-orm": "catalog:",

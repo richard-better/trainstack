@@ -148,11 +148,16 @@ test("the web app pages through the athlete's activities, newest first", async (
 test("the detail page charts the activity's own FIT file when the server has no summary", async () => {
   const { webApp, ride } = await signInOnTheWeb();
   const bytes = await readFile(SAMPLE_RIDE);
-  const { id } = await ride.activities.upload({
+  const { id, statistics: serverStatistics } = await ride.activities.upload({
     file: new File([bytes], "ride.fit"),
     source: "trainstack",
     sport: "indoor_cycling",
   });
+  const db = await runtime.getD1Database("DB");
+  await db.batch([
+    db.prepare("UPDATE activity SET summarized_at = NULL WHERE id = ?").bind(id),
+    db.prepare("DELETE FROM activity_statistic WHERE activity_id = ?").bind(id),
+  ]);
 
   const detail = await webApp.activities.get({ id });
   assert.equal(detail.summarizedAt, null);
@@ -161,6 +166,7 @@ test("the detail page charts the activity's own FIT file when the server has no 
   const reading = readActivityFile(new Uint8Array(await file.arrayBuffer()));
   assert.equal(reading.kind, "decoded");
 
+  assert.deepEqual(statisticsFromFit(reading.activity.summary), serverStatistics);
   const figures = Object.fromEntries(
     summaryFigures(statisticsFromFit(reading.activity.summary)).map((f) => [
       f.label,

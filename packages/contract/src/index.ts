@@ -29,6 +29,12 @@ export const activitySourceSchema = slug.describe(
 
 export const activityFileFormatSchema = z.enum(["fit", "gpx", "tcx"]);
 
+export const activitySummaryErrorSchema = z
+  .enum(["truncated", "corrupt", "no_activity", "too_large", "failed"])
+  .describe(
+    "Why the server could not derive the summary from the file: truncated (the file ends early), corrupt (it does not read as its format), no_activity (it reads, but holds no activity), too_large (bigger than the server summarises yet; it is summarised once that limit rises) or failed (summarising it kept failing)",
+  );
+
 export const activitySchema = z.object({
   id: activityIdSchema,
   source: activitySourceSchema,
@@ -41,6 +47,7 @@ export const activitySchema = z.object({
     .date()
     .nullable()
     .describe("When the server derived the summary from the file; null while it has not yet"),
+  summaryError: activitySummaryErrorSchema.nullable(),
   statistics: z
     .record(z.string(), z.number())
     .describe(
@@ -133,3 +140,4 @@ export type AppContractClient = ContractRouterClient<typeof appContract>;
 export type Activity = z.infer<typeof activitySchema>;
 export type ActivityDetail = z.infer<typeof activityDetailSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
+export type ActivitySummaryError = z.infer<typeof activitySummaryErrorSchema>;
