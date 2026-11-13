@@ -108,6 +108,20 @@
         "varlock": "catalog:",
       },
     },
+    "packages/activity-file": {
+      "name": "@trainstack/activity-file",
+      "dependencies": {
+        "@trainstack/fit": "workspace:*",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@trainstack/config": "workspace:*",
+        "@types/node": "catalog:",
+        "miniflare": "4.20260730.0",
+        "rolldown": "1.2.16",
+        "typescript": "catalog:",
+      },
+    },
     "packages/config": {
       "name": "@trainstack/config",
       "version": "0.0.0",
@@ -799,6 +813,8 @@
     "@testing-library/user-event": ["@testing-library/user-event@14.6.8", "", { "peerDependencies": { "@testing-library/dom": ">=7.21.4" } }, "sha512-vgSSqnANMnkcYR/vUNDbwS7aM3OErRLNUG8vCVVlj4oc6cKffUrccX7UAS5AmJQQNZTSibi9z5GvvRZ0aYgUCQ=="],
 
     "@trainstack/account": ["@trainstack/account@workspace:hosted/apps/account"],
+
+    "@trainstack/activity-file": ["@trainstack/activity-file@workspace:packages/activity-file"],
 
     "@trainstack/config": ["@trainstack/config@workspace:packages/config"],
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Courses>
+    <Course>
+      <Name>Hill Repeats</Name>
+      <Lap><TotalTimeSeconds>600</TotalTimeSeconds><DistanceMeters>4000</DistanceMeters><Intensity>Active</Intensity></Lap>
+      <Track><Trackpoint><Time>2026-01-01T00:00:00Z</Time><Position><LatitudeDegrees>45</LatitudeDegrees><LongitudeDegrees>17</LongitudeDegrees></Position></Trackpoint></Track>
+    </Course>
+  </Courses>
+</TrainingCenterDatabase>

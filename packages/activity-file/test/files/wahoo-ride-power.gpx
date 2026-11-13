@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v2" xmlns:gpxpx="http://www.garmin.com/xmlschemas/PowerExtension/v1" creator="Wahoo ELEMNT BOLT" version="1.1">
+  <trk>
+    <name>Wahoo ELEMNT Ride</name>
+    <type>road_biking</type>
+    <trkseg>
+      <trkpt lat="47.1" lon="18.9">
+        <ele>150</ele>
+        <time>2026-07-20T05:00:00Z</time>
+        <extensions>
+          <gpxpx:PowerExtension><gpxpx:PowerInWatts>200</gpxpx:PowerInWatts></gpxpx:PowerExtension>
+          <gpxtpx:TrackPointExtension><gpxtpx:hr>140</gpxtpx:hr><gpxtpx:cad>90</gpxtpx:cad><gpxtpx:speed>9.5</gpxtpx:speed></gpxtpx:TrackPointExtension>
+        </extensions>
+      </trkpt>
+      <trkpt lat="47.1001" lon="18.9">
+        <ele>149</ele>
+        <time>2026-07-20T05:00:01Z</time>
+        <extensions>
+          <gpxpx:PowerExtension><gpxpx:PowerInWatts>220</gpxpx:PowerInWatts></gpxpx:PowerExtension>
+          <gpxtpx:TrackPointExtension><gpxtpx:hr>142</gpxtpx:hr><gpxtpx:cad>92</gpxtpx:cad><gpxtpx:speed>10.5</gpxtpx:speed></gpxtpx:TrackPointExtension>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
