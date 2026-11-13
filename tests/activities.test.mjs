@@ -297,6 +297,12 @@ test("activities need a signed-in rider, and a cookie only counts from the web a
   assert.equal((await rpcClient(runtime, { cookie }).activities.list({})).activities.length, 1);
   const crossSite = rpcClient(runtime, { cookie, origin: "https://attacker.example" });
   await assert.rejects(crossSite.activities.list({}), { code: "UNAUTHORIZED" });
+  const withBogusBearer = rpcClient(runtime, {
+    cookie,
+    token: "invalid.signature",
+    origin: "https://attacker.example",
+  });
+  await assert.rejects(withBogusBearer.activities.list({}), { code: "UNAUTHORIZED" });
   await assert.rejects(
     crossSite.activities.upload({ file: gpx("2026-05-01T00:00:00Z"), source: "upload" }),
     { code: "UNAUTHORIZED" },

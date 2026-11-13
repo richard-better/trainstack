@@ -7,8 +7,7 @@ export type CreateContextOptions = {
   context: HonoContext;
 };
 
-function sentByTheWebAppOrWithABearerToken(request: Request) {
-  if (/^Bearer\s/i.test(request.headers.get("Authorization") ?? "")) return true;
+function cookiesCount(request: Request) {
   const origin = request.headers.get("Origin");
   if (origin) return origin === ENV.WEB_APP_ORIGIN;
   return request.headers.get("Sec-Fetch-Site") !== "cross-site";
@@ -17,14 +16,10 @@ function sentByTheWebAppOrWithABearerToken(request: Request) {
 export async function createContext({ context }: CreateContextOptions) {
   const db = getDb();
   const request = context.req.raw;
-  const session = await (
-    await createAuth(db)
-  ).api.getSession({
-    headers: request.headers,
-  });
-  return {
-    session: sentByTheWebAppOrWithABearerToken(request) ? session : null,
-  };
+  const headers = new Headers(request.headers);
+  if (!cookiesCount(request)) headers.delete("Cookie");
+  const session = await (await createAuth(db)).api.getSession({ headers });
+  return { session };
 }
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
