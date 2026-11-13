@@ -1,24 +1,25 @@
 import type { ActivityStatisticName } from "@trainstack/contract";
 import {
-  decodeFit,
-  FitDecodeError,
-  type FitDecodeErrorCode,
-  type FitEvent,
-  type FitLap,
-  type FitTotals,
+  ActivityFileError,
+  decodeActivityFile,
+  type ActivityEvent,
+  type ActivityFileErrorCode,
+  type ActivityLap,
   type Sport,
   type SubSport,
-} from "@trainstack/fit";
+} from "@trainstack/activity-file";
+import type { FitTotals } from "@trainstack/fit";
 
 import type { ActivitySummaryError } from "../db/schema";
 import { SummaryError, type FileSummary, type SummaryEvent } from "./file-summary";
 
-const summaryErrorOf: Record<FitDecodeErrorCode, ActivitySummaryError> = {
+const summaryErrorOf: Record<ActivityFileErrorCode, ActivitySummaryError> = {
   truncated: "truncated",
-  notAFitFile: "corrupt",
+  unrecognizedFormat: "corrupt",
   badChecksum: "corrupt",
   malformed: "corrupt",
   noActivity: "no_activity",
+  tooLarge: "too_large",
 };
 
 const statisticOf: Record<ActivityStatisticName, keyof FitTotals> = {
@@ -70,7 +71,7 @@ const FIT_EPOCH = Date.UTC(1989, 11, 31);
 const knownTime = (time: Date | undefined) =>
   time !== undefined && time.getTime() > FIT_EPOCH ? time : undefined;
 
-function lapEvents(laps: readonly FitLap[]): SummaryEvent[] {
+function lapEvents(laps: readonly ActivityLap[]): SummaryEvent[] {
   return laps.flatMap((lap) => {
     const startedAt = knownTime(lap.startTime);
     if (!startedAt) return [];
@@ -88,7 +89,7 @@ function lapEvents(laps: readonly FitLap[]): SummaryEvent[] {
   });
 }
 
-function pauseEvents(events: readonly FitEvent[]): SummaryEvent[] {
+function pauseEvents(events: readonly ActivityEvent[]): SummaryEvent[] {
   const pauses: SummaryEvent[] = [];
   let stoppedAt: Date | undefined;
   for (const event of events) {
@@ -103,21 +104,21 @@ function pauseEvents(events: readonly FitEvent[]): SummaryEvent[] {
   return pauses;
 }
 
-export function summarizeFit(bytes: Uint8Array): FileSummary {
+export function summarizeActivityFile(bytes: Uint8Array): FileSummary {
   try {
-    const activity = decodeFit(bytes);
+    const activity = decodeActivityFile(bytes);
     const { summary } = activity;
     return {
       startedAt: knownTime(summary.startTime),
       sport: sportOf(summary.sport, summary.subSport),
-      name: activity.workoutName?.trim() || undefined,
+      name: activity.name?.trim() || undefined,
       statistics: statistics(summary),
       events: [...lapEvents(activity.laps), ...pauseEvents(activity.events)].sort(
         (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
       ),
     };
   } catch (error) {
-    if (error instanceof FitDecodeError) throw new SummaryError(summaryErrorOf[error.code]);
+    if (error instanceof ActivityFileError) throw new SummaryError(summaryErrorOf[error.code]);
     throw error;
   }
 }

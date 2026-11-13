@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import type { Database } from "../db";
@@ -9,7 +9,7 @@ import {
   type ActivityFileFormat,
   type ActivitySummaryError,
 } from "../db/schema";
-import { decodableFormats, decoders } from "./decoders";
+import { summarizeActivityFile } from "./activity-file";
 import { SummaryError, type FileSummary } from "./file-summary";
 import { fileKey } from "./files";
 
@@ -104,8 +104,7 @@ export async function summarizeActivity(
   target: SummaryTarget,
   bytes?: Uint8Array,
 ) {
-  const decode = target.fileFormat ? decoders[target.fileFormat] : undefined;
-  if (!decode || target.fileSize === null) return;
+  if (target.fileFormat === null || target.fileSize === null) return;
   if (target.summaryAttempts >= MAX_SUMMARY_ATTEMPTS) return store(db, target, { error: "failed" });
   if (target.fileSize > MAX_SUMMARIZED_FILE_BYTES) {
     return store(db, target, { error: "too_large" });
@@ -114,7 +113,7 @@ export async function summarizeActivity(
   const file = bytes ?? (await readFile(bucket, target));
   let outcome: Outcome;
   try {
-    outcome = { summary: decode(file) };
+    outcome = { summary: summarizeActivityFile(file) };
   } catch (error) {
     if (!(error instanceof SummaryError)) throw error;
     outcome = { error: error.code };
@@ -134,7 +133,7 @@ export function dueForSummary(db: Database, limit = SUMMARIES_PER_SCHEDULED_RUN)
     .from(activity)
     .where(
       and(
-        inArray(activity.fileFormat, decodableFormats),
+        isNotNull(activity.fileFormat),
         or(
           isNull(activity.summaryVersion),
           lt(activity.summaryVersion, SUMMARY_VERSION),

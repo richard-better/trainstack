@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc -b ../../../packages/contract ../../../packages/zones && vp pack",
-    "check-types": "tsc -b ../../../packages/contract ../../../packages/zones ../../../packages/fit && tsc --noEmit",
+    "check-types": "tsc -b ../../../packages/contract ../../../packages/zones ../../../packages/fit ../../../packages/activity-file && tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile api",
     "env:generate": "varlock codegen",
     "db:generate": "cd db && drizzle-kit generate"
@@ -19,6 +19,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@trainstack/activity-file": "workspace:*",
     "@trainstack/contract": "workspace:*",
     "@trainstack/fit": "workspace:*",
     "@trainstack/zones": "workspace:*",

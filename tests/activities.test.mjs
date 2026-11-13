@@ -264,7 +264,13 @@ test("statistics and events from any sport come back with the activity", async (
   ]);
 
   const detail = await client.activities.get({ id });
-  assert.deepEqual(detail.statistics, { problems_sent: 7, hardest_grade_v: 5.5 });
+  assert.deepEqual(detail.statistics, {
+    elapsed_s: 0,
+    timer_s: 0,
+    distance_m: 0,
+    problems_sent: 7,
+    hardest_grade_v: 5.5,
+  });
   assert.deepEqual(detail.events, [
     { type: "lap", startedAt: new Date(1775001500000), endedAt: null, data: {} },
     {

@@ -51,7 +51,7 @@ async function runCronUntilNothingIsDue() {
   for (let run = 0; run < 20; run++) {
     const due = await db
       .prepare(
-        "SELECT count(*) AS n FROM activity WHERE file_format = 'fit' AND (summary_version IS NULL OR (summary_error = 'too_large' AND file_size <= ?))",
+        "SELECT count(*) AS n FROM activity WHERE file_format IS NOT NULL AND (summary_version IS NULL OR (summary_error = 'too_large' AND file_size <= ?))",
       )
       .bind(MAX_SUMMARIZED_FILE_BYTES)
       .first();
@@ -256,26 +256,62 @@ test("a FIT file that will not decode stays stored, listed and downloadable, wit
   assert.equal((await client.activities.list({})).activities.length, 2);
 });
 
-test("GPX and TCX files wait, unsummarised and without an error, for their decoders", async () => {
-  const { client, user } = await rider();
-  const gpx = await client.activities.upload({
+test("GPX and TCX files are summarised the same way, pauses included", async () => {
+  const { client } = await rider();
+  const fixture = (name) => readFile(`packages/activity-file/test/files/${name}`);
+  const run = await client.activities.upload({
+    file: new File([await fixture("garmin-connect-run.gpx")], "run.gpx"),
+    source: "upload",
+  });
+  assert.equal(run.file.format, "gpx");
+  assert.ok(run.summarizedAt instanceof Date);
+  assert.equal(run.summaryError, null);
+  assert.equal(run.sport, "running");
+  assert.equal(run.name, "Budapest Running");
+  assert.deepEqual(run.startedAt, new Date("2026-10-03T16:30:00.000Z"));
+  assert.equal(run.statistics.elapsed_s, 68);
+  assert.equal(run.statistics.timer_s, 8);
+  assert.equal(run.statistics.max_heart_rate_bpm, 142);
+  assert.deepEqual((await client.activities.get({ id: run.id })).events, [
+    {
+      type: "pause",
+      startedAt: new Date("2026-10-03T16:30:04.000Z"),
+      endedAt: new Date("2026-10-03T16:31:04.000Z"),
+      data: {},
+    },
+  ]);
+
+  const tcx = await client.activities.upload({
+    file: new File([await fixture("strava-run.tcx")], "run.tcx"),
+    source: "strava",
+  });
+  assert.equal(tcx.file.format, "tcx");
+  assert.equal(tcx.summaryError, null);
+  assert.equal(tcx.sport, "running");
+  assert.deepEqual(tcx.statistics, {
+    elapsed_s: 20,
+    timer_s: 20,
+    distance_m: 60,
+    calories_kcal: 4,
+    average_speed_mps: 3,
+    average_heart_rate_bpm: 146,
+    max_heart_rate_bpm: 152,
+    average_cadence_rpm: 86,
+    max_cadence_rpm: 88,
+    ascent_m: 0,
+    descent_m: 0,
+  });
+  assert.equal((await client.activities.get({ id: tcx.id })).events[0].type, "lap");
+
+  const empty = await client.activities.upload({
     file: new File(
-      [
-        `<?xml version="1.0"?><gpx version="1.1"><trk><trkseg><trkpt lat="47.5" lon="19.04"><time>2026-01-01T00:00:00Z</time></trkpt></trkseg></trk></gpx>`,
-      ],
-      "run.gpx",
+      ['<?xml version="1.0"?><gpx version="1.1"><trk><trkseg/></trk></gpx>'],
+      "empty.gpx",
     ),
     source: "upload",
   });
-  assert.equal(gpx.summarizedAt, null);
-  assert.equal(gpx.summaryError, null);
-  await runCronUntilNothingIsDue();
-  await runCron();
-  const row = await db
-    .prepare("SELECT summary_attempts, summary_version FROM activity WHERE user_id = ? AND id = ?")
-    .bind(user.id, gpx.id)
-    .first();
-  assert.deepEqual(row, { summary_attempts: 0, summary_version: null });
+  assert.equal(empty.summaryError, "no_activity");
+  assert.equal(empty.summarizedAt, null);
 });
 
 test("activities stored before summaries existed are summarised by the scheduled pass", async () => {

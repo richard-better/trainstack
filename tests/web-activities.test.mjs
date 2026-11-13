@@ -138,11 +138,7 @@ test("the web app pages through the athlete's activities, newest first", async (
     times,
     [...times].sort((a, b) => b - a),
   );
-  assert.deepEqual(
-    first.activities.map((activity) => headlineFigures(activity.statistics)),
-    first.activities.map(() => []),
-    "no headline numbers before the server summarizes",
-  );
+  assert.ok(first.activities.every((activity) => activity.summarizedAt instanceof Date));
 });
 
 test("the detail page charts the activity's own FIT file when the server has no summary", async () => {

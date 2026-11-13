@@ -3,7 +3,8 @@
   "references": [
     { "path": "../../../packages/contract" },
     { "path": "../../../packages/zones" },
-    { "path": "../../../packages/fit" }
+    { "path": "../../../packages/fit" },
+    { "path": "../../../packages/activity-file" }
   ],
   "compilerOptions": {
     "noEmit": true,
