@@ -6,6 +6,28 @@ public enum ZoneModel: String, CaseIterable, Codable, Sendable {
   case frielRunningPace, criticalSwimSpeed
   case seilerHeartRate, seilerPower
 
+  public var wireName: String {
+    switch self {
+    case .frielCycling: "friel_cycling"
+    case .frielRunning: "friel_running"
+    case .cogganHeartRate: "coggan_heart_rate"
+    case .percentOfMax: "percent_of_max"
+    case .karvonen: "karvonen"
+    case .coggan6: "coggan_6"
+    case .coggan7: "coggan_7"
+    case .polarized: "polarized"
+    case .frielRunningPace: "friel_running_pace"
+    case .criticalSwimSpeed: "critical_swim_speed"
+    case .seilerHeartRate: "seiler_heart_rate"
+    case .seilerPower: "seiler_power"
+    }
+  }
+
+  public init?(wireName: String) {
+    guard let model = Self.allCases.first(where: { $0.wireName == wireName }) else { return nil }
+    self = model
+  }
+
   public struct Group: Sendable {
     public var title: String
     public var models: [ZoneModel]
