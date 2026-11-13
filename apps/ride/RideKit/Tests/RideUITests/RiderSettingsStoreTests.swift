@@ -66,7 +66,7 @@ struct RiderSettingsStoreTests {
   @Test func analysesARideWithTheFTPInEffectOnItsDay() throws {
     let ride = try RideRecording.sample()
     var settings = RiderSettings()
-    settings.history.record(
+    settings.record(
       [.threshold(.ftp, scope: .all, value: 180)], on: ride.startDate.addingTimeInterval(-86_400))
     let store = RiderSettingsStore(settings: settings)
     store[.ftp, .all] = 260

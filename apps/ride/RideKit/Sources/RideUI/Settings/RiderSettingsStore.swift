@@ -9,18 +9,24 @@ final class RiderSettingsStore {
     didSet { if let defaults { powerDisplay.save(to: defaults) } }
   }
   @ObservationIgnored private let defaults: UserDefaults?
+  @ObservationIgnored private let now: () -> Date
+  @ObservationIgnored var onEdit: (() -> Void)?
 
-  init(defaults: UserDefaults = .standard) {
+  init(defaults: UserDefaults = .standard, now: @escaping () -> Date = { .now }) {
     self.defaults = defaults
+    self.now = now
     settings = RiderSettings.load(from: defaults)
     powerDisplay = PowerDisplay.load(from: defaults)
   }
 
-  init(settings: RiderSettings) {
+  init(settings: RiderSettings, now: @escaping () -> Date = { .now }) {
     self.defaults = nil
+    self.now = now
     self.settings = settings
     powerDisplay = .standard
   }
+
+  var isStored: Bool { defaults != nil }
 
   var current: ZoneProfile { settings.history.current }
 
@@ -31,8 +37,8 @@ final class RiderSettingsStore {
   var weight: Double {
     get { settings.weight }
     set {
-      settings.setWeight(newValue)
-      save()
+      settings.setWeight(newValue, at: now())
+      edited()
     }
   }
 
@@ -106,29 +112,55 @@ final class RiderSettingsStore {
   }
 
   func moveHistoryEntry(_ id: ZoneHistory.Entry.ID, to date: Date) {
-    settings.history.move(id, to: date)
-    save()
+    settings.moveHistoryEntry(id, to: date, at: now())
+    edited()
   }
 
   func removeHistoryEntry(_ id: ZoneHistory.Entry.ID) {
-    settings.history.remove(id)
-    save()
+    settings.removeHistoryEntry(id, at: now())
+    edited()
   }
 
   func ftpTests(in scope: ZoneScope) -> [FTPTest] { settings.ftpTests(in: scope) }
 
   func add(_ test: FTPTest, updatesFTP: Bool) {
-    settings.add(test, updatesFTP: updatesFTP)
-    save()
+    settings.add(test, updatesFTP: updatesFTP, at: now())
+    edited()
   }
 
   func removeFTPTest(_ id: FTPTest.ID) {
-    settings.removeFTPTest(id)
-    save()
+    settings.removeFTPTest(id, at: now())
+    edited()
   }
 
   private func record(_ change: ZoneChange) {
-    settings.history.record([change], on: .now)
+    let now = now()
+    settings.record([change], on: now, at: now)
+    edited()
+  }
+
+  private func edited() {
+    save()
+    onEdit?()
+  }
+
+  func receive(_ writes: [SettingWrite], through cursor: String?) {
+    settings.receive(writes, through: cursor)
+    save()
+  }
+
+  func claim(for account: String) {
+    settings.claim(for: account)
+    save()
+  }
+
+  func forgetAccount() {
+    settings.forgetAccount()
+    save()
+  }
+
+  func replaceLedger(with ledger: SettingsLedger) {
+    settings = RiderSettings(ledger: ledger)
     save()
   }
 
@@ -139,7 +171,7 @@ final class RiderSettingsStore {
   static var sample: RiderSettingsStore {
     var settings = RiderSettings()
     let start = Calendar.current.date(from: DateComponents(year: 2026, month: 9, day: 1)) ?? .now
-    settings.history.record(
+    settings.record(
       [
         .threshold(.maxHeartRate, scope: .all, value: 186),
         .threshold(.ftp, scope: .all, value: 200),

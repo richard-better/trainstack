@@ -168,4 +168,27 @@ struct ZoneHistoryTests {
       ZoneHistory.self, from: JSONEncoder().encode(history))
     #expect(decoded == history)
   }
+
+  @Test func beforeTheFirstDayAnythingTookEffectItsSettingsHoldAsOnTheServer() {
+    let history = ZoneHistory(
+      [
+        (SettingDay(day(3, 1), calendar: calendar), .ownZones(.power, sport: .running, true)),
+        (SettingDay(day(6, 1), calendar: calendar), ftp(200)),
+        (SettingDay(day(9, 1), calendar: calendar), ftp(220)),
+      ], calendar: calendar)
+    #expect(ftp(on: day(4, 1), in: history) == 200)
+    #expect(ftp(on: day(7, 1), in: history) == 200)
+  }
+
+  @Test func appliesChangesOnADayInAFixedOrder() {
+    var history = ZoneHistory()
+    history.record(
+      [.ownZones(.power, sport: .running, true), ftp(250), .listed(.running, true)],
+      on: day(3, 1), calendar: calendar)
+    #expect(
+      history.entries.first?.changes == [
+        .listed(.running, true), ftp(250), .ownZones(.power, sport: .running, true),
+      ])
+    #expect(history.current.value(of: .ftp, in: .sport(.running)) == 250)
+  }
 }
