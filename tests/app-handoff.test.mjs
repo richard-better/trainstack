@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, randomBytes, verify } from "node:crypto";
 import { after, before, test } from "node:test";
 import { mockApple } from "./helpers/apple.mjs";
-import { api, migrate, startWorker } from "./helpers/worker.mjs";
+import { browserThatDoesNotFollowRedirects } from "./helpers/browser.mjs";
+import { api, migrate, origin, startWorker } from "./helpers/worker.mjs";
 
 const APP = "trainstackride://signed-in";
 const APPLE_ORIGIN = "https://appleid.apple.com";
@@ -35,25 +36,7 @@ function pkce() {
 }
 
 function webAuthenticationSessionWithItsOwnCookiesThatDoesNotFollowRedirects(target = runtime) {
-  const jar = new Map();
-  return {
-    jar,
-    async visit(url, init = {}) {
-      const headers = new Headers(init.headers);
-      if (jar.size) {
-        headers.set("Cookie", [...jar].map(([name, value]) => `${name}=${value}`).join("; "));
-      }
-      const response = await target.dispatchFetch(url, { ...init, headers, redirect: "manual" });
-      for (const raw of response.headers.getSetCookie()) {
-        const [pair, ...attributes] = raw.split(";");
-        const name = pair.slice(0, pair.indexOf("=")).trim();
-        const value = pair.slice(pair.indexOf("=") + 1);
-        if (!value || attributes.some((a) => /^\s*max-age=0\s*$/i.test(a))) jar.delete(name);
-        else jar.set(name, value);
-      }
-      return response;
-    },
-  };
+  return browserThatDoesNotFollowRedirects(target);
 }
 
 async function signInThroughBrowser({ challenge, approve = {}, deny = false } = {}) {
@@ -273,10 +256,10 @@ test("the handoff turns away bad requests", async () => {
 test("a challenge sent to Better Auth directly does not make a handoff", async () => {
   const response = await runtime.dispatchFetch(`${api}/api/auth/sign-in/social`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Origin: "https://trainstackhq.com" },
+    headers: { "Content-Type": "application/json", Origin: origin },
     body: JSON.stringify({
       provider: "apple",
-      callbackURL: "https://trainstackhq.com/",
+      callbackURL: `${origin}/`,
       additionalData: { appChallenge: pkce().challenge },
     }),
   });
@@ -293,7 +276,7 @@ test("a challenge sent to Better Auth directly does not make a handoff", async (
     body: form.toString(),
   });
   const back = await session.visit(posted.headers.get("location"));
-  assert.equal(back.headers.get("location"), "https://trainstackhq.com/");
+  assert.equal(back.headers.get("location"), `${origin}/`);
 });
 
 test("deleting an account revokes what the browser sign-in got from Apple", async () => {

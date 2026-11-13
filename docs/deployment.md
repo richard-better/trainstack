@@ -4,9 +4,9 @@
 
 Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted/infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted/infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
 
-- TanStack Start account Worker at `account.trainstackhq.com`, serving a placeholder homepage. Alchemy builds it through `Cloudflare.Website.Vite` and manages the custom domain and TLS.
-- API Worker at `api.trainstackhq.com`, with a `DB` binding to D1 and a secret Better Auth signing key.
-- Astro Worker served at `trainstackhq.com` by a `trainstackhq.com/*` route over the existing proxied DNS records, with the API URL, session KV, and Images binding.
+- TanStack Start web app Worker at `account.trainstackhq.com`, where athletes sign in with Apple. Alchemy builds it through `Cloudflare.Website.Vite` with the API's URL as `VITE_SERVER_URL`, and manages the custom domain and TLS.
+- API Worker at `api.trainstackhq.com`, with a `DB` binding to D1, a secret Better Auth signing key, and the web app's origin as `WEB_APP_ORIGIN`, the only origin it trusts for sign-in and credentialed requests.
+- Astro Worker served at `trainstackhq.com` by a `trainstackhq.com/*` route over the existing proxied DNS records, with session KV and an Images binding.
 - Committed Drizzle migrations before the API Worker update.
 - When configured, Axiom dataset `trainstack-production-logs` and a dataset-scoped ingest token injected into both applications.
 - Shared Cloudflare state storage, using a Worker, Durable Object, and Secrets Store for encrypted state and authentication.
@@ -93,6 +93,8 @@ gh secret set APPLE_SIGN_IN_PRIVATE_KEY --env production --repo richard-better/t
 
 Without them, the web flow sends the app `apple_web_not_configured` and native sign-in keeps working. The app opens `GET /api/auth/app-handoff/apple?code_challenge=` in a web authentication session. When Apple's flow ends with a new session, the API deletes the browser's session and redirects to `trainstackride://signed-in?code=`, or `?error=`. The app trades the code and its verifier at `POST /api/auth/app-handoff/token` for `{ token, user: { name } }`. Codes last two minutes, work once, and only with the verifier, which never leaves the app. Both endpoints allow 10 requests a minute per client address. Deleting an account revokes the refresh token Apple's web flow gave, which App Review expects.
 
+The web app at `account.trainstackhq.com` uses the same Services ID. It asks the API to start Apple's flow with itself as the place to return to, Apple posts the result to the API's callback, and the API sets its session cookie and sends the browser back to the web app, or to the web app with `?error=`. The cookie belongs to `api.trainstackhq.com` and is `HttpOnly`, `Secure` and `SameSite=None`. The web app is the same site, so its credentialed requests to the API carry the cookie, and it never sees the token. Web and app sign-ins look up the account by Apple's user ID, so the same Apple ID reaches the same account from either. Apple's flow cannot return to a local API, so sign-in on the web can only be tried end to end against production.
+
 The workflow passes the GitHub `production` variable and secret to Alchemy through `hosted/infra/.env.schema`. The API receives a plain ID binding and a redacted secret binding, accessed through `ENV.STRAVA_CLIENT_ID` and `ENV.STRAVA_CLIENT_SECRET` from `hosted/apps/api/src/env.server.ts`. Missing values default to empty strings so deployment works before registration. Configure both before enabling Strava features.
 
 ```bash
@@ -137,7 +139,7 @@ Edit `hosted/apps/api/src/db/schema`, run `bun run db:generate`, and commit the 
 
 Use changes compatible with the currently running API because migrations run before its replacement. Add new columns/tables first, deploy code using them, and remove obsolete schema in a later release. A failed deployment can leave successfully applied migrations in place.
 
-Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests exercise deployment orchestration with and without Axiom, and bundle the actual API to execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. The check job builds the account app before deployment. Alchemy builds the Astro and TanStack Start applications for Cloudflare during deployment. The account app uses the existing compatibility settings, runs on port 3001 in `alchemy dev`, and uses a `workers.dev` URL outside production. Run `bun run --cwd hosted/apps/account dev:bare` for standalone development without Cloudflare credentials.
+Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests exercise deployment orchestration with and without Axiom, and bundle the actual API to execute committed SQL, authentication, health, and CORS behavior in local Workers/D1. The check job builds the account app before deployment. Alchemy builds the Astro and TanStack Start applications for Cloudflare during deployment. The account app uses the existing compatibility settings, runs on port 3001 in `alchemy dev`, and uses a `workers.dev` URL outside production. Run `bun run --cwd hosted/apps/account dev:bare` for standalone development without Cloudflare credentials. It calls the API at `http://localhost:3000`, from `hosted/apps/account/.env.development`, and the API trusts `http://localhost:3001` outside production.
 
 ## Recovery
 

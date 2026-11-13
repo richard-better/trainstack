@@ -23,7 +23,7 @@ function logWithoutStoppingTheDeletion(error: unknown) {
 export type AuthConfig = {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
-  CORS_ORIGIN: string;
+  WEB_APP_ORIGIN: string;
 };
 
 export function createAuth(env: AuthConfig, database: Database, appleWebFlowClientSecret?: string) {
@@ -54,7 +54,7 @@ export function createAuth(env: AuthConfig, database: Database, appleWebFlowClie
       provider: "sqlite",
       schema,
     }),
-    trustedOrigins: [env.CORS_ORIGIN, APPLE_WEB_FLOW_RESULT_ORIGIN],
+    trustedOrigins: [env.WEB_APP_ORIGIN, APPLE_WEB_FLOW_RESULT_ORIGIN],
     emailAndPassword: { enabled: false },
     socialProviders: {
       apple: {
