@@ -83,6 +83,10 @@ used with temporal checking. Each model explores all schedules in its bounds.
   re-upload the record for a moment before it fetches the deletion. Recreating a lost zone sends
   every ride and deletion record again (`handleFailedSaves`), and a deleted ride imported again
   stays on that device: neither a refetched deletion record nor the record's deletion removes it.
+  `DropDeletedOnServer` is `ActivitySync` (`RideUI/Sync/ActivitySync.swift`) dropping a ride
+  the TrainStack server answers was deleted, or one it uploaded that has gone from the account:
+  it calls `RideLibrary.remove`, so iCloud sees a removal on that device, possibly after another
+  device already removed the ride. The server's own sync is not modelled.
 - `TrainerPause`: `RideCore/RideEngine.swift` maps `.togglePause` to `Toggle`,
   and `pauseIfTrainerDropped` plus `session.advance` in `.tick` to atomic `Tick`.
   Connection changes, manual toggles and ticks interleave arbitrarily.

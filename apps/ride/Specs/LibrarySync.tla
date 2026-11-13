@@ -14,6 +14,11 @@ Remove(d) == /\ ~removed /\ local[d]
              /\ pending' = [pending EXCEPT ![d] = @ \cup {"DeleteRide", "SaveDeleted"}]
              /\ removed' = TRUE
              /\ UNCHANGED <<cloud, deletedRecord, bootstrapped>>
+DropDeletedOnServer(d) == /\ removed /\ local[d] /\ ~knowsDeleted[d]
+                          /\ local' = [local EXCEPT ![d] = FALSE]
+                          /\ knowsDeleted' = [knowsDeleted EXCEPT ![d] = TRUE]
+                          /\ pending' = [pending EXCEPT ![d] = @ \cup {"DeleteRide", "SaveDeleted"}]
+                          /\ UNCHANGED <<cloud, deletedRecord, removed, bootstrapped>>
 SendsRide(d) == local[d] /\ ~knowsDeleted[d]
 Bootstrap(d) == /\ ~bootstrapped[d]
                 /\ bootstrapped' = [bootstrapped EXCEPT ![d] = TRUE]
@@ -46,7 +51,7 @@ FetchRideGone(d) == /\ ~cloud /\ local[d]
                     /\ UNCHANGED <<cloud, deletedRecord, knowsDeleted, pending, removed,
                                    bootstrapped>>
 Next == \E d \in Devices:
-          \/ Remove(d) \/ Bootstrap(d) \/ FetchDeleted(d) \/ FetchRide(d) \/ FetchRideGone(d)
+          \/ Remove(d) \/ DropDeletedOnServer(d) \/ Bootstrap(d) \/ FetchDeleted(d) \/ FetchRide(d) \/ FetchRideGone(d)
           \/ \E command \in Commands: Send(d, command)
 Spec == Init /\ [][Next]_vars /\ \A d \in Devices:
         /\ WF_vars(Bootstrap(d)) /\ WF_vars(FetchDeleted(d)) /\ WF_vars(FetchRide(d))
