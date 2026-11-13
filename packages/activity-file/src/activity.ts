@@ -1,8 +1,8 @@
 import {
   decodeFit,
   FitDecodeError,
+  summarizeFit,
   type ActivitySummary,
-  type FitActivity,
   type FitEvent,
   type FitLap,
   type FitRecord,
@@ -24,6 +24,13 @@ export interface DecodedActivity {
   readonly laps: readonly ActivityLap[];
   readonly records: readonly ActivityRecord[];
   readonly events: readonly ActivityEvent[];
+}
+
+export interface ActivityFileSummary {
+  readonly format: ActivityFileFormat;
+  readonly name: string | undefined;
+  readonly summary: ActivitySummary;
+  readonly laps: readonly ActivityLap[];
 }
 
 export const maxActivityFileBytes = 64 * 1024 * 1024;
@@ -71,31 +78,34 @@ function xmlBytes(data: Uint8Array | ArrayBuffer, format: "gpx" | "tcx"): Uint8A
 }
 
 export function decodeGpx(data: Uint8Array | ArrayBuffer): DecodedActivity {
-  return readGpx(xmlBytes(data, "gpx"));
+  return readGpx(xmlBytes(data, "gpx"), true);
 }
 
 export function decodeTcx(data: Uint8Array | ArrayBuffer): DecodedActivity {
-  return readTcx(xmlBytes(data, "tcx"));
+  return readTcx(xmlBytes(data, "tcx"), true);
 }
 
-function fromFit(activity: FitActivity): DecodedActivity {
-  return {
-    format: "fit",
-    name: activity.workoutName,
-    summary: activity.summary,
-    laps: activity.laps,
-    records: activity.records,
-    events: activity.events,
-  };
+function fitError(error: unknown): unknown {
+  if (!(error instanceof FitDecodeError)) return error;
+  const code = error.code === "notAFitFile" ? "malformed" : error.code;
+  return new ActivityFileError(code, "fit", { cause: error });
 }
 
 function decodedFit(bytes: Uint8Array): DecodedActivity {
   try {
-    return fromFit(decodeFit(bytes));
+    const { workoutName, summary, laps, records, events } = decodeFit(bytes);
+    return { format: "fit", name: workoutName, summary, laps, records, events };
   } catch (error) {
-    if (!(error instanceof FitDecodeError)) throw error;
-    const code = error.code === "notAFitFile" ? "malformed" : error.code;
-    throw new ActivityFileError(code, "fit", { cause: error });
+    throw fitError(error);
+  }
+}
+
+function summarizedFit(bytes: Uint8Array): ActivityFileSummary {
+  try {
+    const { workoutName, summary, laps } = summarizeFit(bytes);
+    return { format: "fit", name: workoutName, summary, laps };
+  } catch (error) {
+    throw fitError(error);
   }
 }
 
@@ -105,5 +115,18 @@ export function decodeActivityFile(data: Uint8Array | ArrayBuffer): DecodedActiv
   if (format === "fit") return decodedFit(bytes);
   if (format === "gpx") return decodeGpx(bytes);
   if (format === "tcx") return decodeTcx(bytes);
+  throw new ActivityFileError("unrecognizedFormat", undefined);
+}
+
+function summaryOf({ format, name, summary, laps }: DecodedActivity): ActivityFileSummary {
+  return { format, name, summary, laps };
+}
+
+export function summarizeActivityFile(data: Uint8Array | ArrayBuffer): ActivityFileSummary {
+  const bytes = checkedSize(data, undefined);
+  const format = detectActivityFileFormat(bytes);
+  if (format === "fit") return summarizedFit(bytes);
+  if (format === "gpx") return summaryOf(readGpx(xmlBytes(bytes, "gpx"), false));
+  if (format === "tcx") return summaryOf(readTcx(xmlBytes(bytes, "tcx"), false));
   throw new ActivityFileError("unrecognizedFormat", undefined);
 }

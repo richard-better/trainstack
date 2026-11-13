@@ -6,10 +6,8 @@ import { sportFromName, type SportAndSubSport } from "./sports.ts";
 import {
   emptyPoint,
   isTimed,
-  pauseEvents,
-  pausesBetween,
-  records,
   summarize,
+  Track,
   type TimedPoint,
   type TrackPoint,
 } from "./track.ts";
@@ -40,14 +38,18 @@ interface LapDraft {
   readonly startTime: number | undefined;
   readonly values: Partial<Record<LapFieldName, number>>;
   trigger: string | undefined;
-  readonly tracks: TimedPoint[][];
+  trackCount: number;
+  firstTime: number | undefined;
+  lastTime: number | undefined;
+  firstPosition: TimedPoint | undefined;
 }
 
 interface ActivityDraft {
-  readonly sport: string | undefined;
+  readonly sport: SportAndSubSport;
   id: number | undefined;
-  readonly laps: LapDraft[];
 }
+
+export const maxLaps = 10_000;
 
 const lapTriggers: Readonly<Record<string, LapTrigger>> = {
   Manual: "manual",
@@ -71,11 +73,20 @@ const extensionFields: Readonly<Record<string, keyof TrackPoint>> = {
 };
 
 class TcxReader implements XmlHandler {
-  readonly activities: ActivityDraft[] = [];
+  readonly laps: FitLap[] = [];
+  readonly sports = new Set<SportAndSubSport["sport"]>();
+  firstSport: SportAndSubSport | undefined;
+  earliest: number | undefined;
+  latest: number | undefined;
   private activity: ActivityDraft | undefined;
   private lap: LapDraft | undefined;
-  private track: TimedPoint[] | undefined;
+  private inTrack = false;
   private point: TrackPoint | undefined;
+  readonly track: Track;
+
+  constructor(track: Track) {
+    this.track = track;
+  }
 
   open(name: string, attributes: XmlAttributes, ancestors: readonly string[]): void {
     const parent = ancestors.at(-1);
@@ -83,20 +94,25 @@ class TcxReader implements XmlHandler {
       throw new ActivityFileError("malformed", "tcx");
     }
     if (name === "Activity" && ancestors.includes("Activities")) {
-      this.activity = { sport: attributes.get("Sport"), id: undefined, laps: [] };
-      this.activities.push(this.activity);
+      const sport = sportFromName(attributes.get("Sport"));
+      this.activity = { sport, id: undefined };
+      this.firstSport ??= sport;
+      this.sports.add(sport.sport);
     } else if (name === "Lap" && parent === "Activity" && this.activity) {
       this.lap = {
         startTime: parseTime(attributes.get("StartTime")),
         values: {},
         trigger: undefined,
-        tracks: [],
+        trackCount: 0,
+        firstTime: undefined,
+        lastTime: undefined,
+        firstPosition: undefined,
       };
-      this.activity.laps.push(this.lap);
     } else if (name === "Track" && parent === "Lap" && this.lap) {
-      this.track = [];
-      this.lap.tracks.push(this.track);
-    } else if (name === "Trackpoint" && parent === "Track" && this.track) {
+      if (this.lap.trackCount > 0) this.track.segment();
+      this.lap.trackCount += 1;
+      this.inTrack = true;
+    } else if (name === "Trackpoint" && parent === "Track" && this.inTrack) {
       this.point = emptyPoint();
     }
   }
@@ -106,12 +122,15 @@ class TcxReader implements XmlHandler {
     if (this.point) {
       this.closeInTrackpoint(this.point, name, text, ancestors);
     } else if (name === "Activity") {
+      if (this.activity?.id !== undefined) this.include(this.activity.id);
       this.activity = undefined;
       this.lap = undefined;
     } else if (name === "Lap") {
+      if (this.lap && this.activity) this.finishLap(lap(this.lap, this.activity.sport));
       this.lap = undefined;
+      this.inTrack = false;
     } else if (name === "Track") {
-      this.track = undefined;
+      this.inTrack = false;
     } else if (this.lap) {
       this.closeInLap(this.lap, name, text, ancestors);
     } else if (name === "Id" && parent === "Activity" && this.activity) {
@@ -127,7 +146,7 @@ class TcxReader implements XmlHandler {
   ): void {
     const parent = ancestors.at(-1);
     if (name === "Trackpoint") {
-      if (isTimed(point)) this.track?.push(point);
+      if (isTimed(point) && this.lap) this.addPoint(this.lap, point);
       this.point = undefined;
     } else if (parent === "Trackpoint" && name === "Time") {
       point.time = parseTime(text);
@@ -144,6 +163,26 @@ class TcxReader implements XmlHandler {
       const field = extensionFields[name];
       if (point[field] === undefined) point[field] = parseMeasure(text);
     }
+  }
+
+  private include(time: number): void {
+    if (this.earliest === undefined || time < this.earliest) this.earliest = time;
+    if (this.latest === undefined || time > this.latest) this.latest = time;
+  }
+
+  private finishLap(decoded: FitLap | undefined): void {
+    if (!decoded) return;
+    if (this.laps.length >= maxLaps) throw new ActivityFileError("tooLarge", "tcx");
+    this.laps.push(decoded);
+    this.include(decoded.startTime!.getTime());
+    this.include(decoded.endTime!.getTime());
+  }
+
+  private addPoint(lap: LapDraft, point: TimedPoint): void {
+    lap.firstTime ??= point.time;
+    lap.lastTime = point.time;
+    if (point.latitude !== undefined && point.longitude !== undefined) lap.firstPosition ??= point;
+    this.track.add(point);
   }
 
   private closeInLap(
@@ -169,20 +208,13 @@ class TcxReader implements XmlHandler {
 
 const latestDate = 8.64e15;
 
-function positioned(points: readonly TimedPoint[]): TimedPoint | undefined {
-  return points.find((point) => point.latitude !== undefined && point.longitude !== undefined);
-}
-
 function lap(draft: LapDraft, sport: SportAndSubSport): FitLap | undefined {
-  const points = draft.tracks.flat();
   const timerSeconds = draft.values.TotalTimeSeconds;
-  const startTime = draft.startTime ?? points[0]?.time;
+  const startTime = draft.startTime ?? draft.firstTime;
   if (startTime === undefined) return undefined;
-  const lastPoint = points.at(-1)?.time;
-  const endTime = Math.max(lastPoint ?? startTime, startTime + (timerSeconds ?? 0) * 1000);
+  const endTime = Math.max(draft.lastTime ?? startTime, startTime + (timerSeconds ?? 0) * 1000);
   if (!(endTime <= latestDate)) throw new ActivityFileError("malformed", "tcx");
-  const firstPosition = positioned(points);
-  const { values } = draft;
+  const { firstPosition, values } = draft;
   return {
     startTime: new Date(startTime),
     endTime: new Date(endTime),
@@ -210,55 +242,29 @@ function lap(draft: LapDraft, sport: SportAndSubSport): FitLap | undefined {
   };
 }
 
-function activitySport(activities: readonly ActivityDraft[]): SportAndSubSport {
-  const sports = activities.map((activity) => sportFromName(activity.sport));
-  const distinct = new Set(sports.map(({ sport }) => sport));
-  if (distinct.size > 1) return { sport: "multisport", subSport: undefined };
-  return sports[0] ?? { sport: undefined, subSport: undefined };
-}
-
-export function readTcx(bytes: Uint8Array): DecodedActivity {
-  const reader = new TcxReader();
+export function readTcx(bytes: Uint8Array, keepRecords: boolean): DecodedActivity {
+  const track = new Track(keepRecords);
+  const reader = new TcxReader(track);
   scanXml(bytes, reader, "tcx");
-  const segments: TimedPoint[][] = [];
-  const laps: FitLap[] = [];
-  const times: number[] = [];
-  for (const activity of reader.activities) {
-    const sport = sportFromName(activity.sport);
-    if (activity.id !== undefined) times.push(activity.id);
-    for (const draft of activity.laps) {
-      const decoded = lap(draft, sport);
-      if (decoded) {
-        laps.push(decoded);
-        times.push(decoded.startTime!.getTime(), decoded.endTime!.getTime());
-      }
-      draft.tracks.forEach((track, index) => {
-        if (index > 0 || segments.length === 0) segments.push([]);
-        const segment = segments.at(-1)!;
-        for (const point of track) segment.push(point);
-      });
-    }
+  const { laps } = reader;
+  if (track.start === undefined && laps.length === 0) {
+    throw new ActivityFileError("noActivity", "tcx");
   }
-  const points = segments.flat();
-  if (points.length === 0 && laps.length === 0) throw new ActivityFileError("noActivity", "tcx");
-  for (const { time } of points) times.push(time);
-  const start = times.reduce((earliest, time) => Math.min(earliest, time));
-  const end = times.reduce((latest, time) => Math.max(latest, time));
-  const pauses = pausesBetween(segments);
-  const decodedRecords = records(segments, start);
+  const times = [reader.earliest, reader.latest, track.start, track.end].filter(
+    (time) => time !== undefined,
+  );
+  const start = Math.min(...times);
+  const end = Math.max(...times);
+  const sport =
+    reader.sports.size > 1
+      ? { sport: "multisport" as const, subSport: undefined }
+      : (reader.firstSport ?? { sport: undefined, subSport: undefined });
   return {
     format: "tcx",
     name: undefined,
-    summary: summarize({
-      start,
-      end,
-      sport: activitySport(reader.activities),
-      laps,
-      records: decodedRecords,
-      pauses,
-    }),
+    summary: summarize({ start, end, sport, laps, track }),
     laps,
-    records: decodedRecords,
-    events: pauseEvents(pauses),
+    records: track.records(start),
+    events: track.events,
   };
 }

@@ -89,6 +89,10 @@ const widths: Record<number, number> = {
 
 const utf8 = new TextDecoder("utf-8");
 
+function isByte(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= 0xff;
+}
+
 function developerKey(developerDataIndex: number, fieldNumber: number): string {
   return `${developerDataIndex}:${fieldNumber}`;
 }
@@ -221,7 +225,7 @@ class Reader {
     this.descriptions = descriptions;
   }
 
-  read(messages: FitMessage[]): void {
+  read(visit: (message: FitMessage) => void): void {
     while (this.position < this.end) {
       const header = this.byte();
       const compressed = (header & 0x80) !== 0;
@@ -240,7 +244,7 @@ class Reader {
         const timestamp = message.fields.get(timestampField);
         if (typeof timestamp === "number") this.lastTimestamp = timestamp;
       }
-      if (carriesData) messages.push(message);
+      if (carriesData) visit(message);
     }
   }
 
@@ -338,6 +342,7 @@ class Reader {
     }
     const scale = message.fields.get(FieldDescription.scale);
     const offset = message.fields.get(FieldDescription.offset);
+    if (!isByte(index) || !isByte(number)) return;
     this.descriptions.set(developerKey(index, number), {
       name,
       baseType: baseType & 0x1f,
@@ -359,7 +364,7 @@ class Reader {
 function readFile(
   bytes: Uint8Array,
   start: number,
-  messages: FitMessage[],
+  visit: (message: FitMessage) => void,
   descriptions: Map<string, DeveloperFieldDescription>,
 ): number {
   const available = bytes.length - start;
@@ -378,17 +383,24 @@ function readFile(
   if (fitChecksum(bytes, start, end) !== view.getUint16(end, true)) {
     throw new FitDecodeError("badChecksum");
   }
-  new Reader(bytes, start + headerSize, end, descriptions).read(messages);
+  new Reader(bytes, start + headerSize, end, descriptions).read(visit);
   return end + 2;
 }
 
-export function readFitMessages(data: Uint8Array | ArrayBuffer): FitMessage[] {
+export function forEachFitMessage(
+  data: Uint8Array | ArrayBuffer,
+  visit: (message: FitMessage) => void,
+): void {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-  const messages: FitMessage[] = [];
   const descriptions = new Map<string, DeveloperFieldDescription>();
   let position = 0;
   do {
-    position = readFile(bytes, position, messages, descriptions);
+    position = readFile(bytes, position, visit, descriptions);
   } while (position < bytes.length);
+}
+
+export function readFitMessages(data: Uint8Array | ArrayBuffer): FitMessage[] {
+  const messages: FitMessage[] = [];
+  forEachFitMessage(data, (message) => messages.push(message));
   return messages;
 }

@@ -14,7 +14,7 @@ import {
   degreesPerSemicircle,
   fitEpochInUnixSeconds,
 } from "./profile.ts";
-import { readFitMessages, type FitMessage, type FitValue } from "./reader.ts";
+import { forEachFitMessage, type FitMessage, type FitValue } from "./reader.ts";
 
 export type FitEnum<Names extends Record<number, string>> = Names[keyof Names] | number;
 
@@ -118,12 +118,15 @@ export interface ActivitySummary {
   readonly totalDescentMetres: number | undefined;
 }
 
-export interface FitActivity {
+export interface FitActivitySummary {
   readonly fileId: FitFileId | undefined;
   readonly workoutName: string | undefined;
   readonly summary: ActivitySummary;
   readonly sessions: readonly FitSession[];
   readonly laps: readonly FitLap[];
+}
+
+export interface FitActivity extends FitActivitySummary {
   readonly records: readonly FitRecord[];
   readonly events: readonly FitEvent[];
 }
@@ -326,91 +329,168 @@ function onlyValue<Value>(values: readonly (Value | undefined)[]): Value | undef
   return present.size === 1 ? [...present][0] : undefined;
 }
 
+class Series {
+  private total = 0;
+  private count = 0;
+  private largest: number | undefined;
+
+  add(value: number | undefined): void {
+    if (value === undefined) return;
+    this.total += value;
+    this.count += 1;
+    if (this.largest === undefined || value > this.largest) this.largest = value;
+  }
+
+  get mean(): number | undefined {
+    return this.count === 0 ? undefined : this.total / this.count;
+  }
+
+  get max(): number | undefined {
+    return this.largest;
+  }
+}
+
+class RecordStats {
+  firstTimestamp: number | undefined;
+  lastTimestamp: number | undefined;
+  readonly distance = new Series();
+  readonly speed = new Series();
+  readonly heartRate = new Series();
+  readonly cadence = new Series();
+  readonly power = new Series();
+
+  add(record: FitRecord, timestamp: number): void {
+    this.firstTimestamp ??= timestamp;
+    this.lastTimestamp = timestamp;
+    this.distance.add(record.distanceMetres);
+    this.speed.add(record.speedMetresPerSecond);
+    this.heartRate.add(record.heartRate);
+    this.cadence.add(record.cadence);
+    this.power.add(record.power);
+  }
+}
+
 function summarize(
-  startTime: Date,
+  start: number,
   sessions: readonly FitSession[],
-  records: readonly FitRecord[],
+  records: RecordStats,
 ): ActivitySummary {
   const fromSessions = (value: (session: FitSession) => number | undefined) => sessions.map(value);
-  const fromRecords = (value: (record: FitRecord) => number | undefined) => records.map(value);
-  const recordedSeconds = records.at(-1)?.elapsedSeconds ?? 0;
+  const recordedSeconds = records.lastTimestamp === undefined ? 0 : records.lastTimestamp - start;
   const elapsedSeconds = sum(fromSessions((session) => session.elapsedSeconds)) ?? recordedSeconds;
   const sport =
     sessions.length > 1 && !onlyValue(sessions.map((session) => session.sport))
       ? sports[18]
       : sessions[0]?.sport;
   return {
-    startTime,
+    startTime: dateFromFit(start),
     sport,
     subSport: onlyValue(sessions.map((session) => session.subSport)),
     elapsedSeconds,
     timerSeconds: sum(fromSessions((session) => session.timerSeconds)) ?? elapsedSeconds,
-    distanceMetres:
-      sum(fromSessions((session) => session.distanceMetres)) ??
-      max(fromRecords((record) => record.distanceMetres)),
+    distanceMetres: sum(fromSessions((session) => session.distanceMetres)) ?? records.distance.max,
     calories: sum(fromSessions((session) => session.calories)),
     averageSpeedMetresPerSecond:
       weightedMean(sessions, (session) => session.averageSpeedMetresPerSecond) ??
-      mean(fromRecords((record) => record.speedMetresPerSecond)),
+      records.speed.mean,
     maxSpeedMetresPerSecond:
-      max(fromSessions((session) => session.maxSpeedMetresPerSecond)) ??
-      max(fromRecords((record) => record.speedMetresPerSecond)),
+      max(fromSessions((session) => session.maxSpeedMetresPerSecond)) ?? records.speed.max,
     averageHeartRate: rounded(
-      weightedMean(sessions, (session) => session.averageHeartRate) ??
-        mean(fromRecords((record) => record.heartRate)),
+      weightedMean(sessions, (session) => session.averageHeartRate) ?? records.heartRate.mean,
     ),
-    maxHeartRate:
-      max(fromSessions((session) => session.maxHeartRate)) ??
-      max(fromRecords((record) => record.heartRate)),
+    maxHeartRate: max(fromSessions((session) => session.maxHeartRate)) ?? records.heartRate.max,
     averageCadence: rounded(
-      weightedMean(sessions, (session) => session.averageCadence) ??
-        mean(fromRecords((record) => record.cadence)),
+      weightedMean(sessions, (session) => session.averageCadence) ?? records.cadence.mean,
     ),
-    maxCadence:
-      max(fromSessions((session) => session.maxCadence)) ??
-      max(fromRecords((record) => record.cadence)),
+    maxCadence: max(fromSessions((session) => session.maxCadence)) ?? records.cadence.max,
     averagePower: rounded(
-      weightedMean(sessions, (session) => session.averagePower) ??
-        mean(fromRecords((record) => record.power)),
+      weightedMean(sessions, (session) => session.averagePower) ?? records.power.mean,
     ),
-    maxPower:
-      max(fromSessions((session) => session.maxPower)) ??
-      max(fromRecords((record) => record.power)),
+    maxPower: max(fromSessions((session) => session.maxPower)) ?? records.power.max,
     totalAscentMetres: sum(fromSessions((session) => session.totalAscentMetres)),
     totalDescentMetres: sum(fromSessions((session) => session.totalDescentMetres)),
   };
 }
 
-export function decodeFit(data: Uint8Array | ArrayBuffer): FitActivity {
-  const messages = readFitMessages(data);
-  const byNumber = (number: number) =>
-    messages.filter((message) => message.globalNumber === number);
-  const sessionMessages = byNumber(MessageNumber.session);
-  const recordMessages = byNumber(MessageNumber.record).flatMap((message) => {
-    const timestamp = integer(message, CommonField.timestamp);
-    return timestamp === undefined ? [] : [{ message, timestamp }];
+export const maxLapsAndSessions = 10_000;
+
+interface RecordMessage {
+  readonly message: FitMessage;
+  readonly timestamp: number;
+}
+
+function readActivity(
+  data: Uint8Array | ArrayBuffer,
+  keepRecords: boolean,
+): FitActivitySummary & {
+  readonly start: number;
+  readonly recordMessages: readonly RecordMessage[];
+  readonly events: readonly FitEvent[];
+} {
+  let fileIdMessage: FitMessage | undefined;
+  let workoutName: string | undefined;
+  let firstSessionStart: number | undefined;
+  let firstSessionEnd: number | undefined;
+  const sessions: FitSession[] = [];
+  const laps: FitLap[] = [];
+  const events: FitEvent[] = [];
+  const recordMessages: RecordMessage[] = [];
+  const stats = new RecordStats();
+  forEachFitMessage(data, (message) => {
+    switch (message.globalNumber) {
+      case MessageNumber.record: {
+        const timestamp = integer(message, CommonField.timestamp);
+        if (timestamp === undefined) break;
+        stats.add(record(message, timestamp, timestamp), timestamp);
+        if (keepRecords) recordMessages.push({ message, timestamp });
+        break;
+      }
+      case MessageNumber.session:
+        if (sessions.length >= maxLapsAndSessions) throw new FitDecodeError("tooLarge");
+        sessions.push(session(message));
+        firstSessionStart ??= integer(message, SessionField.startTime);
+        firstSessionEnd ??= integer(message, CommonField.timestamp);
+        break;
+      case MessageNumber.lap:
+        if (laps.length >= maxLapsAndSessions) throw new FitDecodeError("tooLarge");
+        laps.push(lap(message));
+        break;
+      case MessageNumber.event:
+        if (keepRecords) events.push(event(message));
+        break;
+      case MessageNumber.fileId:
+        fileIdMessage ??= message;
+        break;
+      case MessageNumber.workout:
+        workoutName ??= text(message, WorkoutField.name);
+        break;
+    }
   });
-  if (sessionMessages.length === 0 && recordMessages.length === 0) {
+  if (sessions.length === 0 && stats.firstTimestamp === undefined) {
     throw new FitDecodeError("noActivity");
   }
-  const sessions = sessionMessages.map(session);
-  const start =
-    defined(sessionMessages.map((message) => integer(message, SessionField.startTime)))[0] ??
-    recordMessages[0]?.timestamp ??
-    defined(sessionMessages.map((message) => integer(message, CommonField.timestamp)))[0] ??
-    0;
-  const records = recordMessages.map(({ message, timestamp }) => record(message, timestamp, start));
-  const fileIdMessage = byNumber(MessageNumber.fileId)[0];
-  const workoutName = defined(
-    byNumber(MessageNumber.workout).map((message) => text(message, WorkoutField.name)),
-  )[0];
+  const start = firstSessionStart ?? stats.firstTimestamp ?? firstSessionEnd ?? 0;
   return {
     fileId: fileIdMessage && fileId(fileIdMessage),
     workoutName,
-    summary: summarize(dateFromFit(start), sessions, records),
+    summary: summarize(start, sessions, stats),
     sessions,
-    laps: byNumber(MessageNumber.lap).map(lap),
-    records,
-    events: byNumber(MessageNumber.event).map(event),
+    laps,
+    start,
+    recordMessages,
+    events,
+  };
+}
+
+export function summarizeFit(data: Uint8Array | ArrayBuffer): FitActivitySummary {
+  const { fileId, workoutName, summary, sessions, laps } = readActivity(data, false);
+  return { fileId, workoutName, summary, sessions, laps };
+}
+
+export function decodeFit(data: Uint8Array | ArrayBuffer): FitActivity {
+  const { start, recordMessages, ...activity } = readActivity(data, true);
+  return {
+    ...activity,
+    records: recordMessages.map(({ message, timestamp }) => record(message, timestamp, start)),
   };
 }

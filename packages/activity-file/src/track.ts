@@ -19,8 +19,6 @@ export interface TimedPoint extends TrackPoint {
   time: number;
 }
 
-export type Segment = readonly TimedPoint[];
-
 export function emptyPoint(): TrackPoint {
   return {
     time: undefined,
@@ -63,106 +61,164 @@ export function metresBetween(
   return 2 * earthRadiusMetres * Math.asin(Math.min(1, Math.sqrt(haversine)));
 }
 
-function travelledDistances(segments: readonly Segment[]): (number | undefined)[] {
-  const distances: (number | undefined)[] = [];
-  let total: number | undefined;
-  for (const segment of segments) {
-    let previous: TimedPoint | undefined;
-    for (const point of segment) {
-      if (point.latitude !== undefined && point.longitude !== undefined) {
-        if (
-          previous?.latitude !== undefined &&
-          previous.longitude !== undefined &&
-          total !== undefined
-        ) {
-          total += metresBetween(
-            previous.latitude,
-            previous.longitude,
-            point.latitude,
-            point.longitude,
-          );
-        }
-        total ??= 0;
-        previous = point;
-      }
-      distances.push(total);
-    }
-  }
-  return distances;
-}
-
-function climbs(records: readonly FitRecord[]): {
-  ascent: number | undefined;
-  descent: number | undefined;
-} {
-  let reference: number | undefined;
-  let ascent = 0;
-  let descent = 0;
-  for (const { altitudeMetres } of records) {
-    if (altitudeMetres === undefined) continue;
-    if (reference === undefined) {
-      reference = altitudeMetres;
-    } else if (altitudeMetres - reference >= ascentThresholdMetres) {
-      ascent += altitudeMetres - reference;
-      reference = altitudeMetres;
-    } else if (reference - altitudeMetres >= ascentThresholdMetres) {
-      descent += reference - altitudeMetres;
-      reference = altitudeMetres;
-    }
-  }
-  return reference === undefined ? { ascent: undefined, descent: undefined } : { ascent, descent };
-}
-
 export interface Pause {
   readonly stoppedAt: number;
   readonly startedAt: number;
 }
 
-export function pausesBetween(segments: readonly Segment[]): Pause[] {
-  const nonEmpty = segments.filter((segment) => segment.length > 0);
-  const pauses: Pause[] = [];
-  for (let index = 1; index < nonEmpty.length; index++) {
-    pauses.push({
-      stoppedAt: nonEmpty[index - 1]!.at(-1)!.time,
-      startedAt: nonEmpty[index]![0]!.time,
-    });
+class Series {
+  private total = 0;
+  private count = 0;
+  private largest: number | undefined;
+
+  add(value: number | undefined): void {
+    if (value === undefined) return;
+    this.total += value;
+    this.count += 1;
+    if (this.largest === undefined || value > this.largest) this.largest = value;
   }
-  return pauses;
+
+  get isEmpty(): boolean {
+    return this.count === 0;
+  }
+
+  get mean(): number | undefined {
+    return this.count === 0 ? undefined : this.total / this.count;
+  }
+
+  get max(): number | undefined {
+    return this.largest;
+  }
 }
 
-export function pauseEvents(pauses: readonly Pause[]): FitEvent[] {
-  return pauses.flatMap(({ stoppedAt, startedAt }) => [
-    {
-      time: new Date(stoppedAt),
-      event: "timer",
-      type: "stopAll",
-      data: undefined,
-      group: undefined,
-    },
-    { time: new Date(startedAt), event: "timer", type: "start", data: undefined, group: undefined },
-  ]);
+class Climbs {
+  private reference: number | undefined;
+  private climbed = 0;
+  private descended = 0;
+
+  add(altitude: number | undefined): void {
+    if (altitude === undefined) return;
+    if (this.reference === undefined) {
+      this.reference = altitude;
+    } else if (altitude - this.reference >= ascentThresholdMetres) {
+      this.climbed += altitude - this.reference;
+      this.reference = altitude;
+    } else if (this.reference - altitude >= ascentThresholdMetres) {
+      this.descended += this.reference - altitude;
+      this.reference = altitude;
+    }
+  }
+
+  get ascent(): number | undefined {
+    return this.reference === undefined ? undefined : this.climbed;
+  }
+
+  get descent(): number | undefined {
+    return this.reference === undefined ? undefined : this.descended;
+  }
 }
 
-export function records(segments: readonly Segment[], start: number): FitRecord[] {
-  const points = segments.flat();
-  const fileDistances = points.some((point) => point.distanceMetres !== undefined);
-  const distances = fileDistances
-    ? points.map((point) => point.distanceMetres)
-    : travelledDistances(segments);
-  return points.map((point, index) => ({
-    time: new Date(point.time),
-    elapsedSeconds: (point.time - start) / 1000,
-    power: point.power,
-    heartRate: point.heartRate,
-    cadence: point.cadence,
-    speedMetresPerSecond: point.speedMetresPerSecond,
-    distanceMetres: distances[index],
-    latitude: point.latitude,
-    longitude: point.longitude,
-    altitudeMetres: point.altitudeMetres,
-    temperatureCelsius: point.temperatureCelsius,
-    developerFields: {},
-  }));
+export class Track {
+  start: number | undefined;
+  end: number | undefined;
+  pausedSeconds = 0;
+  readonly speed = new Series();
+  readonly heartRate = new Series();
+  readonly cadence = new Series();
+  readonly power = new Series();
+  readonly climbs = new Climbs();
+  private readonly keptPoints: TimedPoint[] | undefined;
+  private readonly pauses: Pause[] = [];
+  private readonly travelledAtPoints: (number | undefined)[] = [];
+  private readonly fileDistance = new Series();
+  private travelled: number | undefined;
+  private previousPosition: TimedPoint | undefined;
+  private lastTime: number | undefined;
+  private segmentStarting = false;
+
+  constructor(keepPoints: boolean) {
+    this.keptPoints = keepPoints ? [] : undefined;
+  }
+
+  segment(): void {
+    this.segmentStarting = true;
+    this.previousPosition = undefined;
+  }
+
+  add(point: TimedPoint): void {
+    if (this.segmentStarting && this.lastTime !== undefined) {
+      this.pausedSeconds += Math.max(0, point.time - this.lastTime) / 1000;
+      if (this.keptPoints) this.pauses.push({ stoppedAt: this.lastTime, startedAt: point.time });
+    }
+    this.segmentStarting = false;
+    this.lastTime = point.time;
+    if (this.start === undefined || point.time < this.start) this.start = point.time;
+    if (this.end === undefined || point.time > this.end) this.end = point.time;
+    if (point.latitude !== undefined && point.longitude !== undefined) {
+      const previous = this.previousPosition;
+      if (previous && this.travelled !== undefined) {
+        this.travelled += metresBetween(
+          previous.latitude!,
+          previous.longitude!,
+          point.latitude,
+          point.longitude,
+        );
+      }
+      this.travelled ??= 0;
+      this.previousPosition = point;
+    }
+    this.fileDistance.add(point.distanceMetres);
+    this.speed.add(point.speedMetresPerSecond);
+    this.heartRate.add(point.heartRate);
+    this.cadence.add(point.cadence);
+    this.power.add(point.power);
+    this.climbs.add(point.altitudeMetres);
+    if (this.keptPoints) {
+      this.keptPoints.push(point);
+      this.travelledAtPoints.push(this.travelled);
+    }
+  }
+
+  get distanceMetres(): number | undefined {
+    return this.fileDistance.isEmpty ? this.travelled : this.fileDistance.max;
+  }
+
+  records(start: number): FitRecord[] {
+    const fileDistances = !this.fileDistance.isEmpty;
+    return (this.keptPoints ?? []).map((point, index) => ({
+      time: new Date(point.time),
+      elapsedSeconds: (point.time - start) / 1000,
+      power: point.power,
+      heartRate: point.heartRate,
+      cadence: point.cadence,
+      speedMetresPerSecond: point.speedMetresPerSecond,
+      distanceMetres: fileDistances ? point.distanceMetres : this.travelledAtPoints[index],
+      latitude: point.latitude,
+      longitude: point.longitude,
+      altitudeMetres: point.altitudeMetres,
+      temperatureCelsius: point.temperatureCelsius,
+      developerFields: {},
+    }));
+  }
+
+  get events(): FitEvent[] {
+    return this.pauses.flatMap(({ stoppedAt, startedAt }) => [
+      {
+        time: new Date(stoppedAt),
+        event: "timer",
+        type: "stopAll",
+        data: undefined,
+        group: undefined,
+      },
+      {
+        time: new Date(startedAt),
+        event: "timer",
+        type: "start",
+        data: undefined,
+        group: undefined,
+      },
+    ]);
+  }
 }
 
 function defined<Value>(values: readonly (Value | undefined)[]): Value[] {
@@ -212,31 +268,15 @@ export interface SummaryInput {
   readonly end: number;
   readonly sport: SportAndSubSport;
   readonly laps: readonly FitLap[];
-  readonly records: readonly FitRecord[];
-  readonly pauses: readonly Pause[];
+  readonly track: Track;
 }
 
-export function summarize({
-  start,
-  end,
-  sport,
-  laps,
-  records,
-  pauses,
-}: SummaryInput): ActivitySummary {
+export function summarize({ start, end, sport, laps, track }: SummaryInput): ActivitySummary {
   const fromLaps = (value: (lap: FitLap) => number | undefined) => laps.map(value);
-  const fromRecords = (value: (record: FitRecord) => number | undefined) => records.map(value);
   const elapsedSeconds = Math.max(0, (end - start) / 1000);
-  const pausedSeconds = pauses.reduce(
-    (total, { stoppedAt, startedAt }) => total + Math.max(0, startedAt - stoppedAt) / 1000,
-    0,
-  );
   const timerSeconds =
-    sum(fromLaps((lap) => lap.timerSeconds)) ?? Math.max(0, elapsedSeconds - pausedSeconds);
-  const distanceMetres =
-    sum(fromLaps((lap) => lap.distanceMetres)) ??
-    max(fromRecords((record) => record.distanceMetres));
-  const { ascent, descent } = climbs(records);
+    sum(fromLaps((lap) => lap.timerSeconds)) ?? Math.max(0, elapsedSeconds - track.pausedSeconds);
+  const distanceMetres = sum(fromLaps((lap) => lap.distanceMetres)) ?? track.distanceMetres;
   return {
     startTime: new Date(start),
     sport: sport.sport,
@@ -250,27 +290,17 @@ export function summarize({
       (distanceMetres !== undefined && timerSeconds > 0
         ? distanceMetres / timerSeconds
         : undefined) ??
-      mean(fromRecords((record) => record.speedMetresPerSecond)),
-    maxSpeedMetresPerSecond:
-      max(fromLaps((lap) => lap.maxSpeedMetresPerSecond)) ??
-      max(fromRecords((record) => record.speedMetresPerSecond)),
+      track.speed.mean,
+    maxSpeedMetresPerSecond: max(fromLaps((lap) => lap.maxSpeedMetresPerSecond)) ?? track.speed.max,
     averageHeartRate: rounded(
-      weightedMean(laps, (lap) => lap.averageHeartRate) ??
-        mean(fromRecords((record) => record.heartRate)),
+      weightedMean(laps, (lap) => lap.averageHeartRate) ?? track.heartRate.mean,
     ),
-    maxHeartRate:
-      max(fromLaps((lap) => lap.maxHeartRate)) ?? max(fromRecords((record) => record.heartRate)),
-    averageCadence: rounded(
-      weightedMean(laps, (lap) => lap.averageCadence) ??
-        mean(fromRecords((record) => record.cadence)),
-    ),
-    maxCadence:
-      max(fromLaps((lap) => lap.maxCadence)) ?? max(fromRecords((record) => record.cadence)),
-    averagePower: rounded(
-      weightedMean(laps, (lap) => lap.averagePower) ?? mean(fromRecords((record) => record.power)),
-    ),
-    maxPower: max(fromLaps((lap) => lap.maxPower)) ?? max(fromRecords((record) => record.power)),
-    totalAscentMetres: ascent,
-    totalDescentMetres: descent,
+    maxHeartRate: max(fromLaps((lap) => lap.maxHeartRate)) ?? track.heartRate.max,
+    averageCadence: rounded(weightedMean(laps, (lap) => lap.averageCadence) ?? track.cadence.mean),
+    maxCadence: max(fromLaps((lap) => lap.maxCadence)) ?? track.cadence.max,
+    averagePower: rounded(weightedMean(laps, (lap) => lap.averagePower) ?? track.power.mean),
+    maxPower: max(fromLaps((lap) => lap.maxPower)) ?? track.power.max,
+    totalAscentMetres: track.climbs.ascent,
+    totalDescentMetres: track.climbs.descent,
   };
 }

@@ -1,16 +1,7 @@
 import type { DecodedActivity } from "./activity.ts";
 import { ActivityFileError } from "./error.ts";
 import { sportFromName } from "./sports.ts";
-import {
-  emptyPoint,
-  isTimed,
-  pauseEvents,
-  pausesBetween,
-  records,
-  summarize,
-  type TimedPoint,
-  type TrackPoint,
-} from "./track.ts";
+import { emptyPoint, isTimed, summarize, Track, type TrackPoint } from "./track.ts";
 import { parseLatitude, parseLongitude, parseMeasure, parseNumber, parseTime } from "./values.ts";
 import { scanXml, type XmlAttributes, type XmlHandler } from "./xml.ts";
 
@@ -32,16 +23,20 @@ const extensionFields: Readonly<Record<string, PointField>> = {
 };
 
 class GpxReader implements XmlHandler {
-  readonly segments: TimedPoint[][] = [];
+  readonly track: Track;
   trackName: string | undefined;
   metadataName: string | undefined;
   trackType: string | undefined;
   private point: TrackPoint | undefined;
 
+  constructor(track: Track) {
+    this.track = track;
+  }
+
   open(name: string, attributes: XmlAttributes, ancestors: readonly string[]): void {
     if (ancestors.length === 0 && name !== "gpx") throw new ActivityFileError("malformed", "gpx");
     if (name === "trkseg" && ancestors.at(-1) === "trk") {
-      this.segments.push([]);
+      this.track.segment();
     } else if (name === "trkpt" && (ancestors.at(-1) === "trkseg" || ancestors.at(-1) === "trk")) {
       this.point = {
         ...emptyPoint(),
@@ -52,7 +47,6 @@ class GpxReader implements XmlHandler {
         this.point.latitude = undefined;
         this.point.longitude = undefined;
       }
-      if (ancestors.at(-1) === "trk" && this.segments.length === 0) this.segments.push([]);
     }
   }
 
@@ -60,7 +54,7 @@ class GpxReader implements XmlHandler {
     const parent = ancestors.at(-1);
     if (this.point) {
       if (name === "trkpt") {
-        if (isTimed(this.point)) this.segments.at(-1)?.push(this.point);
+        if (isTimed(this.point)) this.track.add(this.point);
         this.point = undefined;
       } else if (parent === "trkpt" && name === "time") {
         this.point.time = parseTime(text);
@@ -83,33 +77,18 @@ class GpxReader implements XmlHandler {
   }
 }
 
-export function readGpx(bytes: Uint8Array): DecodedActivity {
-  const reader = new GpxReader();
+export function readGpx(bytes: Uint8Array, keepRecords: boolean): DecodedActivity {
+  const track = new Track(keepRecords);
+  const reader = new GpxReader(track);
   scanXml(bytes, reader, "gpx");
-  const segments = reader.segments;
-  const points = segments.flat();
-  if (points.length === 0) throw new ActivityFileError("noActivity", "gpx");
-  let start = points[0]!.time;
-  let end = start;
-  for (const { time } of points) {
-    if (time < start) start = time;
-    if (time > end) end = time;
-  }
-  const pauses = pausesBetween(segments);
-  const decodedRecords = records(segments, start);
+  const { start, end } = track;
+  if (start === undefined || end === undefined) throw new ActivityFileError("noActivity", "gpx");
   return {
     format: "gpx",
     name: reader.trackName ?? reader.metadataName,
-    summary: summarize({
-      start,
-      end,
-      sport: sportFromName(reader.trackType),
-      laps: [],
-      records: decodedRecords,
-      pauses,
-    }),
+    summary: summarize({ start, end, sport: sportFromName(reader.trackType), laps: [], track }),
     laps: [],
-    records: decodedRecords,
-    events: pauseEvents(pauses),
+    records: track.records(start),
+    events: track.events,
   };
 }
