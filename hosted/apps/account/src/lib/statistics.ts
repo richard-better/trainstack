@@ -1,26 +1,10 @@
 import type { ActivitySummary } from "@trainstack/activity-file";
+import type { ActivityStatisticName } from "@trainstack/contract";
 
-export const statisticNames = [
-  "timer_s",
-  "elapsed_s",
-  "distance_m",
-  "average_power_w",
-  "max_power_w",
-  "average_heart_rate_bpm",
-  "max_heart_rate_bpm",
-  "average_cadence_rpm",
-  "max_cadence_rpm",
-  "average_speed_mps",
-  "max_speed_mps",
-  "ascent_m",
-  "descent_m",
-  "calories_kcal",
-] as const;
-
-export type StatisticName = (typeof statisticNames)[number];
+export type StatisticName = ActivityStatisticName;
 export type Statistics = Readonly<Record<string, number>>;
 
-const labels: Record<StatisticName, string> = {
+const labels = {
   timer_s: "Time",
   elapsed_s: "Elapsed",
   distance_m: "Distance",
@@ -35,7 +19,9 @@ const labels: Record<StatisticName, string> = {
   ascent_m: "Ascent",
   descent_m: "Descent",
   calories_kcal: "Energy",
-};
+} satisfies Record<StatisticName, string>;
+
+export const statisticNames = Object.keys(labels) as StatisticName[];
 
 export interface Figure {
   readonly name: string;
