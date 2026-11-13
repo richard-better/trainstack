@@ -6,6 +6,7 @@ public enum RideLint {
     NoGeometryReader(),
     KeychainStaysInItsStore(),
     DeterministicCore(),
+    CoreImportsNoDevices(),
   ]
 
   public static func lint(path: String, source: String) -> [Violation] {
