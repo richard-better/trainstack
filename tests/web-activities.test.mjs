@@ -5,6 +5,7 @@ import { after, before, test } from "node:test";
 import { ORPCError } from "@orpc/client";
 import { readActivityFile } from "../hosted/apps/account/src/lib/activity-file.ts";
 import { ACTIVITIES_PER_PAGE } from "../hosted/apps/account/src/lib/client.ts";
+import { byMonth } from "../hosted/apps/account/src/lib/dates.ts";
 import { lapsOf, traceOf } from "../hosted/apps/account/src/lib/series.ts";
 import { activityTitle } from "../hosted/apps/account/src/lib/sports.ts";
 import {
@@ -269,4 +270,22 @@ test("an unnamed activity is called by its sport and time of day", () => {
     "Untitled kayaking",
   );
   assert.equal(activityTitle({ name: null, sport: null, startedAt: morning }), "Morning activity");
+});
+
+test("activities are grouped by month, each month with an id fit to label its list", () => {
+  const months = byMonth(
+    [new Date(2026, 9, 30), new Date(2026, 9, 1), new Date(2026, 8, 12)],
+    (date) => date,
+  );
+  assert.deepEqual(
+    months.map(({ id, label, items }) => ({ id, label, count: items.length })),
+    [
+      { id: "2026-10", label: "October 2026", count: 2 },
+      { id: "2026-09", label: "September 2026", count: 1 },
+    ],
+  );
+  assert.ok(
+    months.every(({ id }) => !/\s/.test(id)),
+    "aria-labelledby splits ids on spaces",
+  );
 });

@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 
 import { activitiesQueryKey, api } from "../api";
 import { ACTIVITIES_PER_PAGE } from "../lib/client";
-import { activityDate, monthOf } from "../lib/dates";
+import { activityDate, byMonth } from "../lib/dates";
 import { activityTitle, sportName } from "../lib/sports";
 import { headlineFigures } from "../lib/statistics";
 import { SportIcon } from "./sport-icon";
@@ -66,27 +66,22 @@ export function ActivityList() {
 }
 
 function Months({ activities }: { activities: Activity[] }) {
-  const months: { label: string; activities: Activity[] }[] = [];
-  for (const activity of activities) {
-    const label = monthOf(activity.startedAt ?? activity.createdAt);
-    const last = months.at(-1);
-    if (last?.label === label) last.activities.push(activity);
-    else months.push({ label, activities: [activity] });
-  }
-  return months.map((month) => (
-    <section key={month.label} className="month" aria-labelledby={`month-${month.label}`}>
-      <h2 id={`month-${month.label}`} className="month-title">
-        {month.label}
-      </h2>
-      <ol className="rows">
-        {month.activities.map((activity) => (
-          <li key={activity.id}>
-            <ActivityRow activity={activity} />
-          </li>
-        ))}
-      </ol>
-    </section>
-  ));
+  return byMonth(activities, (activity) => activity.startedAt ?? activity.createdAt).map(
+    (month) => (
+      <section key={month.id} className="month" aria-labelledby={`month-${month.id}`}>
+        <h2 id={`month-${month.id}`} className="month-title">
+          {month.label}
+        </h2>
+        <ol className="rows">
+          {month.items.map((activity) => (
+            <li key={activity.id}>
+              <ActivityRow activity={activity} />
+            </li>
+          ))}
+        </ol>
+      </section>
+    ),
+  );
 }
 
 function ActivityRow({ activity }: { activity: Activity }) {
