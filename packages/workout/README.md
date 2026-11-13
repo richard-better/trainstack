@@ -70,3 +70,24 @@ an `ftp`. Readers keep targets as the file states them.
 Zwift's `pace` attribute picks a reference pace for run workouts (one mile, 5 km and so on).
 The model has one threshold pace, so a run file's reference pace is read as threshold and
 reported. Zwift writes `pace="0"` on bike steps too, where it means nothing and is ignored.
+
+## Ride's library
+
+`test/fixtures/ride-library.json` is `WorkoutTemplate.library` from `RideData`, encoded by Swift,
+and `test/ride-library.test.ts` converts every workout in it. When the library changes,
+regenerate the fixture on a Mac:
+
+```sh
+cat > Dump.swift <<'SWIFT'
+import Foundation
+@main enum Dump {
+  static func main() throws {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    FileHandle.standardOutput.write(try encoder.encode(WorkoutTemplate.library))
+  }
+}
+SWIFT
+swiftc -parse-as-library -o dump $(ls apps/ride/RideKit/Sources/RideData/*.swift | grep -v SampleRide.swift) Dump.swift
+./dump > packages/workout/test/fixtures/ride-library.json
+```
