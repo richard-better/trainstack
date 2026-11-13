@@ -106,11 +106,40 @@ MINUTES WATTS
     );
     const written = writeErg(workout, { ftp: 250 }).value;
     expect(written).toContain("FTP = 250\nMINUTES WATTS");
-    expect(written).toContain("0\t300\n0.666667\t300\n");
+    expect(written).toContain("0\t300\n0.666666666666667\t300\n");
     expect(parseErg(written).value.steps).toEqual([
       { type: "step", duration: seconds(40), target: watts(300) },
     ]);
   });
+});
+
+test.each([
+  ["erg", parseErg, writeErg],
+  ["mrc", parseMrc, writeMrc],
+] as const)("keeps fractional values exactly through a .%s round trip", (_, parse, write) => {
+  const workout: Workout = {
+    name: "Fractions",
+    sport: "cycling",
+    steps: [
+      {
+        type: "step",
+        duration: seconds(37.25),
+        target: {
+          type: "power",
+          unit: _ === "erg" ? "watts" : "ftp",
+          level: {
+            kind: "ramp",
+            from: _ === "erg" ? 123.456 : 0.123456,
+            to: _ === "erg" ? 201.789 : 0.987654,
+          },
+        },
+        cues: [{ at: seconds(12.345), text: "Precise", shownForSeconds: 2.5 }],
+      },
+    ],
+  };
+  const written = write(workout);
+  expect(written.warnings).toEqual([]);
+  expect(parse(written.value).value).toEqual(workout);
 });
 
 describe("parseMrc", () => {

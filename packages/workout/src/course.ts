@@ -1,6 +1,6 @@
 import { type Converted, IssueLog } from "./issues";
 import type { Cue, Level, Step, Workout } from "./model";
-import { formatNumber, roundTo } from "./numbers";
+import { formatNumber, withoutFloatNoise } from "./numbers";
 import { powerLevel } from "./power";
 import { CuePlacementError, flatten, repeatsWithin } from "./timeline";
 import { checkedInput, validated } from "./validate";
@@ -71,14 +71,15 @@ function stepsFromPoints(log: IssueLog, points: Point[], unit: Unit): Step[] {
       log.abort("malformed", "Points must not go back in time", `line ${end.line}`);
     }
     if (end.seconds === start.seconds) continue;
-    const toShare = (value: number) => (unit === "PERCENT" ? roundTo(value / 100, 9) : value);
+    const toShare = (value: number) =>
+      unit === "PERCENT" ? withoutFloatNoise(value / 100) : value;
     const level: Level =
       start.value === end.value
         ? { kind: "constant", value: toShare(start.value) }
         : { kind: "ramp", from: toShare(start.value), to: toShare(end.value) };
     steps.push({
       type: "step",
-      duration: { type: "time", seconds: roundTo(end.seconds - start.seconds, 3) },
+      duration: { type: "time", seconds: withoutFloatNoise(end.seconds - start.seconds) },
       target: { type: "power", unit: unit === "PERCENT" ? "ftp" : "watts", level },
     });
   }
@@ -113,7 +114,10 @@ function placeCues(log: IssueLog, steps: Step[], section: Section | undefined): 
       );
       continue;
     }
-    const cue: Cue = { at: { type: "time", seconds: roundTo(seconds - start, 3) }, text: message };
+    const cue: Cue = {
+      at: { type: "time", seconds: withoutFloatNoise(seconds - start) },
+      text: message,
+    };
     if (shown) cue.shownForSeconds = parseNumber(log, shown, line);
     step.cues = [...(step.cues ?? []), cue];
   }
@@ -176,7 +180,7 @@ export function parseCourse(
     const minutes = parseNumber(log, columns[0] ?? "", line);
     const value = parseNumber(log, columns[1] ?? "", line);
     if (value < 0) log.abort("malformed", "Values cannot be negative", `line ${line}`);
-    return { seconds: roundTo(minutes * 60, 3), value, line };
+    return { seconds: withoutFloatNoise(minutes * 60), value, line };
   });
   const steps = stepsFromPoints(log, points, unit);
   placeCues(log, steps, found.get("COURSE TEXT"));
@@ -229,8 +233,7 @@ export function writeCourse(
   const data: string[] = [];
   const text: string[] = [];
   let start = 0;
-  const value = (amount: number) =>
-    formatNumber(unit === "PERCENT" ? amount * 100 : amount, unit === "PERCENT" ? 4 : 2);
+  const value = (amount: number) => formatNumber(unit === "PERCENT" ? amount * 100 : amount);
   for (const [index, step] of steps.entries()) {
     const at = `step ${index + 1}`;
     if (step.duration.type !== "time") {
@@ -266,11 +269,8 @@ export function writeCourse(
         log.warn("dropped", `Cue "${cue.text}" is placed by distance`, at);
         continue;
       }
-      const columns = [
-        formatNumber(start + cue.at.seconds, 3),
-        singleLine(log, cue.text, "cue text"),
-      ];
-      if (cue.shownForSeconds !== undefined) columns.push(formatNumber(cue.shownForSeconds, 3));
+      const columns = [formatNumber(start + cue.at.seconds), singleLine(log, cue.text, "cue text")];
+      if (cue.shownForSeconds !== undefined) columns.push(formatNumber(cue.shownForSeconds));
       text.push(columns.join("\t"));
     }
     if (level && level.kind !== "range") {
@@ -291,7 +291,7 @@ export function writeCourse(
     `DESCRIPTION = ${description}`,
     `FILE NAME = ${name}`,
     ...(options.ftp !== undefined && unit === "WATTS"
-      ? [`FTP = ${formatNumber(options.ftp, 2)}`]
+      ? [`FTP = ${formatNumber(options.ftp)}`]
       : []),
     `MINUTES ${unit}`,
     "[END COURSE HEADER]",
