@@ -325,7 +325,7 @@ test("scales every element of a developer field array", () => {
     .define(1, 20, [{ number: 253, type: "uint32" }], {
       developerFields: [{ number: 0, size: 6, index: 0 }],
     })
-    .raw(0x01, ...[start & 0xff, (start >> 8) & 0xff, (start >> 16) & 0xff, start >>> 24])
+    .raw(0x01, start & 0xff, (start >> 8) & 0xff, (start >> 16) & 0xff, start >>> 24)
     .raw(100, 0, 0xff, 0xff, 200, 0)
     .file();
   assert.deepEqual(decodeFit(data).records[0]!.developerFields, { forces: [0, null, 1] });

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>
+<!-- Converted by GPSBabel -->
+<gpx version="1.0" creator="GPSBabel - http://www.gpsbabel.org" xmlns="http://www.topografix.com/GPX/1/0">
+  <time>2026-05-02T08:00:00Z</time>
+  <wpt lat="46.0" lon="18.0"><name>Start</name><time>2026-05-02T07:00:00Z</time></wpt>
+  <trk>
+    <name>Part 1</name>
+    <trkseg>
+      <trkpt lat="46.000000" lon="18.000000"><ele>200.0</ele><time>2026-05-02T08:00:00Z</time><course>0.0</course><speed>5.0</speed></trkpt>
+      <trkpt lat="46.000900" lon="18.000000"><ele>205.0</ele><time>2026-05-02T08:00:20Z</time><speed>5.0</speed></trkpt>
+    </trkseg>
+  </trk>
+  <trk>
+    <name>Part 2</name>
+    <trkseg>
+      <trkpt lat="46.001800" lon="18.000000"><ele>210.0</ele><time>2026-05-02T08:10:00Z</time><speed>5.0</speed></trkpt>
+      <trkpt lat="46.002700" lon="18.000000"><ele>202.0</ele><time>2026-05-02T08:10:20Z</time><speed>5.0</speed></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

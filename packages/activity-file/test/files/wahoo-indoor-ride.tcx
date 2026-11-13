@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:ax="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+<Activities>
+<Activity Sport="Biking">
+<Id>2026-11-01T18:00:00Z</Id>
+<Lap StartTime="2026-11-01T18:00:00Z">
+<TotalTimeSeconds>3</TotalTimeSeconds>
+<DistanceMeters>0</DistanceMeters>
+<Calories>1</Calories>
+<Intensity>Active</Intensity>
+<TriggerMethod>Manual</TriggerMethod>
+<Track>
+<Trackpoint><Time>2026-11-01T18:00:00Z</Time><HeartRateBpm><Value>110</Value></HeartRateBpm><Cadence>80</Cadence><Extensions><ax:TPX><ax:Watts>150</ax:Watts></ax:TPX></Extensions></Trackpoint>
+<Trackpoint><Time>2026-11-01T18:00:01Z</Time><HeartRateBpm><Value>112</Value></HeartRateBpm><Cadence>82</Cadence><Extensions><ax:TPX><ax:Watts>160</ax:Watts></ax:TPX></Extensions></Trackpoint>
+<Trackpoint><Time>2026-11-01T18:00:02Z</Time><HeartRateBpm><Value>114</Value></HeartRateBpm><Cadence>84</Cadence><Extensions><ax:TPX><ax:Watts>170</ax:Watts></ax:TPX></Extensions></Trackpoint>
+<Trackpoint><Time>2026-11-01T18:00:03Z</Time><HeartRateBpm><Value>116</Value></HeartRateBpm><Cadence>86</Cadence><Extensions><ax:TPX><ax:Watts>181</ax:Watts></ax:TPX></Extensions></Trackpoint>
+</Track>
+</Lap>
+<Creator><Name>Wahoo KICKR</Name></Creator>
+</Activity>
+</Activities>
+</TrainingCenterDatabase>
