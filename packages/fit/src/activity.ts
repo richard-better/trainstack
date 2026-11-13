@@ -412,6 +412,8 @@ function summarize(
   };
 }
 
+export const maxLapsAndSessions = 10_000;
+
 interface RecordMessage {
   readonly message: FitMessage;
   readonly timestamp: number;
@@ -444,11 +446,13 @@ function readActivity(
         break;
       }
       case MessageNumber.session:
+        if (sessions.length >= maxLapsAndSessions) throw new FitDecodeError("tooLarge");
         sessions.push(session(message));
         firstSessionStart ??= integer(message, SessionField.startTime);
         firstSessionEnd ??= integer(message, CommonField.timestamp);
         break;
       case MessageNumber.lap:
+        if (laps.length >= maxLapsAndSessions) throw new FitDecodeError("tooLarge");
         laps.push(lap(message));
         break;
       case MessageNumber.event:

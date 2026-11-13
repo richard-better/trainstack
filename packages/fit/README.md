@@ -17,7 +17,8 @@ try {
 `bytes` is a `Uint8Array` or an `ArrayBuffer`. `summarizeFit(bytes)` returns the same
 `fileId`, `workoutName`, `summary`, `sessions` and `laps` without keeping the records or the
 file's messages, for files too large to decode in full in a Worker. `FitDecodeError.code` is one of `notAFitFile`,
-`truncated`, `badChecksum`, `malformed` or `noActivity`.
+`truncated`, `badChecksum`, `malformed`, `noActivity` or `tooLarge`, the last for a file with
+more than 10,000 laps or sessions.
 
 - `summary` comes from the file's sessions, summed across them for a multisport activity, and
   falls back to the records for any total the sessions leave out.
