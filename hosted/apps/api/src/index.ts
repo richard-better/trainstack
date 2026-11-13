@@ -101,6 +101,16 @@ export const rpcHandler = new RPCHandler(appRouter, {
   interceptors: [onError(logUnexpected)],
 });
 
+function downloadedNeverOpened(response: Response) {
+  const disposition = response.headers.get("Content-Disposition");
+  if (!disposition) return response;
+  const headers = new Headers(response.headers);
+  headers.set("Content-Disposition", disposition.replace(/^inline/, "attachment"));
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Content-Security-Policy", "sandbox; default-src 'none'");
+  return new Response(response.body, { status: response.status, headers });
+}
+
 app.use("/*", async (c, next) => {
   const context = await createContext({ context: c });
 
@@ -119,7 +129,7 @@ app.use("/*", async (c, next) => {
   });
 
   if (apiResult.matched) {
-    return c.newResponse(apiResult.response.body, apiResult.response);
+    return downloadedNeverOpened(c.newResponse(apiResult.response.body, apiResult.response));
   }
 
   await next();

@@ -318,7 +318,7 @@ test("activities need a signed-in rider, and a cookie only counts from the web a
 });
 
 test("the app can use plain HTTP: multipart upload, JSON list, file download and DELETE", async () => {
-  const { token } = await rider();
+  const { token, client } = await rider();
   const auth = { Authorization: `Bearer ${token}` };
 
   const form = new FormData();
@@ -347,6 +347,17 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
   assert.equal(file.status, 200);
   assert.equal(file.headers.get("content-type"), "application/vnd.ant.fit");
   assert.deepEqual(Buffer.from(await file.arrayBuffer()), rideBytes);
+
+  const xml = await client.activities.upload({
+    file: gpx("2026-06-02T00:00:00Z"),
+    source: "upload",
+  });
+  const download = await runtime.dispatchFetch(`${api}/api-reference/activities/${xml.id}/file`, {
+    headers: auth,
+  });
+  assert.match(download.headers.get("content-disposition"), /^attachment; filename=/);
+  assert.equal(download.headers.get("x-content-type-options"), "nosniff");
+  assert.match(download.headers.get("content-security-policy"), /sandbox/);
 
   const deleted = await runtime.dispatchFetch(`${api}/api-reference/activities/${activity.id}`, {
     method: "DELETE",
