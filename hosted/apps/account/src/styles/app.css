@@ -479,6 +479,11 @@ a.row:hover {
   letter-spacing: 0;
 }
 
+.summary-problem {
+  max-width: 640px;
+  margin-top: 16px;
+}
+
 .section-title {
   margin: 56px 0 16px;
   font-size: 15px;

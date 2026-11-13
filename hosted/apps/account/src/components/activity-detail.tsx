@@ -1,5 +1,9 @@
 import { ORPCError } from "@orpc/client";
-import { type ActivityDetail, activityIdSchema } from "@trainstack/contract";
+import {
+  type ActivityDetail,
+  type ActivitySummaryError,
+  activityIdSchema,
+} from "@trainstack/contract";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -160,9 +164,30 @@ function Activity({ activity }: { activity: ActivityDetail }) {
         <FiguresSkeleton />
       ) : null}
 
+      {activity.summaryError &&
+        !(activity.file && activityFile.isPending) &&
+        activityFile.data?.reading.kind !== "unreadable" && (
+          <p className="lede summary-problem" role="status">
+            {summaryProblem(activity.summaryError, decoded !== null)}
+          </p>
+        )}
+
       <Analysis activity={activity} activityFile={activityFile} />
     </Shell>
   );
+}
+
+function summaryProblem(error: ActivitySummaryError, readHere: boolean) {
+  const because = {
+    too_large: "Trainstack does not summarise files this large yet",
+    failed: "Trainstack could not summarise this activity",
+    truncated: "Trainstack found this file ends early",
+    corrupt: "Trainstack could not read this file",
+    no_activity: "Trainstack found no recorded activity in this file",
+  }[error];
+  return readHere
+    ? `${because}, so these numbers are read from the file in your browser and do not show in your activity list.`
+    : `${because}, so it has no numbers in your activity list.`;
 }
 
 function Figures({ figures }: { figures: Figure[] }) {
