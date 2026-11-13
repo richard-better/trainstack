@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 
+import { profileOn } from "@trainstack/zones";
+
+import { analyzeActivity } from "../src/index.ts";
+
 const heapMegabytes = 24;
 
 test(`analyzes a 24 hour run at 1 Hz in under a second, with a ${heapMegabytes} MB heap of which its records take 20`, () => {
@@ -23,4 +27,27 @@ test(`analyzes a 24 hour run at 1 Hz in under a second, with a ${heapMegabytes} 
   assert.equal(result.laps, 96);
   assert.ok(result.milliseconds < 1000, `${result.milliseconds} ms`);
   assert.ok(result.typedArrayBytes < 16 * 1024 * 1024, `${result.typedArrayBytes} bytes`);
+});
+
+test("analyzes a lap per record in time that grows with the records, not records times laps", () => {
+  const count = 40_000;
+  const start = new Date("2026-05-01T00:00:00Z");
+  const began = performance.now();
+  const { laps } = analyzeActivity(
+    {
+      summary: { startTime: start, sport: "cycling", subSport: undefined, elapsedSeconds: count },
+      records: Array.from({ length: count }, (_, second) => ({
+        elapsedSeconds: second,
+        heartRate: 140,
+      })),
+      laps: Array.from({ length: count }, (_, second) => ({
+        startTime: new Date(start.getTime() + second * 1000),
+        elapsedSeconds: 1,
+      })),
+    },
+    profileOn([], null),
+  );
+  const milliseconds = performance.now() - began;
+  assert.equal(laps.length, count);
+  assert.ok(milliseconds < 1000, `${milliseconds} ms`);
 });

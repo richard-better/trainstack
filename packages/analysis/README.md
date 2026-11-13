@@ -146,7 +146,8 @@ A 24-hour run at 1 Hz with power, heart rate, speed, distance and altitude (86,4
 laps) takes about 60 ms on an Apple M-series Mac. Beyond the records, it allocates about 11 MB of
 typed arrays, around 128 bytes per record. It finishes in a 24 MB V8 heap, 20 MB of which the
 records themselves take. `test/cost.test.ts` runs this in a capped child process
-(`test/day-long.ts`).
+(`test/day-long.ts`). Laps cost time in proportion to records plus laps, whatever
+the file claims: 40,000 one-second laps over 40,000 records take about 25 ms.
 
 ## Parity with Ride
 

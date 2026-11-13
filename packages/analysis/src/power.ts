@@ -67,8 +67,7 @@ export function stressScore(
   return rounded(((durationSeconds * intensityFactor * intensityFactor) / secondsInAnHour) * 100);
 }
 
-export function workKilojoules(samples: Samples, span: Span = wholeActivity): number | null {
-  if (!hasValue(samples.power)) return null;
+export function heldKilojoules(samples: Samples, span: Span): number {
   let joules = 0;
   forEachHeldInterval(
     samples,
@@ -79,4 +78,8 @@ export function workKilojoules(samples: Samples, span: Span = wholeActivity): nu
     span,
   );
   return rounded(joules / 1000);
+}
+
+export function workKilojoules(samples: Samples): number | null {
+  return hasValue(samples.power) ? heldKilojoules(samples, wholeActivity) : null;
 }

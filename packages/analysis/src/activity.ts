@@ -8,6 +8,7 @@ import {
 
 import { heartRateStressScore } from "./heart-rate.ts";
 import {
+  heldKilojoules,
   intensity,
   normalizedAverage,
   normalizedPower,
@@ -160,7 +161,7 @@ function lapAnalysis(
     normalizedPowerWatts: normalizedPower(
       powerPerSecond.subarray(second(span.from), second(span.to)),
     ),
-    workKilojoules: workKilojoules(samples, span),
+    workKilojoules: powerPerSecond.length > 0 ? heldKilojoules(samples, span) : null,
     averageGradeAdjustedSpeed: averageWhileHeld(samples, gradeAdjusted, span),
   }));
 }
