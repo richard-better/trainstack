@@ -116,7 +116,9 @@ class ZwoReader {
   }
 
   private checkAttributes(element: XmlElement): void {
-    const known = stepAttributes[element.name] ?? [];
+    const known = Object.hasOwn(stepAttributes, element.name)
+      ? (stepAttributes[element.name] ?? [])
+      : [];
     for (const attribute of element.attributes.keys()) {
       if (!known.includes(attribute)) {
         this.log.warn("dropped", `Attribute ${attribute} is not supported`, this.where(element));
@@ -161,7 +163,7 @@ class ZwoReader {
   }
 
   block(element: XmlElement): Block | undefined {
-    if (!(element.name in stepAttributes)) {
+    if (!Object.hasOwn(stepAttributes, element.name)) {
       this.log.fail(
         "unsupported",
         `<${element.name}> is not a known workout step`,

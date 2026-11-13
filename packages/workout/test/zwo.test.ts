@@ -419,3 +419,34 @@ test("rejects a file whose repeats would expand past the step limit", () => {
   );
   expect(error.issues[0]?.message).toBe("A workout can expand to at most 10000 steps");
 });
+
+test.each(["constructor", "toString", "__proto__"])(
+  "rejects a step named after the object property %s with a format error",
+  (name) => {
+    const error = failure(() =>
+      parseZwo(`<workout_file><workout><${name} Duration="60"/></workout></workout_file>`),
+    );
+    expect(error.issues[0]?.message).toBe(`<${name}> is not a known workout step`);
+  },
+);
+
+test("keeps fractional values exactly through a .zwo round trip", () => {
+  const workout: Workout = {
+    name: "Fractions",
+    sport: "cycling",
+    steps: [
+      {
+        type: "step",
+        duration: { type: "time", seconds: 37.25 },
+        target: {
+          type: "power",
+          unit: "ftp",
+          level: { kind: "range", low: 0.123456789, high: 0.987654321 },
+        },
+        cadence: { kind: "constant", value: 92.5 },
+        cues: [{ at: { type: "time", seconds: 12.345 }, text: "Precise" }],
+      },
+    ],
+  };
+  expect(parseZwo(writeZwo(workout).value).value).toEqual(workout);
+});
