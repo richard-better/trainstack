@@ -391,28 +391,46 @@ describe("the activity's load", () => {
   });
 });
 
-test("analyzes each lap on its own", () => {
-  const records = seconds(121, (second) => ({ power: second < 60 ? 100 : 300 }));
+describe("laps", () => {
   const start = new Date("2026-05-01T08:00:00Z").getTime();
-  const { laps } = analyzeActivity(
-    activity("cycling", records, [
-      { startTime: new Date(start), elapsedSeconds: 60 },
-      { startTime: new Date(start + 60_000), elapsedSeconds: undefined },
-    ]),
-    profile([]),
-  );
-  assert.deepEqual(
-    laps.map(({ startSeconds, endSeconds, normalizedPowerWatts, workKilojoules }) => [
-      startSeconds,
-      endSeconds,
-      normalizedPowerWatts,
-      workKilojoules,
-    ]),
-    [
-      [0, 60, 100, 6],
-      [60, 120, 300, 18],
-    ],
-  );
+  const lap = (from: number, seconds: number | undefined) => ({
+    startTime: new Date(start + from * 1000),
+    elapsedSeconds: seconds,
+  });
+  const lapsOf = (records: AnalysisRecord[], laps: AnalysisActivity["laps"]) =>
+    analyzeActivity(activity("cycling", records, laps), profile([])).laps.map(
+      ({ startSeconds, endSeconds, normalizedPowerWatts, workKilojoules }) => [
+        startSeconds,
+        endSeconds,
+        normalizedPowerWatts,
+        workKilojoules,
+      ],
+    );
+
+  test("analyzes each lap on its own, up to its last second", () => {
+    const records = seconds(121, (second) => ({ power: second < 60 ? 1000 : 3000 }));
+    assert.deepEqual(lapsOf(records, [lap(0, 60), lap(60, undefined)]), [
+      [0, 60, 1000, 60],
+      [60, 120, 3000, 180],
+    ]);
+  });
+
+  test("starts a lap that overlaps the one before where that one ended", () => {
+    const records = seconds(121, () => ({ power: 1000 }));
+    assert.deepEqual(lapsOf(records, [lap(0, 90), lap(60, 60)]), [
+      [0, 90, 1000, 90],
+      [90, 120, 1000, 30],
+    ]);
+  });
+
+  test("stays bounded with a record timestamped long before the start", () => {
+    const records = [{ elapsedSeconds: -1e9, power: 200 }, ...seconds(121, () => ({ power: 200 }))];
+    assert.deepEqual(lapsOf(records, [lap(-1e9, 1e9 + 60), lap(60, 60)]), [
+      [-1e9, 60, 200, 12],
+      [60, 120, 200, 12],
+    ]);
+    assert.deepEqual(lapsOf(records, [lap(Number.NaN, 60)]), []);
+  });
 });
 
 test("names every statistic <what>_<unit>, as the contract's statistics are", () => {

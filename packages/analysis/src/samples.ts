@@ -91,28 +91,43 @@ export function samplesOf(records: readonly AnalysisRecord[], sport: string | nu
   return samples;
 }
 
-export function sliceSamples(samples: Samples, start: number, end: number): Samples {
-  const origin = samples.elapsed[start] ?? 0;
-  return {
-    count: Math.max(0, end - start),
-    elapsed: samples.elapsed.slice(start, end).map((elapsed) => elapsed - origin),
-    power: samples.power.subarray(start, end),
-    heartRate: samples.heartRate.subarray(start, end),
-    speed: samples.speed.subarray(start, end),
-    distance: samples.distance.subarray(start, end),
-    altitude: samples.altitude.subarray(start, end),
-  };
+export const hasValue = (values: Float64Array) => values.some((value) => !Number.isNaN(value));
+
+export interface Span {
+  readonly from: number;
+  readonly to: number;
 }
 
-export const hasValue = (values: Float64Array) => values.some((value) => !Number.isNaN(value));
+export const wholeActivity: Span = { from: -Infinity, to: Infinity };
+
+export function firstAtOrAfter(elapsed: Float64Array, seconds: number): number {
+  let low = 0;
+  let high = elapsed.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (elapsed[middle]! < seconds) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
 
 export function forEachHeldInterval(
   samples: Samples,
   visit: (index: number, seconds: number) => void,
+  span: Span = wholeActivity,
 ): void {
-  for (let index = 0; index + 1 < samples.count; index++) {
-    const seconds = samples.elapsed[index + 1]! - samples.elapsed[index]!;
-    if (seconds > 0 && seconds <= maxSampleGapSeconds) visit(index, seconds);
+  for (
+    let index = Math.max(0, firstAtOrAfter(samples.elapsed, span.from) - 1);
+    index + 1 < samples.count;
+    index++
+  ) {
+    const start = samples.elapsed[index]!;
+    if (start >= span.to) break;
+    const next = samples.elapsed[index + 1]!;
+    const seconds = next - start;
+    if (!(seconds > 0 && seconds <= maxSampleGapSeconds)) continue;
+    const held = Math.min(next, span.to) - Math.max(start, span.from);
+    if (held > 0) visit(index, held);
   }
 }
 
@@ -142,15 +157,23 @@ export function prefixSums(values: Float64Array): Float64Array {
   return sums;
 }
 
-export function averageWhileHeld(samples: Samples, values: Float64Array): number | null {
+export function averageWhileHeld(
+  samples: Samples,
+  values: Float64Array,
+  span: Span = wholeActivity,
+): number | null {
   let total = 0;
   let seconds = 0;
-  forEachHeldInterval(samples, (index, duration) => {
-    const value = values[index]!;
-    if (Number.isNaN(value)) return;
-    total += value * duration;
-    seconds += duration;
-  });
+  forEachHeldInterval(
+    samples,
+    (index, duration) => {
+      const value = values[index]!;
+      if (Number.isNaN(value)) return;
+      total += value * duration;
+      seconds += duration;
+    },
+    span,
+  );
   return seconds > 0 ? total / seconds : null;
 }
 

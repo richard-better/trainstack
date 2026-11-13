@@ -127,6 +127,11 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
   over the time since it, if that time is held.
 - **Distance.** Distance never goes backward: a record that reports less than the furthest
   distance so far keeps the furthest.
+- **Laps.** A lap runs from its start for its elapsed time, or to the next lap's start when it
+  has none. A lap that starts before the previous one ended starts where that one ended, so
+  laps never overlap. A lap's normalized power uses the activity's power per second over the
+  lap's seconds. Its work and average grade-adjusted speed count held intervals clipped to the
+  lap, including the interval that closes it.
 - **Length.** Records more than a week after the start are ignored, so a broken timestamp
   cannot allocate a per-second series years long.
 

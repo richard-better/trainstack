@@ -1,4 +1,12 @@
-import { forEachHeldInterval, hasValue, prefixSums, rounded, type Samples } from "./samples.ts";
+import {
+  forEachHeldInterval,
+  hasValue,
+  prefixSums,
+  rounded,
+  type Samples,
+  type Span,
+  wholeActivity,
+} from "./samples.ts";
 
 export const powerCurveDurations = [5, 15, 30, 60, 300, 600, 1200, 1800, 3600] as const;
 export const normalizedPowerWindowSeconds = 30;
@@ -59,12 +67,16 @@ export function stressScore(
   return rounded(((durationSeconds * intensityFactor * intensityFactor) / secondsInAnHour) * 100);
 }
 
-export function workKilojoules(samples: Samples): number | null {
+export function workKilojoules(samples: Samples, span: Span = wholeActivity): number | null {
   if (!hasValue(samples.power)) return null;
   let joules = 0;
-  forEachHeldInterval(samples, (index, seconds) => {
-    const power = samples.power[index]!;
-    if (!Number.isNaN(power)) joules += power * seconds;
-  });
+  forEachHeldInterval(
+    samples,
+    (index, seconds) => {
+      const power = samples.power[index]!;
+      if (!Number.isNaN(power)) joules += power * seconds;
+    },
+    span,
+  );
   return rounded(joules / 1000);
 }

@@ -23,7 +23,7 @@ import {
   perSecond,
   type Samples,
   samplesOf,
-  sliceSamples,
+  type Span,
 } from "./samples.ts";
 import { timeInZones, type ZoneShare } from "./zones.ts";
 
@@ -126,50 +126,43 @@ function chooseLoad(
   return null;
 }
 
-function firstAtOrAfter(elapsed: Float64Array, seconds: number) {
-  let low = 0;
-  let high = elapsed.length;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (elapsed[middle]! < seconds) low = middle + 1;
-    else high = middle;
-  }
-  return low;
-}
-
-function lapRanges(activity: AnalysisActivity) {
+function lapSpans(activity: AnalysisActivity): Span[] {
   const start = activity.summary.startTime.getTime();
   const laps = (activity.laps ?? []).flatMap((lap) =>
-    lap.startTime === undefined
+    lap.startTime === undefined || !Number.isFinite(lap.startTime.getTime())
       ? []
       : [{ lap, startSeconds: (lap.startTime.getTime() - start) / 1000 }],
   );
-  return laps.map(({ lap, startSeconds }, index) => ({
-    startSeconds,
-    endSeconds:
-      lap.elapsedSeconds === undefined
+  let previousEnd = -Infinity;
+  return laps.map(({ lap, startSeconds }, index) => {
+    const end =
+      lap.elapsedSeconds === undefined || !Number.isFinite(lap.elapsedSeconds)
         ? (laps[index + 1]?.startSeconds ?? activity.summary.elapsedSeconds)
-        : startSeconds + lap.elapsedSeconds,
-  }));
+        : startSeconds + lap.elapsedSeconds;
+    const from = Math.max(startSeconds, previousEnd);
+    const to = Math.max(end, from);
+    previousEnd = to;
+    return { from, to };
+  });
 }
 
 function lapAnalysis(
   activity: AnalysisActivity,
   samples: Samples,
+  powerPerSecond: Float64Array,
   gradeAdjusted: Float64Array,
 ): LapAnalysis[] {
-  return lapRanges(activity).map(({ startSeconds, endSeconds }) => {
-    const first = firstAtOrAfter(samples.elapsed, startSeconds);
-    const end = firstAtOrAfter(samples.elapsed, endSeconds);
-    const lap = sliceSamples(samples, first, end);
-    return {
-      startSeconds,
-      endSeconds,
-      normalizedPowerWatts: normalizedPower(perSecond(lap, lap.power)),
-      workKilojoules: workKilojoules(lap),
-      averageGradeAdjustedSpeed: averageWhileHeld(lap, gradeAdjusted.subarray(first, end)),
-    };
-  });
+  const second = (seconds: number) =>
+    Math.min(powerPerSecond.length, Math.max(0, Math.floor(seconds)));
+  return lapSpans(activity).map((span) => ({
+    startSeconds: span.from,
+    endSeconds: span.to,
+    normalizedPowerWatts: normalizedPower(
+      powerPerSecond.subarray(second(span.from), second(span.to)),
+    ),
+    workKilojoules: workKilojoules(samples, span),
+    averageGradeAdjustedSpeed: averageWhileHeld(samples, gradeAdjusted, span),
+  }));
 }
 
 export function analyzeActivity(activity: AnalysisActivity, profile: Profile): ActivityAnalysis {
@@ -221,6 +214,6 @@ export function analyzeActivity(activity: AnalysisActivity, profile: Profile): A
       pace: paceStressScore,
       heart_rate: heartRateStress,
     }),
-    laps: lapAnalysis(activity, samples, gradeAdjusted),
+    laps: lapAnalysis(activity, samples, powerPerSecond, gradeAdjusted),
   };
 }
