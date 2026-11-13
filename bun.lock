@@ -57,6 +57,7 @@
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
         "@trainstack/contract": "workspace:*",
+        "@trainstack/zones": "workspace:*",
         "better-auth": "catalog:",
         "drizzle-orm": "catalog:",
         "evlog": "catalog:",
@@ -162,6 +163,14 @@
         "@types/node": "catalog:",
         "miniflare": "4.20260730.0",
         "rolldown": "1.2.16",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/zones": {
+      "name": "@trainstack/zones",
+      "devDependencies": {
+        "@trainstack/config": "workspace:*",
+        "@types/node": "catalog:",
         "typescript": "catalog:",
       },
     },
