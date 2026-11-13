@@ -129,6 +129,14 @@ An activity is named by the SHA-256 of its file, in lowercase hex, like the app'
 
 Deleting an activity deletes its file and leaves a row in `deleted_activity`, like the app's `DeletedRide` record. From then on, uploading that file to that account answers `410 ACTIVITY_DELETED` with the deletion's `id` and `deletedAt`, so a stale device can drop the activity instead of treating it as a failure. A device can delete an activity the server never had, which stops any other device sending it. Deleting is idempotent. Deleting an account deletes its activity rows, but not yet its files in R2.
 
+### Athlete settings
+
+Athlete settings are served through the contract's `settings` procedures: `settings.get` (`GET /settings?day=`), the settings that held on a day, or now, per listed sport; `settings.zones` (`GET /settings/zones?day=&sport=`), the zones that applied to a sport on a day; `settings.history` (`GET /settings/history?since=`), every dated entry; and `settings.write` (`POST /settings/history`), up to 100 writes or removals in one request. Thresholds, zone models and the history's rules live in `packages/zones`, which the web app imports too.
+
+A setting is a dated change keyed by what it sets and its day, such as `ftp` for every sport on 2026-06-01. Days are the athlete's own calendar days, with no time zone. `athlete_setting` holds one row per user, key and day. Sports, thresholds and models are open words, so a new sport needs no migration.
+
+Writes resolve per key and day by last writer wins, on the `updatedAt` the device stamps when the athlete makes the edit. The later stamp wins whatever order writes arrive in. On equal stamps a removal beats an edit, and between two edits the greater canonical JSON wins, so every order converges on the same row. A removal leaves a tombstone, so a stale device's older edit cannot bring the entry back, and replaying a write changes nothing. Each write answers with what its keys now hold, so a device that lost learns the value that won. Stamps more than 10 minutes ahead of the server's clock are refused. Every row that changes takes the user's next `revision`; `settings.history` with `since` returns only rows changed after that cursor, removals included, for a device to sync from.
+
 ## First deployment
 
 1. Confirm the domain zone is active in this account and `trainstackhq.com` has a proxied DNS record. The apex Worker route uses the existing proxied records, so keep at least one in place. The API and account Workers use custom domains at `api.trainstackhq.com` and `account.trainstackhq.com`; resolve any conflicting records for those exact hostnames before deployment. Alchemy creates their domain records and TLS certificates.

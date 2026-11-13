@@ -17,6 +17,8 @@ Packages that chose a permissive license:
   workouts in it, and the web app edits them.
 - `packages/activity-file` (Apache-2.0): decodes FIT, GPX and TCX files into one shape for
   `hosted/`.
+- `packages/zones` (Apache-2.0): thresholds, zone models and settings history. `hosted/`
+  resolves athlete settings with it, and the web app draws zones with it.
 
 Each workspace `package.json` declares its license as an SPDX identifier, and `bun run test`
 checks it against these rules.
