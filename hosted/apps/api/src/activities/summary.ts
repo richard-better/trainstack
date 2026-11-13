@@ -1,5 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
-import type { BatchItem } from "drizzle-orm/batch";
+import { and, asc, eq, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
 import {
@@ -19,8 +18,6 @@ export const MAX_SUMMARY_ATTEMPTS = 3;
 export const SUMMARIES_PER_SCHEDULED_RUN = 10;
 export const MAX_EVENTS_PER_ACTIVITY = 2000;
 
-const D1_MAX_BOUND_PARAMETERS = 100;
-
 type Outcome = { summary: FileSummary } | { error: ActivitySummaryError };
 
 export type SummaryTarget = {
@@ -31,41 +28,39 @@ export type SummaryTarget = {
   summaryAttempts: number;
 };
 
-function insertableChunks<Row extends object>(rows: readonly Row[]) {
-  const columns = rows[0] ? Object.keys(rows[0]).length : 1;
-  return chunks(rows, Math.floor(D1_MAX_BOUND_PARAMETERS / columns));
-}
-
-function chunks<Item>(items: readonly Item[], size: number) {
-  return Array.from({ length: Math.ceil(items.length / size) }, (_, index) =>
-    items.slice(index * size, (index + 1) * size),
-  );
-}
-
-async function store(db: Database, { userId, id }: SummaryTarget, outcome: Outcome) {
+async function store(
+  db: Database,
+  { userId, id }: SummaryTarget,
+  attemptsWhenStarted: number,
+  outcome: Outcome,
+) {
   const summary = "summary" in outcome ? outcome.summary : undefined;
-  const ofThisActivity = <Table extends typeof activityStatistic | typeof activityEvent>(
-    table: Table,
-  ) => and(eq(table.userId, userId), eq(table.activityId, id));
-  const statistics = Object.entries(summary?.statistics ?? {}).map(([name, value]) => ({
-    userId,
-    activityId: id,
-    name,
-    value,
-  }));
-  const events = (summary?.events ?? [])
-    .slice(0, MAX_EVENTS_PER_ACTIVITY)
-    .map((event, sequence) => ({
-      userId,
-      activityId: id,
-      sequence,
-      ...event,
-    }));
-  const statements: BatchItem<"sqlite">[] = [
-    db.delete(activityStatistic).where(ofThisActivity(activityStatistic)),
-    db.delete(activityEvent).where(ofThisActivity(activityEvent)),
-    ...insertableChunks(statistics).map((rows) => db.insert(activityStatistic).values(rows)),
-    ...insertableChunks(events).map((rows) => db.insert(activityEvent).values(rows)),
+  const stillOurs = sql`EXISTS (SELECT 1 FROM ${activity} WHERE user_id = ${userId} AND id = ${id} AND summary_attempts = ${attemptsWhenStarted})`;
+  const statistics = JSON.stringify(summary?.statistics ?? {});
+  const events = JSON.stringify(
+    (summary?.events ?? []).slice(0, MAX_EVENTS_PER_ACTIVITY).map((event) => ({
+      type: event.type,
+      startedAt: event.startedAt.getTime(),
+      endedAt: event.endedAt?.getTime() ?? null,
+      data: event.data,
+    })),
+  );
+  await db.batch([
+    db.run(
+      sql`DELETE FROM ${activityStatistic} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
+    ),
+    db.run(
+      sql`DELETE FROM ${activityEvent} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
+    ),
+    db.run(sql`
+      INSERT INTO ${activityStatistic} (user_id, activity_id, name, value)
+      SELECT ${userId}, ${id}, key, value FROM json_each(${statistics}) WHERE ${stillOurs}
+    `),
+    db.run(sql`
+      INSERT INTO ${activityEvent} (user_id, activity_id, sequence, type, started_at, ended_at, data)
+      SELECT ${userId}, ${id}, key, value ->> 'type', value ->> 'startedAt', value ->> 'endedAt', value -> 'data'
+      FROM json_each(${events}) WHERE ${stillOurs}
+    `),
     db
       .update(activity)
       .set({
@@ -77,9 +72,14 @@ async function store(db: Database, { userId, id }: SummaryTarget, outcome: Outco
         summaryError: "error" in outcome ? outcome.error : null,
         summaryAttempts: 0,
       })
-      .where(and(eq(activity.userId, userId), eq(activity.id, id))),
-  ];
-  await db.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+      .where(
+        and(
+          eq(activity.userId, userId),
+          eq(activity.id, id),
+          eq(activity.summaryAttempts, attemptsWhenStarted),
+        ),
+      ),
+  ]);
 }
 
 async function claim(db: Database, { userId, id, summaryAttempts }: SummaryTarget) {
@@ -110,9 +110,11 @@ export async function summarizeActivity(
   bytes?: Uint8Array,
 ) {
   if (target.fileFormat === null || target.fileSize === null) return;
-  if (target.summaryAttempts >= MAX_SUMMARY_ATTEMPTS) return store(db, target, { error: "failed" });
+  if (target.summaryAttempts >= MAX_SUMMARY_ATTEMPTS) {
+    return store(db, target, target.summaryAttempts, { error: "failed" });
+  }
   if (target.fileSize > MAX_SUMMARIZED_FILE_BYTES) {
-    return store(db, target, { error: "too_large" });
+    return store(db, target, target.summaryAttempts, { error: "too_large" });
   }
   if (!(await claim(db, target))) return;
   const file = bytes ?? (await readFile(bucket, target));
@@ -123,7 +125,7 @@ export async function summarizeActivity(
     if (!(error instanceof SummaryError)) throw error;
     outcome = { error: error.code };
   }
-  await store(db, target, outcome);
+  await store(db, target, target.summaryAttempts + 1, outcome);
 }
 
 export function dueForSummary(db: Database, limit = SUMMARIES_PER_SCHEDULED_RUN) {

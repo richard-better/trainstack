@@ -450,3 +450,35 @@ test("each scheduled run takes a small batch, and a file that dies goes to the b
   await runCron();
   assert.equal(await summarised(), 12);
 });
+
+test("a scheduled run working from a stale view does not overwrite a newer outcome", async () => {
+  const { client, user } = await rider();
+  await runCronUntilNothingIsDue();
+  const first = await storedBeforeSummaries(user.id, denseRide(5_000, "2026-06-01T00:00:00Z"));
+  const exhausted = await storedBeforeSummaries(user.id, denseRide(5_000, "2026-06-02T00:00:00Z"));
+  await db
+    .prepare("UPDATE activity SET summary_attempts = 3 WHERE user_id = ? AND id = ?")
+    .bind(user.id, exhausted)
+    .run();
+  await db
+    .prepare(
+      `CREATE TRIGGER another_run_finishes_first AFTER UPDATE OF summary_attempts ON activity
+       WHEN NEW.id = '${first}' AND NEW.summary_attempts = 1
+       BEGIN
+         UPDATE activity SET summary_attempts = 0, summary_version = 1, summarized_at = 1
+           WHERE user_id = NEW.user_id AND id = '${exhausted}';
+         INSERT INTO activity_statistic (user_id, activity_id, name, value)
+           VALUES (NEW.user_id, '${exhausted}', 'elapsed_s', 42);
+       END`,
+    )
+    .run();
+  try {
+    await runCron();
+  } finally {
+    await db.prepare("DROP TRIGGER another_run_finishes_first").run();
+  }
+  const kept = await client.activities.get({ id: exhausted });
+  assert.equal(kept.summaryError, null);
+  assert.deepEqual(kept.statistics, { elapsed_s: 42 });
+  assert.ok((await client.activities.get({ id: first })).summarizedAt instanceof Date);
+});
