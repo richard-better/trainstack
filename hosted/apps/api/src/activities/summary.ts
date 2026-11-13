@@ -69,6 +69,7 @@ async function store(
         summaryVersion: SUMMARY_VERSION,
         summaryError: "error" in outcome ? outcome.error : null,
         summaryAttempts: 0,
+        matchVersion: null,
       })
       .where(
         and(

@@ -35,6 +35,15 @@ export const activitySummaryErrorSchema = z
     "Why the server could not derive the summary from the file: truncated (the file ends early), corrupt (it does not read as its format), no_activity (it reads, but holds no activity), too_large (more laps or sessions than an activity can have) or failed (summarising it kept failing)",
   );
 
+export const duplicateActivitySchema = z.object({
+  id: activityIdSchema,
+  source: activitySourceSchema,
+  sourceId: z.string().nullable(),
+  startedAt: z.date().nullable(),
+  file: z.object({ format: activityFileFormatSchema, size: z.number().int() }).nullable(),
+  primary: z.boolean(),
+});
+
 export const activitySchema = z.object({
   id: activityIdSchema,
   source: activitySourceSchema,
@@ -54,6 +63,16 @@ export const activitySchema = z.object({
       `Numbers that sum up the activity, named <what>_<unit>: ${activityStatistics.map(({ name }) => name).join(", ")}, and more over time`,
     ),
   createdAt: z.date(),
+  primary: z
+    .boolean()
+    .describe(
+      "Whether this activity stands for its workout. The same workout can arrive from several sources, such as Ride and a watch; the server links them, and exactly one of them is primary",
+    ),
+  duplicates: z
+    .array(duplicateActivitySchema)
+    .describe(
+      "The other activities that recorded the same workout, each with its own file; empty when this is the only one",
+    ),
 });
 
 export const activityEventSchema = z.object({
@@ -105,6 +124,12 @@ export const activitiesContract = {
       z.object({
         limit: z.number().int().min(1).max(200).default(50),
         cursor: z.string().optional(),
+        onePerWorkout: z
+          .boolean()
+          .default(false)
+          .describe(
+            "List only the primary activity of each workout, so a workout recorded twice appears once. Without it the list holds every activity, as a client that syncs by id needs",
+          ),
       }),
     )
     .output(
@@ -123,6 +148,36 @@ export const activitiesContract = {
     .errors({ ...unauthorized, ...activityNotFound })
     .input(z.object({ id: activityIdSchema }))
     .output(z.file()),
+  makePrimary: oc
+    .route({
+      method: "POST",
+      path: "/activities/{id}/primary",
+      description:
+        "Make this activity the one that stands for its workout. The choice holds when other copies arrive later and when activities are summarised again",
+    })
+    .errors({ ...unauthorized, ...activityNotFound })
+    .input(z.object({ id: activityIdSchema }))
+    .output(activitySchema),
+  unlink: oc
+    .route({
+      method: "POST",
+      path: "/activities/{id}/unlink",
+      description:
+        "Say this activity is not the same workout as the others it was linked to. It becomes a workout of its own, and is never linked to them again unless the athlete links it",
+    })
+    .errors({ ...unauthorized, ...activityNotFound })
+    .input(z.object({ id: activityIdSchema }))
+    .output(activitySchema),
+  link: oc
+    .route({
+      method: "POST",
+      path: "/activities/{id}/link",
+      description:
+        "Say this activity is the same workout as another, such as a file whose clock was wrong. Their workouts become one",
+    })
+    .errors({ ...unauthorized, ...activityNotFound })
+    .input(z.object({ id: activityIdSchema, to: activityIdSchema }))
+    .output(activitySchema),
   delete: oc
     .route({ method: "DELETE", path: "/activities/{id}" })
     .errors(unauthorized)
@@ -139,5 +194,6 @@ export const appContract = {
 export type AppContractClient = ContractRouterClient<typeof appContract>;
 export type Activity = z.infer<typeof activitySchema>;
 export type ActivityDetail = z.infer<typeof activityDetailSchema>;
+export type DuplicateActivity = z.infer<typeof duplicateActivitySchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
 export type ActivitySummaryError = z.infer<typeof activitySummaryErrorSchema>;

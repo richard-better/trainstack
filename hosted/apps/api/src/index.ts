@@ -12,6 +12,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { summarizeDueActivities } from "./activities/summary";
+import { matchDueActivities } from "./activities/workouts";
 import { createContext } from "./context";
 import { ENV } from "./env.server";
 import { feedbackRoutes } from "./feedback";
@@ -141,8 +142,10 @@ app.get("/", (c) => {
 });
 
 async function summarizeWhatIsDue() {
-  const { failures } = await summarizeDueActivities(getDb(), ENV.ACTIVITY_FILES);
-  for (const failure of failures) console.error(failure);
+  const db = getDb();
+  const summaries = await summarizeDueActivities(db, ENV.ACTIVITY_FILES);
+  const matches = await matchDueActivities(db);
+  for (const failure of [...summaries.failures, ...matches.failures]) console.error(failure);
 }
 
 export default {

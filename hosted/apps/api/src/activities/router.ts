@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import type { Activity, ActivityDetail } from "@trainstack/contract";
+import type { Activity, ActivityDetail, DuplicateActivity } from "@trainstack/contract";
 import { and, asc, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
@@ -9,6 +9,13 @@ import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { contentTypes, fileKey, formatOf, sha256Hex } from "./files";
 import { summarizeActivity } from "./summary";
+import {
+  electPrimary,
+  forgetDistinction,
+  keepApart,
+  matchActivity,
+  mergeWorkouts,
+} from "./workouts";
 
 type ActivityRow = typeof activity.$inferSelect;
 
@@ -31,7 +38,14 @@ async function statisticsOf(db: Database, userId: string, ids: string[]) {
   return byActivity;
 }
 
-function toActivity(row: ActivityRow, statistics: Record<string, number>): Activity {
+const fileOf = (row: ActivityRow) =>
+  row.fileFormat && row.fileSize !== null ? { format: row.fileFormat, size: row.fileSize } : null;
+
+function toActivity(
+  row: ActivityRow,
+  statistics: Record<string, number>,
+  duplicates: DuplicateActivity[],
+): Activity {
   return {
     id: row.id,
     source: row.source,
@@ -39,15 +53,55 @@ function toActivity(row: ActivityRow, statistics: Record<string, number>): Activ
     sport: row.sport ?? row.fileSport,
     name: row.name ?? row.fileName,
     startedAt: row.startedAt,
-    file:
-      row.fileFormat && row.fileSize !== null
-        ? { format: row.fileFormat, size: row.fileSize }
-        : null,
+    file: fileOf(row),
     summarizedAt: row.summarizedAt,
     summaryError: row.summaryError,
     statistics,
     createdAt: row.createdAt,
+    primary: row.isPrimary,
+    duplicates,
   };
+}
+
+async function duplicatesOf(db: Database, userId: string, rows: ActivityRow[]) {
+  const workoutIds = [...new Set(rows.map((row) => row.workoutId ?? row.id))];
+  const members = await db
+    .select()
+    .from(activity)
+    .where(
+      and(
+        eq(activity.userId, userId),
+        inArray(
+          activity.workoutId,
+          sql`(SELECT value FROM json_each(${JSON.stringify(workoutIds)}))`,
+        ),
+      ),
+    )
+    .orderBy(desc(activity.isPrimary), asc(activity.createdAt), asc(activity.id));
+  return new Map(
+    rows.map((row) => [
+      row.id,
+      members
+        .filter((member) => member.workoutId === row.workoutId && member.id !== row.id)
+        .map((member): DuplicateActivity => ({
+          id: member.id,
+          source: member.source,
+          sourceId: member.sourceId,
+          startedAt: member.startedAt,
+          file: fileOf(member),
+          primary: member.isPrimary,
+        })),
+    ]),
+  );
+}
+
+async function toActivities(db: Database, userId: string, rows: ActivityRow[]) {
+  const ids = rows.map((row) => row.id);
+  const [statistics, duplicates] = await Promise.all([
+    statisticsOf(db, userId, ids),
+    duplicatesOf(db, userId, rows),
+  ]);
+  return rows.map((row) => toActivity(row, statistics.get(row.id)!, duplicates.get(row.id)!));
 }
 
 const findActivity = (db: Database, userId: string, id: string) =>
@@ -65,8 +119,14 @@ const findDeletion = (db: Database, userId: string, id: string) =>
     .get();
 
 async function withStatistics(db: Database, row: ActivityRow) {
-  const statistics = await statisticsOf(db, row.userId, [row.id]);
-  return toActivity(row, statistics.get(row.id)!);
+  const [result] = await toActivities(db, row.userId, [row]);
+  return result!;
+}
+
+async function currentActivity(db: Database, userId: string, id: string) {
+  const row = await findActivity(db, userId, id);
+  if (!row) throw new ORPCError("NOT_FOUND", { message: "No such activity" });
+  return withStatistics(db, row);
 }
 
 const encodeCursor = (row: ActivityRow) => `${row.occurredAt}.${row.id}`;
@@ -116,8 +176,8 @@ export const activitiesRouter = {
     await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
     try {
       await db.run(sql`
-        INSERT INTO ${activity} (user_id, id, source, source_id, sport, name, started_at, file_format, file_size)
-        SELECT ${userId}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${input.sport ?? null},
+        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, name, started_at, file_format, file_size)
+        SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${input.sport ?? null},
           ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength}
         WHERE NOT EXISTS (
           SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
@@ -134,6 +194,7 @@ export const activitiesRouter = {
     if (inserted) {
       try {
         await summarizeActivity(db, ENV.ACTIVITY_FILES, inserted, bytes);
+        await matchActivity(db, userId, id);
       } catch (error) {
         console.error(error);
       }
@@ -155,6 +216,7 @@ export const activitiesRouter = {
       .where(
         and(
           eq(activity.userId, userId),
+          input.onePerWorkout ? eq(activity.isPrimary, true) : undefined,
           after
             ? or(
                 lt(activity.occurredAt, after.occurredAt),
@@ -166,13 +228,8 @@ export const activitiesRouter = {
       .orderBy(desc(activity.occurredAt), desc(activity.id))
       .limit(input.limit + 1);
     const page = rows.slice(0, input.limit);
-    const statistics = await statisticsOf(
-      db,
-      userId,
-      page.map((row) => row.id),
-    );
     return {
-      activities: page.map((row) => toActivity(row, statistics.get(row.id)!)),
+      activities: await toActivities(db, userId, page),
       nextCursor: rows.length > input.limit ? encodeCursor(page.at(-1)!) : null,
     };
   }),
@@ -211,10 +268,56 @@ export const activitiesRouter = {
     });
   }),
 
+  makePrimary: signedIn.activities.makePrimary.handler(async ({ context, input, errors }) => {
+    const db = getDb();
+    const userId = context.session.user.id;
+    if (!(await findActivity(db, userId, input.id))) throw errors.NOT_FOUND();
+    await db.batch([
+      db
+        .update(activity)
+        .set({ chosenAsPrimaryAt: new Date() })
+        .where(and(eq(activity.userId, userId), eq(activity.id, input.id))),
+      electPrimary(db, userId, input.id),
+    ]);
+    return currentActivity(db, userId, input.id);
+  }),
+
+  unlink: signedIn.activities.unlink.handler(async ({ context, input, errors }) => {
+    const db = getDb();
+    const userId = context.session.user.id;
+    if (!(await findActivity(db, userId, input.id))) throw errors.NOT_FOUND();
+    await db.batch([
+      ...keepApart(db, userId, input.id),
+      electPrimary(db, userId, input.id, input.id),
+      db
+        .update(activity)
+        .set({ workoutId: crypto.randomUUID(), isPrimary: true })
+        .where(and(eq(activity.userId, userId), eq(activity.id, input.id))),
+    ]);
+    return currentActivity(db, userId, input.id);
+  }),
+
+  link: signedIn.activities.link.handler(async ({ context, input, errors }) => {
+    const db = getDb();
+    const userId = context.session.user.id;
+    const [row, other] = await Promise.all([
+      findActivity(db, userId, input.id),
+      findActivity(db, userId, input.to),
+    ]);
+    if (!row || !other) throw errors.NOT_FOUND();
+    await db.batch([
+      forgetDistinction(db, userId, input.id, input.to),
+      mergeWorkouts(db, userId, input.id, input.to, { evenIfDistinct: true }),
+      electPrimary(db, userId, input.id),
+    ]);
+    return currentActivity(db, userId, input.id);
+  }),
+
   delete: signedIn.activities.delete.handler(async ({ context, input }) => {
     const db = getDb();
     const userId = context.session.user.id;
     await db.batch([
+      electPrimary(db, userId, input.id, input.id),
       db.insert(deletedActivity).values({ userId, id: input.id }).onConflictDoNothing(),
       db.delete(activity).where(and(eq(activity.userId, userId), eq(activity.id, input.id))),
     ]);
