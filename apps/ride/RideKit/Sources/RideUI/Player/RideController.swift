@@ -166,10 +166,8 @@ final class RideController {
     set { apply(.changeMode(newValue)) }
   }
 
-  var trainerTarget: TrainerTarget { engine.trainerTarget }
-
   private func updateTrainer(at date: Date = .now) {
-    devices?.setTrainerTarget(trainerTarget, at: date)
+    devices?.setTrainerTarget(TrainerTarget(engine.trainerCommand), at: date)
   }
 
   var power: Int? { session.power(powerDisplay) }

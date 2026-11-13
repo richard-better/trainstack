@@ -192,4 +192,31 @@ struct RideJournalTests {
       #expect(try #require(RideJournal.recover(from: directory)).session.samples.count == 2)
     }
   }
+
+  @Test func filesBesideTheJournalAreKeptWithItsTrace() throws {
+    try withDirectory { directory in
+      let journal = try journal(in: directory)
+      try Data("log".utf8).write(to: directory.appending(path: "sensors.jsonl"))
+      ride(4, journaling: journal)
+      journal.finish(keepingFor: "ride-a")
+      let kept = RideJournal.traces(ofRide: "ride-a", besideJournalIn: directory)
+      #expect(
+        kept.map(\.lastPathComponent).filter { $0.hasSuffix(" ride-a.sensors.jsonl") }.count == 1)
+      #expect(try Data(contentsOf: try #require(kept.last)) == Data("log".utf8))
+      #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty)
+    }
+  }
+
+  @Test func aNewRideAndADiscardRemoveTheFilesBesideTheJournal() throws {
+    try withDirectory { directory in
+      ride(2, journaling: try journal(in: directory))
+      let beside = directory.appending(path: "sensors.jsonl")
+      try Data("old".utf8).write(to: beside)
+      _ = try journal(in: directory)
+      #expect(!FileManager.default.fileExists(atPath: beside.path))
+      try Data("old".utf8).write(to: beside)
+      RideJournal.discard(in: directory)
+      #expect(!FileManager.default.fileExists(atPath: beside.path))
+    }
+  }
 }

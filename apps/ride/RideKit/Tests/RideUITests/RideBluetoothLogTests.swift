@@ -7,11 +7,18 @@ import Testing
 @testable import RideUI
 
 struct RideBluetoothLogTests {
-  static let traces = URL(filePath: #filePath).deletingLastPathComponent()
+  nonisolated static let traces = URL(filePath: #filePath).deletingLastPathComponent()
     .deletingLastPathComponent().appending(
       path: "RideCoreTests/Traces", directoryHint: .isDirectory)
   static let recordingFixture = ProcessInfo.processInfo.environment["RIDE_RECORD_TRACES"] == "1"
   static let fixtureName = "trainer-and-strap"
+  nonisolated static let bluetoothSuffix = "." + BluetoothLog.fileName
+
+  nonisolated static var bluetoothLogNames: [String] {
+    let names = (try? FileManager.default.contentsOfDirectory(atPath: traces.path)) ?? []
+    return names.filter { $0.hasSuffix(bluetoothSuffix) }
+      .map { String($0.dropLast(bluetoothSuffix.count)) }.sorted()
+  }
 
   private let template = WorkoutTemplate.named("Quick test 45s")!
   private let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
@@ -96,5 +103,25 @@ struct RideBluetoothLogTests {
           to: Self.traces.appending(path: "\(Self.fixtureName).\(BluetoothLog.fileName)"))
       }
     }
+  }
+
+  @Test(arguments: bluetoothLogNames)
+  func replaysEachBluetoothLogToTheReadingsItsRideRecorded(_ name: String) throws {
+    let trace = try #require(
+      RideTrace(jsonLines: Data(contentsOf: Self.traces.appending(path: "\(name).jsonl"))))
+    let replay = BluetoothReplay(
+      jsonLines: try Data(
+        contentsOf: Self.traces.appending(path: "\(name)\(Self.bluetoothSuffix)")))
+    let recorded = trace.inputs.compactMap { input -> TrainerReading? in
+      guard case .tick(_, let reading, _) = input else { return nil }
+      return reading
+    }
+    #expect(replay.ticks.map(\.power) == recorded.map(\.power))
+    #expect(replay.ticks.map(\.cadence) == recorded.map(\.cadence))
+    #expect(replay.replayedWrites == replay.recordedWrites)
+  }
+
+  @Test func theTraceFixturesIncludeABluetoothLog() {
+    #expect(Self.bluetoothLogNames.contains(Self.fixtureName))
   }
 }

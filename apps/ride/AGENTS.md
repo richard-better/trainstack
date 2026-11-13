@@ -155,7 +155,7 @@ file.
 
 Each other rule comes from a bug or review finding, so the same mistake cannot come back:
 `one-type-per-file`, `entry-holds-no-closure` (#41), `no-geometry-reader` (#21),
-`keychain-stays-in-its-store` (#44) and `deterministic-core`. When you fix a bug or a review
+`keychain-stays-in-its-store` (#44), `deterministic-core` and `core-imports-no-devices`. When you fix a bug or a review
 finding that a rule could have caught, add the rule in the same change: a `Rule` in
 `Lint/Sources/RideLintRules`, listed in `RideLint.rules`, with tests in
 `Lint/Tests/RideLintRulesTests`.
@@ -168,6 +168,13 @@ and moves the `RideSession` on. `RideController` only gathers inputs from the cl
 rider, and acts on the engine's output. The `deterministic-core` rule bans clocks and
 randomness in `RideCore`, so the same inputs always give the same ride.
 
+`RideCore` sees only readings and commands, never devices. Readings come in as `TrainerReading`
+and the engine asks for its `TrainerCommand`; `RideController` turns that into
+`RideBluetooth`'s `TrainerTarget`. `RideCore` depends on `RideData` alone, CI tests the package
+with `--explicit-target-dependency-import-check error`, and the `core-imports-no-devices` rule
+keeps `RideCore` to Foundation and `RideData`, and `RideData` to Foundation, so both stay free of
+devices and Apple frameworks.
+
 `RideJournal` writes the header and every input as JSON lines while a ride is on. Recovering a
 crashed ride replays the journal. A finished ride's journal is kept as a trace in
 `Application Support/Ride traces`, the latest `RideJournal.tracesKept` of them, named by start
@@ -178,8 +185,9 @@ and write a test that replays it to the behaviour you expect. `RideTraceReplayTe
 every trace there and compares it with its golden FIT, so any change to how a ride is recorded
 shows up as a diff.
 
-Every ride also records its Bluetooth traffic beside the journal (`BluetoothLog`), and the log
-is kept and shared with the trace as `<trace>.bluetooth.jsonl`. `BluetoothDevices` records
+Every ride also records its Bluetooth traffic beside the journal (`BluetoothLog`). `RideJournal`
+keeps every file beside it with the trace, as `<trace>.<file>`, so the log is kept and shared
+with the trace as `<trace>.bluetooth.jsonl`. `BluetoothDevices` records
 through a `RecordingTransport` around the real transport: the state of each connected device
 when the ride starts (its connection, trainer ranges and readiness, its battery, and its
 measurement packets from the last `RecordingTransport.measurementHistory` seconds, enough to
@@ -187,9 +195,10 @@ rebuild crank cadence), then every packet as raw bytes, every trainer target and
 power or cadence source the rider picks, and each ride tick.
 Devices are numbered, and names and identifiers stay out. `BluetoothReplay` feeds a log through
 a fresh `BluetoothDevices` on the recorded clock and gives the readings at each tick and the
-trainer commands it sends. `RideTraceReplayTests` checks that every log in `Traces` replays to
-the power and cadence its trace recorded and to the commands the trainer was sent.
-`RideBluetoothLogTests` writes the `trainer-and-strap` log with `RIDE_RECORD_TRACES=1`.
+trainer commands it sends. `RideBluetoothLogTests`, in `RideUITests` because it needs both
+`RideCore` and `RideBluetooth`, checks that every log in `Traces` replays to the power and
+cadence its trace recorded and to the commands the trainer was sent, and writes the
+`trainer-and-strap` log with `RIDE_RECORD_TRACES=1`.
 
 Some things a log cannot replay. Commands are compared from the ride's first target, assuming
 the trainer was not under control when the ride started, as it is once the previous ride has

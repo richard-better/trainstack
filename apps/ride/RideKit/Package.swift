@@ -10,7 +10,7 @@ let package = Package(
   ],
   targets: [
     .target(name: "RideBluetooth"),
-    .target(name: "RideCore", dependencies: ["RideBluetooth", "RideData"]),
+    .target(name: "RideCore", dependencies: ["RideData"]),
     .target(name: "RideData", resources: [.copy("Resources/SampleRide.fit")]),
     .target(name: "RideLink", dependencies: ["RideData"]),
     .target(name: "RideStrava"),
@@ -28,8 +28,7 @@ let package = Package(
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
-    .testTarget(
-      name: "RideCoreTests", dependencies: ["RideBluetooth", "RideCore"], exclude: ["Traces"]),
+    .testTarget(name: "RideCoreTests", dependencies: ["RideCore"], exclude: ["Traces"]),
     .testTarget(name: "RideDataTests", dependencies: ["RideData"]),
     .testTarget(name: "RideLinkTests", dependencies: ["RideLink"]),
     .testTarget(name: "RideStravaTests", dependencies: ["RideStrava"]),
