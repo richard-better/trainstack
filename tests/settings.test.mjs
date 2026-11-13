@@ -390,6 +390,27 @@ test("a replayed write changes nothing, and a device syncs only what changed sin
   assert.equal((await client.settings.get({})).weightKg, null);
 });
 
+test("a sport named like an Object property is just a sport", async () => {
+  const { client } = await athlete();
+  await client.settings.write({
+    writes: [
+      put("2026-03-01", ftp(250)),
+      put("2026-03-01", listed("constructor")),
+      put("2026-03-01", { kind: "own_zones", sport: "constructor", metric: "power", own: true }),
+      put("2026-03-01", ftp(300, "constructor")),
+    ],
+  });
+  const settings = await client.settings.get({});
+  assert.deepEqual(Object.keys(settings.sports), ["constructor"]);
+  assert.equal(settings.sports.constructor.power.thresholds.ftp, 300);
+  const other = await athlete();
+  assert.deepEqual((await other.client.settings.get({})).sports, {});
+  assert.equal(
+    (await other.client.settings.zones({ day: "2026-03-01", sport: "constructor" })).zones.power,
+    undefined,
+  );
+});
+
 test("writes from several devices at once all land", async () => {
   const { client } = await athlete();
   await Promise.all(

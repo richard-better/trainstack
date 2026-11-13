@@ -56,7 +56,7 @@ export function emptyProfile(): Profile {
     const model = standardZoneModel(metric, null);
     if (model) defaults[metric] = { thresholds: {}, model, customLimits: null };
   }
-  return { defaults, sports: {}, weightKg: null };
+  return { defaults, sports: Object.create(null) as Profile["sports"], weightKg: null };
 }
 
 const copyZones = (zones: MetricZones): MetricZones => ({
