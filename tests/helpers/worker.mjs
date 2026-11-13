@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { Miniflare } from "miniflare";
 import { rolldown } from "rolldown";
 
-export const origin = "https://trainstackhq.com";
+export const origin = "https://account.trainstackhq.com";
 export const api = "https://api.trainstackhq.com";
 
 export async function startWorker({ bindings = {}, outboundService } = {}) {
@@ -36,7 +36,7 @@ export async function startWorker({ bindings = {}, outboundService } = {}) {
       NODE_ENV: "test",
       BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
       BETTER_AUTH_URL: api,
-      CORS_ORIGIN: origin,
+      WEB_APP_ORIGIN: origin,
       AXIOM_API_KEY: "",
       AXIOM_DATASET: "",
       AXIOM_EDGE_URL: "",

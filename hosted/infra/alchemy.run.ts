@@ -50,9 +50,9 @@ export const server = Cloudflare.Worker("server", {
   env: {
     DB: db,
     NODE_ENV: production.pipe(Effect.map((prod) => (prod ? "production" : "development"))),
-    CORS_ORIGIN: production.pipe(
+    WEB_APP_ORIGIN: production.pipe(
       Effect.flatMap((prod) =>
-        prod ? Effect.succeed(`https://${webDomain}`) : Config.String("CORS_ORIGIN"),
+        prod ? Effect.succeed(`https://${accountDomain}`) : Config.String("WEB_APP_ORIGIN"),
       ),
     ),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
