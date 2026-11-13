@@ -14,7 +14,9 @@ try {
 }
 ```
 
-`bytes` is a `Uint8Array` or an `ArrayBuffer`. `FitDecodeError.code` is one of `notAFitFile`,
+`bytes` is a `Uint8Array` or an `ArrayBuffer`. `summarizeFit(bytes)` returns the same
+`fileId`, `workoutName`, `summary`, `sessions` and `laps` without keeping the records or the
+file's messages, for files too large to decode in full in a Worker. `FitDecodeError.code` is one of `notAFitFile`,
 `truncated`, `badChecksum`, `malformed` or `noActivity`.
 
 - `summary` comes from the file's sessions, summed across them for a multisport activity, and

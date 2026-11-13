@@ -1,10 +1,12 @@
 export {
   decodeFit,
+  summarizeFit,
   type ActivitySummary,
   type EventName,
   type EventType,
   type FileType,
   type FitActivity,
+  type FitActivitySummary,
   type FitEnum,
   type FitEvent,
   type FitFileId,
