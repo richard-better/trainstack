@@ -4,7 +4,7 @@ import { paceDistanceMetres, type Profile, type ZoneMetric } from "@trainstack/z
 
 import type { ChannelKey, Trace } from "./series.ts";
 
-type Decoded = Pick<DecodedActivity, "summary" | "records" | "laps">;
+type Decoded = Pick<DecodedActivity, "summary" | "records" | "laps" | "events">;
 
 export function analysisOf(
   activity: Decoded,
@@ -24,6 +24,7 @@ export function analysisOf(
       },
       records: activity.records,
       laps: activity.laps,
+      events: activity.events,
     },
     profile,
   );

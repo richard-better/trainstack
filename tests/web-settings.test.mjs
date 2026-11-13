@@ -369,6 +369,41 @@ test("an indoor ride's file names its sport, and a file without one uses the act
   );
 });
 
+test("a smart-recorded ride counts its held seconds, but not the time its timer was stopped", () => {
+  const records = [0, 20, 40, 60, 80, 100, 120].map((second) => ({
+    elapsedSeconds: second,
+    power: 180,
+  }));
+  const startTime = new Date("2026-10-06T10:00:00Z");
+  const at = (second) => new Date(startTime.getTime() + second * 1000);
+  const profile = profileOn(
+    [
+      {
+        day: "2026-01-01",
+        change: { kind: "threshold", sport: null, threshold: "ftp", value: 200 },
+      },
+    ],
+    "2026-10-06",
+  );
+  const ride = (events) => ({
+    summary: { startTime, sport: "cycling", subSport: undefined, elapsedSeconds: 120 },
+    records,
+    laps: [],
+    events,
+  });
+  const tempoSeconds = (events) =>
+    analysisOf(ride(events), "cycling", profile).timeInZones.power[2].seconds;
+
+  assert.equal(tempoSeconds([]), 120);
+  assert.equal(
+    tempoSeconds([
+      { time: at(40), event: "timer", type: "stopAll" },
+      { time: at(100), event: "timer", type: "start" },
+    ]),
+    60,
+  );
+});
+
 test("values read and print in the athlete's units", () => {
   assert.equal(parseValue("pace", "4:05"), 245);
   assert.equal(parseValue("pace", "4:65"), null);
