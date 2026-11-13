@@ -106,7 +106,7 @@ struct ActivitySyncTests {
   @Test func uploadsNothingWhileSignedOut() async throws {
     try await withDevice(signedInAs: nil) { device in
       _ = try device.ride(startingAt: 0)
-      try await device.sync.sync()
+      await #expect(throws: StravaError.signedOut) { try await device.sync.sync() }
       #expect(await device.server.calls.isEmpty)
     }
   }
@@ -199,7 +199,7 @@ struct ActivitySyncTests {
       try await device.sync.sync()
       await device.server.signIn(as: nil)
       device.library.remove(id)
-      try await device.sync.sync()
+      await #expect(throws: StravaError.signedOut) { try await device.sync.sync() }
       #expect(await device.server.deletions.isEmpty)
       await device.server.signIn(as: "ada")
       try await device.sync.sync()

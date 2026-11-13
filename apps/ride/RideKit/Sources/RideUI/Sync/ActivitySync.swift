@@ -103,7 +103,7 @@ final class ActivitySync {
   }
 
   func sync() async throws {
-    guard let account = try await server.signedInAccount() else { return }
+    guard let account = try await server.signedInAccount() else { throw StravaError.signedOut }
     try Task.checkCancellation()
     lastAccountID = account.id
     for id in state(of: account.id).deletionsToSend.sorted() {
