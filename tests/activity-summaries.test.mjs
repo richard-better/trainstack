@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { migrate, rpcClient, startWorker } from "./helpers/worker.mjs";
 import { mockApple } from "./helpers/apple.mjs";
-import { pausedRun } from "./helpers/fit-files.mjs";
+import { denseRide, pausedRun } from "./helpers/fit-files.mjs";
 
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const TRACES = "apps/ride/RideKit/Tests/RideCoreTests/Traces";
+const MAX_SUMMARIZED_FILE_BYTES = 2 * 1024 * 1024;
 
 let worker;
 let runtime;
+let db;
+let bucket;
 let rideBytes;
 const apple = mockApple();
 
@@ -18,6 +22,8 @@ before(
     worker = await startWorker({ outboundService: apple.fetch });
     runtime = worker.runtime;
     await migrate(runtime);
+    db = await runtime.getD1Database("DB");
+    bucket = await runtime.getR2Bucket("ACTIVITY_FILES");
     rideBytes = await readFile(SAMPLE_RIDE);
   },
   { timeout: 60_000 },
@@ -27,12 +33,45 @@ after(async () => {
   await worker?.dispose();
 });
 
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
 async function rider() {
   const signedIn = await apple.signIn(runtime, { email: `${crypto.randomUUID()}@example.com` });
   return { ...signedIn, client: rpcClient(runtime, { token: signedIn.token }) };
 }
 
 const fitFile = (bytes = rideBytes, name = "ride.fit") => new File([bytes], name);
+
+async function runCron() {
+  const { outcome } = await (await runtime.getWorker()).scheduled({ cron: "* * * * *" });
+  assert.equal(outcome, "ok");
+}
+
+async function runCronUntilNothingIsDue() {
+  for (let run = 0; run < 20; run++) {
+    const due = await db
+      .prepare(
+        "SELECT count(*) AS n FROM activity WHERE file_format = 'fit' AND (summary_version IS NULL OR (summary_error = 'too_large' AND file_size <= ?))",
+      )
+      .bind(MAX_SUMMARIZED_FILE_BYTES)
+      .first();
+    if (due.n === 0) return;
+    await runCron();
+  }
+  assert.fail("activities were still due after twenty runs");
+}
+
+async function storedBeforeSummaries(userId, bytes, format = "fit") {
+  const id = sha256(bytes);
+  await bucket.put(`activities/${userId}/${id}`, bytes);
+  await db
+    .prepare(
+      "INSERT INTO activity (user_id, id, source, file_format, file_size) VALUES (?, ?, 'trainstack', ?, ?)",
+    )
+    .bind(userId, id, format, bytes.byteLength)
+    .run();
+  return id;
+}
 
 const sampleRideStatistics = {
   elapsed_s: 1800,
@@ -215,4 +254,151 @@ test("a FIT file that will not decode stays stored, listed and downloadable, wit
     assert.deepEqual((await client.activities.get({ id: uploaded.id })).summaryError, reason);
   }
   assert.equal((await client.activities.list({})).activities.length, 2);
+});
+
+test("GPX and TCX files wait, unsummarised and without an error, for their decoders", async () => {
+  const { client, user } = await rider();
+  const gpx = await client.activities.upload({
+    file: new File(
+      [
+        `<?xml version="1.0"?><gpx version="1.1"><trk><trkseg><trkpt lat="47.5" lon="19.04"><time>2026-01-01T00:00:00Z</time></trkpt></trkseg></trk></gpx>`,
+      ],
+      "run.gpx",
+    ),
+    source: "upload",
+  });
+  assert.equal(gpx.summarizedAt, null);
+  assert.equal(gpx.summaryError, null);
+  await runCronUntilNothingIsDue();
+  await runCron();
+  const row = await db
+    .prepare("SELECT summary_attempts, summary_version FROM activity WHERE user_id = ? AND id = ?")
+    .bind(user.id, gpx.id)
+    .first();
+  assert.deepEqual(row, { summary_attempts: 0, summary_version: null });
+});
+
+test("activities stored before summaries existed are summarised by the scheduled pass", async () => {
+  const { client, user } = await rider();
+  const id = await storedBeforeSummaries(user.id, rideBytes);
+  const before = await client.activities.get({ id });
+  assert.equal(before.summarizedAt, null);
+  assert.deepEqual(before.statistics, {});
+
+  await runCronUntilNothingIsDue();
+  const after = await client.activities.get({ id });
+  assert.ok(after.summarizedAt instanceof Date);
+  assert.deepEqual(after.statistics, sampleRideStatistics);
+  assert.equal(after.events.length, 10);
+});
+
+test("an activity summarised by older logic is summarised again, replacing what it had", async () => {
+  const { client, user } = await rider();
+  const { id } = await client.activities.upload({ file: fitFile(), source: "trainstack" });
+  await db.batch([
+    db
+      .prepare(
+        "UPDATE activity SET summary_version = 0, file_sport = 'stale' WHERE user_id = ? AND id = ?",
+      )
+      .bind(user.id, id),
+    db
+      .prepare(
+        "INSERT INTO activity_statistic (user_id, activity_id, name, value) VALUES (?, ?, 'old_name_s', 1)",
+      )
+      .bind(user.id, id),
+  ]);
+  assert.equal((await client.activities.get({ id })).sport, "stale");
+
+  for (let run = 0; run < 20; run++) {
+    const row = await db
+      .prepare("SELECT summary_version FROM activity WHERE user_id = ? AND id = ?")
+      .bind(user.id, id)
+      .first();
+    if (row.summary_version > 0) break;
+    await runCron();
+  }
+  const resummarised = await client.activities.get({ id });
+  assert.equal(resummarised.sport, "cycling");
+  assert.deepEqual(resummarised.statistics, sampleRideStatistics);
+  assert.equal(resummarised.events.length, 10);
+});
+
+test("a file over the summary limit says so, and is summarised once the limit covers it", async () => {
+  const { client, user } = await rider();
+  const big = denseRide(MAX_SUMMARIZED_FILE_BYTES + 1024);
+  const uploaded = await client.activities.upload({ file: fitFile(big), source: "upload" });
+  assert.equal(uploaded.summaryError, "too_large");
+  assert.equal(uploaded.summarizedAt, null);
+  assert.equal((await client.activities.file({ id: uploaded.id })).size, big.byteLength);
+
+  await runCronUntilNothingIsDue();
+  assert.equal((await client.activities.get({ id: uploaded.id })).summaryError, "too_large");
+
+  await db
+    .prepare("UPDATE activity SET file_size = ? WHERE user_id = ? AND id = ?")
+    .bind(MAX_SUMMARIZED_FILE_BYTES, user.id, uploaded.id)
+    .run();
+  await runCronUntilNothingIsDue();
+  const summarised = await client.activities.get({ id: uploaded.id });
+  assert.equal(summarised.summaryError, null);
+  assert.ok(summarised.summarizedAt instanceof Date);
+  assert.equal(summarised.statistics.max_power_w, 249);
+});
+
+test("a summary that keeps dying is retried a bounded number of times, then reported as failed", async () => {
+  const { client, user } = await rider();
+  await runCronUntilNothingIsDue();
+  const dying = await storedBeforeSummaries(user.id, denseRide(10_000, "2026-08-02T06:00:00Z"));
+  await bucket.delete(`activities/${user.id}/${dying}`);
+
+  for (let run = 1; run <= 3; run++) {
+    await runCron();
+    const row = await db
+      .prepare("SELECT summary_attempts, summary_error FROM activity WHERE user_id = ? AND id = ?")
+      .bind(user.id, dying)
+      .first();
+    assert.deepEqual(row, { summary_attempts: run, summary_error: null });
+    assert.equal((await client.activities.get({ id: dying })).summaryError, null);
+  }
+  await runCron();
+  const failed = await client.activities.get({ id: dying });
+  assert.equal(failed.summaryError, "failed");
+  assert.equal(failed.summarizedAt, null);
+
+  await runCron();
+  const row = await db
+    .prepare("SELECT summary_attempts FROM activity WHERE user_id = ? AND id = ?")
+    .bind(user.id, dying)
+    .first();
+  assert.equal(row.summary_attempts, 0);
+});
+
+test("each scheduled run takes a small batch, and a file that dies goes to the back", async () => {
+  const { user } = await rider();
+  await runCronUntilNothingIsDue();
+  const dying = await storedBeforeSummaries(user.id, denseRide(10_000, "2026-07-01T00:00:00Z"));
+  await bucket.delete(`activities/${user.id}/${dying}`);
+  const healthy = [];
+  for (let day = 1; day <= 12; day++) {
+    healthy.push(
+      await storedBeforeSummaries(
+        user.id,
+        denseRide(5_000, `2026-07-${String(day + 1).padStart(2, "0")}T00:00:00Z`),
+      ),
+    );
+  }
+
+  const summarised = async () =>
+    (
+      await db
+        .prepare(
+          "SELECT count(*) AS n FROM activity WHERE user_id = ? AND summarized_at IS NOT NULL",
+        )
+        .bind(user.id)
+        .first()
+    ).n;
+  await runCron();
+  assert.equal(await summarised(), 9);
+  await runCron();
+  assert.equal(await summarised(), 12);
 });

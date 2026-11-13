@@ -11,6 +11,7 @@ import { evlog, type EvlogVariables } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+import { summarizeDueActivities } from "./activities/summary";
 import { createContext } from "./context";
 import { ENV } from "./env.server";
 import { feedbackRoutes } from "./feedback";
@@ -139,4 +140,12 @@ app.get("/", (c) => {
   return c.text("OK");
 });
 
-export default app;
+async function summarizeWhatIsDue() {
+  const { failures } = await summarizeDueActivities(getDb(), ENV.ACTIVITY_FILES);
+  for (const failure of failures) console.error(failure);
+}
+
+export default {
+  fetch: app.fetch,
+  scheduled: summarizeWhatIsDue,
+} satisfies ExportedHandler<Env>;
