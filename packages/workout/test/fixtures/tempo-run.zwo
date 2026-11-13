@@ -1,0 +1,12 @@
+<workout_file>
+    <name>Tempo run 3 x 1 km</name>
+    <description>Distance-based run with tempo kilometres.</description>
+    <sportType>run</sportType>
+    <durationType>distance</durationType>
+    <workout>
+        <Warmup Duration="1500" PowerLow="0.70" PowerHigh="0.85"/>
+        <IntervalsT Repeat="3" OnDuration="1000" OffDuration="400" OnPower="1.02" OffPower="0.75" Cadence="180"/>
+        <SteadyState Duration="1000" Power="0.8"/>
+        <Cooldown Duration="1000" PowerLow="0.8" PowerHigh="0.65"/>
+    </workout>
+</workout_file>

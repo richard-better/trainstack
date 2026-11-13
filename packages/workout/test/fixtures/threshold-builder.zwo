@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Exported from a workout editor -->
+<workout_file>
+    <author>TrainStack Coaching</author>
+    <name>Threshold builder &amp; sprints</name>
+    <description><![CDATA[Ramp in, three threshold intervals,
+then sprints. Keep cadence above 90 in the efforts.]]></description>
+    <sportType>bike</sportType>
+    <tags>
+        <tag name="FTP"/>
+        <tag name="Intervals"/>
+    </tags>
+    <workout>
+        <Warmup Duration="600" PowerLow="0.40" PowerHigh="0.75" pace="0">
+            <textevent timeoffset="0" message="Welcome! Ease into it."/>
+            <textevent timeoffset="540" message="Threshold coming up" duration="10"/>
+        </Warmup>
+        <SteadyState Duration="120" Power="0.6" Cadence="85" pace="0"/>
+        <IntervalsT Repeat="3" OnDuration="480" OffDuration="240" OnPower="0.98" OffPower="0.55" Cadence="95" CadenceResting="85">
+            <textevent timeoffset="0" message="First of three. Settle in."/>
+            <textevent timeoffset="1440" message="Last one, finish strong"/>
+        </IntervalsT>
+        <SteadyState Duration="300" PowerLow="0.88" PowerHigh="0.93" CadenceLow="90" CadenceHigh="100"/>
+        <Ramp Duration="180" PowerLow="0.5" PowerHigh="0.9"/>
+        <FreeRide Duration="300" Cadence="80">
+            <textevent timeoffset="10" message="Free ride: spin easy &quot;however you like&quot;"/>
+        </FreeRide>
+        <MaxEffort Duration="15"/>
+        <SteadyState Duration="45" Power="0.5"/>
+        <MaxEffort Duration="15"/>
+        <Cooldown Duration="420" PowerLow="0.70" PowerHigh="0.35"/>
+    </workout>
+</workout_file>
