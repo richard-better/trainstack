@@ -2,7 +2,7 @@
 
 The typed workout model TrainStack stores, edits and plays, with import and export of `.zwo`,
 `.erg` and `.mrc` files. It has no Node-only APIs, so it runs
-in Cloudflare Workers and the browser.
+in Cloudflare Workers and the browser, and `tests/workout.test.mjs` runs it in workerd.
 
 ## The model
 
