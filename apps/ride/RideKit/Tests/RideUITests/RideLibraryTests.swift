@@ -215,4 +215,24 @@ struct RideLibraryTests {
         ])
     }
   }
+
+  @Test func tellsEveryDestinationOfReceivedChangesButICloudOnlyOfItsOwn() throws {
+    try withDirectory { directory in
+      let library = RideLibrary(directory: directory)
+      var everyChange: [RideLibrary.Change] = []
+      var localChanges: [RideLibrary.Change] = []
+      library.onChange = { everyChange.append($0) }
+      library.onLocalChange = { localChanges.append($0) }
+      let received = try #require(
+        try library.receive(
+          FITEncoder.encode(quickTest(startDate: .init(timeIntervalSince1970: 0)))))
+      let added = try library.add(FITEncoder.encode(quickTest()))
+      library.removeReceived(received)
+      library.removeReceived(received)
+      library.remove(added)
+      #expect(
+        everyChange == [.added(received), .added(added), .removed(received), .removed(added)])
+      #expect(localChanges == [.added(added), .removed(added)])
+    }
+  }
 }

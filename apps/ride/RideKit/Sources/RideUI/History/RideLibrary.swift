@@ -7,6 +7,7 @@ final class RideLibrary {
   private(set) var rides: [Ride]
   var storageProblem: String?
   @ObservationIgnored var onLocalChange: ((Change) -> Void)?
+  @ObservationIgnored var onChange: ((Change) -> Void)?
   @ObservationIgnored private let directory: URL?
   @ObservationIgnored private var files: [Ride.ID: URL] = [:]
   private(set) var stravaActivities: [String: String]
@@ -62,13 +63,18 @@ final class RideLibrary {
   @discardableResult
   func add(_ data: Data, beforeStoring: (Ride) -> Void = { _ in }) throws -> Ride.ID {
     let ride = Ride(recording: try FITDecoder.decode(data), fileData: data)
-    if insertIfNew(ride, beforeStoring: beforeStoring) { onLocalChange?(.added(ride.id)) }
+    if insertIfNew(ride, beforeStoring: beforeStoring) {
+      onLocalChange?(.added(ride.id))
+      onChange?(.added(ride.id))
+    }
     return ride.id
   }
 
   func receive(_ data: Data, beforeStoring: (Ride) -> Void = { _ in }) throws -> Ride.ID? {
     let ride = Ride(recording: try FITDecoder.decode(data), fileData: data)
-    return insertIfNew(ride, beforeStoring: beforeStoring) ? ride.id : nil
+    guard insertIfNew(ride, beforeStoring: beforeStoring) else { return nil }
+    onChange?(.added(ride.id))
+    return ride.id
   }
 
   private func insertIfNew(_ ride: Ride, beforeStoring: (Ride) -> Void = { _ in }) -> Bool {
@@ -97,8 +103,10 @@ final class RideLibrary {
   }
 
   func removeReceived(_ id: Ride.ID) {
+    guard self[id] != nil else { return }
     rides.removeAll { $0.id == id }
     if let url = files.removeValue(forKey: id) { try? FileManager.default.removeItem(at: url) }
+    onChange?(.removed(id))
   }
 
   func isOnStrava(_ ride: Ride) -> Bool { stravaActivities[Self.stravaKey(ride)] != nil }
