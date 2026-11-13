@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "astro": "^7.4.5",
-    "better-auth": "catalog:",
     "evlog": "catalog:",
     "varlock": "catalog:",
     "zod": "catalog:"

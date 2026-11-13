@@ -113,7 +113,6 @@ export default Alchemy.Stack(
         ...observabilityBindings,
         SESSION: Cloudflare.KV.Namespace("session"),
         IMAGES: Cloudflare.Images.Images(),
-        PUBLIC_SERVER_URL: serverWorker.url.as<string>(),
       },
       dev: {
         port: 4321,
