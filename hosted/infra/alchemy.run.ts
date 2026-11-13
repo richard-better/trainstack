@@ -96,6 +96,9 @@ export default Alchemy.Stack(
       compatibility,
       domain: prod ? accountDomain : undefined,
       workersDev: !prod,
+      env: {
+        VITE_SERVER_URL: serverWorker.url.as<string>(),
+      },
       dev: {
         port: 3001,
       },
