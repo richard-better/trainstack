@@ -26,6 +26,7 @@ import {
   samplesOf,
   type Span,
 } from "./samples.ts";
+import { type TimerEvent, timerPauses } from "./sampling.ts";
 import { timeInZones, type ZoneShare } from "./zones.ts";
 
 export interface AnalysisLap {
@@ -42,6 +43,7 @@ export interface AnalysisActivity {
   };
   readonly records: readonly AnalysisRecord[];
   readonly laps?: readonly AnalysisLap[];
+  readonly events?: readonly TimerEvent[];
 }
 
 export type LoadSource = "power" | "pace" | "heart_rate";
@@ -169,7 +171,9 @@ function lapAnalysis(
 export function analyzeActivity(activity: AnalysisActivity, profile: Profile): ActivityAnalysis {
   const sport = zoneSport(activity.summary.sport, activity.summary.subSport);
   const duration = activity.summary.elapsedSeconds;
-  const samples = samplesOf(activity.records, sport);
+  const samples = samplesOf(activity.records, sport, {
+    pauses: timerPauses(activity.events ?? [], activity.summary.startTime),
+  });
 
   const powerPerSecond = perSecond(samples, samples.power);
   const normalizedPowerWatts = normalizedPower(powerPerSecond);

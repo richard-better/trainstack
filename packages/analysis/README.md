@@ -26,7 +26,7 @@ For cycling, the numbers match Ride's analysis in `apps/ride/RideKit/Sources/Rid
 ## Results
 
 `analyzeActivity(activity, profile)` takes anything shaped like a decoded activity, meaning a
-`summary` (`startTime`, `sport`, `subSport`, `elapsedSeconds`), `records` and `laps`, together
+`summary` (`startTime`, `sport`, `subSport`, `elapsedSeconds`), `records`, `laps` and `events`, together
 with the profile that held on the activity's day. It returns:
 
 | Field                                | What                                                                 |
@@ -112,19 +112,37 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
 ## Sampling rules
 
 - **Order.** Records are sorted by elapsed time. Ride's FIT files are already in order.
-- **Holding.** A record's value holds until the next record when the next one is at most 5 s
-  later (`maxSampleGapSeconds`, Ride's `maxSampleGap`). A longer gap is a pause. Time in zones,
-  work, heart rate stress and average speeds count only held intervals.
+- **Pauses.** When the file has timer events, its timer is stopped from each `stop`, `stopAll`,
+  `stopDisable` or `stopDisableAll` until the next `start` (`timerPauses`). The decoders report
+  a GPX segment or TCX track break as such a pair. Time while the timer is stopped counts for
+  nothing. A record written strictly inside a pause is ignored entirely: its values never hold
+  after the restart, and its distance and altitude are not used.
+- **Holding** (`samplingRule`, in `src/sampling.ts`). While the timer runs, a record's values
+  hold until the next record, if that record is at most 30 s later. A longer gap is missing data
+  and counts for nothing. A file without timer events is read the same way. Every quantity
+  holds rather than interpolates, for two reasons:
+  - Smart recording writes a record when direction, speed or heart rate changes (Garmin's
+    "Smart" data recording setting), so the last written value stands until the next one.
+  - For power, a linear ramp between two records invents watts that the fourth power in
+    normalized power then amplifies.
+
+  Ride holds values the same way. The ceiling is 30 s because smart-recorded files hold records
+  15-30 s apart on steady stretches (the Garmin Connect fixture has 15, 16 and 30 s gaps). It
+  stays below GoldenCheetah's FixGaps, which interpolates gaps up to 90 s by default, because a
+  held value is a stronger claim than an interpolated one. Time in zones, work, heart rate
+  stress and average speeds count only held time.
+
 - **Power per second.** This is the series behind normalized power and the power curve. Each
-  record fills the whole seconds from its own until the next record's, or only its own second
-  before a pause. A paused second is 0 W, so long stops lower normalized power, as in Ride.
+  record fills the whole seconds of its held time. A record with no held time fills only its
+  own second, unless the timer is stopped. Any other second is 0 W, so dropouts and long stops
+  lower normalized power, as they do in Ride and in GoldenCheetah's zero-filled gaps.
 - **Dropouts.** A record without a value adds nothing to zones or work, and counts as 0 W in
   power per second, as in Ride.
 - **Spikes.** A value outside a plausible range is treated as a dropout (`plausibleRanges`):
   power 0-3000 W, heart rate 25-250 bpm, speed 0-50 m/s (12.5 m/s for running), altitude
   −500 to 9000 m. Ride has no rule for spikes.
 - **Speed.** When a record has no speed, its speed is the distance since the previous record
-  over the time since it, if that time is held.
+  over the time since it, if that time is at most 30 s and the timer did not stop in between.
 - **Distance.** Distance never goes backward: a record that reports less than the furthest
   distance so far keeps the furthest.
 - **Laps.** A lap runs from its start for its elapsed time, or to the next lap's start when it
@@ -135,15 +153,30 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
 - **Length.** Records more than a week after the start are ignored, so a broken timestamp
   cannot allocate a per-second series years long.
 
-Known limitation: files written with "smart recording", such as many Garmin files, have records
-up to 10 s apart. The 5 s rule reads those gaps as pauses, so such activities lose zone time and
-their normalized power comes out low. Taking pauses from the file's timer events is the next
-change, and Ride's rule will move with it.
+### Where this differs from Ride
+
+Ride's Swift uses the same rule with a 5 s ceiling and no timer events. The ceiling is
+`maxSampleGap: TimeInterval = 5` in `powerPerSecond` (`PowerCurve.swift`), `workKilojoules`
+(`TrainingStress.swift`) and `timeInZones` (`TimeInZones.swift`). The results differ on exactly
+these inputs:
+
+- a gap of more than 5 and at most 30 s between records, with some time outside a timer pause, which Ride
+  reads as a pause and TrainStack holds;
+- a timer pause that overlaps a gap of at most 5 s (5 s included), whose stopped part Ride
+  counts and TrainStack leaves out;
+- a record written strictly inside a timer pause, which Ride uses and TrainStack ignores.
+
+Ride writes timer events only at the start and the end of a ride, so on its own files only
+the first case can occur.
+
+On Ride's own 1 Hz files, and on any file without such gaps or pauses, the numbers are the
+same. `test/swift-parity.test.ts` checks this. A synthetic ride with 6 and 30 s steps matches
+Ride only when read with a 5 s ceiling.
 
 ## Cost
 
 A 24-hour run at 1 Hz with power, heart rate, speed, distance and altitude (86,401 records, 96
-laps) takes about 60 ms on an Apple M-series Mac. Beyond the records, it allocates about 11 MB of
+laps) takes about 65 ms on an Apple M-series Mac. Beyond the records, it allocates about 11 MB of
 typed arrays, around 128 bytes per record. It finishes in a 24 MB V8 heap, 20 MB of which the
 records themselves take. `test/cost.test.ts` runs this in a capped child process
 (`test/day-long.ts`). Laps cost time in proportion to records plus laps, whatever
