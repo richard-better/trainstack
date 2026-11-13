@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import { api, queryClient } from "../api";
+import { activitiesQueryKey, activityKey, api, queryClient } from "../api";
 import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
 import { activityDateInFull } from "../lib/dates";
 import { lapsOf, traceOf } from "../lib/series";
@@ -16,11 +16,8 @@ import {
   statisticsFromFit,
   summaryFigures,
 } from "../lib/statistics";
-import { activitiesQueryKey } from "./activity-list";
 import { SportIcon } from "./sport-icon";
 import { Traces } from "./traces";
-
-const activityKey = (id: string) => ["activity", id] as const;
 
 const refused = (error: Error) => error instanceof ORPCError && error.status < 500;
 

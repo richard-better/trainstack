@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 
-import { queryClient } from "../api";
+import { queryClient, uploads } from "../api";
 import { authClient } from "../auth";
 
 type SignedInUser = { name: string; email: string };
@@ -35,6 +35,7 @@ function AppHeader({ user }: { user: SignedInUser }) {
   async function signOut() {
     setSigningOut(true);
     await authClient.signOut();
+    uploads.clear();
     queryClient.clear();
     setSigningOut(false);
   }
