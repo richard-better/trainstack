@@ -245,6 +245,26 @@ test("an upload that fails on the way can be tried again without choosing the fi
   );
 });
 
+test("a file the browser could not read is read again when the athlete tries again", async () => {
+  const { webApp } = await signInOnTheWeb(runtime, apple);
+  const bytes = await readFile(`${FILES}/wahoo-ride-power.gpx`);
+  let readable = false;
+  class Unplugged extends File {
+    arrayBuffer() {
+      return readable
+        ? super.arrayBuffer()
+        : Promise.reject(new DOMException("The drive is gone", "NotReadableError"));
+    }
+  }
+  const { uploads, outcomes } = uploadsFor(webApp);
+  await uploads.add([new Unplugged([bytes], "wahoo-ride-power.gpx")]);
+  assert.deepEqual(outcomes(), { "wahoo-ride-power.gpx": "failed" });
+
+  readable = true;
+  await uploads.retry(uploads.list()[0].key);
+  assert.deepEqual(outcomes(), { "wahoo-ride-power.gpx": "uploaded" });
+});
+
 test("signing out forgets uploads, and one still running does not come back", async () => {
   const { webApp } = await signInOnTheWeb(runtime, apple);
   const { uploads, added } = uploadsFor(webApp);

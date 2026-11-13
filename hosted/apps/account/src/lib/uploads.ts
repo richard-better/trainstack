@@ -64,6 +64,7 @@ export function createUploads({
   let active = 0;
   const queue: (() => void)[] = [];
   const listeners = new Set<() => void>();
+  const picked = new Map<number, File>();
   const checked = new Map<number, CheckedFile>();
   const inFlight = new Map<string, Promise<Outcome>>();
 
@@ -104,6 +105,7 @@ export function createUploads({
     try {
       const outcome = await sending;
       if (!current()) return;
+      picked.delete(key);
       checked.delete(key);
       update(key, { state: { phase: "done", outcome } });
       if (outcome.kind === "uploaded" || outcome.kind === "alreadyThere") {
@@ -123,8 +125,10 @@ export function createUploads({
       const check = await checkActivityFile(file, maxBytes).catch(() => null);
       if (started !== generation) return;
       if (check === null) return update(key, { state: { phase: "failed" } });
-      if (check.kind !== "ready")
+      if (check.kind !== "ready") {
+        picked.delete(key);
         return update(key, { state: { phase: "refused", refusal: check } });
+      }
       checked.set(key, check.file);
       update(key, { sport: check.file.sport });
       await send(key, check.file, started);
@@ -151,17 +155,24 @@ export function createUploads({
       }));
       if (added.length === 0) return;
       uploads = [...added.map(({ upload }) => upload), ...uploads];
+      for (const { upload, file } of added) picked.set(upload.key, file);
       for (const listener of listeners) listener();
       await Promise.all(added.map(({ upload, file }) => run(upload.key, file, started)));
     },
     async retry(key) {
-      const file = checked.get(key);
-      if (!file) return;
       const started = generation;
+      const file = checked.get(key);
+      if (file) {
+        update(key, { state: { phase: "waiting" } });
+        return turn(() => send(key, file, started));
+      }
+      const original = picked.get(key);
+      if (!original) return;
       update(key, { state: { phase: "waiting" } });
-      await turn(() => send(key, file, started));
+      await run(key, original, started);
     },
     dismiss(key) {
+      picked.delete(key);
       checked.delete(key);
       uploads = uploads.filter((upload) => upload.key !== key);
       for (const listener of listeners) listener();
@@ -172,6 +183,7 @@ export function createUploads({
     },
     clear() {
       generation += 1;
+      picked.clear();
       checked.clear();
       uploads = [];
       for (const listener of listeners) listener();
