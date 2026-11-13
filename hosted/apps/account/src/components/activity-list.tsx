@@ -2,14 +2,13 @@ import type { Activity } from "@trainstack/contract";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
-import { api } from "../api";
+import { activitiesQueryKey, api } from "../api";
 import { ACTIVITIES_PER_PAGE } from "../lib/client";
-import { activityDate, monthOf } from "../lib/dates";
+import { activityDate, byMonth } from "../lib/dates";
 import { activityTitle, sportName } from "../lib/sports";
 import { headlineFigures } from "../lib/statistics";
 import { SportIcon } from "./sport-icon";
-
-export const activitiesQueryKey = ["activities"] as const;
+import { DropTarget, UploadButton, UploadList } from "./uploads";
 
 export function ActivityList() {
   const activities = useInfiniteQuery({
@@ -22,7 +21,12 @@ export function ActivityList() {
 
   return (
     <main className="content">
-      <h1 className="page-title">Activities</h1>
+      <DropTarget />
+      <div className="page-head">
+        <h1 className="page-title">Activities</h1>
+        <UploadButton />
+      </div>
+      <UploadList />
       {activities.isPending ? (
         <ListSkeleton />
       ) : activities.data === undefined ? (
@@ -62,27 +66,22 @@ export function ActivityList() {
 }
 
 function Months({ activities }: { activities: Activity[] }) {
-  const months: { label: string; activities: Activity[] }[] = [];
-  for (const activity of activities) {
-    const label = monthOf(activity.startedAt ?? activity.createdAt);
-    const last = months.at(-1);
-    if (last?.label === label) last.activities.push(activity);
-    else months.push({ label, activities: [activity] });
-  }
-  return months.map((month) => (
-    <section key={month.label} className="month" aria-labelledby={`month-${month.label}`}>
-      <h2 id={`month-${month.label}`} className="month-title">
-        {month.label}
-      </h2>
-      <ol className="rows">
-        {month.activities.map((activity) => (
-          <li key={activity.id}>
-            <ActivityRow activity={activity} />
-          </li>
-        ))}
-      </ol>
-    </section>
-  ));
+  return byMonth(activities, (activity) => activity.startedAt ?? activity.createdAt).map(
+    (month) => (
+      <section key={month.id} className="month" aria-labelledby={`month-${month.id}`}>
+        <h2 id={`month-${month.id}`} className="month-title">
+          {month.label}
+        </h2>
+        <ol className="rows">
+          {month.items.map((activity) => (
+            <li key={activity.id}>
+              <ActivityRow activity={activity} />
+            </li>
+          ))}
+        </ol>
+      </section>
+    ),
+  );
 }
 
 function ActivityRow({ activity }: { activity: Activity }) {
@@ -140,7 +139,9 @@ function EmptyState() {
     <div className="state empty">
       <p className="state-title">No activities yet</p>
       <p className="lede">
-        Rides you record in Ride show up here when Ride is signed in with the same Apple ID.
+        Upload FIT, GPX or TCX files from your watch, bike computer or another app, or drop them
+        anywhere on this page. Rides you record in Ride show up here when Ride is signed in with the
+        same Apple ID.
       </p>
       <a className="secondary link-button" href="https://trainstackhq.com/ride">
         Get Ride

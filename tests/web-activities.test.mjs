@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { generateKeyPairSync } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { ORPCError } from "@orpc/client";
 import { readActivityFile } from "../hosted/apps/account/src/lib/activity-file.ts";
-import { ACTIVITIES_PER_PAGE, createApiClient } from "../hosted/apps/account/src/lib/client.ts";
+import { ACTIVITIES_PER_PAGE } from "../hosted/apps/account/src/lib/client.ts";
+import { byMonth } from "../hosted/apps/account/src/lib/dates.ts";
 import { lapsOf, traceOf } from "../hosted/apps/account/src/lib/series.ts";
 import { activityTitle } from "../hosted/apps/account/src/lib/sports.ts";
 import {
@@ -14,8 +15,8 @@ import {
   summaryFigures,
 } from "../hosted/apps/account/src/lib/statistics.ts";
 import { mockApple } from "./helpers/apple.mjs";
-import { browserThatDoesNotFollowRedirects } from "./helpers/browser.mjs";
-import { api, migrate, origin, rpcClient, startWorker } from "./helpers/worker.mjs";
+import { signInOnTheWeb as signInWithApple } from "./helpers/web.mjs";
+import { migrate, origin, startWorker } from "./helpers/worker.mjs";
 
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const WORKOUT_RIDE = "apps/ride/RideKit/Tests/RideCoreTests/Traces/quick-test-trainer-drop.fit";
@@ -46,58 +47,7 @@ after(async () => {
   await worker?.dispose();
 });
 
-let lastAddress = 0;
-
-function fromItsOwnAddress() {
-  lastAddress += 1;
-  const address = `198.51.100.${lastAddress}`;
-  return {
-    dispatchFetch(url, init = {}) {
-      const headers = new Headers(init.headers);
-      headers.set("cf-connecting-ip", address);
-      return runtime.dispatchFetch(url, { ...init, headers });
-    },
-  };
-}
-
-async function signInOnTheWeb(callbackURL = `${origin}/`) {
-  const subject = `001234.${randomUUID()}`;
-  const email = `${randomUUID()}@example.com`;
-  const browser = browserThatDoesNotFollowRedirects(fromItsOwnAddress());
-  const started = await browser.visit(`${api}/api/auth/sign-in/social`, {
-    method: "POST",
-    headers: { Origin: origin, "Content-Type": "application/json" },
-    body: JSON.stringify({ provider: "apple", callbackURL, errorCallbackURL: callbackURL }),
-  });
-  assert.equal(started.status, 200, await started.clone().text());
-  const { form } = apple.authorize((await started.json()).url, { email, subject });
-  const posted = await browser.visit(`${api}/api/auth/callback/apple`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Origin: "https://appleid.apple.com",
-    },
-    body: form.toString(),
-  });
-  const back = await browser.visit(posted.headers.get("location"));
-  const webApp = createApiClient(api, async (request) => {
-    const headers = new Headers(request.headers);
-    headers.set("Origin", origin);
-    const response = await browser.visit(request.url, {
-      method: request.method,
-      headers,
-      body: request.body ? await request.arrayBuffer() : undefined,
-    });
-    return new Response(await response.arrayBuffer(), {
-      status: response.status,
-      headers: Object.fromEntries(response.headers),
-    });
-  });
-  const ride = rpcClient(runtime, {
-    token: (await apple.signIn(fromItsOwnAddress(), { email, subject })).token,
-  });
-  return { back, webApp, ride };
-}
+const signInOnTheWeb = (callbackURL) => signInWithApple(runtime, apple, callbackURL);
 
 const gpx = (index) =>
   new File(
@@ -320,4 +270,22 @@ test("an unnamed activity is called by its sport and time of day", () => {
     "Untitled kayaking",
   );
   assert.equal(activityTitle({ name: null, sport: null, startedAt: morning }), "Morning activity");
+});
+
+test("activities are grouped by month, each month with an id fit to label its list", () => {
+  const months = byMonth(
+    [new Date(2026, 9, 30), new Date(2026, 9, 1), new Date(2026, 8, 12)],
+    (date) => date,
+  );
+  assert.deepEqual(
+    months.map(({ id, label, items }) => ({ id, label, count: items.length })),
+    [
+      { id: "2026-10", label: "October 2026", count: 2 },
+      { id: "2026-09", label: "September 2026", count: 1 },
+    ],
+  );
+  assert.ok(
+    months.every(({ id }) => !/\s/.test(id)),
+    "aria-labelledby splits ids on spaces",
+  );
 });

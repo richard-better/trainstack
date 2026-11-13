@@ -479,6 +479,11 @@ a.row:hover {
   letter-spacing: 0;
 }
 
+.summary-problem {
+  max-width: 640px;
+  margin-top: 16px;
+}
+
 .section-title {
   margin: 56px 0 16px;
   font-size: 15px;
@@ -698,6 +703,11 @@ a.row:hover {
     font-size: 32px;
   }
 
+  .row.upload {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
   .row {
     grid-template-columns: 40px minmax(0, 1fr);
     align-items: start;
@@ -721,5 +731,152 @@ a.row:hover {
 
   .account-name {
     display: none;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 24px 0 32px;
+}
+
+.page-head .page-title {
+  margin: 0;
+}
+
+.uploads {
+  margin-bottom: 40px;
+}
+
+.uploads-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.uploads-head .month-title {
+  margin: 0;
+}
+
+.uploads-head .quiet {
+  margin-right: -8px;
+}
+
+.row.upload {
+  position: relative;
+}
+
+.upload.done .row-icon {
+  color: var(--mist);
+}
+
+.upload.refused .row-icon,
+.upload.refused .upload-status {
+  color: var(--warn);
+}
+
+.upload.working .upload-status {
+  color: var(--soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.upload .row-meta {
+  overflow-wrap: anywhere;
+}
+
+.upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.compact {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.dismiss {
+  width: 32px;
+  padding: 0;
+}
+
+.upload-progress {
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  left: 8px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.upload-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--power);
+  transition: width 120ms linear;
+}
+
+.upload-progress > .indeterminate {
+  width: 30%;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .upload-progress > .indeterminate {
+    animation: sweep 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+.drop-target {
+  position: fixed;
+  z-index: 10;
+  inset: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px dashed var(--power);
+  border-radius: 20px;
+  background: rgb(15 16 17 / 0.88);
+  pointer-events: none;
+}
+
+.drop-title {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+@media (max-width: 640px) {
+  .page-head {
+    margin: 12px 0 24px;
+  }
+
+  .drop-title {
+    font-size: 32px;
   }
 }

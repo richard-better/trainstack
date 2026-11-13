@@ -1,10 +1,14 @@
 import { ORPCError } from "@orpc/client";
-import { type ActivityDetail, activityIdSchema } from "@trainstack/contract";
+import {
+  type ActivityDetail,
+  type ActivitySummaryError,
+  activityIdSchema,
+} from "@trainstack/contract";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import { api, queryClient } from "../api";
+import { activitiesQueryKey, activityKey, api, queryClient } from "../api";
 import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
 import { activityDateInFull } from "../lib/dates";
 import { lapsOf, traceOf } from "../lib/series";
@@ -16,11 +20,8 @@ import {
   statisticsFromFit,
   summaryFigures,
 } from "../lib/statistics";
-import { activitiesQueryKey } from "./activity-list";
 import { SportIcon } from "./sport-icon";
 import { Traces } from "./traces";
-
-const activityKey = (id: string) => ["activity", id] as const;
 
 const refused = (error: Error) => error instanceof ORPCError && error.status < 500;
 
@@ -119,7 +120,7 @@ function Activity({ activity }: { activity: ActivityDetail }) {
     activity.sport ??
     (decoded ? sportFromFit(decoded.summary.sport, decoded.summary.subSport) : null);
   const startedAt = activity.startedAt ?? decoded?.summary.startTime ?? null;
-  const title = activityTitle({ name: activity.name, sport, startedAt });
+  const title = activityTitle({ name: activity.name ?? decoded?.name ?? null, sport, startedAt });
   const statistics =
     Object.keys(activity.statistics).length > 0
       ? activity.statistics
@@ -163,9 +164,30 @@ function Activity({ activity }: { activity: ActivityDetail }) {
         <FiguresSkeleton />
       ) : null}
 
+      {activity.summaryError &&
+        !(activity.file && activityFile.isPending) &&
+        activityFile.data?.reading.kind !== "unreadable" && (
+          <p className="lede summary-problem" role="status">
+            {summaryProblem(activity.summaryError, decoded !== null)}
+          </p>
+        )}
+
       <Analysis activity={activity} activityFile={activityFile} />
     </Shell>
   );
+}
+
+function summaryProblem(error: ActivitySummaryError, readHere: boolean) {
+  const because = {
+    too_large: "This file has more than 10,000 laps or sessions, more than Trainstack summarises",
+    failed: "Trainstack could not summarise this activity",
+    truncated: "Trainstack found this file ends early",
+    corrupt: "Trainstack could not read this file",
+    no_activity: "Trainstack found no recorded activity in this file",
+  }[error];
+  return readHere
+    ? `${because}, so these numbers are read from the file in your browser and do not show in your activity list.`
+    : `${because}, so it has no numbers in your activity list.`;
 }
 
 function Figures({ figures }: { figures: Figure[] }) {
@@ -400,7 +422,8 @@ function Actions({
       >
         <h2 id="confirm-title">Delete this activity?</h2>
         <p className="lede">
-          {title} is removed from your account, along with its file. Ride will not upload it again.
+          {title} is removed from your account, along with its file. It will not be added again,
+          from Ride or by uploading the same file.
         </p>
         {remove.isError && (
           <p role="alert" className="notice">
