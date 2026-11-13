@@ -427,3 +427,34 @@ test("an upload a delete overtakes after it is stored answers that the activity 
   assert.equal(await bucket.head(`activities/${user.id}/${sha256(rideBytes)}`), null);
   assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
 });
+
+test("deleting an account deletes its activity files, and leaves other accounts' files", async () => {
+  const ada = await rider();
+  const bob = await rider();
+  const { id } = await ada.client.activities.upload({ file: fitFile(), source: "trainstack" });
+  await ada.client.activities.upload({ file: gpx("2026-07-01T00:00:00Z"), source: "upload" });
+  await bob.client.activities.upload({ file: fitFile(), source: "trainstack" });
+  const moreThanOneListing = Array.from(
+    { length: 1001 },
+    (_, i) => `activities/${ada.user.id}/${sha256(`extra ${i}`)}`,
+  );
+  for (let i = 0; i < moreThanOneListing.length; i += 50) {
+    await Promise.all(moreThanOneListing.slice(i, i + 50).map((key) => bucket.put(key, "x")));
+  }
+
+  const deleted = await runtime.dispatchFetch(`${api}/api/auth/delete-user`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ada.token}` },
+    body: JSON.stringify({}),
+  });
+  assert.equal(deleted.status, 200, await deleted.clone().text());
+
+  const left = await bucket.list({ prefix: `activities/${ada.user.id}/` });
+  assert.deepEqual(left.objects, []);
+  const rows = await db
+    .prepare("SELECT count(*) AS n FROM activity WHERE user_id = ?")
+    .bind(ada.user.id)
+    .first();
+  assert.equal(rows.n, 0);
+  assert.ok(await bucket.head(`activities/${bob.user.id}/${id}`));
+});
