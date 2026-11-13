@@ -30,6 +30,7 @@
   "type": "module",
   "scripts": {
     "dev": "vp run -r dev",
+    "dev:account": "node scripts/dev-account.mjs",
     "build": "vp run -r build",
     "check-types": "vp run -r check-types",
     "check": "vp check && vp run -r check-types",
