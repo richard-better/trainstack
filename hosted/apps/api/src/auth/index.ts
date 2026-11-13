@@ -6,6 +6,7 @@ import { betterAuth } from "better-auth";
 import { bearer } from "better-auth/plugins";
 
 import { APPLE_APP_BUNDLE_ID, APPLE_SERVICES_ID, revokeAppleToken } from "./apple";
+import { deleteActivityFiles } from "../activities/files";
 import { appHandoff } from "./app-handoff";
 
 export { APPLE_APP_BUNDLE_ID } from "./apple";
@@ -24,6 +25,7 @@ export type AuthConfig = {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   WEB_APP_ORIGIN: string;
+  ACTIVITY_FILES: R2Bucket;
 };
 
 export function createAuth(env: AuthConfig, database: Database, appleWebFlowClientSecret?: string) {
@@ -67,7 +69,11 @@ export function createAuth(env: AuthConfig, database: Database, appleWebFlowClie
     user: {
       deleteUser: {
         enabled: true,
-        beforeDelete: async (user) => revokeWhatAppleWebFlowGranted(user.id),
+        beforeDelete: async (user) => {
+          await deleteActivityFiles(env.ACTIVITY_FILES, user.id);
+          await revokeWhatAppleWebFlowGranted(user.id);
+        },
+        afterDelete: async (user) => deleteActivityFiles(env.ACTIVITY_FILES, user.id),
       },
     },
     account: { accountLinking: { enabled: false } },

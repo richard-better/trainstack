@@ -8,6 +8,7 @@ import { ENV } from "../env.server";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { contentTypes, fileKey, formatOf, sha256Hex } from "./files";
+import { summarizeActivity } from "./summary";
 
 type ActivityRow = typeof activity.$inferSelect;
 
@@ -35,14 +36,15 @@ function toActivity(row: ActivityRow, statistics: Record<string, number>): Activ
     id: row.id,
     source: row.source,
     sourceId: row.sourceId,
-    sport: row.sport,
-    name: row.name,
+    sport: row.sport ?? row.fileSport,
+    name: row.name ?? row.fileName,
     startedAt: row.startedAt,
     file:
       row.fileFormat && row.fileSize !== null
         ? { format: row.fileFormat, size: row.fileSize }
         : null,
     summarizedAt: row.summarizedAt,
+    summaryError: row.summaryError,
     statistics,
     createdAt: row.createdAt,
   };
@@ -112,17 +114,32 @@ export const activitiesRouter = {
     if (existing) return withStatistics(db, existing);
 
     await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
-    await db.run(sql`
-      INSERT INTO ${activity} (user_id, id, source, source_id, sport, name, started_at, file_format, file_size)
-      SELECT ${userId}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${input.sport ?? null},
-        ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength}
-      WHERE NOT EXISTS (
-        SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
-      )
-      ON CONFLICT DO NOTHING
-    `);
-    const stored = await findActivity(db, userId, id);
-    if (stored) return withStatistics(db, stored);
+    try {
+      await db.run(sql`
+        INSERT INTO ${activity} (user_id, id, source, source_id, sport, name, started_at, file_format, file_size)
+        SELECT ${userId}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${input.sport ?? null},
+          ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength}
+        WHERE NOT EXISTS (
+          SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
+        )
+        ON CONFLICT DO NOTHING
+      `);
+    } catch (error) {
+      if (!(await findActivity(db, userId, id))) {
+        await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+      }
+      throw error;
+    }
+    const inserted = await findActivity(db, userId, id);
+    if (inserted) {
+      try {
+        await summarizeActivity(db, ENV.ACTIVITY_FILES, inserted, bytes);
+      } catch (error) {
+        console.error(error);
+      }
+      const current = await findActivity(db, userId, id);
+      if (current) return withStatistics(db, current);
+    }
     const deletedDuringUpload = await deletedRefusal();
     await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
     throw deletedDuringUpload ?? new Error(`Activity ${id} was neither stored nor deleted`);

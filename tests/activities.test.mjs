@@ -57,34 +57,37 @@ const tcx = new File(
 
 test("a rider uploads a ride's FIT file and reads it back by its SHA-256", async () => {
   const { client, user } = await rider();
-  const startedAt = new Date("2026-11-01T07:30:00Z");
   const uploaded = await client.activities.upload({
     file: fitFile(),
     source: "trainstack",
     sport: "indoor_cycling",
     name: "Sweet spot",
-    startedAt,
   });
   const id = sha256(rideBytes);
   assert.deepEqual(
-    { ...uploaded, createdAt: undefined },
+    { ...uploaded, createdAt: undefined, summarizedAt: undefined, statistics: undefined },
     {
       id,
       source: "trainstack",
       sourceId: null,
       sport: "indoor_cycling",
       name: "Sweet spot",
-      startedAt,
+      startedAt: new Date("2026-10-06T14:21:15.000Z"),
       file: { format: "fit", size: rideBytes.byteLength },
-      summarizedAt: null,
-      statistics: {},
+      summarizedAt: undefined,
+      summaryError: null,
+      statistics: undefined,
       createdAt: undefined,
     },
   );
   assert.ok(uploaded.createdAt instanceof Date);
+  assert.ok(uploaded.summarizedAt instanceof Date);
+  assert.equal(uploaded.statistics.elapsed_s, 1800);
 
   assert.deepEqual(await client.activities.list({}), { activities: [uploaded], nextCursor: null });
-  assert.deepEqual(await client.activities.get({ id }), { ...uploaded, events: [] });
+  const { events, ...detail } = await client.activities.get({ id });
+  assert.deepEqual(detail, uploaded);
+  assert.equal(events.length, 10);
 
   const file = await client.activities.file({ id });
   assert.equal(file.name, `${id}.fit`);
@@ -223,7 +226,7 @@ test("the list pages through activities, newest first", async () => {
       }),
     );
   }
-  const notYetSummarized = await client.activities.upload({
+  const summarizedRide = await client.activities.upload({
     file: fitFile(),
     source: "trainstack",
   });
@@ -236,7 +239,7 @@ test("the list pages through activities, newest first", async () => {
     seen.push(...page.activities.map((activity) => activity.id));
     cursor = page.nextCursor ?? undefined;
   } while (cursor);
-  assert.deepEqual(seen, [notYetSummarized.id, uploaded[1].id, uploaded[2].id, uploaded[0].id]);
+  assert.deepEqual(seen, [summarizedRide.id, uploaded[1].id, uploaded[2].id, uploaded[0].id]);
   await assert.rejects(client.activities.list({ cursor: "nonsense" }), { code: "BAD_REQUEST" });
 });
 
@@ -261,7 +264,13 @@ test("statistics and events from any sport come back with the activity", async (
   ]);
 
   const detail = await client.activities.get({ id });
-  assert.deepEqual(detail.statistics, { problems_sent: 7, hardest_grade_v: 5.5 });
+  assert.deepEqual(detail.statistics, {
+    elapsed_s: 0,
+    timer_s: 0,
+    distance_m: 0,
+    problems_sent: 7,
+    hardest_grade_v: 5.5,
+  });
   assert.deepEqual(detail.events, [
     { type: "lap", startedAt: new Date(1775001500000), endedAt: null, data: {} },
     {
@@ -331,7 +340,7 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
   form.set("file", fitFile());
   form.set("source", "trainstack");
   form.set("sport", "indoor_cycling");
-  form.set("startedAt", "2026-06-01T05:00:00.000Z");
+  form.set("name", "Sweet spot");
   const upload = await send(
     runtime,
     new Request(`${api}/api-reference/activities`, { method: "POST", headers: auth, body: form }),
@@ -339,7 +348,9 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
   assert.equal(upload.status, 200, await upload.clone().text());
   const activity = await upload.json();
   assert.equal(activity.id, sha256(rideBytes));
-  assert.equal(activity.startedAt, "2026-06-01T05:00:00.000Z");
+  assert.equal(activity.name, "Sweet spot");
+  assert.equal(activity.startedAt, "2026-10-06T14:21:15.000Z");
+  assert.equal(activity.statistics.average_power_w, 137);
 
   const list = await runtime.dispatchFetch(`${api}/api-reference/activities?limit=1`, {
     headers: auth,
@@ -423,6 +434,80 @@ test("an upload a delete overtakes after it is stored answers that the activity 
     });
   } finally {
     await db.prepare("DROP TRIGGER delete_right_after_upload").run();
+  }
+  assert.equal(await bucket.head(`activities/${user.id}/${sha256(rideBytes)}`), null);
+  assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
+});
+
+test("deleting an account deletes its activity files, and leaves other accounts' files", async () => {
+  const ada = await rider();
+  const bob = await rider();
+  const { id } = await ada.client.activities.upload({ file: fitFile(), source: "trainstack" });
+  await ada.client.activities.upload({ file: gpx("2026-07-01T00:00:00Z"), source: "upload" });
+  await bob.client.activities.upload({ file: fitFile(), source: "trainstack" });
+  const moreThanOneListing = Array.from(
+    { length: 1001 },
+    (_, i) => `activities/${ada.user.id}/${sha256(`extra ${i}`)}`,
+  );
+  for (let i = 0; i < moreThanOneListing.length; i += 50) {
+    await Promise.all(moreThanOneListing.slice(i, i + 50).map((key) => bucket.put(key, "x")));
+  }
+
+  const deleted = await runtime.dispatchFetch(`${api}/api/auth/delete-user`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ada.token}` },
+    body: JSON.stringify({}),
+  });
+  assert.equal(deleted.status, 200, await deleted.clone().text());
+
+  const left = await bucket.list({ prefix: `activities/${ada.user.id}/` });
+  assert.deepEqual(left.objects, []);
+  const rows = await db
+    .prepare("SELECT count(*) AS n FROM activity WHERE user_id = ?")
+    .bind(ada.user.id)
+    .first();
+  assert.equal(rows.n, 0);
+  assert.ok(await bucket.head(`activities/${bob.user.id}/${id}`));
+});
+
+test("an upload whose account is deleted before its row is stored leaves no file behind", async () => {
+  const { client, user } = await rider();
+  await db
+    .prepare(
+      `CREATE TRIGGER account_deleted_mid_upload BEFORE INSERT ON activity WHEN NEW.user_id = '${user.id}'
+       BEGIN
+         DELETE FROM "user" WHERE id = NEW.user_id;
+       END`,
+    )
+    .run();
+  try {
+    await assert.rejects(client.activities.upload({ file: fitFile(), source: "trainstack" }));
+  } finally {
+    await db.prepare("DROP TRIGGER account_deleted_mid_upload").run();
+  }
+  const left = await bucket.list({ prefix: `activities/${user.id}/` });
+  assert.deepEqual(left.objects, []);
+});
+
+test("an upload a delete overtakes while it is being summarised answers that the activity was deleted", async () => {
+  const { client, user } = await rider();
+  await db
+    .prepare(
+      `CREATE TRIGGER delete_during_summary AFTER UPDATE OF summary_attempts ON activity
+       WHEN NEW.user_id = '${user.id}' AND NEW.summary_attempts = 1
+       BEGIN
+         INSERT INTO deleted_activity (user_id, id) VALUES (NEW.user_id, NEW.id);
+         DELETE FROM activity WHERE user_id = NEW.user_id AND id = NEW.id;
+       END`,
+    )
+    .run();
+  try {
+    await assert.rejects(client.activities.upload({ file: fitFile(), source: "trainstack" }), {
+      code: "ACTIVITY_DELETED",
+      status: 410,
+    });
+  } finally {
+    await db.prepare("DROP TRIGGER delete_during_summary").run();
   }
   assert.equal(await bucket.head(`activities/${user.id}/${sha256(rideBytes)}`), null);
   assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });

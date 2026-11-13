@@ -49,6 +49,7 @@ export const observabilityBindings = {
 export const server = Cloudflare.Worker("server", {
   main: "../apps/api/src/index.ts",
   compatibility,
+  crons: ["* * * * *"],
   domain: serverDomainForStage,
   workersDev: serverWorkersDevForStage,
   env: {

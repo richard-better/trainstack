@@ -1,3 +1,4 @@
+import type { ActivitySummaryError } from "@trainstack/contract";
 import { sql } from "drizzle-orm";
 import {
   foreignKey,
@@ -19,6 +20,7 @@ const ownedBy = () =>
     .references(() => user.id, { onDelete: "cascade" });
 
 export type ActivityFileFormat = "fit" | "gpx" | "tcx";
+export type { ActivitySummaryError };
 
 export const activity = sqliteTable(
   "activity",
@@ -33,6 +35,11 @@ export const activity = sqliteTable(
     fileFormat: text("file_format").$type<ActivityFileFormat>(),
     fileSize: integer("file_size"),
     summarizedAt: timestamp("summarized_at"),
+    fileSport: text("file_sport"),
+    fileName: text("file_name"),
+    summaryVersion: integer("summary_version"),
+    summaryError: text("summary_error").$type<ActivitySummaryError>(),
+    summaryAttempts: integer("summary_attempts").notNull().default(0),
     createdAt: timestamp("created_at").default(now).notNull(),
     occurredAt: integer("occurred_at")
       .generatedAlwaysAs(sql`coalesce(started_at, created_at)`, { mode: "virtual" })
@@ -42,6 +49,8 @@ export const activity = sqliteTable(
     primaryKey({ columns: [table.userId, table.id] }),
     index("activity_user_occurred_idx").on(table.userId, table.occurredAt, table.id),
     index("activity_user_source_idx").on(table.userId, table.source, table.sourceId),
+    index("activity_summary_version_idx").on(table.summaryVersion),
+    index("activity_summary_error_idx").on(table.summaryError),
   ],
 );
 
