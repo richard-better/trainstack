@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { fitChecksum } from "../src/checksum.ts";
 import { FitDecodeError, decodeFit, type FitDecodeErrorCode } from "../src/index.ts";
+import { readFitMessages } from "../src/reader.ts";
 import { FitWriter, fitTime } from "./fit-writer.ts";
 import { sampleRide, trace, traceNames } from "./goldens.ts";
 
@@ -104,4 +105,21 @@ test("decodes or fails with a FitDecodeError when bytes are corrupted behind a v
       assert.ok(error instanceof FitDecodeError, `round ${round}: ${String(error)}`);
     }
   }
+});
+
+test("keeps nothing for messages that carry no data, however many a file repeats", () => {
+  const zeroSizeFields = Array.from({ length: 255 }, (_, number) => ({
+    number,
+    type: "uint8" as const,
+    size: 0,
+  }));
+  const writer = new FitWriter().define(0, 20, zeroSizeFields);
+  writer.raw(...new Array<number>(50_000).fill(0x00));
+  writer.raw(...new Array<number>(50_000).fill(0x81));
+  const data = writer
+    .define(1, 20, [{ number: 253, type: "uint32" }])
+    .data(1, [fitTime("2026-01-01T00:00:00Z")])
+    .file();
+  assert.equal(readFitMessages(data).length, 1);
+  assert.equal(decodeFit(data).records.length, 1);
 });

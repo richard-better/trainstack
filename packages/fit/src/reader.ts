@@ -221,16 +221,23 @@ class Reader {
   read(messages: FitMessage[]): void {
     while (this.position < this.end) {
       const header = this.byte();
-      if (header & 0x80) {
-        messages.push(this.compressedTimestampMessage(header));
-      } else if (header & 0x40) {
+      const compressed = (header & 0x80) !== 0;
+      if (!compressed && header & 0x40) {
         this.definitions.set(header & 0x0f, this.definition((header & 0x20) !== 0));
+        continue;
+      }
+      const message = this.message(
+        this.definitionFor(compressed ? (header >> 5) & 0x03 : header & 0x0f),
+      );
+      const carriesData = message.fields.size > 0 || message.developerFields.size > 0;
+      if (compressed) {
+        this.advanceClock(header & 0x1f);
+        message.fields.set(timestampField, this.lastTimestamp);
       } else {
-        const message = this.message(this.definitionFor(header & 0x0f));
         const timestamp = message.fields.get(timestampField);
         if (typeof timestamp === "number") this.lastTimestamp = timestamp;
-        messages.push(message);
       }
+      if (carriesData) messages.push(message);
     }
   }
 
@@ -240,15 +247,10 @@ class Reader {
     return definition;
   }
 
-  private compressedTimestampMessage(header: number): FitMessage {
-    const message = this.message(this.definitionFor((header >> 5) & 0x03));
-    const offset = header & 0x1f;
+  private advanceClock(offset: number): void {
     let timestamp = (this.lastTimestamp & ~0x1f) + offset;
     if (offset < (this.lastTimestamp & 0x1f)) timestamp += 0x20;
     this.lastTimestamp = timestamp >>> 0;
-    const fields = new Map(message.fields);
-    fields.set(timestampField, this.lastTimestamp);
-    return { ...message, fields };
   }
 
   private definition(hasDeveloperFields: boolean): Definition {
@@ -260,7 +262,8 @@ class Reader {
     const fieldCount = this.byte();
     const fields: FieldDefinition[] = [];
     for (let index = 0; index < fieldCount; index++) {
-      fields.push({ number: this.byte(), size: this.byte(), baseType: this.byte() & 0x1f });
+      const field = { number: this.byte(), size: this.byte(), baseType: this.byte() & 0x1f };
+      if (field.size > 0) fields.push(field);
     }
     const developerFields: DeveloperFieldDefinition[] = [];
     if (hasDeveloperFields) {
@@ -268,13 +271,14 @@ class Reader {
       for (let index = 0; index < developerFieldCount; index++) {
         const fieldNumber = this.byte();
         const size = this.byte();
-        developerFields.push({ key: developerKey(this.byte(), fieldNumber), size });
+        const key = developerKey(this.byte(), fieldNumber);
+        if (size > 0) developerFields.push({ key, size });
       }
     }
     return { globalNumber, littleEndian, fields, developerFields };
   }
 
-  private message(definition: Definition): FitMessage {
+  private message(definition: Definition): FitMessage & { fields: Map<number, FitValue> } {
     const fields = new Map<number, FitValue>();
     for (const field of definition.fields) {
       this.require(field.size);
