@@ -160,7 +160,7 @@ Ride's Swift uses the same rule with a 5 s ceiling and no timer events. The ceil
 (`TrainingStress.swift`) and `timeInZones` (`TimeInZones.swift`). The results differ on exactly
 these inputs:
 
-- a gap of more than 5 and at most 30 s between records, outside a timer pause, which Ride
+- a gap of more than 5 and at most 30 s between records, with some time outside a timer pause, which Ride
   reads as a pause and TrainStack holds;
 - a timer pause that overlaps a gap of at most 5 s (5 s included), whose stopped part Ride
   counts and TrainStack leaves out;
