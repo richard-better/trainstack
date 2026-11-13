@@ -1,11 +1,11 @@
 import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
-import { settingsContract } from "./settings";
-import { activityStatistics } from "./statistics";
+import { settingsContract } from "./settings.ts";
+import { activityStatistics } from "./statistics.ts";
 
-export * from "./settings";
-export * from "./statistics";
+export * from "./settings.ts";
+export * from "./statistics.ts";
 
 export const MAX_ACTIVITY_FILE_BYTES = 25 * 1024 * 1024;
 
