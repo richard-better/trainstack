@@ -179,7 +179,7 @@ function Activity({ activity }: { activity: ActivityDetail }) {
 
 function summaryProblem(error: ActivitySummaryError, readHere: boolean) {
   const because = {
-    too_large: "Trainstack does not summarise files this large yet",
+    too_large: "This file has more than 10,000 laps or sessions, more than Trainstack summarises",
     failed: "Trainstack could not summarise this activity",
     truncated: "Trainstack found this file ends early",
     corrupt: "Trainstack could not read this file",
