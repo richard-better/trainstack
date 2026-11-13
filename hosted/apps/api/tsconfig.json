@@ -1,6 +1,6 @@
 {
   "extends": "@trainstack/config/tsconfig.base.json",
-  "references": [{ "path": "../../../packages/contract" }],
+  "references": [{ "path": "../../../packages/contract" }, { "path": "../../../packages/zones" }],
   "compilerOptions": {
     "noEmit": true,
     "paths": {

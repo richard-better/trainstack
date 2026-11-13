@@ -1,6 +1,10 @@
 import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
+import { settingsContract } from "./settings";
+
+export * from "./settings";
+
 export const MAX_ACTIVITY_FILE_BYTES = 25 * 1024 * 1024;
 
 const slug = z
@@ -118,6 +122,7 @@ export const activitiesContract = {
 export const appContract = {
   healthCheck: oc.output(z.literal("OK")),
   activities: activitiesContract,
+  settings: settingsContract,
 };
 
 export type AppContractClient = ContractRouterClient<typeof appContract>;

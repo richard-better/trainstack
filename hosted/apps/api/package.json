@@ -5,8 +5,8 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc -b ../../../packages/contract && vp pack",
-    "check-types": "tsc -b ../../../packages/contract && tsc --noEmit",
+    "build": "tsc -b ../../../packages/contract ../../../packages/zones && vp pack",
+    "check-types": "tsc -b ../../../packages/contract ../../../packages/zones && tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile api",
     "env:generate": "varlock codegen",
     "db:generate": "cd db && drizzle-kit generate"
@@ -20,6 +20,7 @@
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "@trainstack/contract": "workspace:*",
+    "@trainstack/zones": "workspace:*",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "evlog": "catalog:",
