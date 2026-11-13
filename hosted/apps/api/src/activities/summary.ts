@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
 import {
@@ -8,14 +8,13 @@ import {
   type ActivityFileFormat,
   type ActivitySummaryError,
 } from "../db/schema";
-import { summarizeActivityFile } from "./activity-file";
+import { summaryOfFile } from "./activity-file";
 import { SummaryError, type FileSummary } from "./file-summary";
 import { fileKey } from "./files";
 
-export const SUMMARY_VERSION = 1;
-export const MAX_SUMMARIZED_FILE_BYTES = 2 * 1024 * 1024;
+export const SUMMARY_VERSION = 2;
 export const MAX_SUMMARY_ATTEMPTS = 3;
-export const SUMMARIES_PER_SCHEDULED_RUN = 10;
+export const SUMMARIES_PER_SCHEDULED_RUN = 5;
 export const MAX_EVENTS_PER_ACTIVITY = 2000;
 
 type Outcome = { summary: FileSummary } | { error: ActivitySummaryError };
@@ -24,7 +23,6 @@ export type SummaryTarget = {
   userId: string;
   id: string;
   fileFormat: ActivityFileFormat | null;
-  fileSize: number | null;
   summaryAttempts: number;
 };
 
@@ -109,18 +107,15 @@ export async function summarizeActivity(
   target: SummaryTarget,
   bytes?: Uint8Array,
 ) {
-  if (target.fileFormat === null || target.fileSize === null) return;
+  if (target.fileFormat === null) return;
   if (target.summaryAttempts >= MAX_SUMMARY_ATTEMPTS) {
     return store(db, target, target.summaryAttempts, { error: "failed" });
-  }
-  if (target.fileSize > MAX_SUMMARIZED_FILE_BYTES) {
-    return store(db, target, target.summaryAttempts, { error: "too_large" });
   }
   if (!(await claim(db, target))) return;
   const file = bytes ?? (await readFile(bucket, target));
   let outcome: Outcome;
   try {
-    outcome = { summary: summarizeActivityFile(file) };
+    outcome = { summary: summaryOfFile(file) };
   } catch (error) {
     if (!(error instanceof SummaryError)) throw error;
     outcome = { error: error.code };
@@ -134,21 +129,13 @@ export function dueForSummary(db: Database, limit = SUMMARIES_PER_SCHEDULED_RUN)
       userId: activity.userId,
       id: activity.id,
       fileFormat: activity.fileFormat,
-      fileSize: activity.fileSize,
       summaryAttempts: activity.summaryAttempts,
     })
     .from(activity)
     .where(
       and(
         isNotNull(activity.fileFormat),
-        or(
-          isNull(activity.summaryVersion),
-          lt(activity.summaryVersion, SUMMARY_VERSION),
-          and(
-            eq(activity.summaryError, "too_large"),
-            lte(activity.fileSize, MAX_SUMMARIZED_FILE_BYTES),
-          ),
-        ),
+        or(isNull(activity.summaryVersion), lt(activity.summaryVersion, SUMMARY_VERSION)),
       ),
     )
     .orderBy(asc(activity.summaryAttempts), asc(activity.createdAt))

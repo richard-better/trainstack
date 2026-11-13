@@ -32,7 +32,7 @@ export const activityFileFormatSchema = z.enum(["fit", "gpx", "tcx"]);
 export const activitySummaryErrorSchema = z
   .enum(["truncated", "corrupt", "no_activity", "too_large", "failed"])
   .describe(
-    "Why the server could not derive the summary from the file: truncated (the file ends early), corrupt (it does not read as its format), no_activity (it reads, but holds no activity), too_large (bigger than the server summarises yet; it is summarised once that limit rises) or failed (summarising it kept failing)",
+    "Why the server could not derive the summary from the file: truncated (the file ends early), corrupt (it does not read as its format), no_activity (it reads, but holds no activity), too_large (more laps or sessions than an activity can have) or failed (summarising it kept failing)",
   );
 
 export const activitySchema = z.object({

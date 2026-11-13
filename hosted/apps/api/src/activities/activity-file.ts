@@ -1,8 +1,7 @@
 import type { ActivityStatisticName } from "@trainstack/contract";
 import {
   ActivityFileError,
-  decodeActivityFile,
-  type ActivityEvent,
+  summarizeActivityFile,
   type ActivityFileErrorCode,
   type ActivityLap,
   type Sport,
@@ -89,31 +88,16 @@ function lapEvents(laps: readonly ActivityLap[]): SummaryEvent[] {
   });
 }
 
-function pauseEvents(events: readonly ActivityEvent[]): SummaryEvent[] {
-  const pauses: SummaryEvent[] = [];
-  let stoppedAt: Date | undefined;
-  for (const event of events) {
-    const time = knownTime(event.time);
-    if (event.event !== "timer" || !time) continue;
-    if (event.type === "stop" || event.type === "stopAll") stoppedAt ??= time;
-    if (event.type === "start" && stoppedAt) {
-      pauses.push({ type: "pause", startedAt: stoppedAt, endedAt: time, data: {} });
-      stoppedAt = undefined;
-    }
-  }
-  return pauses;
-}
-
-export function summarizeActivityFile(bytes: Uint8Array): FileSummary {
+export function summaryOfFile(bytes: Uint8Array): FileSummary {
   try {
-    const activity = decodeActivityFile(bytes);
+    const activity = summarizeActivityFile(bytes);
     const { summary } = activity;
     return {
       startedAt: knownTime(summary.startTime),
       sport: sportOf(summary.sport, summary.subSport),
       name: activity.name?.trim() || undefined,
       statistics: statistics(summary),
-      events: [...lapEvents(activity.laps), ...pauseEvents(activity.events)].sort(
+      events: lapEvents(activity.laps).sort(
         (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
       ),
     };
