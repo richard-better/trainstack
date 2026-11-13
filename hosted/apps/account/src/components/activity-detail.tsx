@@ -120,7 +120,7 @@ function Activity({ activity }: { activity: ActivityDetail }) {
     activity.sport ??
     (decoded ? sportFromFit(decoded.summary.sport, decoded.summary.subSport) : null);
   const startedAt = activity.startedAt ?? decoded?.summary.startTime ?? null;
-  const title = activityTitle({ name: activity.name, sport, startedAt });
+  const title = activityTitle({ name: activity.name ?? decoded?.name ?? null, sport, startedAt });
   const statistics =
     Object.keys(activity.statistics).length > 0
       ? activity.statistics
