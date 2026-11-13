@@ -46,6 +46,14 @@ function AppHeader({ user }: { user: SignedInUser }) {
         <img src="/trainstack-logo.svg" alt="" width={24} height={24} />
         Trainstack
       </Link>
+      <nav aria-label="Main" className="main-nav">
+        <Link to="/" className="nav-link" activeOptions={{ exact: true }}>
+          Activities
+        </Link>
+        <Link to="/settings" className="nav-link">
+          Settings
+        </Link>
+      </nav>
       <div className="account">
         <span className="account-name" title={user.email}>
           {user.name || user.email}
