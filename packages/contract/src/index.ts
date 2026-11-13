@@ -20,8 +20,12 @@ export const activityIdSchema = z
   .regex(/^[0-9a-f]{64}$/, "the SHA-256 of the activity's file, in lowercase hex");
 
 export const activitySportSchema = slug.describe(
-  "The sport, such as cycling, indoor_cycling, running, swimming, strength or bouldering",
+  "The sport, such as cycling, running, swimming, strength or bouldering. Where it took place is `indoor`, not part of the sport; an upload's indoor_<sport> is read as <sport> done indoors",
 );
+
+export const activityIndoorSchema = z
+  .boolean()
+  .describe("Whether the activity took place indoors, such as on a trainer or a treadmill");
 
 export const activitySourceSchema = slug.describe(
   "Where the activity came from, such as trainstack, apple_health, strava, upload or coros",
@@ -49,6 +53,7 @@ export const activitySchema = z.object({
   source: activitySourceSchema,
   sourceId: z.string().nullable(),
   sport: activitySportSchema.nullable(),
+  indoor: activityIndoorSchema.nullable(),
   name: z.string().nullable(),
   startedAt: z.date().nullable(),
   file: z.object({ format: activityFileFormatSchema, size: z.number().int() }).nullable(),
@@ -112,6 +117,7 @@ export const activitiesContract = {
         source: activitySourceSchema,
         sourceId: z.string().min(1).max(128).optional(),
         sport: activitySportSchema.optional(),
+        indoor: activityIndoorSchema.optional(),
         name: z.string().trim().min(1).max(200).optional(),
         startedAt: z.date().optional(),
       }),

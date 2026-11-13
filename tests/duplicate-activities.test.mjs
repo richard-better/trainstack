@@ -301,9 +301,9 @@ test("the athlete's primary sticks when another copy arrives and when activities
   assert.deepEqual(
     results.map((row) => [row.summary_version, row.match_version]),
     [
-      [2, 1],
-      [2, 1],
-      [2, 1],
+      [3, 1],
+      [3, 1],
+      [3, 1],
     ],
     "every copy was summarised and matched again",
   );

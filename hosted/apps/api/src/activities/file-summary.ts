@@ -18,6 +18,7 @@ export type SummaryEvent = {
 export type FileSummary = {
   startedAt: Date | undefined;
   sport: string | undefined;
+  indoor: boolean | undefined;
   name: string | undefined;
   statistics: Partial<Record<ActivityStatisticName, number>>;
   events: SummaryEvent[];
