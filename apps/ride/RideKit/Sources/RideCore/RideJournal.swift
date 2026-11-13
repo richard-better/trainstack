@@ -1,5 +1,4 @@
 import Foundation
-import RideBluetooth
 import RideData
 
 public final class RideJournal {
@@ -15,7 +14,6 @@ public final class RideJournal {
   public static let tracesKept = 10
 
   private static let fileName = "ride.jsonl"
-  private static let sidecarFileNames = [BluetoothLog.fileName]
 
   private let directory: URL
   private var handle: FileHandle?
@@ -28,7 +26,7 @@ public final class RideJournal {
     do {
       try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
       FileManager.default.createFile(atPath: url.path, contents: nil)
-      Self.removeSidecars(in: directory)
+      Self.removeFilesBesideTheJournal(in: directory)
       handle = try FileHandle(forWritingTo: url)
     } catch {
       return nil
@@ -63,7 +61,7 @@ public final class RideJournal {
     let directory = journal.deletingLastPathComponent()
     guard let data = try? Data(contentsOf: journal), let trace = RideTrace(jsonLines: data) else {
       try? files.removeItem(at: journal)
-      removeSidecars(in: directory)
+      removeFilesBesideTheJournal(in: directory)
       return
     }
     try? files.createDirectory(at: traces, withIntermediateDirectories: true)
@@ -71,7 +69,9 @@ public final class RideJournal {
     let stem = traceStem(of: name)
     let moves =
       [(journal, name)]
-      + sidecarFileNames.map { (directory.appending(path: $0), "\(stem).\($0)") }
+      + filesBesideTheJournal(in: directory).map {
+        (directory.appending(path: $0), "\(stem).\($0)")
+      }
     for (file, kept) in moves where files.fileExists(atPath: file.path) {
       let destination = traces.appending(path: kept)
       try? files.removeItem(at: destination)
@@ -82,8 +82,13 @@ public final class RideJournal {
     removeOldTraces(in: traces)
   }
 
-  private static func removeSidecars(in directory: URL) {
-    for name in sidecarFileNames {
+  private static func filesBesideTheJournal(in directory: URL) -> [String] {
+    let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+    return names.filter { $0 != fileName }.sorted()
+  }
+
+  private static func removeFilesBesideTheJournal(in directory: URL) {
+    for name in filesBesideTheJournal(in: directory) {
       try? FileManager.default.removeItem(at: directory.appending(path: name))
     }
   }
@@ -152,6 +157,6 @@ public final class RideJournal {
 
   public static func discard(in directory: URL = defaultDirectory) {
     try? FileManager.default.removeItem(at: directory.appending(path: fileName))
-    removeSidecars(in: directory)
+    removeFilesBesideTheJournal(in: directory)
   }
 }
