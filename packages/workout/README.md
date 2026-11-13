@@ -74,8 +74,10 @@ reported. Zwift writes `pace="0"` on bike steps too, where it means nothing and 
 ## Ride's library
 
 `test/fixtures/ride-library.json` is `WorkoutTemplate.library` from `RideData`, encoded by Swift,
-and `test/ride-library.test.ts` converts every workout in it. When the library changes,
-regenerate the fixture on a Mac:
+and `test/ride-library.test.ts` converts every workout in it. The hosted API serves the same file,
+`hosted/apps/api/src/workouts/ride-library.json`, as its built-in library, and
+`tests/ride-library-source.test.mjs` fails when either copy differs from the Swift source. When the
+library changes, regenerate both on a Mac:
 
 ```sh
 cat > Dump.swift <<'SWIFT'
@@ -89,5 +91,5 @@ import Foundation
 }
 SWIFT
 swiftc -parse-as-library -o dump $(ls apps/ride/RideKit/Sources/RideData/*.swift | grep -v SampleRide.swift) Dump.swift
-./dump > packages/workout/test/fixtures/ride-library.json
+./dump | tee packages/workout/test/fixtures/ride-library.json > hosted/apps/api/src/workouts/ride-library.json
 ```
