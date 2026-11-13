@@ -60,3 +60,22 @@ test("reads back what it writes", () => {
   expect(root.attributes.get("m")).toBe(text);
   expect(root.children[0]?.text).toBe(text);
 });
+
+test("refuses elements nested past the depth limit", () => {
+  const nested = (depth: number) => `${"<a>".repeat(depth)}${"</a>".repeat(depth)}`;
+  expect(parseXml(nested(64)).name).toBe("a");
+  expect(() => parseXml(nested(100_000))).toThrow("Elements nest deeper than 64 levels on line 1");
+});
+
+test("reads a large file in linear time", () => {
+  const children = '<b x="1"/>\n'.repeat(200_000);
+  const started = performance.now();
+  const root = parseXml(`<a>\n${children}</a>`);
+  expect(root.children).toHaveLength(200_000);
+  expect(root.children.at(-1)?.line).toBe(200_001);
+  expect(performance.now() - started).toBeLessThan(5_000);
+});
+
+test("rejects entities named after object properties", () => {
+  expect(() => parseXml("<a>&constructor;</a>")).toThrow('Unknown entity "&constructor;"');
+});

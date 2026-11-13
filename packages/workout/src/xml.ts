@@ -30,15 +30,23 @@ const nameCharacters = /[A-Za-z0-9_:.-]/;
 
 class Reader {
   private position = 0;
+  private readonly lineStarts: number[] = [0];
 
-  constructor(private readonly source: string) {}
+  constructor(private readonly source: string) {
+    for (let index = source.indexOf("\n"); index !== -1; index = source.indexOf("\n", index + 1)) {
+      this.lineStarts.push(index + 1);
+    }
+  }
 
   get line(): number {
-    let line = 1;
-    for (let index = 0; index < this.position; index += 1) {
-      if (this.source[index] === "\n") line += 1;
+    let low = 0;
+    let high = this.lineStarts.length - 1;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if ((this.lineStarts[middle] ?? 0) <= this.position) low = middle;
+      else high = middle - 1;
     }
-    return line;
+    return low + 1;
   }
 
   fail(message: string): never {
@@ -102,7 +110,7 @@ class Reader {
       if (!match.endsWith(";")) this.fail(`Unterminated entity "${match}"`);
       if (entity.startsWith("#x")) return this.codePoint(Number.parseInt(entity.slice(2), 16));
       if (entity.startsWith("#")) return this.codePoint(Number.parseInt(entity.slice(1), 10));
-      const named = namedEntities[entity];
+      const named = Object.hasOwn(namedEntities, entity) ? namedEntities[entity] : undefined;
       if (named === undefined) this.fail(`Unknown entity "&${entity};"`);
       return named;
     });
@@ -127,7 +135,10 @@ function skipMisc(reader: Reader): void {
   }
 }
 
-function readElement(reader: Reader): XmlElement {
+export const maxXmlDepth = 64;
+
+function readElement(reader: Reader, depth = 1): XmlElement {
+  if (depth > maxXmlDepth) reader.fail(`Elements nest deeper than ${maxXmlDepth} levels`);
   const line = reader.line;
   reader.expect("<");
   const name = reader.name();
@@ -166,7 +177,7 @@ function readElement(reader: Reader): XmlElement {
       reader.expect("<![CDATA[");
       text += reader.skipPast("]]>", "CDATA section");
     } else if (reader.startsWith("<?")) reader.skipPast("?>", "processing instruction");
-    else if (reader.startsWith("<")) children.push(readElement(reader));
+    else if (reader.startsWith("<")) children.push(readElement(reader, depth + 1));
     else text += reader.textUntilTag();
   }
 }
