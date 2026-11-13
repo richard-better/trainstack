@@ -1,4 +1,5 @@
 import { isDefinedError, safe } from "@orpc/client";
+import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import type { Activity } from "@trainstack/contract";
 import {
   type ActivityFileFormat,
@@ -122,6 +123,29 @@ export function withActivity<Page extends ActivityPage>(
     return without;
   }
   return [...pages];
+}
+
+type ActivityPages = InfiniteData<ActivityPage, string | undefined>;
+
+export function placeActivity(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  activity: Activity,
+) {
+  const place = () =>
+    queryClient.setQueryData<ActivityPages>(
+      queryKey,
+      (data) => data && { ...data, pages: withActivity(data.pages, activity) },
+    );
+  place();
+  const cache = queryClient.getQueryCache();
+  const query = cache.find({ queryKey, exact: true });
+  if (query?.state.fetchStatus !== "fetching") return;
+  const unsubscribe = cache.subscribe((event) => {
+    if (event.query !== query || query.state.fetchStatus === "fetching") return;
+    unsubscribe();
+    place();
+  });
 }
 
 const emptyBodyStatuses = new Set([101, 204, 205, 304]);

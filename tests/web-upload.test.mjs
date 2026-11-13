@@ -3,8 +3,10 @@ import { createHash, generateKeyPairSync } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { ACTIVITIES_PER_PAGE } from "../hosted/apps/account/src/lib/client.ts";
+import { InfiniteQueryObserver, QueryClient } from "@tanstack/react-query";
 import {
   checkActivityFile,
+  placeActivity,
   sendActivityFile,
   withActivity,
 } from "../hosted/apps/account/src/lib/upload.ts";
@@ -304,4 +306,35 @@ test("a new activity takes its place by date among the loaded pages", () => {
     ["nab", "cd"],
     "without a start time, it is placed by when it was added",
   );
+});
+
+test("an activity uploaded while older activities load is still in the list once they arrive", async () => {
+  const queryClient = new QueryClient();
+  const key = ["activities"];
+  const older = Promise.withResolvers();
+  const observer = new InfiniteQueryObserver(queryClient, {
+    queryKey: key,
+    queryFn: ({ pageParam }) =>
+      pageParam === undefined
+        ? {
+            activities: [activity("a", "2026-10-30"), activity("b", "2026-10-20")],
+            nextCursor: "1",
+          }
+        : older.promise,
+    initialPageParam: undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  await observer.refetch();
+
+  const loading = observer.fetchNextPage();
+  placeActivity(queryClient, key, activity("n", "2026-11-05"));
+  assert.deepEqual(ids(queryClient.getQueryData(key).pages), ["nab"]);
+  older.resolve({ activities: [activity("c", "2026-10-10")], nextCursor: null });
+  await loading;
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  assert.deepEqual(ids(queryClient.getQueryData(key).pages), ["nab", "c"]);
+  unsubscribe();
+  queryClient.clear();
 });
