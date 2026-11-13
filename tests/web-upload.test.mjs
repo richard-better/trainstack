@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { ACTIVITIES_PER_PAGE } from "../hosted/apps/account/src/lib/client.ts";
 import { InfiniteQueryObserver, QueryClient } from "@tanstack/react-query";
+import { MAX_ACTIVITY_FILE_BYTES } from "@trainstack/contract";
 import {
   checkActivityFile,
   placeActivity,
@@ -15,7 +16,6 @@ import { mockApple } from "./helpers/apple.mjs";
 import { signInOnTheWeb } from "./helpers/web.mjs";
 import { migrate, startWorker } from "./helpers/worker.mjs";
 
-const MAX_BYTES = 25 * 1024 * 1024;
 const FILES = "packages/activity-file/test/files";
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const WORKOUT_RIDE = "apps/ride/RideKit/Tests/RideCoreTests/Traces/quick-test-trainer-drop.fit";
@@ -53,7 +53,6 @@ function uploadsFor(webApp) {
   const added = [];
   const uploads = createUploads({
     api: webApp,
-    maxBytes: MAX_BYTES,
     onActivity: (activity) => added.push(activity),
   });
   const outcomes = () =>
@@ -74,7 +73,7 @@ function uploadsFor(webApp) {
 
 test("a FIT, GPX or TCX file is read in the browser for its sport and start", async () => {
   const read = async (path) => {
-    const check = await checkActivityFile(await fileAt(path), MAX_BYTES);
+    const check = await checkActivityFile(await fileAt(path));
     assert.equal(check.kind, "ready", path);
     return { format: check.file.format, sport: check.file.sport, startedAt: check.file.startedAt };
   };
@@ -98,14 +97,14 @@ test("a FIT, GPX or TCX file is read in the browser for its sport and start", as
 test("a wrong, empty, damaged or oversized file is refused before anything is sent", async () => {
   class Oversized extends File {
     get size() {
-      return MAX_BYTES + 1;
+      return MAX_ACTIVITY_FILE_BYTES + 1;
     }
     arrayBuffer() {
       throw new Error("an oversized file is not read");
     }
   }
   const sample = await readFile(SAMPLE_RIDE);
-  const refusal = async (file) => checkActivityFile(file, MAX_BYTES);
+  const refusal = async (file) => checkActivityFile(file);
   assert.deepEqual(await refusal(new Oversized([sample], "huge.fit")), { kind: "tooLarge" });
   assert.deepEqual(await refusal(new File(["milk\neggs\n"], "notes.fit")), {
     kind: "notActivityFile",
@@ -188,7 +187,7 @@ test("several files upload at once, each with its own outcome, and only activity
 test("a file the athlete deleted is not added again, and says when it was deleted", async () => {
   const { webApp } = await signInOnTheWeb(runtime, apple);
   const run = await fileAt(`${FILES}/strava-run.tcx`);
-  const check = await checkActivityFile(run, MAX_BYTES);
+  const check = await checkActivityFile(run);
   assert.equal(check.kind, "ready");
   const first = await sendActivityFile(webApp, check.file);
   assert.equal(first.kind, "uploaded");
@@ -219,7 +218,6 @@ test("an upload that fails on the way can be tried again without choosing the fi
   const added = [];
   const uploads = createUploads({
     api: flaky,
-    maxBytes: MAX_BYTES,
     onActivity: (activity) => added.push(activity),
   });
 

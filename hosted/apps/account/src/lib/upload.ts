@@ -1,6 +1,6 @@
 import { isDefinedError, safe } from "@orpc/client";
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
-import type { Activity } from "@trainstack/contract";
+import { type Activity, MAX_ACTIVITY_FILE_BYTES } from "@trainstack/contract";
 import {
   type ActivityFileFormat,
   type DecodedActivity,
@@ -41,8 +41,8 @@ async function sha256Hex(bytes: Uint8Array<ArrayBuffer>) {
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export async function checkActivityFile(file: File, maxBytes: number): Promise<Check> {
-  if (file.size > maxBytes) return { kind: "tooLarge" };
+export async function checkActivityFile(file: File): Promise<Check> {
+  if (file.size > MAX_ACTIVITY_FILE_BYTES) return { kind: "tooLarge" };
   if (file.size === 0) return { kind: "notActivityFile" };
   const bytes = new Uint8Array(await file.arrayBuffer());
   let decoded: DecodedActivity;

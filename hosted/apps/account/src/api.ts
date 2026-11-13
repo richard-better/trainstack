@@ -1,5 +1,4 @@
 import { QueryClient } from "@tanstack/react-query";
-import { MAX_ACTIVITY_FILE_BYTES } from "@trainstack/contract";
 
 import { createApiClient } from "./lib/client";
 import { placeActivity, sendWithProgress } from "./lib/upload";
@@ -19,7 +18,6 @@ export const activityKey = (id: string) => ["activity", id] as const;
 
 export const uploads = createUploads({
   api,
-  maxBytes: MAX_ACTIVITY_FILE_BYTES,
   uploadClient: (onProgress) => createApiClient(serverUrl, sendWithProgress(onProgress)),
   onActivity: (activity) => placeActivity(queryClient, activitiesQueryKey, activity),
 });

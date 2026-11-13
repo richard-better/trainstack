@@ -35,7 +35,6 @@ export const isBusy = (upload: Upload) =>
 
 export interface UploadsOptions {
   readonly api: ApiClient;
-  readonly maxBytes: number;
   readonly uploadClient?: (onProgress: (fraction: number) => void) => ApiClient;
   readonly onActivity?: (activity: Activity) => void;
   readonly concurrency?: number;
@@ -53,7 +52,6 @@ export interface Uploads {
 
 export function createUploads({
   api,
-  maxBytes,
   uploadClient = () => api,
   onActivity = () => {},
   concurrency = 3,
@@ -122,7 +120,7 @@ export function createUploads({
     await turn(async () => {
       if (started !== generation || !uploads.some((upload) => upload.key === key)) return;
       update(key, { state: { phase: "checking" } });
-      const check = await checkActivityFile(file, maxBytes).catch(() => null);
+      const check = await checkActivityFile(file).catch(() => null);
       if (started !== generation) return;
       if (check === null) return update(key, { state: { phase: "failed" } });
       if (check.kind !== "ready") {
