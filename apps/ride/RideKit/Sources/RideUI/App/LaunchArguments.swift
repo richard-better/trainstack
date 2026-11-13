@@ -78,6 +78,8 @@ extension BluetoothDevices {
 }
 
 extension TrainStackAccount {
+  static let launched = launchAccount()
+
   static func launchAccount(arguments: [String] = CommandLine.arguments) -> TrainStackAccount {
     #if DEBUG
       func value(_ flag: String) -> String? {

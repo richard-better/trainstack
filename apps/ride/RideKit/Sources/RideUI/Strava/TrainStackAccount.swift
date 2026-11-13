@@ -10,7 +10,8 @@ final class TrainStackAccount {
   private(set) var name: String?
   private(set) var isStravaConnected = false
   private(set) var stravaAthleteName: String?
-  @ObservationIgnored private let client: TrainStackClient
+  @ObservationIgnored let client: TrainStackClient
+  @ObservationIgnored var onSignInChange: (() -> Void)?
 
   init(
     server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
@@ -28,6 +29,7 @@ final class TrainStackAccount {
     try await client.signInWithApple(
       identityToken: identityToken, nonce: nonce, fullName: fullName)
     await refreshFromClient()
+    onSignInChange?()
     await refreshStrava()
   }
 
@@ -43,12 +45,14 @@ final class TrainStackAccount {
     }
     try await client.finishAppleWebSignIn(attempt, callback: callback)
     await refreshFromClient()
+    onSignInChange?()
     await refreshStrava()
   }
 
   func signOut() async {
     await client.signOut()
     await refreshFromClient()
+    onSignInChange?()
     isStravaConnected = false
     stravaAthleteName = nil
   }
@@ -56,8 +60,13 @@ final class TrainStackAccount {
   func deleteAccount() async throws {
     try await client.deleteAccount()
     await refreshFromClient()
+    onSignInChange?()
     isStravaConnected = false
     stravaAthleteName = nil
+  }
+
+  func refreshSignIn() async {
+    await refreshFromClient()
   }
 
   private func refreshFromClient() async {

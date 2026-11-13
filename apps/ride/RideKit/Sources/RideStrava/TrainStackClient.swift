@@ -11,7 +11,7 @@ public actor TrainStackClient {
   private let transport: any HTTPTransport
   private let pollInterval: Duration
   private let pollLimit: Int
-  private var session: AccountSession?
+  var session: AccountSession?
   private var keptSessionRead: Task<AccountSession?, Never>?
   private var knowsCurrentSession = false
 
@@ -41,7 +41,7 @@ public actor TrainStackClient {
     }
   }
 
-  private func restore() async {
+  func restore() async {
     guard !knowsCurrentSession else { return }
     let task = keptSessionRead ?? Task { [store] in await store.load() }
     keptSessionRead = task
@@ -63,7 +63,10 @@ public actor TrainStackClient {
       throw response.statusCode < 500 ? StravaError.signInFailed : StravaError.unavailable
     }
     struct SignedIn: Decodable {
-      struct User: Decodable { let name: String? }
+      struct User: Decodable {
+        let id: String?
+        let name: String?
+      }
       let token: String?
       let user: User?
     }
@@ -72,17 +75,22 @@ public actor TrainStackClient {
       throw StravaError.signInFailed
     }
     let name = signedIn?.user?.name.flatMap { $0.isEmpty ? nil : $0 }
-    try keep(AccountSession(token: token, name: name))
+    let session = AccountSession(token: token, name: name, userID: signedIn?.user?.id)
+    try keep(session)
     if name == nil, let fullName, !fullName.isEmpty {
-      await giveTheAccountTheNameAppleSharesOnce(fullName, token: token)
+      await giveTheAccountTheNameAppleSharesOnce(fullName, session: session)
     }
   }
 
-  private func giveTheAccountTheNameAppleSharesOnce(_ fullName: String, token: String) async {
+  private func giveTheAccountTheNameAppleSharesOnce(
+    _ fullName: String, session: AccountSession
+  ) async {
     let updated = try? await send(
       "POST", "api/auth/update-user", json: ["name": fullName], signedIn: true)
     guard updated?.1.statusCode == 200 else { return }
-    try? keep(AccountSession(token: token, name: fullName))
+    var named = session
+    named.name = fullName
+    try? keep(named)
   }
 
   public struct WebSignInAttempt: Sendable {
@@ -110,7 +118,10 @@ public actor TrainStackClient {
     default: throw StravaError.unavailable
     }
     struct SignedIn: Decodable {
-      struct User: Decodable { let name: String? }
+      struct User: Decodable {
+        let id: String?
+        let name: String?
+      }
       let token: String
       let user: User?
     }
@@ -118,7 +129,9 @@ public actor TrainStackClient {
       throw StravaError.signInFailed
     }
     let nameTheServerGotFromApple = signedIn.user?.name.flatMap { $0.isEmpty ? nil : $0 }
-    try keep(AccountSession(token: signedIn.token, name: nameTheServerGotFromApple))
+    try keep(
+      AccountSession(
+        token: signedIn.token, name: nameTheServerGotFromApple, userID: signedIn.user?.id))
   }
 
   static func signInCode(from callback: URL) throws -> String {
@@ -145,7 +158,7 @@ public actor TrainStackClient {
     }
   }
 
-  private func keep(_ session: AccountSession) throws {
+  func keep(_ session: AccountSession) throws {
     do {
       try store.save(session)
     } catch {
@@ -156,7 +169,7 @@ public actor TrainStackClient {
     keptSessionRead = nil
   }
 
-  private func forget() {
+  func forget() {
     session = nil
     knowsCurrentSession = true
     keptSessionRead = nil
@@ -338,9 +351,10 @@ public actor TrainStackClient {
     }
   }
 
-  private func send(
+  func send(
     _ method: String, _ path: String, query: [URLQueryItem] = [], json: [String: Any]? = nil,
-    body: Data? = nil, contentType: String? = nil, signedIn: Bool = false
+    body: Data? = nil, contentType: String? = nil, signedIn: Bool = false,
+    as account: ActivityAccount? = nil
   ) async throws -> (Data, HTTPURLResponse) {
     await restore()
     var components = URLComponents(
@@ -348,7 +362,10 @@ public actor TrainStackClient {
     if !query.isEmpty { components.queryItems = query }
     var request = URLRequest(url: components.url!)
     request.httpMethod = method
-    if signedIn {
+    if let account {
+      guard session?.token == account.token else { throw StravaError.signedOut }
+      request.setValue("Bearer \(account.token)", forHTTPHeaderField: "Authorization")
+    } else if signedIn {
       guard let session else { throw StravaError.signedOut }
       request.setValue("Bearer \(session.token)", forHTTPHeaderField: "Authorization")
     }
@@ -368,7 +385,7 @@ public actor TrainStackClient {
     }
   }
 
-  private static let decoder: JSONDecoder = {
+  static let decoder: JSONDecoder = {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     return decoder
