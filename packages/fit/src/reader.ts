@@ -89,6 +89,10 @@ const widths: Record<number, number> = {
 
 const utf8 = new TextDecoder("utf-8");
 
+function isByte(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= 0xff;
+}
+
 function developerKey(developerDataIndex: number, fieldNumber: number): string {
   return `${developerDataIndex}:${fieldNumber}`;
 }
@@ -338,6 +342,7 @@ class Reader {
     }
     const scale = message.fields.get(FieldDescription.scale);
     const offset = message.fields.get(FieldDescription.offset);
+    if (!isByte(index) || !isByte(number)) return;
     this.descriptions.set(developerKey(index, number), {
       name,
       baseType: baseType & 0x1f,
