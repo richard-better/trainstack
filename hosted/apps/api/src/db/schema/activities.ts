@@ -40,6 +40,10 @@ export const activity = sqliteTable(
     summaryVersion: integer("summary_version"),
     summaryError: text("summary_error").$type<ActivitySummaryError>(),
     summaryAttempts: integer("summary_attempts").notNull().default(0),
+    workoutId: text("workout_id"),
+    isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(true),
+    chosenAsPrimaryAt: timestamp("chosen_as_primary_at"),
+    matchVersion: integer("match_version"),
     createdAt: timestamp("created_at").default(now).notNull(),
     occurredAt: integer("occurred_at")
       .generatedAlwaysAs(sql`coalesce(started_at, created_at)`, { mode: "virtual" })
@@ -48,6 +52,14 @@ export const activity = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.id] }),
     index("activity_user_occurred_idx").on(table.userId, table.occurredAt, table.id),
+    index("activity_user_primary_occurred_idx").on(
+      table.userId,
+      table.isPrimary,
+      table.occurredAt,
+      table.id,
+    ),
+    index("activity_user_workout_idx").on(table.userId, table.workoutId),
+    index("activity_match_version_idx").on(table.matchVersion),
     index("activity_user_source_idx").on(table.userId, table.source, table.sourceId),
     index("activity_summary_version_idx").on(table.summaryVersion),
   ],
@@ -89,6 +101,26 @@ export const activityEvent = sqliteTable(
     primaryKey({ columns: [table.userId, table.activityId, table.sequence] }),
     foreignKey({
       columns: [table.userId, table.activityId],
+      foreignColumns: [activity.userId, activity.id],
+    }).onDelete("cascade"),
+  ],
+);
+
+export const distinctActivities = sqliteTable(
+  "distinct_activities",
+  {
+    userId: text("user_id").notNull(),
+    activityId: text("activity_id").notNull(),
+    otherId: text("other_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.activityId, table.otherId] }),
+    foreignKey({
+      columns: [table.userId, table.activityId],
+      foreignColumns: [activity.userId, activity.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.userId, table.otherId],
       foreignColumns: [activity.userId, activity.id],
     }).onDelete("cascade"),
   ],

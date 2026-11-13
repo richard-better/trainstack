@@ -100,3 +100,52 @@ export function manyLaps(count) {
   for (let i = 0; i < count; i++) writer.data(0, [start + i + 1, start + i, 1000, 1000]);
   return writer.file();
 }
+
+const FIT_SPORTS = { running: 1, cycling: 2 };
+const FIT_SUB_SPORTS = { indoorCycling: 6, road: 7 };
+
+export function recordedSession({
+  start,
+  elapsedSeconds,
+  timerSeconds = elapsedSeconds,
+  sport = "cycling",
+  subSport,
+  distanceMetres,
+  power,
+  heartRate,
+  cadence,
+}) {
+  const startTime = fitTime(start);
+  const end = startTime + elapsedSeconds;
+  const session = [
+    { number: 253, type: "uint32" },
+    { number: 2, type: "uint32" },
+    { number: 5, type: "enum" },
+    { number: 6, type: "enum" },
+    { number: 7, type: "uint32" },
+    { number: 8, type: "uint32" },
+    { number: 9, type: "uint32" },
+    { number: 16, type: "uint8" },
+    { number: 18, type: "uint8" },
+    { number: 20, type: "uint16" },
+  ];
+  const optional = (value, scale = 1) => (value === undefined ? null : Math.round(value * scale));
+  return new FitWriter()
+    .define(1, 20, [{ number: 253, type: "uint32" }])
+    .data(1, [startTime])
+    .data(1, [end])
+    .define(2, 18, session)
+    .data(2, [
+      end,
+      startTime,
+      FIT_SPORTS[sport],
+      subSport === undefined ? null : FIT_SUB_SPORTS[subSport],
+      elapsedSeconds * 1000,
+      timerSeconds * 1000,
+      optional(distanceMetres, 100),
+      optional(heartRate),
+      optional(cadence),
+      optional(power),
+    ])
+    .file();
+}

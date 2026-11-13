@@ -78,6 +78,8 @@ test("a rider uploads a ride's FIT file and reads it back by its SHA-256", async
       summaryError: null,
       statistics: undefined,
       createdAt: undefined,
+      primary: true,
+      duplicates: [],
     },
   );
   assert.ok(uploaded.createdAt instanceof Date);
