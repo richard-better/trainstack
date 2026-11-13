@@ -75,7 +75,6 @@ extension TrainStackClient: ActivityServer {
   public func deleteActivity(_ id: String, for account: ActivityAccount) async throws {
     let (_, response) = try await send(
       "DELETE", "\(Self.activitiesPath)/\(id)", as: account)
-    if response.statusCode == 400 { return }
     try checkActivityResponse(response, for: account)
   }
 
