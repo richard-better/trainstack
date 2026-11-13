@@ -87,6 +87,18 @@ test("rejects XML that is not well formed", () => {
   );
 });
 
+test("allows only comments, processing instructions and space after the root element", () => {
+  const activity = `<gpx><trk><trkseg>${timed(0)}</trkseg></trk></gpx>`;
+  assert.equal(
+    decodeActivityFile(text(`${activity}\n<!-- exported -->\n<?done?>\n`)).records.length,
+    1,
+  );
+  assertFails(text(`${activity}<unfinished`), "malformed");
+  assertFails(text(`${activity}<gpx></gpx>`), "malformed");
+  assertFails(text(`${activity}trailing`), "malformed");
+  assertFails(text(`${activity}</gpx>`), "malformed");
+});
+
 test("never expands entities a DOCTYPE declares", () => {
   const laughs = Array.from(
     { length: 9 },

@@ -187,7 +187,10 @@ export function scanXml(
       if (names.length > 0) keepText(position, textEnd, (start, end) => scanner.text(start, end));
       else if (!scanner.onlySpace(position, textEnd)) scanner.fail("malformed");
     }
-    if (tagStart < 0) scanner.fail(rootSeen || bytes.length === 0 ? "truncated" : "malformed");
+    if (tagStart < 0) {
+      if (rootSeen && names.length === 0) return;
+      scanner.fail(rootSeen || bytes.length === 0 ? "truncated" : "malformed");
+    }
 
     position = tagStart + 1;
     const marker = scanner.byteAt(position);
@@ -228,10 +231,10 @@ export function scanXml(
       textParts = [];
       textBytes = 0;
       position = end + 1;
-      if (names.length === 0) return;
       continue;
     }
 
+    if (rootSeen && names.length === 0) scanner.fail("malformed");
     const nameEnd = scanner.nameEnd(position);
     if (nameEnd === position) scanner.fail("malformed");
     const qualifiedName = scanner.name(position, nameEnd);
@@ -283,7 +286,6 @@ export function scanXml(
     position = index;
     if (selfClosing) {
       handler.close(name, "", names);
-      if (names.length === 0) return;
     } else {
       names.push(name);
       qualifiedNames.push(qualifiedName);
