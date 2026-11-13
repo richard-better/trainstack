@@ -1,0 +1,26 @@
+{
+  "name": "@trainstack/analysis",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "check-types": "tsc -b && tsc -p test --noEmit",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@trainstack/zones": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@trainstack/activity-file": "workspace:*",
+    "@trainstack/config": "workspace:*",
+    "@trainstack/fit": "workspace:*",
+    "@types/node": "catalog:",
+    "miniflare": "4.20260730.0",
+    "rolldown": "1.2.16",
+    "typescript": "catalog:"
+  }
+}
