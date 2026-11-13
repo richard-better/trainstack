@@ -9,13 +9,15 @@ final class ActivitySync {
   private let directory: URL
   private var states: [String: ActivitySyncState] = [:]
   private var refusedThisLaunch: Set<Ride.ID> = []
-  private var running: Task<Void, Never>?
-  private var generation = 0
-  private var wantsAnotherPass = false
-  private var retry: Task<Void, Never>?
-  private var failuresInARow = 0
-  var onSignedOut: (() -> Void)?
   private let log = Logger(subsystem: "com.trainstackhq.ride", category: "activity-sync")
+  private lazy var passes = SyncPasses(of: "Rides", log: log) { [weak self] in
+    try await self?.sync()
+  }
+
+  var onSignedOut: (() -> Void)? {
+    get { passes.onSignedOut }
+    set { passes.onSignedOut = newValue }
+  }
 
   init(library: RideLibrary, server: any ActivityServer, directory: URL = defaultDirectory) {
     self.library = library
@@ -48,58 +50,11 @@ final class ActivitySync {
   }
 
   func accountChanged() {
-    running?.cancel()
-    running = nil
-    retry?.cancel()
-    retry = nil
-    failuresInARow = 0
-    syncSoon()
+    passes.restart()
   }
 
   func syncSoon() {
-    wantsAnotherPass = true
-    guard running == nil else { return }
-    retry?.cancel()
-    retry = nil
-    generation += 1
-    let generation = generation
-    running = Task {
-      await syncUntilSettled()
-      if self.generation == generation { running = nil }
-    }
-  }
-
-  private func syncUntilSettled() async {
-    while wantsAnotherPass, !Task.isCancelled {
-      wantsAnotherPass = false
-      do {
-        try await sync()
-        failuresInARow = 0
-      } catch is CancellationError {
-        return
-      } catch StravaError.signedOut {
-        onSignedOut?()
-        return
-      } catch {
-        failuresInARow += 1
-        log.error("Rides not synced with TrainStack: \(error.localizedDescription)")
-        retryLater()
-        return
-      }
-    }
-  }
-
-  private func retryLater() {
-    let delay = Self.retryDelay(afterFailures: failuresInARow)
-    retry = Task { [weak self] in
-      try? await Task.sleep(for: delay)
-      guard !Task.isCancelled else { return }
-      self?.syncSoon()
-    }
-  }
-
-  static func retryDelay(afterFailures failures: Int) -> Duration {
-    .seconds(min(30 << min(max(failures - 1, 0), 6), 30 * 60))
+    passes.soon()
   }
 
   func sync() async throws {
