@@ -127,3 +127,30 @@ test("rejects a course, which has no activity", () => {
       error instanceof ActivityFileError && error.code === "noActivity" && error.format === "tcx",
   );
 });
+
+test("keeps a lap's declared duration when its last point comes before the lap ends", () => {
+  const activity = decodeTcx(
+    text(`<TrainingCenterDatabase><Activities><Activity Sport="Running">
+      <Lap StartTime="2026-06-01T08:00:00Z"><TotalTimeSeconds>60</TotalTimeSeconds><Track>
+        <Trackpoint><Time>2026-06-01T08:00:00Z</Time></Trackpoint>
+        <Trackpoint><Time>2026-06-01T08:00:50Z</Time></Trackpoint>
+      </Track></Lap>
+    </Activity></Activities></TrainingCenterDatabase>`),
+  );
+  assert.equal(activity.laps[0]!.elapsedSeconds, 60);
+  assert.equal(activity.summary.elapsedSeconds, 60);
+  assert.equal(activity.summary.timerSeconds, 60);
+});
+
+test("rejects a lap whose duration runs past the last date there can be", () => {
+  assert.throws(
+    () =>
+      decodeTcx(
+        text(`<TrainingCenterDatabase><Activities><Activity Sport="Running">
+          <Lap StartTime="2026-06-01T08:00:00Z"><TotalTimeSeconds>1e308</TotalTimeSeconds></Lap>
+        </Activity></Activities></TrainingCenterDatabase>`),
+      ),
+    (error) =>
+      error instanceof ActivityFileError && error.code === "malformed" && error.format === "tcx",
+  );
+});

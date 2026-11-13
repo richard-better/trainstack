@@ -167,6 +167,8 @@ class TcxReader implements XmlHandler {
   }
 }
 
+const latestDate = 8.64e15;
+
 function positioned(points: readonly TimedPoint[]): TimedPoint | undefined {
   return points.find((point) => point.latitude !== undefined && point.longitude !== undefined);
 }
@@ -177,10 +179,8 @@ function lap(draft: LapDraft, sport: SportAndSubSport): FitLap | undefined {
   const startTime = draft.startTime ?? points[0]?.time;
   if (startTime === undefined) return undefined;
   const lastPoint = points.at(-1)?.time;
-  const endTime =
-    lastPoint !== undefined && lastPoint > startTime
-      ? lastPoint
-      : startTime + (timerSeconds ?? 0) * 1000;
+  const endTime = Math.max(lastPoint ?? startTime, startTime + (timerSeconds ?? 0) * 1000);
+  if (!(endTime <= latestDate)) throw new ActivityFileError("malformed", "tcx");
   const firstPosition = positioned(points);
   const { values } = draft;
   return {
