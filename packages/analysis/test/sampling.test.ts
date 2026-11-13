@@ -74,9 +74,31 @@ describe("the sampling rule", () => {
       [
         [0, 0, 30],
         [2, 61, 65],
-        [3, 72, 80],
       ],
     );
+  });
+
+  test("never lets a record written while the timer is stopped hold after the restart", () => {
+    const records = [0, 10, 20].map((elapsedSeconds) => ({ elapsedSeconds, power: 300 }));
+    const samples = samplesOf(records, "cycling", { pauses: [{ from: 5, to: 15 }] });
+    assert.deepEqual(
+      [...perSecond(samples, samples.power)],
+      [300, 300, 300, 300, 300, ...Array<number>(15).fill(0), 300],
+    );
+  });
+
+  test("takes no speed from distance across a pause", () => {
+    const run = samplesOf(
+      [
+        { elapsedSeconds: 0, distanceMetres: 0 },
+        { elapsedSeconds: 5, distanceMetres: 10 },
+        { elapsedSeconds: 25, distanceMetres: 10 },
+        { elapsedSeconds: 30, distanceMetres: 20 },
+      ],
+      "running",
+      { pauses: [{ from: 5, to: 25 }] },
+    );
+    assert.deepEqual([...run.speed], [NaN, 2, NaN, 2]);
   });
 
   test("fills no second for a record written while the timer is stopped", () => {

@@ -10,6 +10,7 @@ export interface AnalysisRecord {
 import {
   type HeldSegments,
   heldSegments,
+  overlapsPause,
   pausedRecords,
   type SamplingRule,
   samplingRule,
@@ -70,6 +71,7 @@ export function samplesOf(
   const count = ordered.length;
   const speedRange = sport === "running" ? plausibleRanges.runningSpeed : plausibleRanges.speed;
   const elapsed = Float64Array.from(ordered, (record) => record.elapsedSeconds);
+  const paused = pausedRecords(elapsed, pauses);
   const samples: Samples = {
     count,
     elapsed,
@@ -79,13 +81,25 @@ export function samplesOf(
     distance: new Float64Array(count),
     altitude: new Float64Array(count),
     held: heldSegments(elapsed, pauses, rule),
-    paused: pausedRecords(elapsed, pauses),
+    paused,
   };
   let furthest = NaN;
   let previousWithDistance = -1;
   for (let index = 0; index < count; index++) {
     const record = ordered[index]!;
     const seconds = elapsed[index]!;
+    if (paused[index]) {
+      for (const values of [
+        samples.power,
+        samples.heartRate,
+        samples.speed,
+        samples.distance,
+        samples.altitude,
+      ]) {
+        values[index] = NaN;
+      }
+      continue;
+    }
     samples.power[index] = within(record.power, plausibleRanges.power);
     samples.heartRate[index] = within(record.heartRate, plausibleRanges.heartRate);
     samples.altitude[index] = within(record.altitudeMetres, plausibleRanges.altitude);
@@ -100,8 +114,9 @@ export function samplesOf(
       previousWithDistance >= 0 &&
       !Number.isNaN(distance)
     ) {
-      const gap = seconds - elapsed[previousWithDistance]!;
-      if (gap > 0 && gap <= rule.maxHeldGapSeconds) {
+      const previous = elapsed[previousWithDistance]!;
+      const gap = seconds - previous;
+      if (gap > 0 && gap <= rule.maxHeldGapSeconds && !overlapsPause(pauses, previous, seconds)) {
         speed = within(
           (samples.distance[index]! - samples.distance[previousWithDistance]!) / gap,
           speedRange,

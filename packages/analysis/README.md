@@ -115,7 +115,8 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
 - **Pauses.** When the file has timer events, its timer is stopped from each `stop`, `stopAll`,
   `stopDisable` or `stopDisableAll` until the next `start` (`timerPauses`). The decoders report
   a GPX segment or TCX track break as such a pair. Time while the timer is stopped counts for
-  nothing, and a record written strictly inside a pause is ignored.
+  nothing. A record written strictly inside a pause is ignored entirely: its values never hold
+  after the restart, and its distance and altitude are not used.
 - **Holding** (`samplingRule`, in `src/sampling.ts`). While the timer runs, a record's values
   hold until the next record, if that record is at most 30 s later. A longer gap is missing data
   and counts for nothing. A file without timer events is read the same way. Every quantity
@@ -141,7 +142,7 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
   power 0-3000 W, heart rate 25-250 bpm, speed 0-50 m/s (12.5 m/s for running), altitude
   −500 to 9000 m. Ride has no rule for spikes.
 - **Speed.** When a record has no speed, its speed is the distance since the previous record
-  over the time since it, if that time is held.
+  over the time since it, if that time is at most 30 s and the timer did not stop in between.
 - **Distance.** Distance never goes backward: a record that reports less than the furthest
   distance so far keeps the furthest.
 - **Laps.** A lap runs from its start for its elapsed time, or to the next lap's start when it
@@ -161,8 +162,12 @@ these inputs:
 
 - a gap of more than 5 and at most 30 s between records, outside a timer pause, which Ride
   reads as a pause and TrainStack holds;
-- records less than 5 s apart while the file's timer is stopped, which Ride counts and
-  TrainStack ignores. Ride writes no timer events mid-ride, so its own files have none.
+- a timer pause that overlaps a gap of at most 5 s (5 s included), whose stopped part Ride
+  counts and TrainStack leaves out;
+- a record written strictly inside a timer pause, which Ride uses and TrainStack ignores.
+
+Ride writes timer events only at the start and the end of a ride, so on its own files only
+the first case can occur.
 
 On Ride's own 1 Hz files, and on any file without such gaps or pauses, the numbers are the
 same. `test/swift-parity.test.ts` checks this. A synthetic ride with 6 and 30 s steps matches

@@ -59,6 +59,17 @@ export function pausedRecords(elapsed: Float64Array, pauses: readonly Span[]): U
   return paused;
 }
 
+export function overlapsPause(pauses: readonly Span[], from: number, to: number): boolean {
+  let low = 0;
+  let high = pauses.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (pauses[middle]!.to <= from) low = middle + 1;
+    else high = middle;
+  }
+  return low < pauses.length && pauses[low]!.from < to;
+}
+
 export function heldSegments(
   elapsed: Float64Array,
   pauses: readonly Span[],
@@ -67,8 +78,10 @@ export function heldSegments(
   const start: number[] = [];
   const end: number[] = [];
   const record: number[] = [];
+  const paused = pausedRecords(elapsed, pauses);
   let pause = 0;
   for (let index = 0; index + 1 < elapsed.length; index++) {
+    if (paused[index]) continue;
     let from = elapsed[index]!;
     const to = elapsed[index + 1]!;
     const gap = to - from;
