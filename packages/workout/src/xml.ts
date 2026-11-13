@@ -8,12 +8,11 @@ export type XmlElement = {
 
 export class XmlSyntaxError extends Error {
   override readonly name = "XmlSyntaxError";
+  readonly line: number;
 
-  constructor(
-    message: string,
-    readonly line: number,
-  ) {
+  constructor(message: string, line: number) {
     super(`${message} on line ${line}`);
+    this.line = line;
   }
 }
 
@@ -32,7 +31,10 @@ class Reader {
   private position = 0;
   private readonly lineStarts: number[] = [0];
 
-  constructor(private readonly source: string) {
+  private readonly source: string;
+
+  constructor(source: string) {
+    this.source = source;
     for (let index = source.indexOf("\n"); index !== -1; index = source.indexOf("\n", index + 1)) {
       this.lineStarts.push(index + 1);
     }

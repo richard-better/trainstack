@@ -1,5 +1,5 @@
-import type { IssueLog } from "./issues";
-import { type Workout, workoutSchema } from "./model";
+import type { IssueLog } from "./issues.ts";
+import { type Workout, workoutSchema } from "./model.ts";
 
 export function validated(log: IssueLog, workout: Workout): Workout {
   const parsed = workoutSchema.safeParse(workout);

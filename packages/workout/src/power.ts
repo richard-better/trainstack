@@ -1,5 +1,5 @@
-import type { IssueLog } from "./issues";
-import type { Level, Target } from "./model";
+import type { IssueLog } from "./issues.ts";
+import type { Level, Target } from "./model.ts";
 
 function scaled(level: Level, factor: number): Level {
   switch (level.kind) {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { expandedLength, maxExpandedSteps } from "./timeline";
+import { expandedLength, maxExpandedSteps } from "./timeline.ts";
 
 export const sportSchema = z.enum(["cycling", "running", "swimming"]);
 export type Sport = z.infer<typeof sportSchema>;

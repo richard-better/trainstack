@@ -1,9 +1,9 @@
-import { type Converted, IssueLog } from "./issues";
-import type { Cue, Level, Step, Workout } from "./model";
-import { formatNumber, withoutFloatNoise } from "./numbers";
-import { powerLevel } from "./power";
-import { CuePlacementError, flatten, repeatsWithin } from "./timeline";
-import { checkedInput, validated } from "./validate";
+import { type Converted, IssueLog } from "./issues.ts";
+import type { Cue, Level, Step, Workout } from "./model.ts";
+import { formatNumber, withoutFloatNoise } from "./numbers.ts";
+import { powerLevel } from "./power.ts";
+import { CuePlacementError, flatten, repeatsWithin } from "./timeline.ts";
+import { checkedInput, validated } from "./validate.ts";
 
 export type CourseFormat = "erg" | "mrc";
 export type CourseParseOptions = { name?: string };

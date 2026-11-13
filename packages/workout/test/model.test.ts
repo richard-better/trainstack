@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vite-plus/test";
-import { CuePlacementError, flatten, totals, type Workout, workoutSchema } from "../src/index";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+import { CuePlacementError, flatten, totals, type Workout, workoutSchema } from "../src/index.ts";
 
 const easy = {
   type: "step",
@@ -39,10 +40,10 @@ describe("workoutSchema", () => {
         },
       ],
     };
-    expect(workoutSchema.parse(swim)).toEqual(swim);
+    assert.deepEqual(workoutSchema.parse(swim), swim);
   });
 
-  test.each<[string, unknown]>([
+  for (const [label, workout] of [
     ["no steps", { name: "Empty", sport: "cycling", steps: [] }],
     ["an unknown sport", { name: "Row", sport: "rowing", steps: [easy] }],
     [
@@ -78,20 +79,23 @@ describe("workoutSchema", () => {
         steps: [{ type: "repeat", count: 2, steps: [{ type: "repeat", count: 2, steps: [] }] }],
       },
     ],
-  ])("rejects %s", (_, workout) => {
-    expect(workoutSchema.safeParse(workout).success).toBe(false);
-  });
+  ] as [string, unknown][]) {
+    test(`rejects ${String(label)}`, () => {
+      assert.equal(workoutSchema.safeParse(workout).success, false);
+    });
+  }
 });
 
 describe("flatten", () => {
   test("expands nested repeats in order", () => {
     const hard = { ...easy, duration: { type: "time", seconds: 30 } } as const;
-    expect(
+    assert.deepEqual(
       flatten([
         easy,
         { type: "repeat", count: 2, steps: [hard, { type: "repeat", count: 2, steps: [easy] }] },
       ]),
-    ).toEqual([easy, hard, easy, easy, hard, easy, easy]);
+      [easy, hard, easy, easy, hard, easy, easy],
+    );
   });
 
   test("fires a repeat's cue once, in the step it falls in", () => {
@@ -106,43 +110,50 @@ describe("flatten", () => {
         steps: [{ ...easy, cues: [{ at: { type: "time", seconds: 5 }, text: "Go" }] }],
       },
     ]);
-    expect(steps.map((step) => step.cues)).toEqual([
-      [{ at: { type: "time", seconds: 5 }, text: "Go" }],
-      [{ at: { type: "time", seconds: 5 }, text: "Go" }],
+    assert.deepEqual(
+      steps.map((step) => step.cues),
       [
-        { at: { type: "time", seconds: 0 }, text: "Last one" },
-        { at: { type: "time", seconds: 5 }, text: "Go" },
-        { at: { type: "time", seconds: 60 }, text: "Done" },
+        [{ at: { type: "time", seconds: 5 }, text: "Go" }],
+        [{ at: { type: "time", seconds: 5 }, text: "Go" }],
+        [
+          { at: { type: "time", seconds: 0 }, text: "Last one" },
+          { at: { type: "time", seconds: 5 }, text: "Go" },
+          { at: { type: "time", seconds: 60 }, text: "Done" },
+        ],
       ],
-    ]);
+    );
   });
 
   test("refuses a repeat cue it cannot place", () => {
-    expect(() =>
-      flatten([
-        {
-          type: "repeat",
-          count: 2,
-          cues: [{ at: { type: "time", seconds: 500 }, text: "Too late" }],
-          steps: [easy],
-        },
-      ]),
-    ).toThrow(CuePlacementError);
-    expect(() =>
-      flatten([
-        {
-          type: "repeat",
-          count: 2,
-          cues: [{ at: { type: "time", seconds: 10 }, text: "By time" }],
-          steps: [{ type: "step", duration: { type: "distance", meters: 400 } }],
-        },
-      ]),
-    ).toThrow(CuePlacementError);
+    assert.throws(
+      () =>
+        flatten([
+          {
+            type: "repeat",
+            count: 2,
+            cues: [{ at: { type: "time", seconds: 500 }, text: "Too late" }],
+            steps: [easy],
+          },
+        ]),
+      CuePlacementError,
+    );
+    assert.throws(
+      () =>
+        flatten([
+          {
+            type: "repeat",
+            count: 2,
+            cues: [{ at: { type: "time", seconds: 10 }, text: "By time" }],
+            steps: [{ type: "step", duration: { type: "distance", meters: 400 } }],
+          },
+        ]),
+      CuePlacementError,
+    );
   });
 });
 
 test("totals add up time and distance through repeats", () => {
-  expect(
+  assert.deepEqual(
     totals([
       easy,
       {
@@ -151,7 +162,8 @@ test("totals add up time and distance through repeats", () => {
         steps: [easy, { type: "step", duration: { type: "distance", meters: 400 } }],
       },
     ]),
-  ).toEqual({ seconds: 300, meters: 1600 });
+    { seconds: 300, meters: 1600 },
+  );
 });
 
 test("a workout cannot expand past the step limit, so a file cannot exhaust memory", () => {
@@ -160,10 +172,11 @@ test("a workout cannot expand past the step limit, so a file cannot exhaust memo
     sport: "cycling",
     steps: [{ type: "repeat", count: 1_000_000_000, steps: [easy] }],
   };
-  expect(workoutSchema.safeParse(huge).success).toBe(false);
-  expect(() => flatten(huge.steps)).toThrow(RangeError);
-  expect(
+  assert.equal(workoutSchema.safeParse(huge).success, false);
+  assert.throws(() => flatten(huge.steps), RangeError);
+  assert.equal(
     workoutSchema.safeParse({ ...huge, steps: [{ type: "repeat", count: 10_000, steps: [easy] }] })
       .success,
-  ).toBe(true);
+    true,
+  );
 });

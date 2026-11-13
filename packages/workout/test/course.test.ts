@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vite-plus/test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import {
   flatten,
   parseErg,
@@ -9,8 +10,8 @@ import {
   WorkoutFormatError,
   writeErg,
   writeMrc,
-} from "../src/index";
-import { fixture } from "./fixtures";
+} from "../src/index.ts";
+import { fixture } from "./fixtures.ts";
 
 function failure(run: () => unknown): WorkoutFormatError {
   try {
@@ -31,10 +32,10 @@ const seconds = (value: number) => ({ type: "time", seconds: value }) as const;
 describe("parseErg", () => {
   test("reads watts, ramps, jumps and course text", () => {
     const { value, warnings } = parseErg(fixture("sweet-spot.erg"));
-    expect(warnings).toEqual([
+    assert.deepEqual(warnings, [
       { code: "dropped", message: "Header FTP = 250 is not kept; targets stay as written" },
     ]);
-    expect(value).toEqual({
+    assert.deepEqual(value, {
       name: "Sweet spot 2x15",
       sport: "cycling",
       description: "Two sweet spot blocks with a ramped warm-up",
@@ -66,9 +67,11 @@ describe("parseErg", () => {
   test("round-trips without changing the workout", () => {
     const imported = parseErg(fixture("sweet-spot.erg")).value;
     const written = writeErg(imported);
-    expect(written.warnings).toEqual([]);
-    expect(parseErg(written.value).value).toEqual(imported);
-    expect(written.value).toBe(`[COURSE HEADER]
+    assert.deepEqual(written.warnings, []);
+    assert.deepEqual(parseErg(written.value).value, imported);
+    assert.equal(
+      written.value,
+      `[COURSE HEADER]
 VERSION = 2
 UNITS = ENGLISH
 DESCRIPTION = Two sweet spot blocks with a ramped warm-up
@@ -92,7 +95,8 @@ MINUTES WATTS
 600\tFirst sweet spot block\t10
 1800\tSecond block, same again
 [END COURSE TEXT]
-`);
+`,
+    );
   });
 
   test("writes shares of FTP as watts when given an FTP, and names that FTP", () => {
@@ -101,67 +105,70 @@ MINUTES WATTS
       sport: "cycling",
       steps: [{ type: "step", duration: seconds(40), target: ftp(1.2) }],
     };
-    expect(failure(() => writeErg(workout)).issues[0]?.message).toBe(
+    assert.equal(
+      failure(() => writeErg(workout)).issues[0]?.message,
       "Power as a share of FTP needs an FTP to become watts",
     );
     const written = writeErg(workout, { ftp: 250 }).value;
-    expect(written).toContain("FTP = 250\nMINUTES WATTS");
-    expect(written).toContain("0\t300\n0.666666666666667\t300\n");
-    expect(parseErg(written).value.steps).toEqual([
+    assert.ok(written.includes("FTP = 250\nMINUTES WATTS"));
+    assert.ok(written.includes("0\t300\n0.666666666666667\t300\n"));
+    assert.deepEqual(parseErg(written).value.steps, [
       { type: "step", duration: seconds(40), target: watts(300) },
     ]);
   });
 });
 
-test.each([
+for (const [label, parse, write] of [
   ["erg", parseErg, writeErg],
   ["mrc", parseMrc, writeMrc],
-] as const)("keeps fractional values exactly through a .%s round trip", (_, parse, write) => {
-  const workout: Workout = {
-    name: "Fractions",
-    sport: "cycling",
-    steps: [
-      {
-        type: "step",
-        duration: seconds(37.25),
-        target: {
-          type: "power",
-          unit: _ === "erg" ? "watts" : "ftp",
-          level: {
-            kind: "ramp",
-            from: _ === "erg" ? 123.456 : 0.123456,
-            to: _ === "erg" ? 201.789 : 0.987654,
+] as const) {
+  test(`keeps fractional values exactly through a .${String(label)} round trip`, () => {
+    const workout: Workout = {
+      name: "Fractions",
+      sport: "cycling",
+      steps: [
+        {
+          type: "step",
+          duration: seconds(37.25),
+          target: {
+            type: "power",
+            unit: label === "erg" ? "watts" : "ftp",
+            level: {
+              kind: "ramp",
+              from: label === "erg" ? 123.456 : 0.123456,
+              to: label === "erg" ? 201.789 : 0.987654,
+            },
           },
+          cues: [{ at: seconds(12.345), text: "Precise", shownForSeconds: 2.5 }],
         },
-        cues: [{ at: seconds(12.345), text: "Precise", shownForSeconds: 2.5 }],
-      },
-    ],
-  };
-  const written = write(workout);
-  expect(written.warnings).toEqual([]);
-  expect(parse(written.value).value).toEqual(workout);
-});
+      ],
+    };
+    const written = write(workout);
+    assert.deepEqual(written.warnings, []);
+    assert.deepEqual(parse(written.value).value, workout);
+  });
+}
 
 describe("parseMrc", () => {
   test("reads percent of FTP and Windows line endings", () => {
     const { value, warnings } = parseMrc(fixture("over-unders.mrc"));
-    expect(warnings).toEqual([]);
-    expect(value.name).toBe("Over-unders 3x9");
+    assert.deepEqual(warnings, []);
+    assert.equal(value.name, "Over-unders 3x9");
     const steps = value.steps as Step[];
-    expect(steps).toHaveLength(11);
-    expect(steps[0]).toEqual({
+    assert.equal(steps.length, 11);
+    assert.deepEqual(steps[0], {
       type: "step",
       duration: seconds(480),
       target: { type: "power", unit: "ftp", level: { kind: "ramp", from: 0.45, to: 0.75 } },
     });
-    expect(steps[1]).toEqual({
+    assert.deepEqual(steps[1], {
       type: "step",
       duration: seconds(120),
       target: ftp(0.95),
       cues: [{ at: seconds(0), text: "Over-unders start: 95 then 105" }],
     });
-    expect(steps[5]?.cues).toEqual([{ at: seconds(0), text: "Recover" }]);
-    expect(steps[10]).toEqual({
+    assert.deepEqual(steps[5]?.cues, [{ at: seconds(0), text: "Recover" }]);
+    assert.deepEqual(steps[10], {
       type: "step",
       duration: seconds(360),
       target: { type: "power", unit: "ftp", level: { kind: "ramp", from: 0.75, to: 0.45 } },
@@ -171,9 +178,9 @@ describe("parseMrc", () => {
   test("round-trips without changing the workout", () => {
     const imported = parseMrc(fixture("over-unders.mrc")).value;
     const written = writeMrc(imported);
-    expect(written.warnings).toEqual([]);
-    expect(parseMrc(written.value).value).toEqual(imported);
-    expect(writeMrc(parseMrc(written.value).value).value).toBe(written.value);
+    assert.deepEqual(written.warnings, []);
+    assert.deepEqual(parseMrc(written.value).value, imported);
+    assert.equal(writeMrc(parseMrc(written.value).value).value, written.value);
   });
 });
 
@@ -203,25 +210,28 @@ describe("writing course files", () => {
 
   test("writes repeats out and keeps the timeline, reporting what it leaves out", () => {
     const written = writeMrc(workout);
-    expect(written.warnings.map((warning) => warning.message)).toEqual([
-      'Focus "vo2Max" has no place in a .mrc file',
-      "Repeats are written out step by step in a .mrc file",
-      'Name "Pyramid" has no place in this format',
-      "Cadence has no place in this format",
-      'Intensity "recovery" has no place in this format',
-      "Cadence has no place in this format",
-      'Intensity "recovery" has no place in this format',
-    ]);
+    assert.deepEqual(
+      written.warnings.map((warning) => warning.message),
+      [
+        'Focus "vo2Max" has no place in a .mrc file',
+        "Repeats are written out step by step in a .mrc file",
+        'Name "Pyramid" has no place in this format',
+        "Cadence has no place in this format",
+        'Intensity "recovery" has no place in this format',
+        "Cadence has no place in this format",
+        'Intensity "recovery" has no place in this format',
+      ],
+    );
     const stripped = flatten(workout.steps).map((step) => {
       const copy = { ...step };
       delete copy.cadence;
       delete copy.intensity;
       return copy;
     });
-    expect(parseMrc(written.value).value.steps).toEqual(stripped);
+    assert.deepEqual(parseMrc(written.value).value.steps, stripped);
   });
 
-  test.each<[string, Step, string]>([
+  for (const [label, step, message] of [
     [
       "distance steps",
       { type: "step", duration: { type: "distance", meters: 400 }, target: ftp(1) },
@@ -255,15 +265,17 @@ describe("writing course files", () => {
       { type: "step", duration: seconds(60), target: { type: "maxEffort" } },
       "A maxEffort target has no place in this format",
     ],
-  ])("fails on %s", (_, step, message) => {
-    const error = failure(() =>
-      writeMrc({ name: "Odd", sport: "cycling", steps: [step] }, { ftp: 250 }),
-    );
-    expect(error.format).toBe("mrc");
-    expect(error.issues).toEqual([{ code: "unsupported", message, at: "step 1" }]);
-  });
+  ] as [string, Step, string][]) {
+    test(`fails on ${String(label)}`, () => {
+      const error = failure(() =>
+        writeMrc({ name: "Odd", sport: "cycling", steps: [step] }, { ftp: 250 }),
+      );
+      assert.equal(error.format, "mrc");
+      assert.deepEqual(error.issues, [{ code: "unsupported", message, at: "step 1" }]);
+    });
+  }
 
-  test.each([
+  for (const [label, text, message] of [
     [
       "no data section",
       "[COURSE HEADER]\nMINUTES WATTS\n[END COURSE HEADER]\n",
@@ -285,10 +297,12 @@ describe("writing course files", () => {
       "[COURSE HEADER]\nMINUTES WATTS\n[END COURSE HEADER]\n[COURSE DATA]\n0 100\n1 100\n[END COURSE DATA]\n[COURSE TEXT]\n90\tToo late\n[END COURSE TEXT]\n",
       "Course text at 90 seconds is outside the workout",
     ],
-  ])("fails to read %s", (_, text, message) => {
-    const error = failure(() => parseErg(text));
-    expect(error.issues.map((issue) => issue.message)).toContain(message);
-  });
+  ] as [string, string, string][]) {
+    test(`fails to read ${String(label)}`, () => {
+      const error = failure(() => parseErg(text));
+      assert.ok(error.issues.map((issue) => issue.message).includes(message));
+    });
+  }
 });
 
 describe("parseWorkoutFile", () => {
@@ -296,8 +310,8 @@ describe("parseWorkoutFile", () => {
     const text =
       "[COURSE HEADER]\nMINUTES PERCENT\n[END COURSE HEADER]\n[COURSE DATA]\n0 50\n1 50\n[END COURSE DATA]\n";
     const { value } = parseWorkoutFile("downloads/Easy spin.MRC", text);
-    expect(value.name).toBe("Easy spin");
-    expect(value.steps).toEqual([{ type: "step", duration: seconds(60), target: ftp(0.5) }]);
-    expect(failure(() => parseWorkoutFile("ride.fit", "")).format).toBeUndefined();
+    assert.equal(value.name, "Easy spin");
+    assert.deepEqual(value.steps, [{ type: "step", duration: seconds(60), target: ftp(0.5) }]);
+    assert.equal(failure(() => parseWorkoutFile("ride.fit", "")).format, undefined);
   });
 });

@@ -3,12 +3,17 @@ import {
   type CourseWriteOptions,
   parseCourse,
   writeCourse,
-} from "./course";
-import { type Converted, type WorkoutFormat, WorkoutFormatError, workoutFormats } from "./issues";
-import type { Workout } from "./model";
-import { parseZwo, writeZwo } from "./zwo";
+} from "./course.ts";
+import {
+  type Converted,
+  type WorkoutFormat,
+  WorkoutFormatError,
+  workoutFormats,
+} from "./issues.ts";
+import type { Workout } from "./model.ts";
+import { parseZwo, writeZwo } from "./zwo.ts";
 
-export * from "./model";
+export * from "./model.ts";
 export {
   CuePlacementError,
   expandedLength,
@@ -16,7 +21,7 @@ export {
   maxExpandedSteps,
   totals,
   type Totals,
-} from "./timeline";
+} from "./timeline.ts";
 export {
   type Converted,
   type FormatIssue,
@@ -24,8 +29,8 @@ export {
   type WorkoutFormat,
   WorkoutFormatError,
   workoutFormats,
-} from "./issues";
-export { parseZwo, writeZwo, type ZwoParseOptions, type ZwoWriteOptions } from "./zwo";
+} from "./issues.ts";
+export { parseZwo, writeZwo, type ZwoParseOptions, type ZwoWriteOptions } from "./zwo.ts";
 export type { CourseParseOptions as ErgParseOptions, CourseWriteOptions as ErgWriteOptions };
 export type { CourseParseOptions as MrcParseOptions, CourseWriteOptions as MrcWriteOptions };
 

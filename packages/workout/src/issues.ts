@@ -17,15 +17,17 @@ export type Converted<T> = {
 export class WorkoutFormatError extends Error {
   override readonly name = "WorkoutFormatError";
 
-  constructor(
-    readonly format: WorkoutFormat | undefined,
-    readonly issues: FormatIssue[],
-  ) {
+  readonly format: WorkoutFormat | undefined;
+  readonly issues: FormatIssue[];
+
+  constructor(format: WorkoutFormat | undefined, issues: FormatIssue[]) {
     super(
       `${format ? `.${format} ` : ""}conversion failed: ${issues
         .map((issue) => (issue.at ? `${issue.at}: ${issue.message}` : issue.message))
         .join("; ")}`,
     );
+    this.format = format;
+    this.issues = issues;
   }
 }
 
@@ -33,14 +35,18 @@ export class IssueLog {
   readonly errors: FormatIssue[] = [];
   readonly warnings: FormatIssue[] = [];
 
-  constructor(readonly format: WorkoutFormat) {}
+  readonly format: WorkoutFormat;
+
+  constructor(format: WorkoutFormat) {
+    this.format = format;
+  }
 
   fail(code: "malformed" | "unsupported", message: string, at?: string): void {
-    this.errors.push({ code, message, at });
+    this.errors.push(at === undefined ? { code, message } : { code, message, at });
   }
 
   warn(code: "dropped" | "expanded" | "malformed", message: string, at?: string): void {
-    this.warnings.push({ code, message, at });
+    this.warnings.push(at === undefined ? { code, message } : { code, message, at });
   }
 
   abort(code: "malformed" | "unsupported", message: string, at?: string): never {

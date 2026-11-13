@@ -1,4 +1,4 @@
-import type { Block, Cue, Repeat, Step } from "./model";
+import type { Block, Cue, Repeat, Step } from "./model.ts";
 
 export class CuePlacementError extends RangeError {
   override readonly name = "CuePlacementError";

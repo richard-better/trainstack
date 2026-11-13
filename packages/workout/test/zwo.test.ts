@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vite-plus/test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import {
   flatten,
   parseZwo,
@@ -6,8 +7,8 @@ import {
   WorkoutFormatError,
   workoutSchema,
   writeZwo,
-} from "../src/index";
-import { fixture } from "./fixtures";
+} from "../src/index.ts";
+import { fixture } from "./fixtures.ts";
 
 function failure(run: () => unknown): WorkoutFormatError {
   try {
@@ -25,8 +26,8 @@ const ftp = (value: number) =>
 describe("parseZwo", () => {
   test("reads ramps, ranges, repeats, free ride, max efforts, cadence and text events", () => {
     const { value, warnings } = parseZwo(fixture("threshold-builder.zwo"));
-    expect(warnings).toEqual([]);
-    expect(value).toEqual({
+    assert.deepEqual(warnings, []);
+    assert.deepEqual(value, {
       name: "Threshold builder & sprints",
       sport: "cycling",
       author: "TrainStack Coaching",
@@ -115,21 +116,24 @@ describe("parseZwo", () => {
     const { value } = parseZwo(fixture("threshold-builder.zwo"));
     const steps = flatten(value.steps);
     const intervals = steps.slice(2, 8);
-    expect(intervals.map((step) => step.cues?.map((cue) => cue.text))).toEqual([
-      ["First of three. Settle in."],
-      undefined,
-      undefined,
-      undefined,
-      ["Last one, finish strong"],
-      undefined,
-    ]);
+    assert.deepEqual(
+      intervals.map((step) => step.cues?.map((cue) => cue.text)),
+      [
+        ["First of three. Settle in."],
+        undefined,
+        undefined,
+        undefined,
+        ["Last one, finish strong"],
+        undefined,
+      ],
+    );
   });
 
   test("reads a distance-based run as pace targets in metres, and reports Zwift's reference pace", () => {
     const { value, warnings } = parseZwo(fixture("tempo-run.zwo"));
-    expect(warnings).toEqual([]);
-    expect(value.sport).toBe("running");
-    expect(value.steps[1]).toEqual({
+    assert.deepEqual(warnings, []);
+    assert.equal(value.sport, "running");
+    assert.deepEqual(value.steps[1], {
       type: "repeat",
       count: 3,
       steps: [
@@ -149,7 +153,7 @@ describe("parseZwo", () => {
     const paced = parseZwo(
       `<workout_file><name>Run</name><sportType>run</sportType><workout><SteadyState Duration="600" Power="0.9" pace="2"/></workout></workout_file>`,
     );
-    expect(paced.warnings).toEqual([
+    assert.deepEqual(paced.warnings, [
       {
         code: "dropped",
         message: "Zwift reference pace 2 is read as a share of threshold pace",
@@ -166,22 +170,25 @@ describe("parseZwo", () => {
     <FreeRide Duration="60" FlatRoad="1" show_avg="1"/>
   </workout>
 </workout_file>`);
-    expect(warnings.map((warning) => warning.message)).toEqual([
-      "<category> is not supported",
-      "Attribute FlatRoad is not supported",
-      "Attribute show_avg is not supported",
-    ]);
+    assert.deepEqual(
+      warnings.map((warning) => warning.message),
+      [
+        "<category> is not supported",
+        "Attribute FlatRoad is not supported",
+        "Attribute show_avg is not supported",
+      ],
+    );
   });
 
   test("names an untitled workout after the file, or says it had to invent a name", () => {
     const xml = `<workout_file><workout><SteadyState Duration="60" Power="0.5"/></workout></workout_file>`;
-    expect(parseZwo(xml, { name: "openers" }).value.name).toBe("openers");
+    assert.equal(parseZwo(xml, { name: "openers" }).value.name, "openers");
     const untitled = parseZwo(xml);
-    expect(untitled.value.name).toBe("Untitled workout");
-    expect(untitled.warnings).toHaveLength(1);
+    assert.equal(untitled.value.name, "Untitled workout");
+    assert.equal(untitled.warnings.length, 1);
   });
 
-  test.each([
+  for (const [label, xml, message] of [
     ["broken XML", "<workout_file><workout>", "Unclosed element <workout>"],
     ["another root", "<plan/>", "Expected <workout_file> but found <plan>"],
     [
@@ -209,27 +216,34 @@ describe("parseZwo", () => {
       `<workout_file><workout></workout></workout_file>`,
       "Too small: expected array to have >=1 items",
     ],
-  ])("fails on %s", (_, xml, message) => {
-    const error = failure(() => parseZwo(xml));
-    expect(error.format).toBe("zwo");
-    expect(error.issues.map((issue) => issue.message).join("\n")).toContain(message);
-  });
+  ] as [string, string, string][]) {
+    test(`fails on ${String(label)}`, () => {
+      const error = failure(() => parseZwo(xml));
+      assert.equal(error.format, "zwo");
+      assert.ok(
+        error.issues
+          .map((issue) => issue.message)
+          .join("\n")
+          .includes(message),
+      );
+    });
+  }
 });
 
 describe("writeZwo", () => {
-  test.each(["threshold-builder.zwo", "tempo-run.zwo"])(
-    "round-trips %s without changing the workout",
-    (name) => {
+  for (const name of ["threshold-builder.zwo", "tempo-run.zwo"]) {
+    test(`round-trips ${String(name)} without changing the workout`, () => {
       const imported = parseZwo(fixture(name)).value;
       const written = writeZwo(imported);
-      expect(written.warnings).toEqual([]);
-      expect(parseZwo(written.value).value).toEqual(imported);
-      expect(writeZwo(parseZwo(written.value).value).value).toBe(written.value);
-    },
-  );
+      assert.deepEqual(written.warnings, []);
+      assert.deepEqual(parseZwo(written.value).value, imported);
+      assert.equal(writeZwo(parseZwo(written.value).value).value, written.value);
+    });
+  }
 
   test("writes the readable layout Zwift uses", () => {
-    expect(writeZwo(parseZwo(fixture("threshold-builder.zwo")).value).value).toBe(
+    assert.equal(
+      writeZwo(parseZwo(fixture("threshold-builder.zwo")).value).value,
       `<?xml version="1.0" encoding="UTF-8"?>
 <workout_file>
     <author>TrainStack Coaching</author>
@@ -301,8 +315,11 @@ then sprints. Keep cadence above 90 in the efforts.</description>
       ],
     };
     const written = writeZwo(workout);
-    expect(written.warnings.map((warning) => warning.code)).toEqual(["expanded", "dropped"]);
-    expect(flatten(parseZwo(written.value).value.steps)).toEqual(flatten(workout.steps));
+    assert.deepEqual(
+      written.warnings.map((warning) => warning.code),
+      ["expanded", "dropped"],
+    );
+    assert.deepEqual(flatten(parseZwo(written.value).value.steps), flatten(workout.steps));
   });
 
   test("turns watts into shares of FTP when given an FTP", () => {
@@ -316,10 +333,11 @@ then sprints. Keep cadence above 90 in the efforts.</description>
         },
       ],
     };
-    expect(failure(() => writeZwo(workout)).issues[0]?.message).toBe(
+    assert.equal(
+      failure(() => writeZwo(workout)).issues[0]?.message,
       "Power in watts needs an FTP to become a share of FTP",
     );
-    expect(parseZwo(writeZwo(workout, { ftp: 250 }).value).value.steps[0]).toEqual({
+    assert.deepEqual(parseZwo(writeZwo(workout, { ftp: 250 }).value).value.steps[0], {
       type: "step",
       duration: { type: "time", seconds: 60 },
       target: ftp(0.8),
@@ -341,15 +359,18 @@ then sprints. Keep cadence above 90 in the efforts.</description>
         },
       ],
     });
-    expect(warnings.map((warning) => warning.message)).toEqual([
-      'Focus "threshold" has no place in a .zwo file',
-      'Name "Spin" has no place in a .zwo file',
-      "Notes have no place in a .zwo file",
-      'Intensity "recovery" has no place in this step',
-    ]);
+    assert.deepEqual(
+      warnings.map((warning) => warning.message),
+      [
+        'Focus "threshold" has no place in a .zwo file',
+        'Name "Spin" has no place in a .zwo file',
+        "Notes have no place in a .zwo file",
+        'Intensity "recovery" has no place in this step',
+      ],
+    );
   });
 
-  test.each<[string, Workout, string]>([
+  for (const [label, workout, message] of [
     [
       "heart rate targets",
       {
@@ -400,14 +421,18 @@ then sprints. Keep cadence above 90 in the efforts.</description>
       { ...base, steps: [] },
       "The workout is not valid: Too small: expected array to have >=1 items",
     ],
-  ])("fails on %s", (_, workout, message) => {
-    expect(failure(() => writeZwo(workout)).issues.map((issue) => issue.message)).toContain(
-      message,
-    );
-  });
+  ] as [string, Workout, string][]) {
+    test(`fails on ${String(label)}`, () => {
+      assert.ok(
+        failure(() => writeZwo(workout))
+          .issues.map((issue) => issue.message)
+          .includes(message),
+      );
+    });
+  }
 
   test("writes only valid workouts", () => {
-    expect(workoutSchema.safeParse(parseZwo(writeZwo(base).value).value).success).toBe(true);
+    assert.equal(workoutSchema.safeParse(parseZwo(writeZwo(base).value).value).success, true);
   });
 });
 
@@ -417,18 +442,17 @@ test("rejects a file whose repeats would expand past the step limit", () => {
       `<workout_file><workout><IntervalsT Repeat="1000000000" OnDuration="1" OffDuration="1" OnPower="1" OffPower="0.5"/></workout></workout_file>`,
     ),
   );
-  expect(error.issues[0]?.message).toBe("A workout can expand to at most 10000 steps");
+  assert.equal(error.issues[0]?.message, "A workout can expand to at most 10000 steps");
 });
 
-test.each(["constructor", "toString", "__proto__"])(
-  "rejects a step named after the object property %s with a format error",
-  (name) => {
+for (const name of ["constructor", "toString", "__proto__"]) {
+  test(`rejects a step named after the object property ${String(name)} with a format error`, () => {
     const error = failure(() =>
       parseZwo(`<workout_file><workout><${name} Duration="60"/></workout></workout_file>`),
     );
-    expect(error.issues[0]?.message).toBe(`<${name}> is not a known workout step`);
-  },
-);
+    assert.equal(error.issues[0]?.message, `<${name}> is not a known workout step`);
+  });
+}
 
 test("keeps fractional values exactly through a .zwo round trip", () => {
   const workout: Workout = {
@@ -448,12 +472,11 @@ test("keeps fractional values exactly through a .zwo round trip", () => {
       },
     ],
   };
-  expect(parseZwo(writeZwo(workout).value).value).toEqual(workout);
+  assert.deepEqual(parseZwo(writeZwo(workout).value).value, workout);
 });
 
-test.each([0, -250, Number.NaN, Number.POSITIVE_INFINITY])(
-  "refuses to convert watts with an FTP of %s",
-  (ftp) => {
+for (const ftp of [0, -250, Number.NaN, Number.POSITIVE_INFINITY]) {
+  test(`refuses to convert watts with an FTP of ${String(ftp)}`, () => {
     const workout: Workout = {
       name: "Watts",
       sport: "cycling",
@@ -465,8 +488,9 @@ test.each([0, -250, Number.NaN, Number.POSITIVE_INFINITY])(
         },
       ],
     };
-    expect(failure(() => writeZwo(workout, { ftp })).issues[0]?.message).toBe(
+    assert.equal(
+      failure(() => writeZwo(workout, { ftp })).issues[0]?.message,
       `FTP ${ftp} is not a positive number of watts`,
     );
-  },
-);
+  });
+}

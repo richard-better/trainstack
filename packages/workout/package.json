@@ -7,14 +7,16 @@
   },
   "scripts": {
     "check-types": "tsc -p . && tsc -p test",
-    "test": "vp test run"
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
     "zod": "catalog:"
   },
   "devDependencies": {
     "@trainstack/config": "workspace:*",
-    "typescript": "catalog:",
-    "vite-plus": "catalog:"
+    "@types/node": "catalog:",
+    "miniflare": "4.20260730.0",
+    "rolldown": "1.2.16",
+    "typescript": "catalog:"
   }
 }

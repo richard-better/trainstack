@@ -1,4 +1,4 @@
-import { type Converted, IssueLog } from "./issues";
+import { type Converted, IssueLog } from "./issues.ts";
 import type {
   Block,
   Cadence,
@@ -10,12 +10,12 @@ import type {
   Step,
   Target,
   Workout,
-} from "./model";
-import { formatNumber } from "./numbers";
-import { powerLevel } from "./power";
-import { CuePlacementError, flatten, repeatsWithin } from "./timeline";
-import { checkedInput, validated } from "./validate";
-import { parseXml, renderXml, type XmlElement, type XmlNode, XmlSyntaxError } from "./xml";
+} from "./model.ts";
+import { formatNumber } from "./numbers.ts";
+import { powerLevel } from "./power.ts";
+import { CuePlacementError, flatten, repeatsWithin } from "./timeline.ts";
+import { checkedInput, validated } from "./validate.ts";
+import { parseXml, renderXml, type XmlElement, type XmlNode, XmlSyntaxError } from "./xml.ts";
 
 export type ZwoParseOptions = { name?: string };
 export type ZwoWriteOptions = { ftp?: number };
@@ -56,11 +56,15 @@ const stepAttributes: Record<string, string[]> = {
 };
 
 class ZwoReader {
-  constructor(
-    private readonly log: IssueLog,
-    private readonly sport: Sport,
-    private readonly durationType: DurationType,
-  ) {}
+  private readonly log: IssueLog;
+  private readonly sport: Sport;
+  private readonly durationType: DurationType;
+
+  constructor(log: IssueLog, sport: Sport, durationType: DurationType) {
+    this.log = log;
+    this.sport = sport;
+    this.durationType = durationType;
+  }
 
   private where(element: XmlElement): string {
     return `<${element.name}> on line ${element.line}`;
@@ -293,11 +297,15 @@ export function parseZwo(text: string, options: ZwoParseOptions = {}): Converted
 }
 
 class ZwoWriter {
-  constructor(
-    private readonly log: IssueLog,
-    private readonly sport: Sport,
-    private readonly options: ZwoWriteOptions,
-  ) {}
+  private readonly log: IssueLog;
+  private readonly sport: Sport;
+  private readonly options: ZwoWriteOptions;
+
+  constructor(log: IssueLog, sport: Sport, options: ZwoWriteOptions) {
+    this.log = log;
+    this.sport = sport;
+    this.options = options;
+  }
 
   private level(target: Target | undefined, at: string): Level | undefined {
     if (!target || target.type === "maxEffort") return undefined;
