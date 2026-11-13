@@ -81,3 +81,22 @@ export function pausedRun() {
     .data(2, [start + 1200, start, RUNNING, TREADMILL, 1_200_000, 1_140_000, 300_000])
     .file();
 }
+
+export function manyLaps(count) {
+  const start = fitTime("2026-09-02T06:00:00Z");
+  const lap = [
+    { number: 253, type: "uint32" },
+    { number: 2, type: "uint32" },
+    { number: 7, type: "uint32" },
+    { number: 8, type: "uint32" },
+  ];
+  const writer = new FitWriter()
+    .define(1, 20, [
+      { number: 253, type: "uint32" },
+      { number: 7, type: "uint16" },
+    ])
+    .data(1, [start, 200])
+    .define(0, 19, lap);
+  for (let i = 0; i < count; i++) writer.data(0, [start + i + 1, start + i, 1000, 1000]);
+  return writer.file();
+}

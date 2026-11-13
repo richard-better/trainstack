@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { migrate, rpcClient, startWorker } from "./helpers/worker.mjs";
 import { mockApple } from "./helpers/apple.mjs";
-import { denseRide, pausedRun } from "./helpers/fit-files.mjs";
+import { denseRide, manyLaps, pausedRun } from "./helpers/fit-files.mjs";
 
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const TRACES = "apps/ride/RideKit/Tests/RideCoreTests/Traces";
@@ -227,6 +227,18 @@ test("a pause in the file becomes a pause event between its laps", async () => {
       data: {},
     },
   ]);
+});
+
+test("an activity keeps at most two thousand events, however many laps its file has", async () => {
+  const { client } = await rider();
+  const uploaded = await client.activities.upload({
+    file: fitFile(manyLaps(2500)),
+    source: "upload",
+  });
+  assert.equal(uploaded.summaryError, null);
+  const { events } = await client.activities.get({ id: uploaded.id });
+  assert.equal(events.length, 2000);
+  assert.deepEqual(events[0].startedAt, uploaded.startedAt);
 });
 
 test("a FIT file that will not decode stays stored, listed and downloadable, with the reason", async () => {

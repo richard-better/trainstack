@@ -17,9 +17,9 @@ export const SUMMARY_VERSION = 1;
 export const MAX_SUMMARIZED_FILE_BYTES = 2 * 1024 * 1024;
 export const MAX_SUMMARY_ATTEMPTS = 3;
 export const SUMMARIES_PER_SCHEDULED_RUN = 10;
+export const MAX_EVENTS_PER_ACTIVITY = 2000;
 
-const STATISTIC_ROWS_PER_INSERT = 20;
-const EVENT_ROWS_PER_INSERT = 16;
+const D1_MAX_BOUND_PARAMETERS = 100;
 
 type Outcome = { summary: FileSummary } | { error: ActivitySummaryError };
 
@@ -30,6 +30,11 @@ export type SummaryTarget = {
   fileSize: number | null;
   summaryAttempts: number;
 };
+
+function insertableChunks<Row extends object>(rows: readonly Row[]) {
+  const columns = rows[0] ? Object.keys(rows[0]).length : 1;
+  return chunks(rows, Math.floor(D1_MAX_BOUND_PARAMETERS / columns));
+}
 
 function chunks<Item>(items: readonly Item[], size: number) {
   return Array.from({ length: Math.ceil(items.length / size) }, (_, index) =>
@@ -48,19 +53,19 @@ async function store(db: Database, { userId, id }: SummaryTarget, outcome: Outco
     name,
     value,
   }));
-  const events = (summary?.events ?? []).map((event, sequence) => ({
-    userId,
-    activityId: id,
-    sequence,
-    ...event,
-  }));
+  const events = (summary?.events ?? [])
+    .slice(0, MAX_EVENTS_PER_ACTIVITY)
+    .map((event, sequence) => ({
+      userId,
+      activityId: id,
+      sequence,
+      ...event,
+    }));
   const statements: BatchItem<"sqlite">[] = [
     db.delete(activityStatistic).where(ofThisActivity(activityStatistic)),
     db.delete(activityEvent).where(ofThisActivity(activityEvent)),
-    ...chunks(statistics, STATISTIC_ROWS_PER_INSERT).map((rows) =>
-      db.insert(activityStatistic).values(rows),
-    ),
-    ...chunks(events, EVENT_ROWS_PER_INSERT).map((rows) => db.insert(activityEvent).values(rows)),
+    ...insertableChunks(statistics).map((rows) => db.insert(activityStatistic).values(rows)),
+    ...insertableChunks(events).map((rows) => db.insert(activityEvent).values(rows)),
     db
       .update(activity)
       .set({
