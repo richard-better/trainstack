@@ -23,13 +23,16 @@ async function browserBundle(): Promise<{ code: string; imports: string[] }> {
 }
 
 const worker = `
-import { decodeActivityFile, ActivityFileError } from "./activity-file.mjs";
+import { decodeActivityFile, summarizeActivityFile, ActivityFileError } from "./activity-file.mjs";
 
 export default {
   async fetch(request) {
     try {
-      const { format, summary, laps, records } = decodeActivityFile(await request.arrayBuffer());
-      return Response.json({ format, summary, laps: laps.length, records: records.length });
+      const bytes = await request.arrayBuffer();
+      const { format, summary, laps, records } = decodeActivityFile(bytes);
+      const summarized = summarizeActivityFile(bytes);
+      const same = JSON.stringify(summarized.summary) === JSON.stringify(summary);
+      return Response.json({ format, summary, laps: laps.length, records: records.length, same });
     } catch (error) {
       if (error instanceof ActivityFileError) return Response.json({ error: error.code }, { status: 422 });
       throw error;
@@ -76,7 +79,7 @@ test("decodes FIT, GPX and TCX inside the Workers runtime", async () => {
   try {
     const fit = await decode(sampleRide());
     assert.equal(fit.status, 200);
-    assert.deepEqual([fit.body.format, fit.body.records], ["fit", 1801]);
+    assert.deepEqual([fit.body.format, fit.body.records, fit.body.same], ["fit", 1801, true]);
 
     const gpx = await decode(file("strava-ride.gpx"));
     assert.equal(gpx.status, 200);
@@ -90,7 +93,10 @@ test("decodes FIT, GPX and TCX inside the Workers runtime", async () => {
 
     const tcx = await decode(file("garmin-connect-ride.tcx"));
     assert.equal(tcx.status, 200);
-    assert.deepEqual([tcx.body.format, tcx.body.laps, tcx.body.records], ["tcx", 2, 5]);
+    assert.deepEqual(
+      [tcx.body.format, tcx.body.laps, tcx.body.records, tcx.body.same],
+      ["tcx", 2, 5, true],
+    );
 
     const bigEndian = await decode(utf16(file("strava-run.tcx")));
     assert.deepEqual([bigEndian.status, bigEndian.body.records], [200, 3]);
