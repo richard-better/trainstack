@@ -311,6 +311,26 @@ test("reads developer fields by name, applying their scale and offset", () => {
   });
 });
 
+test("scales every element of a developer field array", () => {
+  const data = new FitWriter()
+    .define(0, 206, [
+      { number: 0, type: "uint8" },
+      { number: 1, type: "uint8" },
+      { number: 2, type: "uint8" },
+      { number: 3, type: "string", size: 8 },
+      { number: 6, type: "uint8" },
+      { number: 7, type: "sint8" },
+    ])
+    .data(0, [0, 0, 0x84, "forces", 100, 1])
+    .define(1, 20, [{ number: 253, type: "uint32" }], {
+      developerFields: [{ number: 0, size: 6, index: 0 }],
+    })
+    .raw(0x01, ...[start & 0xff, (start >> 8) & 0xff, (start >> 16) & 0xff, start >>> 24])
+    .raw(100, 0, 0xff, 0xff, 200, 0)
+    .file();
+  assert.deepEqual(decodeFit(data).records[0]!.developerFields, { forces: [0, null, 1] });
+});
+
 test("skips messages it does not model and records without a time", () => {
   const data = new FitWriter()
     .define(0, 23, [{ number: 2, type: "uint16" }])

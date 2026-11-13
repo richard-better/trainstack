@@ -192,8 +192,11 @@ function readValue(
 }
 
 function scaled(value: FitValue, scale: number | undefined, offset: number | undefined): FitValue {
-  if (typeof value !== "number") return value;
-  return value / (scale || 1) - (offset ?? 0);
+  const apply = (element: number) => element / (scale || 1) - (offset ?? 0);
+  if (typeof value === "number") return apply(value);
+  if (Array.isArray(value))
+    return value.map((element) => (element === null ? null : apply(element)));
+  return value;
 }
 
 class Reader {
