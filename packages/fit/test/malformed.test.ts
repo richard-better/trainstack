@@ -114,8 +114,8 @@ test("keeps nothing for messages that carry no data, however many a file repeats
     size: 0,
   }));
   const writer = new FitWriter().define(0, 20, zeroSizeFields);
-  writer.raw(...new Array<number>(50_000).fill(0x00));
-  writer.raw(...new Array<number>(50_000).fill(0x81));
+  writer.raw(...Array.from({ length: 50_000 }, () => 0x00));
+  writer.raw(...Array.from({ length: 50_000 }, () => 0x81));
   const data = writer
     .define(1, 20, [{ number: 253, type: "uint32" }])
     .data(1, [fitTime("2026-01-01T00:00:00Z")])
