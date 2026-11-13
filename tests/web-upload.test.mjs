@@ -290,6 +290,11 @@ test("a new activity takes its place by date among the loaded pages", () => {
     ["n"],
   );
   assert.deepEqual(
+    ids(withActivity(pages, activity("d", "2026-10-01"))),
+    ["ab", "cd"],
+    "the last loaded activity stays when the same file is uploaded again",
+  );
+  assert.deepEqual(
     ids(withActivity(pages, { ...activity("c", "2026-10-25") })),
     ["acb", "d"],
     "an activity already in the list moves instead of appearing twice",

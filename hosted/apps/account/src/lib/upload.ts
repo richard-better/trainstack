@@ -121,7 +121,7 @@ export function withActivity<Page extends ActivityPage>(
     };
     return without;
   }
-  return without;
+  return [...pages];
 }
 
 const emptyBodyStatuses = new Set([101, 204, 205, 304]);
