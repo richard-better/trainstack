@@ -5,6 +5,8 @@ import RideStrava
 @testable import RideUI
 
 actor FakeActivityServer: ActivityServer {
+  enum Request { case list, upload }
+
   enum Call: Equatable {
     case list(account: String)
     case upload(String, account: String)
@@ -16,6 +18,8 @@ actor FakeActivityServer: ActivityServer {
   private var tombstones: [String: Set<String>] = [:]
   private var signedIn: ActivityAccount?
   private var offline = false
+  private var holding: Request?
+  private var held: [CheckedContinuation<Void, Never>] = []
 
   init(signedInAs account: String? = "ada") {
     signedIn = account.map { ActivityAccount(id: $0, token: "token-\($0)") }
@@ -26,6 +30,21 @@ actor FakeActivityServer: ActivityServer {
   }
 
   func goOffline(_ offline: Bool = true) { self.offline = offline }
+
+  func holdReplies(to request: Request) { holding = request }
+
+  var isHoldingAReply: Bool { !held.isEmpty }
+
+  func releaseReplies() {
+    holding = nil
+    for continuation in held { continuation.resume() }
+    held = []
+  }
+
+  private func replyWhenReleased(to request: Request) async {
+    guard holding == request else { return }
+    await withCheckedContinuation { held.append($0) }
+  }
 
   func store(_ id: String, for account: String) { activities[account, default: []].insert(id) }
 
@@ -59,7 +78,9 @@ actor FakeActivityServer: ActivityServer {
   func activityIDs(for account: ActivityAccount) async throws -> Set<String> {
     try check(account)
     calls.append(.list(account: account.id))
-    return activities(of: account.id)
+    let ids = activities(of: account.id)
+    await replyWhenReleased(to: .list)
+    return ids
   }
 
   func upload(_ file: ActivityFile, for account: ActivityAccount) async throws
@@ -68,9 +89,11 @@ actor FakeActivityServer: ActivityServer {
     try check(account)
     let id = Ride(recording: try FITDecoder.decode(file.data), fileData: file.data).id
     calls.append(.upload(id, account: account.id))
-    if tombstones(of: account.id).contains(id) { return .deletedOnTheServer }
-    store(id, for: account.id)
-    return .stored
+    let result: ActivityUploadResult =
+      tombstones(of: account.id).contains(id) ? .deletedOnTheServer : .stored
+    if result == .stored { store(id, for: account.id) }
+    await replyWhenReleased(to: .upload)
+    return result
   }
 
   func deleteActivity(_ id: String, for account: ActivityAccount) async throws {

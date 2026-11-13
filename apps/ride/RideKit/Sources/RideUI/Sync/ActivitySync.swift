@@ -102,18 +102,26 @@ final class ActivitySync {
 
   func sync() async throws {
     guard let account = try await server.signedInAccount() else { return }
+    try Task.checkCancellation()
     lastAccountID = account.id
     for id in state(of: account.id).deletionsToSend.sorted() {
       try await server.deleteActivity(id, for: account)
+      try checkStillSyncing(account)
       update(account.id) { $0.deletionsToSend.remove(id) }
     }
     let onServer = try await server.activityIDs(for: account)
+    try checkStillSyncing(account)
     dropRidesDeletedOnTheServer(keeping: onServer, account: account.id)
     for ride in library.rides where needsUploading(ride.id, account: account.id) {
-      try Task.checkCancellation()
       let result = try await server.upload(ride.activityFile, for: account)
+      try checkStillSyncing(account)
       receive(result, for: ride.id, account: account.id)
     }
+  }
+
+  private func checkStillSyncing(_ account: ActivityAccount) throws {
+    try Task.checkCancellation()
+    guard lastAccountID == account.id else { throw CancellationError() }
   }
 
   private func needsUploading(_ id: Ride.ID, account: String) -> Bool {
@@ -136,8 +144,11 @@ final class ActivitySync {
   private func receive(_ result: ActivityUploadResult, for id: Ride.ID, account: String) {
     switch result {
     case .stored:
-      update(account) { $0.onServer.insert(id) }
+      update(account) { state in
+        if !state.deleted.contains(id) { state.onServer.insert(id) }
+      }
     case .deletedOnTheServer:
+      guard !state(of: account).deleted.contains(id) else { return }
       update(account) { $0.deleted.insert(id) }
       library.remove(id)
     case .refused:
