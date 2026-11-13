@@ -31,5 +31,9 @@ export function powerLevel(
     );
     return undefined;
   }
+  if (!Number.isFinite(ftp) || ftp <= 0) {
+    log.fail("unsupported", `FTP ${ftp} is not a positive number of watts`, at);
+    return undefined;
+  }
   return scaled(target.level, unit === "watts" ? ftp : 1 / ftp);
 }

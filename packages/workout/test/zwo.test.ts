@@ -450,3 +450,23 @@ test("keeps fractional values exactly through a .zwo round trip", () => {
   };
   expect(parseZwo(writeZwo(workout).value).value).toEqual(workout);
 });
+
+test.each([0, -250, Number.NaN, Number.POSITIVE_INFINITY])(
+  "refuses to convert watts with an FTP of %s",
+  (ftp) => {
+    const workout: Workout = {
+      name: "Watts",
+      sport: "cycling",
+      steps: [
+        {
+          type: "step",
+          duration: { type: "time", seconds: 60 },
+          target: { type: "power", unit: "watts", level: { kind: "constant", value: 200 } },
+        },
+      ],
+    };
+    expect(failure(() => writeZwo(workout, { ftp })).issues[0]?.message).toBe(
+      `FTP ${ftp} is not a positive number of watts`,
+    );
+  },
+);
