@@ -44,12 +44,22 @@ export {
 export {
   type AnalysisRecord,
   maxActivitySeconds,
-  maxSampleGapSeconds,
   perSecond,
   plausibleRanges,
   type Samples,
   samplesOf,
+  type SamplesOptions,
 } from "./samples.ts";
+export {
+  type HeldSegments,
+  heldSegments,
+  pausedRecords,
+  type SamplingRule,
+  samplingRule,
+  type Span,
+  type TimerEvent,
+  timerPauses,
+} from "./sampling.ts";
 export {
   type AnalysisStatistic,
   type AnalysisStatisticUnit,

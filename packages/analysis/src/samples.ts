@@ -7,7 +7,17 @@ export interface AnalysisRecord {
   readonly altitudeMetres?: number | undefined;
 }
 
-export const maxSampleGapSeconds = 5;
+import {
+  type HeldSegments,
+  heldSegments,
+  pausedRecords,
+  type SamplingRule,
+  samplingRule,
+  type Span,
+} from "./sampling.ts";
+
+export type { Span } from "./sampling.ts";
+
 export const maxActivitySeconds = 7 * 24 * 60 * 60;
 
 export const plausibleRanges = {
@@ -27,6 +37,13 @@ export interface Samples {
   readonly speed: Float64Array;
   readonly distance: Float64Array;
   readonly altitude: Float64Array;
+  readonly held: HeldSegments;
+  readonly paused: Uint8Array;
+}
+
+export interface SamplesOptions {
+  readonly pauses?: readonly Span[];
+  readonly rule?: SamplingRule;
 }
 
 type Range = { readonly min: number; readonly max: number };
@@ -44,25 +61,31 @@ function inTimeOrder(records: readonly AnalysisRecord[]): readonly AnalysisRecor
   return ordered ? kept : kept.toSorted((a, b) => a.elapsedSeconds - b.elapsedSeconds);
 }
 
-export function samplesOf(records: readonly AnalysisRecord[], sport: string | null): Samples {
+export function samplesOf(
+  records: readonly AnalysisRecord[],
+  sport: string | null,
+  { pauses = [], rule = samplingRule }: SamplesOptions = {},
+): Samples {
   const ordered = inTimeOrder(records);
   const count = ordered.length;
   const speedRange = sport === "running" ? plausibleRanges.runningSpeed : plausibleRanges.speed;
+  const elapsed = Float64Array.from(ordered, (record) => record.elapsedSeconds);
   const samples: Samples = {
     count,
-    elapsed: new Float64Array(count),
+    elapsed,
     power: new Float64Array(count),
     heartRate: new Float64Array(count),
     speed: new Float64Array(count),
     distance: new Float64Array(count),
     altitude: new Float64Array(count),
+    held: heldSegments(elapsed, pauses, rule),
+    paused: pausedRecords(elapsed, pauses),
   };
   let furthest = NaN;
   let previousWithDistance = -1;
   for (let index = 0; index < count; index++) {
     const record = ordered[index]!;
-    const elapsed = record.elapsedSeconds;
-    samples.elapsed[index] = elapsed;
+    const seconds = elapsed[index]!;
     samples.power[index] = within(record.power, plausibleRanges.power);
     samples.heartRate[index] = within(record.heartRate, plausibleRanges.heartRate);
     samples.altitude[index] = within(record.altitudeMetres, plausibleRanges.altitude);
@@ -77,10 +100,10 @@ export function samplesOf(records: readonly AnalysisRecord[], sport: string | nu
       previousWithDistance >= 0 &&
       !Number.isNaN(distance)
     ) {
-      const seconds = elapsed - samples.elapsed[previousWithDistance]!;
-      if (seconds > 0 && seconds <= maxSampleGapSeconds) {
+      const gap = seconds - elapsed[previousWithDistance]!;
+      if (gap > 0 && gap <= rule.maxHeldGapSeconds) {
         speed = within(
-          (samples.distance[index]! - samples.distance[previousWithDistance]!) / seconds,
+          (samples.distance[index]! - samples.distance[previousWithDistance]!) / gap,
           speedRange,
         );
       }
@@ -93,19 +116,14 @@ export function samplesOf(records: readonly AnalysisRecord[], sport: string | nu
 
 export const hasValue = (values: Float64Array) => values.some((value) => !Number.isNaN(value));
 
-export interface Span {
-  readonly from: number;
-  readonly to: number;
-}
-
 export const wholeActivity: Span = { from: -Infinity, to: Infinity };
 
-export function firstAtOrAfter(elapsed: Float64Array, seconds: number): number {
+function firstEndingAfter(end: Float64Array, seconds: number): number {
   let low = 0;
-  let high = elapsed.length;
+  let high = end.length;
   while (low < high) {
     const middle = (low + high) >>> 1;
-    if (elapsed[middle]! < seconds) low = middle + 1;
+    if (end[middle]! <= seconds) low = middle + 1;
     else high = middle;
   }
   return low;
@@ -116,18 +134,12 @@ export function forEachHeldInterval(
   visit: (index: number, seconds: number) => void,
   span: Span = wholeActivity,
 ): void {
-  for (
-    let index = Math.max(0, firstAtOrAfter(samples.elapsed, span.from) - 1);
-    index + 1 < samples.count;
-    index++
-  ) {
-    const start = samples.elapsed[index]!;
+  const { held } = samples;
+  for (let segment = firstEndingAfter(held.end, span.from); segment < held.count; segment++) {
+    const start = held.start[segment]!;
     if (start >= span.to) break;
-    const next = samples.elapsed[index + 1]!;
-    const seconds = next - start;
-    if (!(seconds > 0 && seconds <= maxSampleGapSeconds)) continue;
-    const held = Math.min(next, span.to) - Math.max(start, span.from);
-    if (held > 0) visit(index, held);
+    const seconds = Math.min(held.end[segment]!, span.to) - Math.max(start, span.from);
+    if (seconds > 0) visit(held.record[segment]!, seconds);
   }
 }
 
@@ -135,17 +147,27 @@ export function perSecond(samples: Samples, values: Float64Array): Float64Array 
   if (samples.count === 0 || !hasValue(values)) return new Float64Array(0);
   const length = Math.max(Math.trunc(samples.elapsed[samples.count - 1]!) + 1, 0);
   const result = new Float64Array(length);
-  for (let index = 0; index < samples.count; index++) {
-    const elapsed = samples.elapsed[index]!;
-    const first = Math.trunc(elapsed);
-    if (first < 0 || first >= length) continue;
-    let end = first + 1;
-    if (index + 1 < samples.count) {
-      const next = samples.elapsed[index + 1]!;
-      if (next - elapsed <= maxSampleGapSeconds) end = Math.max(Math.trunc(next), end);
-    }
+  const { held } = samples;
+  const fill = (index: number, from: number, to: number) => {
+    const first = Math.trunc(from);
+    if (first < 0 || first >= length) return;
     const value = values[index]!;
-    result.fill(Number.isNaN(value) ? 0 : value, first, Math.min(end, length));
+    result.fill(
+      Number.isNaN(value) ? 0 : value,
+      first,
+      Math.min(Math.max(Math.trunc(to), first + 1), length),
+    );
+  };
+  let segment = 0;
+  for (let index = 0; index < samples.count; index++) {
+    if (segment < held.count && held.record[segment] === index) {
+      for (; segment < held.count && held.record[segment] === index; segment++) {
+        fill(index, held.start[segment]!, held.end[segment]!);
+      }
+    } else if (!samples.paused[index]) {
+      const elapsed = samples.elapsed[index]!;
+      fill(index, elapsed, elapsed);
+    }
   }
   return result;
 }

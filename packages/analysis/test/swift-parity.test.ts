@@ -13,7 +13,9 @@ import {
   perSecond,
   powerCurve,
   samplesOf,
+  type SamplesOptions,
   stressScore,
+  timerPauses,
   timeInZones,
   trainingLoad,
   workKilojoules,
@@ -22,8 +24,14 @@ import { reference, type ReferenceResults, syntheticRecords, zones } from "./rid
 
 const { ftp, maxHeartRate, thresholdPace } = reference.thresholds;
 
-function computed(records: readonly AnalysisRecord[], duration: number): ReferenceResults {
-  const samples = samplesOf(records, "cycling");
+const rideSamplingRule = { maxHeldGapSeconds: 5 };
+
+function computed(
+  records: readonly AnalysisRecord[],
+  duration: number,
+  options: SamplesOptions = {},
+): ReferenceResults {
+  const samples = samplesOf(records, "cycling", options);
   const powerPerSecond = perSecond(samples, samples.power);
   const normalized = normalizedPower(powerPerSecond);
   const intensityFactor = intensity(normalized, ftp);
@@ -61,17 +69,26 @@ const goldens: Record<string, Uint8Array> = {
 describe("agrees with Ride's Swift analysis", () => {
   for (const ride of reference.rides) {
     test(`on the golden ride ${ride.file}`, () => {
-      const { summary, records } = decodeFit(goldens[ride.file]!);
+      const { summary, records, events } = decodeFit(goldens[ride.file]!);
       assert.equal(records.length, ride.samples);
-      assert.deepEqual(computed(records, summary.elapsedSeconds), ride.results);
+      const pauses = timerPauses(events, summary.startTime);
+      assert.deepEqual(computed(records, summary.elapsedSeconds, { pauses }), ride.results);
     });
   }
 
   for (const { name, seed, count, steps, results } of reference.synthetic) {
-    test(`on a synthetic ride, ${name}`, () => {
-      const records = syntheticRecords(seed, count, steps);
-      assert.deepEqual(computed(records, records.at(-1)!.elapsedSeconds), results);
-    });
+    const records = syntheticRecords(seed, count, steps);
+    const duration = records.at(-1)!.elapsedSeconds;
+    if (steps.every((step) => step <= rideSamplingRule.maxHeldGapSeconds)) {
+      test(`on a synthetic ride, ${name}`, () => {
+        assert.deepEqual(computed(records, duration), results);
+      });
+    } else {
+      test(`on a synthetic ride, ${name}, once its 5 to 30 s gaps are read as pauses as Ride reads them`, () => {
+        assert.deepEqual(computed(records, duration, { rule: rideSamplingRule }), results);
+        assert.notDeepEqual(computed(records, duration), results);
+      });
+    }
   }
 
   test("on fitness, fatigue and form per day", () => {
