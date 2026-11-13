@@ -14,6 +14,7 @@ final class ActivitySync {
   private var wantsAnotherPass = false
   private var retry: Task<Void, Never>?
   private var failuresInARow = 0
+  var onSignedOut: (() -> Void)?
   private let log = Logger(subsystem: "com.trainstackhq.ride", category: "activity-sync")
 
   init(library: RideLibrary, server: any ActivityServer, directory: URL = defaultDirectory) {
@@ -77,6 +78,7 @@ final class ActivitySync {
       } catch is CancellationError {
         return
       } catch StravaError.signedOut {
+        onSignedOut?()
         return
       } catch {
         failuresInARow += 1

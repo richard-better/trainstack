@@ -236,4 +236,28 @@ struct TrainStackAccountTests {
     await #expect(throws: StravaError.notConnected) { try await revoked.upload(ride) }
     #expect(!revoked.isStravaConnected)
   }
+
+  @Test func aSessionTheActivitiesAPIRejectsShowsAsSignedOut() async throws {
+    let directory = FileManager.default.temporaryDirectory.appending(
+      path: "TrainStackAccountTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let account = TrainStackAccount(
+      store: InMemorySessionStore(AccountSession(token: "t", name: "Ada", userID: "ada")),
+      transport: FakeTransport([reply(status: 401)]))
+    await account.restore()
+    #expect(account.isSignedIn)
+    let library = RideLibrary(directory: directory.appending(path: "Rides"))
+    let sync = ActivitySync(
+      library: library, server: account.client, directory: directory.appending(path: "State"))
+    let signedOut = AsyncStream<Void>.makeStream()
+    sync.onSignedOut = {
+      Task {
+        await account.refreshSignIn()
+        signedOut.continuation.yield()
+      }
+    }
+    sync.start()
+    for await _ in signedOut.stream { break }
+    #expect(!account.isSignedIn)
+  }
 }

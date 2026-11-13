@@ -65,6 +65,10 @@ final class TrainStackAccount {
     stravaAthleteName = nil
   }
 
+  func refreshSignIn() async {
+    await refreshFromClient()
+  }
+
   private func refreshFromClient() async {
     isSignedIn = await client.isSignedIn
     name = await client.accountName
