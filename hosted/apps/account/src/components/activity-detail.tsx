@@ -1,4 +1,5 @@
 import { ORPCError } from "@orpc/client";
+import { activitySport } from "@trainstack/activity-file";
 import {
   type ActivityDetail,
   type ActivitySummaryError,
@@ -13,7 +14,7 @@ import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/a
 import { activityDateInFull } from "../lib/dates";
 import { localDay } from "../lib/settings";
 import { lapsOf, traceOf } from "../lib/series";
-import { activityTitle, sportFromFit, sportName } from "../lib/sports";
+import { activityTitle, sportName } from "../lib/sports";
 import {
   type Figure,
   formatDistance,
@@ -118,11 +119,16 @@ function Activity({ activity }: { activity: ActivityDetail }) {
   const activityFile = useActivityFile(activity);
   const decoded =
     activityFile.data?.reading.kind === "decoded" ? activityFile.data.reading.activity : null;
-  const sport =
-    activity.sport ??
-    (decoded ? sportFromFit(decoded.summary.sport, decoded.summary.subSport) : null);
+  const fromFile = decoded ? activitySport(decoded.summary.sport, decoded.summary.subSport) : null;
+  const sport = activity.sport ?? fromFile?.sport ?? null;
+  const indoor = activity.indoor ?? fromFile?.indoor ?? null;
   const startedAt = activity.startedAt ?? decoded?.summary.startTime ?? null;
-  const title = activityTitle({ name: activity.name ?? decoded?.name ?? null, sport, startedAt });
+  const title = activityTitle({
+    name: activity.name ?? decoded?.name ?? null,
+    sport,
+    indoor,
+    startedAt,
+  });
   const statistics =
     Object.keys(activity.statistics).length > 0
       ? activity.statistics
@@ -130,7 +136,7 @@ function Activity({ activity }: { activity: ActivityDetail }) {
         ? statisticsFromFit(decoded.summary)
         : {};
   const figures = summaryFigures(statistics);
-  const { label, family } = sportName(sport);
+  const { label, family } = sportName(sport, indoor);
 
   useEffect(() => {
     document.title = `${title} - Trainstack`;

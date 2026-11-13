@@ -5,11 +5,11 @@ import {
   type ActivityFileFormat,
   type DecodedActivity,
   ActivityFileError,
+  activitySport,
   decodeActivityFile,
 } from "@trainstack/activity-file";
 
 import type { ApiClient } from "./client.ts";
-import { sportFromFit } from "./sports.ts";
 
 export interface CheckedFile {
   readonly id: string;
@@ -61,7 +61,7 @@ export async function checkActivityFile(file: File): Promise<Check> {
       name: file.name,
       format: decoded.format,
       bytes,
-      sport: sportFromFit(decoded.summary.sport, decoded.summary.subSport),
+      sport: activitySport(decoded.summary.sport, decoded.summary.subSport).sport ?? null,
       startedAt: decoded.summary.startTime,
     },
   };

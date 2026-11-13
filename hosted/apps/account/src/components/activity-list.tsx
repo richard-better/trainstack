@@ -85,7 +85,7 @@ function Months({ activities }: { activities: Activity[] }) {
 }
 
 function ActivityRow({ activity }: { activity: Activity }) {
-  const sport = sportName(activity.sport);
+  const sport = sportName(activity.sport, activity.indoor);
   const figures = headlineFigures(activity.statistics);
   return (
     <Link to="/activities/$id" params={{ id: activity.id }} className="row">
