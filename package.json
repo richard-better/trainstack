@@ -17,6 +17,7 @@
       "@orpc/server": "^1.16.1",
       "@orpc/contract": "^1.16.1",
       "@orpc/openapi": "^1.16.1",
+      "@orpc/json-schema": "^1.16.1",
       "@orpc/zod": "^1.16.1",
       "better-auth": "1.7.15",
       "evlog": "^2.34.0",

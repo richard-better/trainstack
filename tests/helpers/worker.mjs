@@ -1,6 +1,8 @@
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
 import { Miniflare } from "miniflare";
 import { rolldown } from "rolldown";
 
@@ -31,6 +33,7 @@ export async function startWorker({ bindings = {}, outboundService } = {}) {
     compatibilityFlags: ["nodejs_compat"],
     cf: false,
     d1Databases: ["DB"],
+    r2Buckets: ["ACTIVITY_FILES"],
     outboundService,
     bindings: {
       NODE_ENV: "test",
@@ -51,6 +54,33 @@ export async function startWorker({ bindings = {}, outboundService } = {}) {
       await rm(directory, { recursive: true, force: true });
     },
   };
+}
+
+export function rpcClient(runtime, { token, cookie, origin: requestOrigin = origin } = {}) {
+  return createORPCClient(
+    new RPCLink({
+      url: `${api}/rpc`,
+      fetch: async (request, options) => {
+        const outgoing = new Request(request, options);
+        if (requestOrigin) outgoing.headers.set("Origin", requestOrigin);
+        if (cookie) outgoing.headers.set("Cookie", cookie);
+        if (token) outgoing.headers.set("Authorization", `Bearer ${token}`);
+        return send(runtime, outgoing);
+      },
+    }),
+  );
+}
+
+export async function send(runtime, request) {
+  const response = await runtime.dispatchFetch(request.url, {
+    method: request.method,
+    headers: Object.fromEntries(request.headers),
+    body: request.body ? await request.arrayBuffer() : undefined,
+  });
+  return new Response(response.body ? await response.arrayBuffer() : null, {
+    status: response.status,
+    headers: Object.fromEntries(response.headers),
+  });
 }
 
 export async function migrate(runtime) {

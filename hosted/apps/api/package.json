@@ -15,6 +15,7 @@
     "@better-auth/core": "1.7.15",
     "@better-auth/drizzle-adapter": "1.7.15",
     "@libsql/client": "0.18.0",
+    "@orpc/json-schema": "catalog:",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",

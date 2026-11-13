@@ -5,7 +5,7 @@
 Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted/infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted/infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
 
 - TanStack Start web app Worker at `account.trainstackhq.com`, where athletes sign in with Apple. Alchemy builds it through `Cloudflare.Website.Vite` with the API's URL as `VITE_SERVER_URL`, and manages the custom domain and TLS.
-- API Worker at `api.trainstackhq.com`, with a `DB` binding to D1, a secret Better Auth signing key, and the web app's origin as `WEB_APP_ORIGIN`, the only origin it trusts for sign-in and credentialed requests.
+- API Worker at `api.trainstackhq.com`, with a `DB` binding to D1, an `ACTIVITY_FILES` binding to the private R2 bucket that holds activity files, a secret Better Auth signing key, and the web app's origin as `WEB_APP_ORIGIN`, the only origin it trusts for sign-in and credentialed requests.
 - Astro Worker served at `trainstackhq.com` by a `trainstackhq.com/*` route over the existing proxied DNS records, with session KV and an Images binding.
 - Committed Drizzle migrations before the API Worker update.
 - When configured, Axiom dataset `trainstack-production-logs` and a dataset-scoped ingest token injected into both applications.
@@ -23,6 +23,7 @@ Create an **account-owned** API token from [this account's token settings](https
 | ----------------------- | ------------------------ |
 | Anthropo account        | Workers Scripts Write    |
 | Anthropo account        | D1 Write                 |
+| Anthropo account        | Workers R2 Storage Write |
 | Anthropo account        | Workers KV Storage Write |
 | Anthropo account        | Secrets Store Write      |
 | Anthropo account        | Account Settings Read    |
@@ -120,6 +121,14 @@ gh secret set GITHUB_FEEDBACK_TOKEN --env production --repo richard-better/train
 
 A fine-grained token cannot write to a repository that `kes-agent` does not own, which is why this is a classic one. Rotate it before it expires by replacing the secret and redeploying.
 
+### Activities
+
+Activities are served through the contract in `packages/contract` (`activities.upload`, `list`, `get`, `file` and `delete`), over RPC at `/rpc` for TypeScript clients and as plain HTTP at `/api-reference` for the app, documented at `/api-reference/spec.json`: `POST /activities` (multipart, with `file`, `source` and optionally `sourceId`, `sport`, `name` and `startedAt`), `GET /activities?limit=&cursor=`, `GET /activities/{id}`, `GET /activities/{id}/file` and `DELETE /activities/{id}`. They take the rider's session as a bearer token, or as the session cookie from the web app's origin; a cookie sent from any other site counts as no session.
+
+An activity is named by the SHA-256 of its file, in lowercase hex, like the app's iCloud record for a ride, so uploading the same file again returns the activity it already made. The file (FIT, GPX or TCX, up to 25 MB) is stored in R2 at `activities/<user id>/<activity id>` and never changes. Sport and source are open lowercase words (`indoor_cycling`, `apple_health`), so a new sport or source needs no migration. Numbers that sum an activity up go in `activity_statistic` as named values, and laps, pauses and other moments in `activity_event`; both are empty until the server derives them from the file, and `summarizedAt` stays null until it has. `activity_sync` holds each source's sync cursor for importers.
+
+Deleting an activity deletes its file and leaves a row in `deleted_activity`, like the app's `DeletedRide` record. From then on, uploading that file to that account answers `410 ACTIVITY_DELETED` with the deletion's `id` and `deletedAt`, so a stale device can drop the activity instead of treating it as a failure. A device can delete an activity the server never had, which stops any other device sending it. Deleting is idempotent. Deleting an account deletes its activity rows, but not yet its files in R2.
+
 ## First deployment
 
 1. Confirm the domain zone is active in this account and `trainstackhq.com` has a proxied DNS record. The apex Worker route uses the existing proxied records, so keep at least one in place. The API and account Workers use custom domains at `api.trainstackhq.com` and `account.trainstackhq.com`; resolve any conflicting records for those exact hostnames before deployment. Alchemy creates their domain records and TLS certificates.
@@ -145,6 +154,6 @@ Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests e
 
 For an application regression, revert the application commit on `main` and let CI redeploy. Old workflow revisions are intentionally skipped, so use a revert commit instead of re-running an old revision. Reverting application code does not reverse database migrations; fix schema issues with a new forward migration. Use D1 Time Travel for a data recovery incident after checking the affected database and restore point.
 
-The production database has a retain removal policy. This prevents Alchemy from deleting it during replacement or teardown, but the state row is still removed. Do not use `destroy` to roll back an application release. Preserve database IDs and state access before deliberate infrastructure removal.
+The production database and activity files bucket have a retain removal policy. This prevents Alchemy from deleting it during replacement or teardown, but the state row is still removed. Do not use `destroy` to roll back an application release. Preserve database IDs and state access before deliberate infrastructure removal.
 
 If deployment fails, inspect the Actions job and Alchemy plan, correct the configuration or code, and rerun the current `main` workflow. Do not delete shared state or use broad adoption to hide a failed deploy.

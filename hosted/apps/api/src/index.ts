@@ -1,6 +1,7 @@
+import { SmartCoercionPlugin } from "@orpc/json-schema";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
-import { onError } from "@orpc/server";
+import { onError, ORPCError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { initLogger } from "evlog";
@@ -49,7 +50,7 @@ app.use(
   "/*",
   cors({
     origin: ENV.WEB_APP_ORIGIN,
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
@@ -79,26 +80,36 @@ app.route("/feedback", feedbackRoutes({ env: ENV, database: getDb, userId: rider
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 
+function logUnexpected(error: unknown) {
+  if (error instanceof ORPCError && error.status < 500) return;
+  console.error(error);
+}
+
 export const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
+    new SmartCoercionPlugin({
+      schemaConverters: [new ZodToJsonSchemaConverter()],
+    }),
     new OpenAPIReferencePlugin({
       schemaConverters: [new ZodToJsonSchemaConverter()],
     }),
   ],
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
+  interceptors: [onError(logUnexpected)],
 });
 
 export const rpcHandler = new RPCHandler(appRouter, {
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
+  interceptors: [onError(logUnexpected)],
 });
+
+function downloadedNeverOpened(response: Response) {
+  const disposition = response.headers.get("Content-Disposition");
+  if (!disposition) return response;
+  const headers = new Headers(response.headers);
+  headers.set("Content-Disposition", disposition.replace(/^inline/, "attachment"));
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Content-Security-Policy", "sandbox; default-src 'none'");
+  return new Response(response.body, { status: response.status, headers });
+}
 
 app.use("/*", async (c, next) => {
   const context = await createContext({ context: c });
@@ -118,7 +129,7 @@ app.use("/*", async (c, next) => {
   });
 
   if (apiResult.matched) {
-    return c.newResponse(apiResult.response.body, apiResult.response);
+    return downloadedNeverOpened(c.newResponse(apiResult.response.body, apiResult.response));
   }
 
   await next();
