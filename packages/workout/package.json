@@ -1,0 +1,22 @@
+{
+  "name": "@trainstack/workout",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -p . && tsc -p test",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@trainstack/config": "workspace:*",
+    "@types/node": "catalog:",
+    "miniflare": "4.20260730.0",
+    "rolldown": "1.2.16",
+    "typescript": "catalog:"
+  }
+}

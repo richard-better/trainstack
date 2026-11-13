@@ -1,0 +1,543 @@
+[
+  {
+    "about": "Three 10-minute blocks at tempo with easy spinning between. Steady, honest work that builds aerobic strength without draining you.",
+    "category": 2,
+    "name": "Zone 3 · 3×10",
+    "steps": [
+      {
+        "duration": 360,
+        "intensity": 0.5
+      },
+      {
+        "duration": 240,
+        "intensity": 0.65
+      },
+      {
+        "duration": 600,
+        "intensity": 0.85
+      },
+      {
+        "duration": 240,
+        "intensity": 0.5
+      },
+      {
+        "duration": 600,
+        "intensity": 0.85
+      },
+      {
+        "duration": 240,
+        "intensity": 0.5
+      },
+      {
+        "duration": 600,
+        "intensity": 0.85
+      },
+      {
+        "duration": 360,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "Three 12-minute blocks that creep from just under threshold to just over it. Stretches how long you can hold your FTP.",
+    "category": 3,
+    "name": "Threshold waves 3×12",
+    "steps": [
+      {
+        "duration": 360,
+        "intensity": 0.5
+      },
+      {
+        "duration": 180,
+        "intensity": 0.7
+      },
+      {
+        "duration": 720,
+        "intensity": 0.96
+      },
+      {
+        "duration": 240,
+        "intensity": 0.5
+      },
+      {
+        "duration": 720,
+        "intensity": 0.99
+      },
+      {
+        "duration": 240,
+        "intensity": 0.5
+      },
+      {
+        "duration": 720,
+        "intensity": 1.02
+      },
+      {
+        "duration": 420,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "Short efforts that climb from tempo to well over threshold, with easy spinning between. Wakes the legs up before a race or a hard day.",
+    "category": 4,
+    "name": "Ramp openers 30",
+    "steps": [
+      {
+        "duration": 360,
+        "intensity": 0.5
+      },
+      {
+        "duration": 180,
+        "intensity": 0.68
+      },
+      {
+        "duration": 120,
+        "intensity": 0.8
+      },
+      {
+        "duration": 120,
+        "intensity": 0.5
+      },
+      {
+        "duration": 120,
+        "intensity": 0.9
+      },
+      {
+        "duration": 120,
+        "intensity": 0.5
+      },
+      {
+        "duration": 60,
+        "intensity": 1.05
+      },
+      {
+        "duration": 120,
+        "intensity": 0.5
+      },
+      {
+        "duration": 60,
+        "intensity": 1.15
+      },
+      {
+        "duration": 120,
+        "intensity": 0.5
+      },
+      {
+        "duration": 60,
+        "intensity": 1.25
+      },
+      {
+        "duration": 120,
+        "intensity": 0.5
+      },
+      {
+        "duration": 60,
+        "intensity": 1.3
+      },
+      {
+        "duration": 180,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "Two sets of surges just over threshold that settle back to tempo rather than resting. Teaches you to recover while still working.",
+    "category": 3,
+    "name": "Over-unders 2×10",
+    "steps": [
+      {
+        "duration": 480,
+        "intensity": 0.5
+      },
+      {
+        "duration": 600,
+        "intensity": 0.72
+      },
+      {
+        "duration": 120,
+        "intensity": 1.04
+      },
+      {
+        "duration": 180,
+        "intensity": 0.72
+      },
+      {
+        "duration": 120,
+        "intensity": 1.04
+      },
+      {
+        "duration": 180,
+        "intensity": 0.72
+      },
+      {
+        "duration": 120,
+        "intensity": 1.04
+      },
+      {
+        "duration": 180,
+        "intensity": 0.72
+      },
+      {
+        "duration": 300,
+        "intensity": 0.72
+      },
+      {
+        "duration": 120,
+        "intensity": 1.04
+      },
+      {
+        "duration": 180,
+        "intensity": 0.72
+      },
+      {
+        "duration": 120,
+        "intensity": 1.04
+      },
+      {
+        "duration": 180,
+        "intensity": 0.72
+      },
+      {
+        "duration": 120,
+        "intensity": 1.04
+      },
+      {
+        "duration": 180,
+        "intensity": 0.72
+      },
+      {
+        "duration": 480,
+        "intensity": 0.72
+      },
+      {
+        "duration": 300,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "Over an hour of steady endurance riding. Builds the aerobic base everything else rests on.",
+    "category": 1,
+    "name": "Long endurance 90",
+    "steps": [
+      {
+        "duration": 600,
+        "intensity": 0.5
+      },
+      {
+        "duration": 4500,
+        "intensity": 0.68
+      },
+      {
+        "duration": 300,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "A ramping warm-up, one six-minute effort well above threshold, then a long endurance spin. Raises the ceiling on your aerobic power.",
+    "category": 4,
+    "name": "VO2 max booster",
+    "steps": [
+      {
+        "duration": 300,
+        "intensity": 0.4
+      },
+      {
+        "duration": 180,
+        "intensity": 0.5
+      },
+      {
+        "duration": 180,
+        "intensity": 0.58
+      },
+      {
+        "duration": 180,
+        "intensity": 0.64
+      },
+      {
+        "duration": 360,
+        "intensity": 0.72
+      },
+      {
+        "duration": 300,
+        "intensity": 0.52
+      },
+      {
+        "duration": 360,
+        "intensity": 1.18
+      },
+      {
+        "duration": 1500,
+        "intensity": 0.68
+      },
+      {
+        "duration": 240,
+        "intensity": 0.45
+      }
+    ]
+  },
+  {
+    "about": "Four all-out 40-second sprints with 20 seconds' rest between them. Short, brutal and over quickly.",
+    "category": 5,
+    "name": "Tabata 4×40\/20",
+    "steps": [
+      {
+        "duration": 480,
+        "intensity": 0.5
+      },
+      {
+        "duration": 600,
+        "intensity": 0.68
+      },
+      {
+        "duration": 60,
+        "intensity": 1.3
+      },
+      {
+        "duration": 300,
+        "intensity": 0.5
+      },
+      {
+        "duration": 40,
+        "intensity": 1.7
+      },
+      {
+        "duration": 20,
+        "intensity": 0.4
+      },
+      {
+        "duration": 40,
+        "intensity": 1.7
+      },
+      {
+        "duration": 20,
+        "intensity": 0.4
+      },
+      {
+        "duration": 40,
+        "intensity": 1.7
+      },
+      {
+        "duration": 20,
+        "intensity": 0.4
+      },
+      {
+        "duration": 40,
+        "intensity": 1.7
+      },
+      {
+        "duration": 20,
+        "intensity": 0.4
+      },
+      {
+        "duration": 300,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "Gentle spinning that rises a little in the middle and eases off again. Keeps the legs turning on a rest day.",
+    "category": 1,
+    "name": "Recovery 30",
+    "steps": [
+      {
+        "duration": 180,
+        "intensity": 0.5
+      },
+      {
+        "duration": 180,
+        "intensity": 0.58
+      },
+      {
+        "duration": 180,
+        "intensity": 0.62
+      },
+      {
+        "duration": 180,
+        "intensity": 0.66
+      },
+      {
+        "duration": 360,
+        "intensity": 0.72
+      },
+      {
+        "duration": 180,
+        "intensity": 0.66
+      },
+      {
+        "duration": 180,
+        "intensity": 0.62
+      },
+      {
+        "duration": 180,
+        "intensity": 0.58
+      },
+      {
+        "duration": 180,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "Three 10-minute blocks just under threshold, each finished with a one-minute push over it. A good benchmark for whether your FTP still feels right.",
+    "category": 3,
+    "name": "Threshold classic 60",
+    "steps": [
+      {
+        "duration": 300,
+        "intensity": 0.45
+      },
+      {
+        "duration": 180,
+        "intensity": 0.55
+      },
+      {
+        "duration": 180,
+        "intensity": 0.65
+      },
+      {
+        "duration": 180,
+        "intensity": 0.72
+      },
+      {
+        "duration": 600,
+        "intensity": 0.95
+      },
+      {
+        "duration": 60,
+        "intensity": 1.12
+      },
+      {
+        "duration": 300,
+        "intensity": 0.6
+      },
+      {
+        "duration": 600,
+        "intensity": 0.95
+      },
+      {
+        "duration": 60,
+        "intensity": 1.12
+      },
+      {
+        "duration": 300,
+        "intensity": 0.6
+      },
+      {
+        "duration": 600,
+        "intensity": 0.95
+      },
+      {
+        "duration": 60,
+        "intensity": 1.12
+      },
+      {
+        "duration": 180,
+        "intensity": 0.5
+      }
+    ]
+  },
+  {
+    "about": "Eight short surges over an endurance base. Playful enough to pass the time, easy enough to recover from.",
+    "category": 1,
+    "name": "Pixel sprints 30",
+    "steps": [
+      {
+        "duration": 240,
+        "intensity": 0.55
+      },
+      {
+        "duration": 180,
+        "intensity": 0.66
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 120,
+        "intensity": 0.7
+      },
+      {
+        "duration": 30,
+        "intensity": 0.98
+      },
+      {
+        "duration": 180,
+        "intensity": 0.55
+      }
+    ]
+  },
+  {
+    "about": "Fifteen seconds each at easy, medium and hard. Too short to train anything; it is here to check a trainer and the ride from start to finish.",
+    "category": 4,
+    "name": "Quick test 45s",
+    "steps": [
+      {
+        "duration": 15,
+        "intensity": 0.5
+      },
+      {
+        "duration": 15,
+        "intensity": 0.75
+      },
+      {
+        "duration": 15,
+        "intensity": 1.2
+      }
+    ]
+  }
+]

@@ -134,6 +134,19 @@
         "typescript": "catalog:",
       },
     },
+    "packages/workout": {
+      "name": "@trainstack/workout",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@trainstack/config": "workspace:*",
+        "@types/node": "catalog:",
+        "miniflare": "4.20260730.0",
+        "rolldown": "1.2.16",
+        "typescript": "catalog:",
+      },
+    },
   },
   "overrides": {
     "vite": "catalog:",
@@ -798,6 +811,8 @@
     "@trainstack/hosted-infra": ["@trainstack/hosted-infra@workspace:hosted/infra"],
 
     "@trainstack/marketing": ["@trainstack/marketing@workspace:hosted/apps/marketing"],
+
+    "@trainstack/workout": ["@trainstack/workout@workspace:packages/workout"],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.4", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A=="],
 

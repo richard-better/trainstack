@@ -1,0 +1,25 @@
+[COURSE HEADER]
+VERSION = 2
+UNITS = ENGLISH
+DESCRIPTION = Two sweet spot blocks with a ramped warm-up
+FILE NAME = Sweet spot 2x15
+FTP = 250
+MINUTES WATTS
+[END COURSE HEADER]
+[COURSE DATA]
+0.00	100
+10.00	180
+10.00	225
+25.00	225
+25.00	125
+30.00	125
+30.00	225
+45.00	225
+45.00	100
+50.00	100
+[END COURSE DATA]
+[COURSE TEXT]
+0	Warm up gradually	15
+600	First sweet spot block	10
+1800	Second block, same again
+[END COURSE TEXT]
