@@ -1,5 +1,4 @@
 import Foundation
-import RideBluetooth
 import RideData
 import Testing
 
@@ -60,18 +59,18 @@ struct RideEngineTests {
   @Test func asksTheTrainerForTheCurrentModesSetting() {
     var engine = engine()
     let firstTarget = template.workout(ftp: 250).steps[0].targetPower
-    #expect(engine.trainerTarget == .power(watts: firstTarget))
+    #expect(engine.trainerCommand == .power(watts: firstTarget))
     engine.apply(.changeMode(.slope))
     engine.apply(.adjust(steps: 2))
-    #expect(engine.trainerTarget == .grade(percent: 3))
+    #expect(engine.trainerCommand == .grade(percent: 3))
     engine.apply(.changeMode(.level))
-    #expect(engine.trainerTarget == .resistance(shareOfRange: 0.3))
+    #expect(engine.trainerCommand == .resistance(shareOfRange: 0.3))
   }
 
   @Test func asksForAFlatRoadOnceTheWorkoutIsOver() {
     var engine = engine()
     while !engine.session.isComplete { engine.apply(.skipInterval) }
-    #expect(engine.trainerTarget == .grade(percent: 0))
+    #expect(engine.trainerCommand == .grade(percent: 0))
   }
 
   @Test func replayingTheInputsRebuildsTheSameRide() {

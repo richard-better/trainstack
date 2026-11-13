@@ -1,5 +1,4 @@
 import Foundation
-import RideBluetooth
 import RideData
 
 public struct RideEngine: Sendable {
@@ -50,9 +49,9 @@ public struct RideEngine: Sendable {
     isPausedForTrainer = true
   }
 
-  public var trainerTarget: TrainerTarget {
+  public var trainerCommand: TrainerCommand {
     switch session.mode {
-    case .erg: session.targetPower.map(TrainerTarget.power(watts:)) ?? .grade(percent: 0)
+    case .erg: session.targetPower.map(TrainerCommand.power(watts:)) ?? .grade(percent: 0)
     case .slope: .grade(percent: session.slopeGradePercent)
     case .level:
       .resistance(
