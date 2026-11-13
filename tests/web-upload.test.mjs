@@ -70,23 +70,24 @@ function uploadsFor(webApp) {
   return { uploads, added, outcomes };
 }
 
-test("a FIT, GPX or TCX file is read in the browser for its sport, name and start", async () => {
-  const fields = async (path) => {
+test("a FIT, GPX or TCX file is read in the browser for its sport and start", async () => {
+  const read = async (path) => {
     const check = await checkActivityFile(await fileAt(path), MAX_BYTES);
     assert.equal(check.kind, "ready", path);
-    return check.file.fields;
+    return { format: check.file.format, sport: check.file.sport, startedAt: check.file.startedAt };
   };
-  assert.deepEqual(await fields(WORKOUT_RIDE), {
+  assert.deepEqual(await read(WORKOUT_RIDE), {
+    format: "fit",
     sport: "indoor_cycling",
-    name: "Quick test 45s",
     startedAt: new Date("2027-01-15T08:00:00.000Z"),
   });
-  assert.deepEqual(await fields(`${FILES}/strava-ride.gpx`), {
+  assert.deepEqual(await read(`${FILES}/strava-ride.gpx`), {
+    format: "gpx",
     sport: "cycling",
-    name: "Morning Ride & Coffee",
     startedAt: new Date("2026-09-12T06:58:31.000Z"),
   });
-  assert.deepEqual(await fields(`${FILES}/strava-run.tcx`), {
+  assert.deepEqual(await read(`${FILES}/strava-run.tcx`), {
+    format: "tcx",
     sport: "running",
     startedAt: new Date("2026-10-10T05:45:00.000Z"),
   });
@@ -160,8 +161,8 @@ test("several files upload at once, each with its own outcome, and only activity
         startedAt: "2027-01-15T08:00:00.000Z",
         source: "upload",
       },
-      { name: null, sport: null, startedAt: null, source: "trainstack" },
       { name: null, sport: "running", startedAt: "2026-10-10T05:45:00.000Z", source: "upload" },
+      { name: null, sport: "cycling", startedAt: "2026-10-06T14:21:15.000Z", source: "trainstack" },
       {
         name: "Morning Ride & Coffee",
         sport: "cycling",
@@ -169,7 +170,7 @@ test("several files upload at once, each with its own outcome, and only activity
         source: "upload",
       },
     ],
-    "nothing refused reached the server, and each file kept its own date",
+    "nothing refused reached the server, and the server read each file for its name, sport and date",
   );
   const workout = await readFile(WORKOUT_RIDE);
   assert.equal(
@@ -202,11 +203,15 @@ test("a file the athlete deleted is not added again, and says when it was delete
 test("an upload that fails on the way can be tried again without choosing the file again", async () => {
   const { webApp } = await signInOnTheWeb(runtime, apple);
   let online = false;
+  const sent = [];
   const flaky = {
     activities: {
       get: (input) =>
         online ? webApp.activities.get(input) : Promise.reject(new TypeError("offline")),
-      upload: (input) => webApp.activities.upload(input),
+      upload: (input) => {
+        sent.push(input);
+        return webApp.activities.upload(input);
+      },
     },
   };
   const added = [];
@@ -225,6 +230,17 @@ test("an upload that fails on the way can be tried again without choosing the fi
   await uploads.retry(failed.key);
   assert.equal(uploads.list()[0].state.outcome.kind, "uploaded");
   assert.equal(added.length, 1);
+  assert.deepEqual(
+    sent.map(({ file, ...fields }) => ({ name: file.name, ...fields })),
+    [
+      {
+        name: "strava-ride.gpx",
+        source: "upload",
+        startedAt: new Date("2026-09-12T06:58:31.000Z"),
+      },
+    ],
+    "the server reads the sport and name from the file, so the athlete can still set their own",
+  );
 });
 
 test("signing out forgets uploads, and one still running does not come back", async () => {

@@ -10,18 +10,13 @@ import {
 import type { ApiClient } from "./client.ts";
 import { sportFromFit } from "./sports.ts";
 
-export interface UploadFields {
-  readonly sport?: string;
-  readonly name?: string;
-  readonly startedAt?: Date;
-}
-
 export interface CheckedFile {
   readonly id: string;
   readonly name: string;
   readonly format: ActivityFileFormat;
   readonly bytes: Uint8Array<ArrayBuffer>;
-  readonly fields: UploadFields;
+  readonly sport: string | null;
+  readonly startedAt: Date | undefined;
 }
 
 export type Refusal =
@@ -39,16 +34,6 @@ export type Outcome =
   | { readonly kind: "refused"; readonly refusal: Refusal };
 
 export const UPLOAD_SOURCE = "upload";
-
-export function uploadFields(activity: DecodedActivity): UploadFields {
-  const sport = sportFromFit(activity.summary.sport, activity.summary.subSport);
-  const name = activity.name?.trim().slice(0, 200);
-  return {
-    ...(sport ? { sport } : {}),
-    ...(name ? { name } : {}),
-    ...(activity.summary.startTime ? { startedAt: activity.summary.startTime } : {}),
-  };
-}
 
 async function sha256Hex(bytes: Uint8Array<ArrayBuffer>) {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
@@ -75,7 +60,8 @@ export async function checkActivityFile(file: File, maxBytes: number): Promise<C
       name: file.name,
       format: decoded.format,
       bytes,
-      fields: uploadFields(decoded),
+      sport: sportFromFit(decoded.summary.sport, decoded.summary.subSport),
+      startedAt: decoded.summary.startTime,
     },
   };
 }
@@ -93,7 +79,7 @@ export async function sendActivityFile(
     upload.activities.upload({
       file: new File([file.bytes], file.name),
       source: UPLOAD_SOURCE,
-      ...file.fields,
+      ...(file.startedAt ? { startedAt: file.startedAt } : {}),
     }),
   );
   if (!sent.error) return { kind: "uploaded", activity: sent.data };

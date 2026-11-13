@@ -126,7 +126,7 @@ export function createUploads({
       if (check.kind !== "ready")
         return update(key, { state: { phase: "refused", refusal: check } });
       checked.set(key, check.file);
-      update(key, { sport: check.file.fields.sport ?? null });
+      update(key, { sport: check.file.sport });
       await send(key, check.file, started);
     });
   }

@@ -4,7 +4,6 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { parseArgs } from "node:util";
 
-import { checkActivityFile } from "../hosted/apps/account/src/lib/upload.ts";
 import { mockApple } from "../tests/helpers/apple.mjs";
 import { migrate, rpcClient, startWorker } from "../tests/helpers/worker.mjs";
 
@@ -128,9 +127,7 @@ if (!options.empty) {
   const ride = rpcClient(runtime, { token });
   for (const path of SEEDED_RIDES) {
     const file = new File([await readFile(path)], path.split("/").at(-1));
-    const check = await checkActivityFile(file, Infinity);
-    if (check.kind !== "ready") throw new Error(`${path} is not a readable activity file`);
-    await ride.activities.upload({ file, source: "trainstack", ...check.file.fields });
+    await ride.activities.upload({ file, source: "trainstack" });
   }
 }
 
