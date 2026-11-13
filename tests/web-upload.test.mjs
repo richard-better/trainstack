@@ -149,24 +149,39 @@ test("several files upload at once, each with its own outcome, and only activity
   });
   const { activities } = await webApp.activities.list({ limit: ACTIVITIES_PER_PAGE });
   assert.deepEqual(
-    activities.map(({ name, sport, startedAt, source }) => ({
+    activities.map(({ name, sport, indoor, startedAt, source }) => ({
       name,
       sport,
+      indoor,
       startedAt: startedAt?.toISOString() ?? null,
       source,
     })),
     [
       {
         name: "Quick test 45s",
-        sport: "indoor_cycling",
+        sport: "cycling",
+        indoor: true,
         startedAt: "2027-01-15T08:00:00.000Z",
         source: "upload",
       },
-      { name: null, sport: "running", startedAt: "2026-10-10T05:45:00.000Z", source: "upload" },
-      { name: null, sport: "cycling", startedAt: "2026-10-06T14:21:15.000Z", source: "trainstack" },
+      {
+        name: null,
+        sport: "running",
+        indoor: false,
+        startedAt: "2026-10-10T05:45:00.000Z",
+        source: "upload",
+      },
+      {
+        name: null,
+        sport: "cycling",
+        indoor: false,
+        startedAt: "2026-10-06T14:21:15.000Z",
+        source: "trainstack",
+      },
       {
         name: "Morning Ride & Coffee",
         sport: "cycling",
+        indoor: false,
         startedAt: "2026-09-12T06:58:31.000Z",
         source: "upload",
       },

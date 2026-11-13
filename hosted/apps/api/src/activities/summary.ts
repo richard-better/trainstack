@@ -12,7 +12,7 @@ import { summaryOfFile } from "./activity-file";
 import { SummaryError, type FileSummary } from "./file-summary";
 import { fileKey } from "./files";
 
-export const SUMMARY_VERSION = 2;
+export const SUMMARY_VERSION = 3;
 export const MAX_SUMMARY_ATTEMPTS = 3;
 export const SUMMARIES_PER_SCHEDULED_RUN = 5;
 export const MAX_EVENTS_PER_ACTIVITY = 2000;
@@ -64,6 +64,7 @@ async function store(
       .set({
         ...(summary?.startedAt ? { startedAt: summary.startedAt } : {}),
         fileSport: summary?.sport ?? null,
+        fileIndoor: summary?.indoor ?? null,
         fileName: summary?.name ?? null,
         summarizedAt: summary ? new Date() : null,
         summaryVersion: SUMMARY_VERSION,

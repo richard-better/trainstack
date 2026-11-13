@@ -102,6 +102,7 @@ function recordings(db: Database, userId: string, condition: SQL | undefined) {
       id: activity.id,
       workoutId: activity.workoutId,
       sport: sql<string | null>`coalesce(${activity.sport}, ${activity.fileSport})`,
+      indoor: sql<number | null>`coalesce(${activity.indoor}, ${activity.fileIndoor})`,
       startedAt: activity.startedAt,
       elapsedSeconds: elapsed.value,
       distanceMetres: distance.value,
@@ -130,11 +131,13 @@ const asCandidate = (row: {
   id: string;
   workoutId: string | null;
   sport: string | null;
+  indoor: number | null;
   startedAt: Date | null;
   elapsedSeconds: number;
   distanceMetres: number | null;
 }): Candidate => ({
   ...row,
+  indoor: row.indoor === null ? null : row.indoor === 1,
   startedAt: row.startedAt!,
   distanceMetres: row.distanceMetres ?? undefined,
 });

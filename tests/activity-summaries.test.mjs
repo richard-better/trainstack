@@ -8,7 +8,7 @@ import { denseRide, manyLaps, pausedRun } from "./helpers/fit-files.mjs";
 
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const TRACES = "apps/ride/RideKit/Tests/RideCoreTests/Traces";
-const SUMMARY_VERSION = 2;
+const SUMMARY_VERSION = 3;
 const MAX_ACTIVITY_FILE_BYTES = 25 * 1024 * 1024;
 
 let worker;
@@ -132,12 +132,14 @@ test("the file's start time wins over the client's, and the client's sport and n
   const uploaded = await client.activities.upload({
     file: fitFile(),
     source: "trainstack",
-    sport: "indoor_cycling",
+    sport: "rowing",
+    indoor: false,
     name: "Sweet spot",
     startedAt: new Date("2026-11-01T07:30:00Z"),
   });
   assert.deepEqual(uploaded.startedAt, new Date("2026-10-06T14:21:15.000Z"));
-  assert.equal(uploaded.sport, "indoor_cycling");
+  assert.equal(uploaded.sport, "rowing");
+  assert.equal(uploaded.indoor, false);
   assert.equal(uploaded.name, "Sweet spot");
 });
 
@@ -200,7 +202,8 @@ test("Ride's golden files summarise as indoor cycling, named after their workout
       file: fitFile(bytes, `${trace}.fit`),
       source: "trainstack",
     });
-    assert.equal(uploaded.sport, "indoor_cycling", trace);
+    assert.equal(uploaded.sport, "cycling", trace);
+    assert.equal(uploaded.indoor, true, trace);
     assert.equal(uploaded.name, name, trace);
     assert.equal(uploaded.startedAt.toISOString(), startedAt, trace);
     assert.deepEqual(uploaded.statistics, statistics, trace);

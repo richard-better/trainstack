@@ -2,6 +2,7 @@ export type Recording = {
   startedAt: Date;
   elapsedSeconds: number;
   sport: string | null;
+  indoor: boolean | null;
   distanceMetres: number | undefined;
 };
 
@@ -13,14 +14,11 @@ const PIECE_DISTANCE_SLACK = 1.2;
 const COMPARABLE_DURATION_RATIO = 0.8;
 
 const sportFamilies: Record<string, string> = {
-  indoor_cycling: "cycling",
   e_biking: "cycling",
   hiking: "walking",
 };
 
 const familyOf = (sport: string) => sportFamilies[sport] ?? sport;
-
-const isIndoor = (sport: string | null) => sport === "indoor_cycling";
 
 const sameSport = (a: string | null, b: string | null) =>
   a === null || b === null || familyOf(a) === familyOf(b);
@@ -51,7 +49,7 @@ export function isSameWorkout(a: Recording, b: Recording) {
 }
 
 function distancesAgree(shorter: Recording, longer: Recording, comparable: boolean) {
-  if (isIndoor(shorter.sport) || isIndoor(longer.sport)) return true;
+  if (shorter.indoor || longer.indoor) return true;
   const shorterDistance = shorter.distanceMetres ?? 0;
   const longerDistance = longer.distanceMetres ?? 0;
   if (shorterDistance <= 0 || longerDistance <= 0) return true;

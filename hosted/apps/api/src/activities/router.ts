@@ -51,6 +51,7 @@ function toActivity(
     source: row.source,
     sourceId: row.sourceId,
     sport: row.sport ?? row.fileSport,
+    indoor: row.indoor ?? row.fileIndoor,
     name: row.name ?? row.fileName,
     startedAt: row.startedAt,
     file: fileOf(row),
@@ -137,6 +138,15 @@ function decodeCursor(cursor: string) {
   return { occurredAt: Number(match[1]), id: match[2]! };
 }
 
+const INDOOR_PREFIX = "indoor_";
+
+function athleteSport(sport: string | undefined, indoor: boolean | undefined) {
+  if (sport?.startsWith(INDOOR_PREFIX)) {
+    return { sport: sport.slice(INDOOR_PREFIX.length), indoor: indoor ?? true };
+  }
+  return { sport: sport ?? null, indoor: indoor ?? null };
+}
+
 const SAME_KEY_WRITE_ATTEMPTS = 3;
 const R2_SAME_KEY_WRITE_INTERVAL_MS = 1000;
 
@@ -162,6 +172,7 @@ export const activitiesRouter = {
     const format = formatOf(bytes);
     if (!format) throw errors.UNSUPPORTED_FILE();
     const id = await sha256Hex(bytes);
+    const { sport, indoor } = athleteSport(input.sport, input.indoor);
 
     const deletedRefusal = async () => {
       const deletion = await findDeletion(db, userId, id);
@@ -176,8 +187,8 @@ export const activitiesRouter = {
     await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
     try {
       await db.run(sql`
-        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, name, started_at, file_format, file_size)
-        SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${input.sport ?? null},
+        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size)
+        SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${sport}, ${indoor},
           ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength}
         WHERE NOT EXISTS (
           SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}

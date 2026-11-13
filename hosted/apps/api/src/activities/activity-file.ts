@@ -1,11 +1,10 @@
 import type { ActivityStatisticName } from "@trainstack/contract";
 import {
   ActivityFileError,
+  activitySport,
   summarizeActivityFile,
   type ActivityFileErrorCode,
   type ActivityLap,
-  type Sport,
-  type SubSport,
 } from "@trainstack/activity-file";
 import type { FitTotals } from "@trainstack/fit";
 
@@ -52,18 +51,7 @@ function statistics(totals: Totals) {
   return named;
 }
 
-const indoorCyclingSubSports = new Set<SubSport>(["indoorCycling", "virtualActivity", "spin"]);
-
 const snakeCase = (name: string) => name.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-
-export function sportOf(sport: Sport | undefined, subSport: SubSport | undefined) {
-  if (typeof sport !== "string" || sport === "generic") return undefined;
-  if (sport === "cycling" && subSport !== undefined && indoorCyclingSubSports.has(subSport)) {
-    return "indoor_cycling";
-  }
-  if (sport === "training" && subSport === "strengthTraining") return "strength";
-  return snakeCase(sport);
-}
 
 const FIT_EPOCH = Date.UTC(1989, 11, 31);
 
@@ -92,9 +80,11 @@ export function summaryOfFile(bytes: Uint8Array): FileSummary {
   try {
     const activity = summarizeActivityFile(bytes);
     const { summary } = activity;
+    const { sport, indoor } = activitySport(summary.sport, summary.subSport);
     return {
       startedAt: knownTime(summary.startTime),
-      sport: sportOf(summary.sport, summary.subSport),
+      sport,
+      indoor,
       name: activity.name?.trim() || undefined,
       statistics: statistics(summary),
       events: lapEvents(activity.laps).sort(
