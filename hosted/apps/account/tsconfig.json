@@ -4,7 +4,8 @@
     "jsx": "react-jsx",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["vite/client", "node"],
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
 }

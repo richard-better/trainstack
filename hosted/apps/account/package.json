@@ -10,8 +10,12 @@
     "dev:bare": "vp dev"
   },
   "dependencies": {
+    "@orpc/client": "catalog:",
+    "@tanstack/react-query": "^5.107.1",
     "@tanstack/react-router": "^1.170.46",
     "@tanstack/react-start": "^1.169.4",
+    "@trainstack/activity-file": "workspace:*",
+    "@trainstack/contract": "workspace:*",
     "better-auth": "catalog:",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

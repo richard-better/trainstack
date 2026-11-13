@@ -1,6 +1,8 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import { queryClient } from "../api";
 import styles from "../styles/app.css?url";
 
 export const Route = createRootRoute({
@@ -12,11 +14,21 @@ export const Route = createRootRoute({
       { title: "Trainstack" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap",
+      },
       { rel: "stylesheet", href: styles },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
   }),
-  component: () => <Outlet />,
+  component: () => (
+    <QueryClientProvider client={queryClient}>
+      <Outlet />
+    </QueryClientProvider>
+  ),
   shellComponent: RootDocument,
 });
 
