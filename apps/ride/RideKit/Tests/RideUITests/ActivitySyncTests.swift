@@ -263,6 +263,24 @@ struct ActivitySyncTests {
     }
   }
 
+  @Test func aRideDeletedAndImportedAgainWhileTheListIsOnItsWayStaysOnThisDevice() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      try await device.sync.sync()
+      await device.server.holdReplies(to: .list)
+      let listing = Task { try await device.sync.sync() }
+      while !(await device.server.isHoldingAReply) { await Task.yield() }
+      device.library.remove(id)
+      try device.library.add(data)
+      await device.server.releaseReplies()
+      try await listing.value
+      try await device.sync.sync()
+      #expect(device.library[id] != nil)
+      #expect(await device.server.tombstones(of: "ada") == [id])
+    }
+  }
+
   @Test func retriesSoonAfterAFailureAndBacksOffToHalfAnHour() {
     #expect(ActivitySync.retryDelay(afterFailures: 1) == .seconds(30))
     #expect(ActivitySync.retryDelay(afterFailures: 2) == .seconds(60))

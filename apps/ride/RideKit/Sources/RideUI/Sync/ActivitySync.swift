@@ -136,6 +136,7 @@ final class ActivitySync {
     update(account) { state in
       state.onServer = known.intersection(onServer)
         .union(onServer.filter { library[$0] != nil })
+        .subtracting(state.deleted)
       state.deleted.formUnion(deletedElsewhere)
     }
     for id in deletedElsewhere.sorted() { library.remove(id) }
