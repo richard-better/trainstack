@@ -1,32 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { createORPCClient } from "@orpc/client";
-import { RPCLink } from "@orpc/client/fetch";
 import { hashPassword } from "better-auth/crypto";
-import { api, migrate, origin, startWorker } from "./helpers/worker.mjs";
+import { api, migrate, origin, rpcClient, startWorker } from "./helpers/worker.mjs";
 import { mockApple } from "./helpers/apple.mjs";
 
 let worker;
 let runtime;
 const apple = mockApple();
-
-function rpcClient(cookie) {
-  return createORPCClient(
-    new RPCLink({
-      url: `${api}/rpc`,
-      fetch: async (request, options) => {
-        const outgoing = new Request(request, options);
-        outgoing.headers.set("Origin", origin);
-        if (cookie) outgoing.headers.set("Cookie", cookie);
-        return runtime.dispatchFetch(outgoing.url, {
-          method: outgoing.method,
-          headers: Object.fromEntries(outgoing.headers),
-          body: outgoing.body ? await outgoing.arrayBuffer() : undefined,
-        });
-      },
-    }),
-  );
-}
 
 before(
   async () => {
@@ -56,9 +36,9 @@ test("committed migrations support health and authentication on D1 without Axiom
   assert.equal(health.headers.get("access-control-allow-credentials"), "true");
   assert.deepEqual(await health.json(), { status: "ok" });
 
-  const anonymous = rpcClient();
+  const anonymous = rpcClient(runtime);
   assert.equal(await anonymous.healthCheck(), "OK");
-  await assert.rejects(anonymous.privateData(), { code: "UNAUTHORIZED", status: 401 });
+  await assert.rejects(anonymous.activities.list({}), { code: "UNAUTHORIZED", status: 401 });
 
   const { response: signup, cookie } = await apple.signIn(runtime, { email: "ci@example.com" });
   assert.match(signup.headers.get("set-cookie"), /HttpOnly/i);
@@ -70,34 +50,27 @@ test("committed migrations support health and authentication on D1 without Axiom
   const sessionUser = (await session.json()).user;
   assert.equal(sessionUser.email, "ci@example.com");
 
-  const privateData = await rpcClient(cookie).privateData();
-  assert.equal(privateData.message, "This is private");
-  assert.deepEqual(JSON.parse(JSON.stringify(privateData.user)), sessionUser);
-  assert.ok(privateData.user.createdAt instanceof Date);
-  assert.ok(privateData.user.updatedAt instanceof Date);
+  assert.deepEqual(await rpcClient(runtime, { cookie }).activities.list({}), {
+    activities: [],
+    nextCursor: null,
+  });
 
   const publicApi = await runtime.dispatchFetch(`${api}/api-reference/healthCheck`, {
     method: "POST",
   });
   assert.equal(publicApi.status, 200);
   assert.equal(await publicApi.json(), "OK");
-  const anonymousApi = await runtime.dispatchFetch(`${api}/api-reference/privateData`, {
-    method: "POST",
-  });
+  const anonymousApi = await runtime.dispatchFetch(`${api}/api-reference/activities`);
   assert.equal(anonymousApi.status, 401);
   assert.equal((await anonymousApi.json()).code, "UNAUTHORIZED");
-  const authenticatedApi = await runtime.dispatchFetch(`${api}/api-reference/privateData`, {
-    method: "POST",
+  const authenticatedApi = await runtime.dispatchFetch(`${api}/api-reference/activities`, {
     headers: { Cookie: cookie },
   });
   assert.equal(authenticatedApi.status, 200);
-  assert.deepEqual(await authenticatedApi.json(), {
-    message: "This is private",
-    user: sessionUser,
-  });
+  assert.deepEqual(await authenticatedApi.json(), { activities: [], nextCursor: null });
 
-  const invalidSession = rpcClient("better-auth.session_token=invalid");
-  await assert.rejects(invalidSession.privateData(), { code: "UNAUTHORIZED", status: 401 });
+  const invalidSession = rpcClient(runtime, { cookie: "better-auth.session_token=invalid" });
+  await assert.rejects(invalidSession.activities.list({}), { code: "UNAUTHORIZED", status: 401 });
 
   const untrusted = await runtime.dispatchFetch(`${api}/health`, {
     headers: { Origin: "https://untrusted.example" },
@@ -116,11 +89,15 @@ test("OpenAPI reference describes contract outputs and authentication errors", a
     spec.paths["/healthCheck"].post.responses[200].content["application/json"].schema.const,
     "OK",
   );
-  const privateData = spec.paths["/privateData"].post.responses;
-  assert.ok(privateData[401]);
-  const schema = privateData[200].content["application/json"].schema;
-  assert.deepEqual(schema.required, ["message", "user"]);
-  assert.equal(schema.properties.user.properties.email.type, "string");
+  const list = spec.paths["/activities"].get.responses;
+  assert.ok(list[401]);
+  const schema = list[200].content["application/json"].schema;
+  assert.deepEqual(schema.required, ["activities", "nextCursor"]);
+  const upload = spec.paths["/activities"].post;
+  assert.ok(upload.requestBody.content["multipart/form-data"]);
+  assert.ok(upload.responses[410]);
+  assert.ok(spec.paths["/activities/{id}"].delete);
+  assert.ok(spec.paths["/activities/{id}/file"].get);
 });
 
 test("a native app signs in with a bearer token and can delete its account", async () => {

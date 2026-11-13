@@ -121,6 +121,14 @@ gh secret set GITHUB_FEEDBACK_TOKEN --env production --repo richard-better/train
 
 A fine-grained token cannot write to a repository that `kes-agent` does not own, which is why this is a classic one. Rotate it before it expires by replacing the secret and redeploying.
 
+### Activities
+
+Activities are served through the contract in `packages/contract` (`activities.upload`, `list`, `get`, `file` and `delete`), over RPC at `/rpc` for TypeScript clients and as plain HTTP at `/api-reference` for the app, documented at `/api-reference/spec.json`: `POST /activities` (multipart, with `file`, `source` and optionally `sourceId`, `sport`, `name` and `startedAt`), `GET /activities?limit=&cursor=`, `GET /activities/{id}`, `GET /activities/{id}/file` and `DELETE /activities/{id}`. They take the rider's session as a bearer token, or as the session cookie from the web app's origin; a cookie sent from any other site counts as no session.
+
+An activity is named by the SHA-256 of its file, in lowercase hex, like the app's iCloud record for a ride, so uploading the same file again returns the activity it already made. The file (FIT, GPX or TCX, up to 25 MB) is stored in R2 at `activities/<user id>/<activity id>` and never changes. Sport and source are open lowercase words (`indoor_cycling`, `apple_health`), so a new sport or source needs no migration. Numbers that sum an activity up go in `activity_statistic` as named values, and laps, pauses and other moments in `activity_event`; both are empty until the server derives them from the file, and `summarizedAt` stays null until it has. `activity_sync` holds each source's sync cursor for importers.
+
+Deleting an activity deletes its file and leaves a row in `deleted_activity`, like the app's `DeletedRide` record. From then on, uploading that file to that account answers `410 ACTIVITY_DELETED` with the deletion's `id` and `deletedAt`, so a stale device can drop the activity instead of treating it as a failure. A device can delete an activity the server never had, which stops any other device sending it. Deleting is idempotent. Deleting an account deletes its activity rows, but not yet its files in R2.
+
 ## First deployment
 
 1. Confirm the domain zone is active in this account and `trainstackhq.com` has a proxied DNS record. The apex Worker route uses the existing proxied records, so keep at least one in place. The API and account Workers use custom domains at `api.trainstackhq.com` and `account.trainstackhq.com`; resolve any conflicting records for those exact hostnames before deployment. Alchemy creates their domain records and TLS certificates.
