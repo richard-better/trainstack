@@ -23,6 +23,10 @@ export const db = Cloudflare.D1.Database("database", {
   migrations: "../apps/api/src/db/migrations",
 }).pipe(RemovalPolicy.retain(production));
 
+export const activityFiles = Cloudflare.R2.Bucket("activity-files").pipe(
+  RemovalPolicy.retain(production),
+);
+
 export const observability = Effect.gen(function* () {
   const enabled = yield* Config.Boolean("AXIOM_ENABLED").pipe(Config.withDefault(false));
   if (!enabled) {
@@ -49,6 +53,7 @@ export const server = Cloudflare.Worker("server", {
   workersDev: serverWorkersDevForStage,
   env: {
     DB: db,
+    ACTIVITY_FILES: activityFiles,
     NODE_ENV: production.pipe(Effect.map((prod) => (prod ? "production" : "development"))),
     WEB_APP_ORIGIN: production.pipe(
       Effect.flatMap((prod) =>
@@ -124,6 +129,7 @@ export default Alchemy.Stack(
       account: accountWorker.url,
       server: serverWorker.url,
       database: (yield* db).databaseId,
+      activityFiles: (yield* activityFiles).bucketName,
       axiomDataset: observabilityResources.AXIOM_DATASET,
     };
   }),

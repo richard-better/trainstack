@@ -5,7 +5,7 @@
 Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted/infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted/infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
 
 - TanStack Start web app Worker at `account.trainstackhq.com`, where athletes sign in with Apple. Alchemy builds it through `Cloudflare.Website.Vite` with the API's URL as `VITE_SERVER_URL`, and manages the custom domain and TLS.
-- API Worker at `api.trainstackhq.com`, with a `DB` binding to D1, a secret Better Auth signing key, and the web app's origin as `WEB_APP_ORIGIN`, the only origin it trusts for sign-in and credentialed requests.
+- API Worker at `api.trainstackhq.com`, with a `DB` binding to D1, an `ACTIVITY_FILES` binding to the private R2 bucket that holds activity files, a secret Better Auth signing key, and the web app's origin as `WEB_APP_ORIGIN`, the only origin it trusts for sign-in and credentialed requests.
 - Astro Worker served at `trainstackhq.com` by a `trainstackhq.com/*` route over the existing proxied DNS records, with session KV and an Images binding.
 - Committed Drizzle migrations before the API Worker update.
 - When configured, Axiom dataset `trainstack-production-logs` and a dataset-scoped ingest token injected into both applications.
@@ -23,6 +23,7 @@ Create an **account-owned** API token from [this account's token settings](https
 | ----------------------- | ------------------------ |
 | Anthropo account        | Workers Scripts Write    |
 | Anthropo account        | D1 Write                 |
+| Anthropo account        | Workers R2 Storage Write |
 | Anthropo account        | Workers KV Storage Write |
 | Anthropo account        | Secrets Store Write      |
 | Anthropo account        | Account Settings Read    |
@@ -145,6 +146,6 @@ Run `bun run check`, `bun run test`, and `bun run build` before merging. Tests e
 
 For an application regression, revert the application commit on `main` and let CI redeploy. Old workflow revisions are intentionally skipped, so use a revert commit instead of re-running an old revision. Reverting application code does not reverse database migrations; fix schema issues with a new forward migration. Use D1 Time Travel for a data recovery incident after checking the affected database and restore point.
 
-The production database has a retain removal policy. This prevents Alchemy from deleting it during replacement or teardown, but the state row is still removed. Do not use `destroy` to roll back an application release. Preserve database IDs and state access before deliberate infrastructure removal.
+The production database and activity files bucket have a retain removal policy. This prevents Alchemy from deleting it during replacement or teardown, but the state row is still removed. Do not use `destroy` to roll back an application release. Preserve database IDs and state access before deliberate infrastructure removal.
 
 If deployment fails, inspect the Actions job and Alchemy plan, correct the configuration or code, and rerun the current `main` workflow. Do not delete shared state or use broad adoption to hide a failed deploy.
