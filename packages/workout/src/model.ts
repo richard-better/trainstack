@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { expandedLength, maxExpandedSteps } from "./timeline";
 
 export const sportSchema = z.enum(["cycling", "running", "swimming"]);
 export type Sport = z.infer<typeof sportSchema>;
@@ -148,6 +149,11 @@ export const workoutSchema = z.object({
   author: z.string().min(1).optional(),
   focus: focusSchema.optional(),
   tags: z.array(z.string().min(1)).optional(),
-  steps: z.array(blockSchema).min(1),
+  steps: z
+    .array(blockSchema)
+    .min(1)
+    .refine((steps) => expandedLength(steps) <= maxExpandedSteps, {
+      message: `A workout can expand to at most ${maxExpandedSteps} steps`,
+    }),
 });
 export type Workout = z.infer<typeof workoutSchema>;

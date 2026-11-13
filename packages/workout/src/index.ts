@@ -9,7 +9,14 @@ import type { Workout } from "./model";
 import { parseZwo, writeZwo } from "./zwo";
 
 export * from "./model";
-export { CuePlacementError, flatten, totals, type Totals } from "./timeline";
+export {
+  CuePlacementError,
+  expandedLength,
+  flatten,
+  maxExpandedSteps,
+  totals,
+  type Totals,
+} from "./timeline";
 export {
   type Converted,
   type FormatIssue,

@@ -153,3 +153,17 @@ test("totals add up time and distance through repeats", () => {
     ]),
   ).toEqual({ seconds: 300, meters: 1600 });
 });
+
+test("a workout cannot expand past the step limit, so a file cannot exhaust memory", () => {
+  const huge: Workout = {
+    name: "Huge",
+    sport: "cycling",
+    steps: [{ type: "repeat", count: 1_000_000_000, steps: [easy] }],
+  };
+  expect(workoutSchema.safeParse(huge).success).toBe(false);
+  expect(() => flatten(huge.steps)).toThrow(RangeError);
+  expect(
+    workoutSchema.safeParse({ ...huge, steps: [{ type: "repeat", count: 10_000, steps: [easy] }] })
+      .success,
+  ).toBe(true);
+});

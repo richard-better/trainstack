@@ -410,3 +410,12 @@ then sprints. Keep cadence above 90 in the efforts.</description>
     expect(workoutSchema.safeParse(parseZwo(writeZwo(base).value).value).success).toBe(true);
   });
 });
+
+test("rejects a file whose repeats would expand past the step limit", () => {
+  const error = failure(() =>
+    parseZwo(
+      `<workout_file><workout><IntervalsT Repeat="1000000000" OnDuration="1" OffDuration="1" OnPower="1" OffPower="0.5"/></workout></workout_file>`,
+    ),
+  );
+  expect(error.issues[0]?.message).toBe("A workout can expand to at most 10000 steps");
+});

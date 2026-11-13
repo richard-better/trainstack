@@ -49,10 +49,29 @@ function shifted(at: Cue["at"], amount: number): Cue["at"] {
     : { type: "distance", meters: amount };
 }
 
+export const maxExpandedSteps = 10_000;
+
+export function expandedLength(blocks: readonly Block[]): number {
+  return blocks.reduce(
+    (sum, block) => sum + (block.type === "step" ? 1 : block.count * expandedLength(block.steps)),
+    0,
+  );
+}
+
 export function flatten(blocks: readonly Block[]): Step[] {
+  const length = expandedLength(blocks);
+  if (length > maxExpandedSteps) {
+    throw new RangeError(
+      `A workout expands to ${length} steps, more than the ${maxExpandedSteps} allowed`,
+    );
+  }
+  return expand(blocks);
+}
+
+function expand(blocks: readonly Block[]): Step[] {
   return blocks.flatMap((block) => {
     if (block.type === "step") return [block];
-    const once = flatten(block.steps);
+    const once = expand(block.steps);
     const expanded = Array.from({ length: block.count }, () => once).flat();
     return (block.cues ?? []).reduce(placeCue, expanded);
   });
