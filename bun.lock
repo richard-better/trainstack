@@ -122,6 +122,17 @@
         "typescript": "catalog:",
       },
     },
+    "packages/fit": {
+      "name": "@trainstack/fit",
+      "devDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@trainstack/config": "workspace:*",
+        "@types/node": "catalog:",
+        "miniflare": "4.20260730.0",
+        "rolldown": "1.2.16",
+        "typescript": "catalog:",
+      },
+    },
   },
   "overrides": {
     "vite": "catalog:",
@@ -777,6 +788,8 @@
     "@trainstack/config": ["@trainstack/config@workspace:packages/config"],
 
     "@trainstack/contract": ["@trainstack/contract@workspace:packages/contract"],
+
+    "@trainstack/fit": ["@trainstack/fit@workspace:packages/fit"],
 
     "@trainstack/hosted-api": ["@trainstack/hosted-api@workspace:hosted/apps/api"],
 
