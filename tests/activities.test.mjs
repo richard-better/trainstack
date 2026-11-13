@@ -398,3 +398,26 @@ test("a full page of two hundred activities lists in one request", async () => {
   assert.deepEqual(rest.activities.length, 1);
   assert.equal(rest.nextCursor, null);
 });
+
+test("an upload a delete overtakes after it is stored answers that the activity was deleted", async () => {
+  const { client, user } = await rider();
+  await db
+    .prepare(
+      `CREATE TRIGGER delete_right_after_upload AFTER INSERT ON activity WHEN NEW.user_id = '${user.id}'
+       BEGIN
+         INSERT INTO deleted_activity (user_id, id) VALUES (NEW.user_id, NEW.id);
+         DELETE FROM activity WHERE user_id = NEW.user_id AND id = NEW.id;
+       END`,
+    )
+    .run();
+  try {
+    await assert.rejects(client.activities.upload({ file: fitFile(), source: "trainstack" }), {
+      code: "ACTIVITY_DELETED",
+      status: 410,
+    });
+  } finally {
+    await db.prepare("DROP TRIGGER delete_right_after_upload").run();
+  }
+  assert.equal(await bucket.head(`activities/${user.id}/${sha256(rideBytes)}`), null);
+  assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
+});
