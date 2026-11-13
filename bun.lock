@@ -129,6 +129,22 @@
         "typescript": "catalog:",
       },
     },
+    "packages/analysis": {
+      "name": "@trainstack/analysis",
+      "dependencies": {
+        "@trainstack/zones": "workspace:*",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@trainstack/activity-file": "workspace:*",
+        "@trainstack/config": "workspace:*",
+        "@trainstack/fit": "workspace:*",
+        "@types/node": "catalog:",
+        "miniflare": "4.20260730.0",
+        "rolldown": "1.2.16",
+        "typescript": "catalog:",
+      },
+    },
     "packages/config": {
       "name": "@trainstack/config",
       "version": "0.0.0",
@@ -834,6 +850,8 @@
     "@trainstack/account": ["@trainstack/account@workspace:hosted/apps/account"],
 
     "@trainstack/activity-file": ["@trainstack/activity-file@workspace:packages/activity-file"],
+
+    "@trainstack/analysis": ["@trainstack/analysis@workspace:packages/analysis"],
 
     "@trainstack/config": ["@trainstack/config@workspace:packages/config"],
 
