@@ -55,7 +55,7 @@ decoding.
 
 ## Untrusted input
 
-Files over 64 MiB fail with `tooLarge`. The XML reader scans bytes once and keeps no document
+Files over 64 MiB, and files with more than 10,000 laps or sessions, fail with `tooLarge`. The XML reader scans bytes once and keeps no document
 tree. It never expands entities a DOCTYPE declares, and rejects nesting deeper than 64
 elements or more than 64 attributes on one element. It keeps at most 4 KiB of text per
 element. Time grows linearly with size, and the tests check that on input crafted to be slow.

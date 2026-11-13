@@ -12,7 +12,7 @@ import {
   summarizeActivityFile,
   type ActivityFileFormat,
 } from "../src/index.ts";
-import { denseFit, denseGpx, denseTcx } from "./dense.ts";
+import { denseFit, denseGpx, denseTcx, manyLapsTcx, segmentedGpx } from "./dense.ts";
 import { file, fileNames, text } from "./files.ts";
 
 const decodable = [
@@ -43,6 +43,15 @@ test("fails as the full decode does", () => {
     assert.throws(
       () => summarizeActivityFile(data),
       (error) => error instanceof ActivityFileError && error.code === code,
+    );
+  }
+});
+
+test("rejects a file with more laps than an activity can have, before keeping them all", () => {
+  for (const decode of [decodeActivityFile, summarizeActivityFile]) {
+    assert.throws(
+      () => decode(manyLapsTcx(2 * 1024 * 1024)),
+      (error) => error instanceof ActivityFileError && error.code === "tooLarge",
     );
   }
 });
@@ -93,6 +102,16 @@ test(`summarizes a dense 25 MB file of each format in a ${heapMegabytes} MB heap
 
       assert.notEqual(run(path, "full").status, 0, `${format} decoded in full within the cap`);
     }
+
+    const segmented = join(directory, "segmented.gpx");
+    writeFileSync(segmented, segmentedGpx(fileBytes));
+    const summarized = run(segmented, "summary");
+    assert.equal(summarized.status, 0, summarized.stderr);
+    const { summary } = JSON.parse(summarized.stdout) as {
+      summary: { elapsedSeconds: number; timerSeconds: number };
+    };
+    assert.equal(summary.timerSeconds, 0);
+    assert.ok(summary.elapsedSeconds > 100_000);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

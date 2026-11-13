@@ -90,3 +90,20 @@ export function denseTcx(size: number): Uint8Array {
     },
   );
 }
+
+export function segmentedGpx(size: number): Uint8Array {
+  return xml(size, `<gpx version="1.1"><trk>`, `</trk></gpx>`, (second) => {
+    const sample = point(second * 2);
+    return `<trkseg><trkpt lat="${sample.latitude.toFixed(5)}" lon="${sample.longitude.toFixed(5)}"><time>${new Date(sample.time).toISOString()}</time></trkpt></trkseg>`;
+  });
+}
+
+export function manyLapsTcx(size: number): Uint8Array {
+  return xml(
+    size,
+    `<TrainingCenterDatabase><Activities><Activity Sport="Running">`,
+    `</Activity></Activities></TrainingCenterDatabase>`,
+    (second) =>
+      `<Lap StartTime="${new Date(start + second * 1000).toISOString()}"><TotalTimeSeconds>1</TotalTimeSeconds></Lap>`,
+  );
+}

@@ -121,13 +121,14 @@ class Climbs {
 export class Track {
   start: number | undefined;
   end: number | undefined;
-  readonly pauses: Pause[] = [];
+  pausedSeconds = 0;
   readonly speed = new Series();
   readonly heartRate = new Series();
   readonly cadence = new Series();
   readonly power = new Series();
   readonly climbs = new Climbs();
   private readonly keptPoints: TimedPoint[] | undefined;
+  private readonly pauses: Pause[] = [];
   private readonly travelledAtPoints: (number | undefined)[] = [];
   private readonly fileDistance = new Series();
   private travelled: number | undefined;
@@ -146,7 +147,8 @@ export class Track {
 
   add(point: TimedPoint): void {
     if (this.segmentStarting && this.lastTime !== undefined) {
-      this.pauses.push({ stoppedAt: this.lastTime, startedAt: point.time });
+      this.pausedSeconds += Math.max(0, point.time - this.lastTime) / 1000;
+      if (this.keptPoints) this.pauses.push({ stoppedAt: this.lastTime, startedAt: point.time });
     }
     this.segmentStarting = false;
     this.lastTime = point.time;
@@ -272,12 +274,8 @@ export interface SummaryInput {
 export function summarize({ start, end, sport, laps, track }: SummaryInput): ActivitySummary {
   const fromLaps = (value: (lap: FitLap) => number | undefined) => laps.map(value);
   const elapsedSeconds = Math.max(0, (end - start) / 1000);
-  const pausedSeconds = track.pauses.reduce(
-    (total, { stoppedAt, startedAt }) => total + Math.max(0, startedAt - stoppedAt) / 1000,
-    0,
-  );
   const timerSeconds =
-    sum(fromLaps((lap) => lap.timerSeconds)) ?? Math.max(0, elapsedSeconds - pausedSeconds);
+    sum(fromLaps((lap) => lap.timerSeconds)) ?? Math.max(0, elapsedSeconds - track.pausedSeconds);
   const distanceMetres = sum(fromLaps((lap) => lap.distanceMetres)) ?? track.distanceMetres;
   return {
     startTime: new Date(start),
