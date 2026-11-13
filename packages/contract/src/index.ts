@@ -2,8 +2,10 @@ import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
 import { settingsContract } from "./settings";
+import { activityStatistics } from "./statistics";
 
 export * from "./settings";
+export * from "./statistics";
 
 export const MAX_ACTIVITY_FILE_BYTES = 25 * 1024 * 1024;
 
@@ -41,7 +43,9 @@ export const activitySchema = z.object({
     .describe("When the server derived the summary from the file; null while it has not yet"),
   statistics: z
     .record(z.string(), z.number())
-    .describe("Numbers that sum up the activity, such as distance_m or average_power_w"),
+    .describe(
+      `Numbers that sum up the activity, named <what>_<unit>: ${activityStatistics.map(({ name }) => name).join(", ")}, and more over time`,
+    ),
   createdAt: z.date(),
 });
 
