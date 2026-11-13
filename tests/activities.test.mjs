@@ -469,3 +469,46 @@ test("deleting an account deletes its activity files, and leaves other accounts'
   assert.equal(rows.n, 0);
   assert.ok(await bucket.head(`activities/${bob.user.id}/${id}`));
 });
+
+test("an upload whose account is deleted before its row is stored leaves no file behind", async () => {
+  const { client, user } = await rider();
+  await db
+    .prepare(
+      `CREATE TRIGGER account_deleted_mid_upload BEFORE INSERT ON activity WHEN NEW.user_id = '${user.id}'
+       BEGIN
+         DELETE FROM "user" WHERE id = NEW.user_id;
+       END`,
+    )
+    .run();
+  try {
+    await assert.rejects(client.activities.upload({ file: fitFile(), source: "trainstack" }));
+  } finally {
+    await db.prepare("DROP TRIGGER account_deleted_mid_upload").run();
+  }
+  const left = await bucket.list({ prefix: `activities/${user.id}/` });
+  assert.deepEqual(left.objects, []);
+});
+
+test("an upload a delete overtakes while it is being summarised answers that the activity was deleted", async () => {
+  const { client, user } = await rider();
+  await db
+    .prepare(
+      `CREATE TRIGGER delete_during_summary AFTER UPDATE OF summary_attempts ON activity
+       WHEN NEW.user_id = '${user.id}' AND NEW.summary_attempts = 1
+       BEGIN
+         INSERT INTO deleted_activity (user_id, id) VALUES (NEW.user_id, NEW.id);
+         DELETE FROM activity WHERE user_id = NEW.user_id AND id = NEW.id;
+       END`,
+    )
+    .run();
+  try {
+    await assert.rejects(client.activities.upload({ file: fitFile(), source: "trainstack" }), {
+      code: "ACTIVITY_DELETED",
+      status: 410,
+    });
+  } finally {
+    await db.prepare("DROP TRIGGER delete_during_summary").run();
+  }
+  assert.equal(await bucket.head(`activities/${user.id}/${sha256(rideBytes)}`), null);
+  assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
+});

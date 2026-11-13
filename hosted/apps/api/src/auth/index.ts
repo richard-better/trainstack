@@ -73,6 +73,7 @@ export function createAuth(env: AuthConfig, database: Database, appleWebFlowClie
           await deleteActivityFiles(env.ACTIVITY_FILES, user.id);
           await revokeWhatAppleWebFlowGranted(user.id);
         },
+        afterDelete: async (user) => deleteActivityFiles(env.ACTIVITY_FILES, user.id),
       },
     },
     account: { accountLinking: { enabled: false } },
