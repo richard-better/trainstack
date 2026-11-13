@@ -110,11 +110,14 @@ export const settingWriteSchema = z.union([
   settingRemovalSchema.extend({ remove: z.literal(true) }),
 ]);
 
-const historySchema = z.object({
+const changesSchema = z.object({
   entries: z.array(settingEntrySchema).describe("Ordered by day"),
   removed: z
     .array(settingRemovalSchema)
     .describe("Entries removed, kept so a device can drop its copy"),
+});
+
+const historySchema = changesSchema.extend({
   cursor: z.string().describe("Pass as since to get only what changes after this read"),
 });
 
@@ -198,7 +201,11 @@ export const settingsContract = {
       },
     })
     .input(z.object({ writes: z.array(settingWriteSchema).min(1).max(MAX_SETTING_WRITES) }))
-    .output(historySchema.describe("What each written setting and day now holds")),
+    .output(
+      changesSchema.describe(
+        "What each written setting and day now holds. It carries no cursor, since other devices' changes are not in it",
+      ),
+    ),
 };
 
 export type SettingChange = z.infer<typeof settingChangeSchema>;

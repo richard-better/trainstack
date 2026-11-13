@@ -31,8 +31,7 @@ const changeOf = (row: SettingRow) => JSON.parse(row.value) as SettingChange;
 const datedChanges = (rows: SettingRow[]): DatedChange[] =>
   rows.filter(isLive).map((row) => ({ day: row.day, change: changeOf(row) }));
 
-function history(rows: SettingRow[], allRows: SettingRow[], since?: string) {
-  const after = since === undefined ? 0 : Number(since);
+function changes(rows: SettingRow[], after = 0) {
   const changed = rows
     .filter((row) => row.revision > after)
     .toSorted(
@@ -48,8 +47,13 @@ function history(rows: SettingRow[], allRows: SettingRow[], since?: string) {
   const removed: SettingRemoval[] = changed
     .filter((row) => row.removed)
     .map((row) => ({ day: row.day, key: keyOf(row), updatedAt: row.updatedAt }));
-  const cursor = Math.max(after, ...allRows.map((row) => row.revision));
-  return { entries, removed, cursor: String(cursor) };
+  return { entries, removed };
+}
+
+function history(rows: SettingRow[], since?: string) {
+  const after = since === undefined ? 0 : Number(since);
+  const cursor = Math.max(after, ...rows.map((row) => row.revision));
+  return { ...changes(rows, after), cursor: String(cursor) };
 }
 
 const metricOutput = (settings: MetricZones) => ({
@@ -105,7 +109,7 @@ export const settingsRouter = {
 
   history: signedIn.settings.history.handler(async ({ context, input }) => {
     const rows = await rowsOf(getDb(), context.session.user.id);
-    return history(rows, rows, input.since);
+    return history(rows, input.since);
   }),
 
   write: signedIn.settings.write.handler(async ({ context, input, errors }) => {
@@ -170,6 +174,6 @@ export const settingsRouter = {
     const affected = rows.filter((row) =>
       written.has(JSON.stringify([row.kind, row.scope, row.name, row.day])),
     );
-    return history(affected, rows);
+    return changes(affected);
   }),
 };

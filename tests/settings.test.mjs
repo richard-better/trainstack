@@ -101,9 +101,7 @@ test("an old activity is analysed with the FTP that held on its day", async () =
   assert.equal(await ftpOn(client, "2026-01-01"), 200, "before the first change, the first holds");
   assert.equal((await client.settings.get({})).defaults.power.thresholds.ftp, 250);
 
-  const history = await client.settings.history({});
-  assert.deepEqual(history.entries, written.entries);
-  assert.equal(history.cursor, written.cursor);
+  assert.deepEqual((await client.settings.history({})).entries, written.entries);
 });
 
 test("an athlete corrects a threshold and removes another", async () => {
@@ -129,7 +127,6 @@ test("an athlete corrects a threshold and removes another", async () => {
         updatedAt: at(2),
       },
     ],
-    cursor: removed.cursor,
   });
   assert.equal(await ftpOn(client, "2026-07-01"), 200);
   assert.deepEqual(
@@ -365,13 +362,10 @@ test("a removal racing an edit: the later one wins, in either order, and a tie r
 
 test("a replayed write changes nothing, and a device syncs only what changed since its cursor", async () => {
   const { client } = await athlete();
-  const first = await client.settings.write({
-    writes: [put("2026-03-01", ftp(200)), put("2026-03-01", { kind: "weight", kg: 72.5 })],
-  });
-  const replay = await client.settings.write({
-    writes: [put("2026-03-01", ftp(200)), put("2026-03-01", { kind: "weight", kg: 72.5 })],
-  });
-  assert.deepEqual(replay, first);
+  const writes = [put("2026-03-01", ftp(200)), put("2026-03-01", { kind: "weight", kg: 72.5 })];
+  const written = await client.settings.write({ writes });
+  const first = await client.settings.history({});
+  assert.deepEqual(await client.settings.write({ writes }), written);
   assert.deepEqual(await client.settings.history({ since: first.cursor }), {
     entries: [],
     removed: [],
@@ -388,6 +382,21 @@ test("a replayed write changes nothing, and a device syncs only what changed sin
   ]);
   assert.ok(Number(since.cursor) > Number(first.cursor));
   assert.equal((await client.settings.get({})).weightKg, null);
+});
+
+test("a device that writes still syncs what another device wrote before it", async () => {
+  const { client } = await athlete();
+  const phone = client;
+  const mac = client;
+  const synced = await mac.settings.history({});
+  await phone.settings.write({ writes: [put("2026-03-01", { kind: "weight", kg: 71 })] });
+  const written = await mac.settings.write({ writes: [put("2026-03-01", ftp(250))] });
+  assert.deepEqual(Object.keys(written), ["entries", "removed"]);
+  const since = await mac.settings.history({ since: synced.cursor });
+  assert.deepEqual(
+    since.entries.map((entry) => entry.change.kind),
+    ["threshold", "weight"],
+  );
 });
 
 test("a sport named like an Object property is just a sport", async () => {
