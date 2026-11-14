@@ -2,6 +2,7 @@ import { oc } from "@orpc/contract";
 import { workoutSchema } from "@trainstack/workout";
 import { z } from "zod";
 
+import { activityRouteSchema } from "./route.ts";
 import { settingDaySchema } from "./settings.ts";
 import { builtinWorkoutIdSchema, workoutIdSchema } from "./workouts.ts";
 
@@ -240,6 +241,12 @@ export const calendarActivitySchema = z.object({
   seconds: z.number().nullable().describe("Moving time: timer_s, else elapsed_s"),
   meters: z.number().nullable().describe("distance_m"),
   load: z.number().nullable().describe("load_tss, once the analysis has it"),
+  route: activityRouteSchema,
+  analysisDue: z
+    .boolean()
+    .describe(
+      "As on Activity: whether the server has yet to analyse it as it stands. While true, a null load may still come and the numbers may change",
+    ),
   plannedId: plannedWorkoutIdSchema
     .nullable()
     .describe(
@@ -462,6 +469,13 @@ export const calendarContract = {
         today: settingDaySchema.describe("Today in the athlete's time zone"),
         days: z.array(calendarDaySchema).describe("One for every day from from through through"),
         weeks: z.array(calendarWeekSchema),
+        analysesDue: z
+          .number()
+          .int()
+          .min(0)
+          .describe(
+            "How many of the activities in the weeks returned have analysisDue. While it is above 0 their loads, totals and compliance may still change; refetch until it is 0",
+          ),
       }),
     ),
 };

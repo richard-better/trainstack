@@ -1,4 +1,5 @@
 import type {
+  ActivityRoute,
   CalendarActivity,
   CalendarDay,
   CalendarTotals,
@@ -7,7 +8,13 @@ import type {
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
-import { activity, activityStatistic, plannedPairingChoice, plannedWorkout } from "../db/schema";
+import {
+  activity,
+  activityAnalysis,
+  activityStatistic,
+  plannedPairingChoice,
+  plannedWorkout,
+} from "../db/schema";
 import { analysisDueOf } from "../activities/analysis";
 import { complianceOf, contentHashOf, intervalsOf } from "./compliance";
 import { type Pair, pairDay, type PairChoice } from "./pairing";
@@ -45,6 +52,7 @@ type ActivityRow = {
   distance: number | null;
   load: number | null;
   analysisDue: number;
+  route: string | null;
 };
 
 const calendarStatistics = ["timer_s", "elapsed_s", "distance_m", "load_tss"];
@@ -63,7 +71,8 @@ function activitiesOn(db: Database, userId: string, days: readonly string[]) {
       max(CASE s.name WHEN 'elapsed_s' THEN s.value END) AS elapsed,
       max(CASE s.name WHEN 'distance_m' THEN s.value END) AS distance,
       max(CASE s.name WHEN 'load_tss' THEN s.value END) AS load,
-      ${analysisDueOf(sql.raw("a"))} AS analysisDue
+      ${analysisDueOf(sql.raw("a"))} AS analysisDue,
+      (SELECT r.route FROM ${activityAnalysis} r WHERE r.user_id = a.user_id AND r.activity_id = a.id) AS route
     FROM ${activity} a
     LEFT JOIN ${activityStatistic} s ON s.user_id = a.user_id AND s.activity_id = a.id
       AND s.name IN (SELECT value FROM json_each(${JSON.stringify(calendarStatistics)}))
@@ -233,6 +242,8 @@ const toActivity = (row: ActivityRow, plannedId: string | null): CalendarActivit
   seconds: row.timer ?? row.elapsed,
   meters: row.distance,
   load: row.load,
+  route: row.indoor === 1 || row.route === null ? null : (JSON.parse(row.route) as ActivityRoute),
+  analysisDue: row.analysisDue === 1,
   plannedId,
 });
 
@@ -301,5 +312,9 @@ export async function calendarRange(
     }
     weeks.push({ start: monday, totals });
   }
-  return { today, days, weeks };
+  const analysesDue = [...loaded.values()].reduce(
+    (count, { activities }) => count + activities.filter((done) => done.analysisDue).length,
+    0,
+  );
+  return { today, days, weeks, analysesDue };
 }

@@ -244,3 +244,32 @@ test("activities analysed before compliance existed are scored once the migratio
   await runCronUntilAnalysed();
   assert.ok((await client.plannedWorkouts.get({ id })).compliance.parts.intervals.share > 0.95);
 });
+
+test("the calendar's activities carry their route and whether their analysis is due, and the range counts those due", async () => {
+  const { client } = await athlete();
+  const day = "2026-07-12";
+  const outdoor = await upload(client, day);
+  const indoor = await client.activities.upload({
+    file: new File([denseRide(minutes * 60 * 25 + 400, `${day}T09:00:00Z`)], "trainer.fit"),
+    source: "upload",
+    sport: "cycling",
+    indoor: true,
+  });
+  const before = await client.calendar.range({ from: day, through: day });
+  assert.equal(before.analysesDue, 2);
+  assert.deepEqual(
+    before.days[0].activities.map(({ analysisDue, route }) => [analysisDue, route]),
+    [
+      [true, null],
+      [true, null],
+    ],
+  );
+  await runCronUntilAnalysed();
+  const after = await client.calendar.range({ from: day, through: day });
+  assert.equal(after.analysesDue, 0);
+  const byId = Object.fromEntries(after.days[0].activities.map((done) => [done.id, done]));
+  assert.equal(byId[outdoor.id].analysisDue, false);
+  assert.ok(byId[outdoor.id].route.segments.length > 0);
+  assert.deepEqual(byId[outdoor.id].route, (await client.activities.get({ id: outdoor.id })).route);
+  assert.equal(byId[indoor.id].route, null);
+});
