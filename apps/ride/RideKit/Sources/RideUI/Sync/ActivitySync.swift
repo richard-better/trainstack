@@ -127,12 +127,15 @@ final class ActivitySync {
     dropRidesDeletedOnTheServer(keeping: onServer, account: account.id)
     let owed = state(of: account.id).deletionsToSend
     history?.receive(listing.filter { !owed.contains($0.id) }, for: account.id)
+    var uploaded = false
     for ride in library.rides where needsUploading(ride.id, account: account.id) {
       let result = try await server.upload(ride.activityFile, for: account)
       try checkStillSyncing(account)
       guard !state(of: account.id).restoresToSend.contains(ride.id) else { continue }
       receive(result, for: ride.id, account: account.id)
+      if result == .stored { uploaded = true }
     }
+    if uploaded, history != nil { passes.passAgain() }
   }
 
   private func checkStillSyncing(_ account: ActivityAccount) throws {
