@@ -54,6 +54,23 @@ struct ActivitySyncTests {
     try Self.rideFile(startingAt: seconds)
   }
 
+  @Test func aSessionLoggedOnTheServerWithoutAFileChangesNothingOnTheDevice() async throws {
+    try await withDevice { device in
+      let ride = try device.ride(startingAt: 0)
+      let logged = String(repeating: "b", count: 64)
+      await device.server.store(ride, for: "ada")
+      await device.server.store(logged, for: "ada")
+      try await device.sync.sync()
+      let relaunched = device.relaunched()
+      try await relaunched.sync.sync()
+      await device.server.deleteElsewhere(logged, for: "ada")
+      try await relaunched.sync.sync()
+      #expect(relaunched.library.rides.map(\.id) == [ride])
+      #expect(await device.server.uploads.isEmpty)
+      #expect(await device.server.deletions.isEmpty)
+    }
+  }
+
   @Test func uploadsEveryRideInTheLibraryTheServerDoesNotHave() async throws {
     try await withDevice { device in
       let first = try device.ride(startingAt: 0)

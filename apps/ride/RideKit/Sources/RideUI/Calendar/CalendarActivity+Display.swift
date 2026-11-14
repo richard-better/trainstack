@@ -17,6 +17,8 @@ extension CalendarActivity {
     case "running": "figure.run"
     case "swimming": "figure.pool.swim"
     case "cycling": indoor == true ? "figure.indoor.cycle" : "figure.outdoor.cycle"
+    case "strength": "dumbbell"
+    case "bouldering": "figure.climbing"
     default: "figure.mixed.cardio"
     }
   }

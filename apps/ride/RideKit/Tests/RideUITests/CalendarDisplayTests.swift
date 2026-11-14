@@ -106,4 +106,12 @@ struct CalendarDisplayTests {
     #expect(CalendarWeekName.of(monday.adding(days: 7), today: saturday) == "Next week")
     #expect(CalendarWeekName.of(monday.adding(days: 14), today: saturday).contains("–"))
   }
+
+  @Test func aLoggedSessionReadsByItsSportTimeAndLoad() {
+    let session = CalendarActivity(
+      id: "b", sport: "strength", indoor: nil, seconds: 3600, load: 45)
+    #expect(session.title == "Strength")
+    #expect(session.symbol == "dumbbell")
+    #expect(session.summary == "1h 00m · 45 TSS")
+  }
 }
