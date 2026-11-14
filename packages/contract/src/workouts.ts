@@ -44,7 +44,7 @@ export const workoutTotalsSchema = z.object({
 export const workoutOriginSchema = z
   .discriminatedUnion("kind", [
     z.object({ kind: z.literal("builtin"), id: builtinWorkoutIdSchema }),
-    z.object({ kind: z.literal("file"), format: workoutFormatSchema, fileName: z.string() }),
+    z.object({ kind: z.literal("file"), format: workoutFileFormatSchema, fileName: z.string() }),
   ])
   .nullable()
   .describe(
@@ -123,24 +123,44 @@ export const formatIssueSchema = z.object({
   at: z.string().optional(),
 });
 
-export const exportedWorkoutSchema = z.object({
-  fileName: z.string(),
-  contentType: z.string(),
-  text: z.string(),
-  warnings: z
-    .array(formatIssueSchema)
-    .describe("What the format has no place for and was left out, such as names or notes"),
-});
+const exportWarnings = z
+  .array(formatIssueSchema)
+  .describe(
+    "What the format has no place for and was left out, such as names or notes, and what was converted or approximated",
+  );
+
+export const exportedWorkoutSchema = z.union([
+  z.object({
+    fileName: z.string(),
+    contentType: z.string(),
+    text: z.string().describe("The file, for the text formats .zwo, .erg and .mrc"),
+    warnings: exportWarnings,
+  }),
+  z.object({
+    fileName: z.string(),
+    contentType: z.string(),
+    base64: z.string().describe("The file's bytes in base64, for the binary .fit format"),
+    warnings: exportWarnings,
+  }),
+]);
 
 const exportInput = {
-  format: workoutFormatSchema,
+  format: workoutFileFormatSchema,
+  approximate: z
+    .boolean()
+    .optional()
+    .describe(
+      "For .fit: write a ramp as a staircase of steady steps and a max effort as a step with no target, each reported in warnings, instead of refusing the workout",
+    ),
   ftp: z
     .number()
     .int()
     .min(1)
     .max(2000)
     .optional()
-    .describe("Watts. Needed to write power as a share of FTP to .erg, or watts to .zwo and .mrc"),
+    .describe(
+      "Watts. Needed to write power as a share of FTP to .erg, or watts to .zwo and .mrc. A .fit file holds either, and takes threshold heart rate and pace from the athlete's settings",
+    ),
 };
 
 const unauthorized = { UNAUTHORIZED: {} };
@@ -261,7 +281,7 @@ export const workoutsContract = {
       path: "/workouts/import",
       successStatus: 200,
       description:
-        "Read a .zwo, .erg or .mrc file, picked by its extension, into a workout stored under id",
+        "Read a .zwo, .erg, .mrc or .fit file, picked by its extension, into a workout stored under id. A .fit file's zone and percent of max heart rate targets become the athlete's own values from their settings today, reported in warnings",
     })
     .errors({
       ...unauthorized,

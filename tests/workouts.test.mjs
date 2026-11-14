@@ -475,12 +475,12 @@ test("a file the readers refuse comes back as a typed error listing every issue"
   );
 
   const unsupported = await definedError(
-    client.workouts.import({ file: new File(["x"], "ride.fit"), id, updatedAt: at(0) }),
+    client.workouts.import({ file: new File(["x"], "ride.gpx"), id, updatedAt: at(0) }),
     "WORKOUT_FORMAT_ERROR",
   );
   assert.deepEqual(unsupported.data, {
     format: null,
-    issues: [{ code: "unsupported", message: '"ride.fit" is not a .zwo, .erg or .mrc file' }],
+    issues: [{ code: "unsupported", message: '"ride.gpx" is not a .zwo, .erg, .mrc or .fit file' }],
   });
 
   const [tooBig] = await safe(

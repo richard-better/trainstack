@@ -4,13 +4,13 @@ import {
   type StoredWorkout,
   type WorkoutOrigin,
 } from "@trainstack/contract";
-import { formatOfFile, type Workout } from "@trainstack/workout";
+import { fileFormatOfFile, type Workout } from "@trainstack/workout";
 
 import type { Database } from "../db";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { builtinWorkout, builtinWorkouts } from "./builtin";
-import { exportedWorkout, failureData, importedWorkout } from "./files";
+import { athleteToday, exportedWorkout, failureData, importedWorkout } from "./files";
 import {
   allLists,
   deleteList,
@@ -125,7 +125,10 @@ export const workoutsRouter = {
     }
     const bytes = new Uint8Array(await input.file.arrayBuffer());
     const fileName = input.file.name;
-    const imported = importedWorkout(fileName, bytes);
+    const format = fileFormatOfFile(fileName);
+    const athlete =
+      format === "fit" ? await athleteToday(getDb(), context.session.user.id) : undefined;
+    const imported = importedWorkout(fileName, bytes, athlete);
     if ("failure" in imported) {
       throw errors.WORKOUT_FORMAT_ERROR({ data: failureData(imported) });
     }
@@ -135,7 +138,7 @@ export const workoutsRouter = {
       input.id,
       imported.value,
       input.updatedAt,
-      { kind: "file", format: formatOfFile(fileName)!, fileName },
+      { kind: "file", format: format!, fileName },
     );
     if ("stored" in written) return { workout: written.stored, warnings: imported.warnings };
     if ("editedInTheFuture" in written) throw errors.EDITED_IN_THE_FUTURE();
@@ -149,7 +152,12 @@ export const workoutsRouter = {
     if (row.deletedAt) {
       throw errors.WORKOUT_DELETED({ data: { id: row.id, deletedAt: row.deletedAt } });
     }
-    const exported = exportedWorkout(storedOf(row).workout, input.format, input.ftp);
+    const exported = exportedWorkout(
+      storedOf(row).workout,
+      input.format,
+      input,
+      input.format === "fit" ? await athleteToday(getDb(), context.session.user.id) : undefined,
+    );
     if ("failure" in exported) throw errors.WORKOUT_FORMAT_ERROR({ data: failureData(exported) });
     return exported;
   }),
@@ -185,10 +193,15 @@ export const builtinWorkoutsRouter = {
     throw new Error(`Built-in workout ${found.id} does not fit the library`);
   }),
 
-  export: signedIn.builtinWorkouts.export.handler(({ input, errors }) => {
+  export: signedIn.builtinWorkouts.export.handler(async ({ context, input, errors }) => {
     const found = builtinWorkout(input.id);
     if (!found) throw errors.NOT_FOUND();
-    const exported = exportedWorkout(found.workout, input.format, input.ftp);
+    const exported = exportedWorkout(
+      found.workout,
+      input.format,
+      input,
+      input.format === "fit" ? await athleteToday(getDb(), context.session.user.id) : undefined,
+    );
     if ("failure" in exported) throw errors.WORKOUT_FORMAT_ERROR({ data: failureData(exported) });
     return exported;
   }),
