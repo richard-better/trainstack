@@ -35,8 +35,9 @@ If signing in stops at **Sign in was cancelled.** or **Sign in did not finish. T
 
 1. [Get your activities in](/help/add-activities): upload files from your watch or bike computer,
    or sign Ride in with the same Apple ID.
-2. [Set your thresholds](/help/thresholds-and-zones). Without them, TrainStack cannot score
-   any activity's load, and the fitness chart stays empty. Once you have a few hard efforts in,
+2. [Set your thresholds](/help/thresholds-and-zones). Without them, TrainStack cannot score the
+   load of rides, runs and swims, so they are left out of your fitness chart. (Strength and
+   bouldering sessions get their load from how hard you rate them.) Once you have a few hard efforts in,
    TrainStack suggests thresholds from them.
 3. Look at an activity's [analysis](/help/activity-analysis), then your
    [fitness and form](/help/fitness-and-form).

@@ -32,9 +32,10 @@ included.
   would have been on the flat. **Normalized grade-adjusted pace** weights the hard parts like
   normalized power does.
 
-If the activity has no **Load**, TrainStack is missing the threshold it needs: see
-[Thresholds and zones](/help/thresholds-and-zones). Activities are worked out again within a
-minute or two after you set one.
+If the activity has no **Load**, look at what its page says first. Most often a threshold it needs
+is missing: see [Thresholds and zones](/help/thresholds-and-zones), and the activity is worked out
+again within a minute or two after you set one. If the page says the file could not be analysed,
+thresholds will not help: the charts are read from the file, but it has no load.
 
 ## Charts
 

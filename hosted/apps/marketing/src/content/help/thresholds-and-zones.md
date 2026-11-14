@@ -6,8 +6,9 @@ order: 20
 ---
 
 Your thresholds are what TrainStack measures every activity against. Without them it can still
-show an activity's power, pace and heart rate, but not its load, intensity or time in zones, and
-your [fitness chart](/help/fitness-and-form) stays empty. They live in **Settings**, under
+show an activity's power, pace and heart rate, but not its load, intensity or time in zones, so it
+is left out of your [fitness chart](/help/fitness-and-form). Logged strength and bouldering
+sessions are the exception: their load comes from how hard you rate them. They live in **Settings**, under
 **Thresholds and zones**.
 
 ## The thresholds
@@ -78,7 +79,9 @@ estimate differs enough from what you have, or when you have none. It never chan
 by itself. A suggestion names the effort it comes from (open it to see the activity) and how sure
 it is.
 
-- **Use from today** sets the threshold from today. Older activities keep their old thresholds.
+- **Use from today** sets the threshold from today. Older activities keep their old thresholds,
+  unless this is the first entry of its kind in **History**: activities before your first entry
+  use your earliest settings, so then they use it too.
 - **Use from** a day, when the effort was earlier, sets it from the day of the effort, so the
   activities since then are measured with it too.
 - **Dismiss** hides it. The same effort will not suggest it again, but a new effort can.
