@@ -14,7 +14,14 @@ try {
 }
 ```
 
-`bytes` is a `Uint8Array` or an `ArrayBuffer`. `summarizeFit(bytes)` returns the same
+`bytes` is a `Uint8Array` or an `ArrayBuffer`. `streamFit(bytes, { untilSeconds, maxRecords })`
+returns the same summary, sessions and laps, the timer events, and the records as columns:
+`Float64Array`s of seconds since the start, power, heart rate, speed, distance and altitude, with
+`NaN` where a record has no value. It reads the file twice, first for the start and the number of
+records and then for the columns, so it allocates them once and builds no object per record.
+Records more than `untilSeconds` after the start are left out. A file with more records than
+`maxRecords` within that time, or more than 20,000 timer events, fails with `tooLarge`. The
+server analyses activities this way. `summarizeFit(bytes)` returns the same
 `fileId`, `workoutName`, `summary`, `sessions` and `laps` without keeping the records or the
 file's messages, for files too large to decode in full in a Worker. `FitDecodeError.code` is one of `notAFitFile`,
 `truncated`, `badChecksum`, `malformed`, `noActivity` or `tooLarge`, the last for a file with

@@ -131,6 +131,26 @@ export interface FitActivity extends FitActivitySummary {
   readonly events: readonly FitEvent[];
 }
 
+export interface RecordColumns {
+  readonly count: number;
+  readonly elapsedSeconds: Float64Array;
+  readonly power: Float64Array;
+  readonly heartRate: Float64Array;
+  readonly speedMetresPerSecond: Float64Array;
+  readonly distanceMetres: Float64Array;
+  readonly altitudeMetres: Float64Array;
+}
+
+export interface StreamLimits {
+  readonly untilSeconds: number;
+  readonly maxRecords: number;
+}
+
+export interface FitActivityColumns extends FitActivitySummary {
+  readonly events: readonly FitEvent[];
+  readonly records: RecordColumns;
+}
+
 function integer(message: FitMessage, field: number): number | undefined {
   const value = message.fields.get(field);
   return typeof value === "number" ? value : undefined;
@@ -260,6 +280,13 @@ function altitude(message: FitMessage): number | undefined {
     : (raw - altitudeOffsetMetres * Scale.altitude) / Scale.altitude;
 }
 
+function speed(message: FitMessage): number | undefined {
+  return (
+    divided(message, RecordField.enhancedSpeed, Scale.speed) ??
+    divided(message, RecordField.speed, Scale.speed)
+  );
+}
+
 function record(message: FitMessage, timestamp: number, start: number): FitRecord {
   return {
     time: dateFromFit(timestamp),
@@ -267,9 +294,7 @@ function record(message: FitMessage, timestamp: number, start: number): FitRecor
     power: integer(message, RecordField.power),
     heartRate: integer(message, RecordField.heartRate),
     cadence: integer(message, RecordField.cadence),
-    speedMetresPerSecond:
-      divided(message, RecordField.enhancedSpeed, Scale.speed) ??
-      divided(message, RecordField.speed, Scale.speed),
+    speedMetresPerSecond: speed(message),
     distanceMetres: divided(message, RecordField.distance, Scale.distance),
     latitude: degrees(message, RecordField.positionLat),
     longitude: degrees(message, RecordField.positionLong),
@@ -413,20 +438,27 @@ function summarize(
 }
 
 export const maxLapsAndSessions = 10_000;
+export const maxTimerEvents = 20_000;
 
 interface RecordMessage {
   readonly message: FitMessage;
   readonly timestamp: number;
 }
 
+type ReadMode = "summary" | "records" | "streams";
+
 function readActivity(
   data: Uint8Array | ArrayBuffer,
-  keepRecords: boolean,
-): FitActivitySummary & {
+  mode: ReadMode,
+): {
+  readonly activity: FitActivitySummary;
   readonly start: number;
+  readonly recordCount: number;
   readonly recordMessages: readonly RecordMessage[];
   readonly events: readonly FitEvent[];
 } {
+  const keepRecords = mode === "records";
+  let recordCount = 0;
   let fileIdMessage: FitMessage | undefined;
   let workoutName: string | undefined;
   let firstSessionStart: number | undefined;
@@ -442,6 +474,7 @@ function readActivity(
         const timestamp = integer(message, CommonField.timestamp);
         if (timestamp === undefined) break;
         stats.add(record(message, timestamp, timestamp), timestamp);
+        recordCount += 1;
         if (keepRecords) recordMessages.push({ message, timestamp });
         break;
       }
@@ -455,9 +488,16 @@ function readActivity(
         if (laps.length >= maxLapsAndSessions) throw new FitDecodeError("tooLarge");
         laps.push(lap(message));
         break;
-      case MessageNumber.event:
-        if (keepRecords) events.push(event(message));
+      case MessageNumber.event: {
+        if (mode === "summary") break;
+        const decoded = event(message);
+        if (mode === "streams") {
+          if (decoded.event !== "timer") break;
+          if (events.length >= maxTimerEvents) throw new FitDecodeError("tooLarge");
+        }
+        events.push(decoded);
         break;
+      }
       case MessageNumber.fileId:
         fileIdMessage ??= message;
         break;
@@ -471,26 +511,79 @@ function readActivity(
   }
   const start = firstSessionStart ?? stats.firstTimestamp ?? firstSessionEnd ?? 0;
   return {
-    fileId: fileIdMessage && fileId(fileIdMessage),
-    workoutName,
-    summary: summarize(start, sessions, stats),
-    sessions,
-    laps,
+    activity: {
+      fileId: fileIdMessage && fileId(fileIdMessage),
+      workoutName,
+      summary: summarize(start, sessions, stats),
+      sessions,
+      laps,
+    },
     start,
+    recordCount,
     recordMessages,
     events,
   };
 }
 
 export function summarizeFit(data: Uint8Array | ArrayBuffer): FitActivitySummary {
-  const { fileId, workoutName, summary, sessions, laps } = readActivity(data, false);
-  return { fileId, workoutName, summary, sessions, laps };
+  return readActivity(data, "summary").activity;
 }
 
 export function decodeFit(data: Uint8Array | ArrayBuffer): FitActivity {
-  const { start, recordMessages, ...activity } = readActivity(data, true);
+  const { activity, start, recordMessages, events } = readActivity(data, "records");
   return {
     ...activity,
+    events,
     records: recordMessages.map(({ message, timestamp }) => record(message, timestamp, start)),
+  };
+}
+
+function emptyStreams(capacity: number) {
+  return {
+    elapsedSeconds: new Float64Array(capacity),
+    power: new Float64Array(capacity),
+    heartRate: new Float64Array(capacity),
+    speedMetresPerSecond: new Float64Array(capacity),
+    distanceMetres: new Float64Array(capacity),
+    altitudeMetres: new Float64Array(capacity),
+  };
+}
+
+const orNaN = (value: number | undefined) => value ?? NaN;
+
+export function streamFit(
+  data: Uint8Array | ArrayBuffer,
+  limits: StreamLimits,
+): FitActivityColumns {
+  const { activity, start, recordCount, events } = readActivity(data, "streams");
+  const columns = emptyStreams(Math.min(recordCount, limits.maxRecords));
+  let count = 0;
+  forEachFitMessage(data, (message) => {
+    if (message.globalNumber !== MessageNumber.record) return;
+    const timestamp = integer(message, CommonField.timestamp);
+    if (timestamp === undefined) return;
+    const elapsed = timestamp - start;
+    if (!(elapsed <= limits.untilSeconds)) return;
+    if (count >= columns.elapsedSeconds.length) throw new FitDecodeError("tooLarge");
+    columns.elapsedSeconds[count] = elapsed;
+    columns.power[count] = orNaN(integer(message, RecordField.power));
+    columns.heartRate[count] = orNaN(integer(message, RecordField.heartRate));
+    columns.speedMetresPerSecond[count] = orNaN(speed(message));
+    columns.distanceMetres[count] = orNaN(divided(message, RecordField.distance, Scale.distance));
+    columns.altitudeMetres[count] = orNaN(altitude(message));
+    count += 1;
+  });
+  return {
+    ...activity,
+    events: events,
+    records: {
+      count,
+      elapsedSeconds: columns.elapsedSeconds.subarray(0, count),
+      power: columns.power.subarray(0, count),
+      heartRate: columns.heartRate.subarray(0, count),
+      speedMetresPerSecond: columns.speedMetresPerSecond.subarray(0, count),
+      distanceMetres: columns.distanceMetres.subarray(0, count),
+      altitudeMetres: columns.altitudeMetres.subarray(0, count),
+    },
   };
 }
