@@ -173,6 +173,27 @@ test("swapping a hard session for easy skips it with its reason and plans an eas
   );
 });
 
+test("a swap the server refuses leaves the session as it was, not skipped", async () => {
+  const { client, today } = await athlete();
+  const hard = await plan(client, today);
+  for (let position = 2; position <= 20; position++) {
+    await plan(client, today, { kind: "note", title: `Note ${position}`, notes: null }, position);
+  }
+  const { writes, load } = device(client, today);
+  const range = await load();
+  await swapForEasy(writes, hard, range.days[0].planned, today);
+  assert.deepEqual(
+    writes.notices().map(({ kind, name }) => [kind, name]),
+    [["refused", "Easy ride"]],
+  );
+  const stored = await client.plannedWorkouts.get({ id: hard.id });
+  assert.equal(stored.skipped, null, "the hard session is still there to do");
+  assert.equal(
+    (await client.calendar.range({ from: today, through: today })).days[0].planned.length,
+    20,
+  );
+});
+
 test("resting skips the session with the day's readiness as the reason, and it can be undone", async () => {
   const { client, today } = await athlete();
   const hard = await plan(client, today);

@@ -187,6 +187,15 @@ const easyNames: Record<Workout["sport"], string> = {
   swimming: "Easy swim",
 };
 
+export const isAnswered = (checkIn: {
+  ratings: Record<string, number | null>;
+  illness: unknown;
+  injury: unknown;
+}) =>
+  checkIn.illness !== null ||
+  checkIn.injury !== null ||
+  Object.values(checkIn.ratings).some((rating) => rating !== null);
+
 export function easySwapFor(item: PlannedWorkout): PlannedContent | null {
   if (item.content.kind !== "workout") return null;
   const sport = item.content.workout.sport;
@@ -221,7 +230,7 @@ export function swapPosition(day: readonly Pick<PlannedWorkout, "id" | "position
   return positionAt(positions, positions.indexOf(at.position) + 1);
 }
 
-export function swapForEasy(
+export async function swapForEasy(
   writes: Pick<CalendarWrites, "plan" | "skip">,
   item: PlannedWorkout,
   day: readonly PlannedWorkout[],
@@ -229,11 +238,12 @@ export function swapForEasy(
   id: string = crypto.randomUUID(),
 ) {
   const content = easySwapFor(item);
-  if (!content) return Promise.resolve();
-  return Promise.all([
-    writes.plan({ id, day: item.day, position: swapPosition(day, item.id), content }, today),
-    writes.skip(item, { reason: swapSkipReason }),
-  ]).then(() => undefined);
+  if (!content) return;
+  const planned = await writes.plan(
+    { id, day: item.day, position: swapPosition(day, item.id), content },
+    today,
+  );
+  if (planned) await writes.skip(item, { reason: swapSkipReason });
 }
 
 export const restFrom = (

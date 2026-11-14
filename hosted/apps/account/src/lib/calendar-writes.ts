@@ -139,7 +139,7 @@ export function createCalendarWrites({
   let seq = 0;
   let lastStamp = 0;
   let version = 0;
-  const tails = new Map<string, Promise<void>>();
+  const tails = new Map<string, Promise<unknown>>();
   const answered = new Map<string, PlannedWorkout | null>();
   const latestChoice = new Map<string, number>();
   const sleepers = new Set<() => void>();
@@ -221,7 +221,7 @@ export function createCalendarWrites({
     }
   }
 
-  function run(write: Write): Promise<void> {
+  function run(write: Write): Promise<boolean> {
     seq += 1;
     const entry: Pending = {
       seq,
@@ -237,7 +237,7 @@ export function createCalendarWrites({
     const previous = tails.get(entry.id) ?? Promise.resolve();
     const done = previous.then(async () => {
       const outcome = await sendWithRetries(write, updatedAt, queuedIn);
-      if ("dropped" in outcome || queuedIn !== epoch) return;
+      if ("dropped" in outcome || queuedIn !== epoch) return false;
       if ("result" in outcome) {
         await remember(outcome.result);
         const result = outcome.result;
@@ -282,6 +282,7 @@ export function createCalendarWrites({
       }
       changed();
       settleCaches();
+      return "result" in outcome;
     });
     tails.set(entry.id, done);
     return done;
@@ -364,7 +365,7 @@ export function createCalendarWrites({
       });
     },
 
-    change(item: PlannedWorkout, content: PlannedContent): Promise<void> {
+    change(item: PlannedWorkout, content: PlannedContent): Promise<boolean> {
       return run({
         kind: "change",
         base: item,
@@ -383,7 +384,7 @@ export function createCalendarWrites({
       });
     },
 
-    move(item: PlannedWorkout, placement: Placement): Promise<void> {
+    move(item: PlannedWorkout, placement: Placement): Promise<boolean> {
       return run({
         kind: "move",
         base: item,
@@ -395,7 +396,7 @@ export function createCalendarWrites({
       });
     },
 
-    skip(item: PlannedWorkout, skipped: PlannedWorkout["skipped"]): Promise<void> {
+    skip(item: PlannedWorkout, skipped: PlannedWorkout["skipped"]): Promise<boolean> {
       return run({
         kind: "skip",
         base: item,
@@ -406,7 +407,7 @@ export function createCalendarWrites({
       });
     },
 
-    pair(item: PlannedWorkout, activityId: string): Promise<void> {
+    pair(item: PlannedWorkout, activityId: string): Promise<boolean> {
       return run({
         kind: "pair",
         base: item,
@@ -418,7 +419,7 @@ export function createCalendarWrites({
       });
     },
 
-    unpair(item: PlannedWorkout, activityId: string): Promise<void> {
+    unpair(item: PlannedWorkout, activityId: string): Promise<boolean> {
       return run({
         kind: "unpair",
         base: item,
@@ -431,7 +432,7 @@ export function createCalendarWrites({
       });
     },
 
-    remove(item: PlannedWorkout): Promise<void> {
+    remove(item: PlannedWorkout): Promise<boolean> {
       return run({
         kind: "delete",
         base: item,
