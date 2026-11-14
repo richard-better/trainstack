@@ -156,7 +156,14 @@ and `tss` (stress scores, which all use the TSS scale, so an hour at threshold s
   an activity held a planned workout's targets. Each step with a power, pace or heart rate
   target gets a band in watts, metres per second or beats per minute: a set value or a ramp
   ±5 %, a range widened by 2.5 % at each end, a share of threshold against the day's FTP,
-  threshold speed or lactate threshold heart rate. Steps are placed by laps when the activity
+  threshold speed or lactate threshold heart rate. When the activity's laps name the workout step
+  each rode (`wkt_step_index`, as Ride writes), each step is placed on the laps that name it,
+  however long they ran: a lap the athlete marked inside an interval and a step ridden again
+  after going back both count toward that step, and laps that name no step, such as riding on
+  after the workout ended, toward none. Only a workout without repeats is placed this way, since a device
+  may number its laps by the repeat steps it encodes rather than by the steps they expand to, and
+  if any lap names a step the workout does not have, the laps are placed by the rule below
+  instead. Otherwise steps are placed by laps when the activity
   has exactly one lap per step, as a watch running a structured workout records, and each timed
   step's lap is within 10 % or 5 s of its planned time, so automatic laps do not count. Otherwise
   they are laid end to end over the activity's moving seconds from its start, a time step for

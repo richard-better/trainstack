@@ -257,4 +257,12 @@ describe("Ride's own recordings in the trace goldens", () => {
     const lapSeconds = ride.laps.reduce((total, lap) => total + lap.elapsedSeconds!, 0);
     assert.equal(lapSeconds, ride.summary.elapsedSeconds);
   });
+
+  test("names the workout step each lap rode, and none once the workout is over", () => {
+    const ride = decodeFit(trace("simulator-lap-extend-back-ride-on"));
+    assert.deepEqual(
+      ride.laps.map((lap) => lap.workoutStepIndex),
+      [0, 1, 1, 2, 1, 2, undefined],
+    );
+  });
 });

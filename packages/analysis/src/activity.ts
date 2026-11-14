@@ -42,6 +42,7 @@ import { timeInZones, type ZoneShare } from "./zones.ts";
 export interface AnalysisLap {
   readonly startTime: Date | undefined;
   readonly elapsedSeconds: number | undefined;
+  readonly workoutStepIndex?: number;
 }
 
 export interface AnalysisActivity {

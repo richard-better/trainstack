@@ -45,7 +45,7 @@ import { isAnalysisStatistic } from "./analysis-statistics";
 import { fileKey, sha256Hex } from "./files";
 import { MAX_EVENTS_PER_ACTIVITY, SUMMARY_VERSION } from "./summary";
 
-export const ANALYSIS_VERSION = 4;
+export const ANALYSIS_VERSION = 5;
 export const MAX_ANALYSIS_ATTEMPTS = 3;
 export const ANALYSIS_CHECKS_PER_SCHEDULED_RUN = 200;
 export const ANALYSES_PER_SCHEDULED_RUN = 20;

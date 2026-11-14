@@ -10,7 +10,7 @@ import {
   statisticsOf,
   sustainedMaxHeartRate,
 } from "../src/index.ts";
-import { growth } from "./measure.ts";
+import { growthExponent } from "./measure.ts";
 
 const analysed = (sport: string, records: AnalysisRecord[]) => ({
   statistics: statisticsOf(
@@ -110,7 +110,7 @@ describe("per activity", () => {
       );
       return () => assert.equal(sustainedMaxHeartRate(samples), 120);
     };
-    const ratio = growth(crowded, 25_000, 200_000);
-    assert.ok(ratio < 24, `eight times the records took ${ratio.toFixed(1)} times the CPU`);
+    const exponent = growthExponent(crowded, [25_000, 50_000, 100_000, 200_000]);
+    assert.ok(exponent < 1.5, `the CPU grew as the records to the power ${exponent.toFixed(2)}`);
   });
 });

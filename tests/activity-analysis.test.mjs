@@ -223,7 +223,7 @@ test("a file with more records than the analysis reads says so and is not retrie
     .prepare("SELECT due, attempts, version FROM activity_analysis WHERE user_id = ?")
     .bind(user.id)
     .first();
-  assert.deepEqual(row, { due: 0, attempts: 0, version: 4 });
+  assert.deepEqual(row, { due: 0, attempts: 0, version: 5 });
 
   await bucket.delete(`activities/${user.id}/${id}`);
   await client.settings.write({ writes: [put("2026-01-01", threshold("ftp", 210))] });
@@ -234,7 +234,7 @@ test("a file with more records than the analysis reads says so and is not retrie
       .prepare("SELECT due, attempts, version FROM activity_analysis WHERE user_id = ?")
       .bind(user.id)
       .first(),
-    { due: 0, attempts: 0, version: 4 },
+    { due: 0, attempts: 0, version: 5 },
   );
 });
 

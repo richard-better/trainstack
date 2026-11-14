@@ -103,7 +103,7 @@ function intervalsUnscored(intervals: Intervals | null, item: PlannedWorkout) {
     return "Intervals are not scored: they need the activity's analysis, and for targets set against a threshold, that threshold in Settings.";
   }
   if (steps && steps.length > 0 && steps.every((step) => !step.placed)) {
-    return "Intervals are not scored: its steps could not be found in the activity, which has no lap per step while a step's length was not known in advance.";
+    return "Intervals are not scored: its steps could not be found in the activity, whose laps neither name the workout's steps nor give one lap per step, while a step's length was not known in advance.";
   }
   return "Intervals are not scored: no step with a target had data, such as power targets on a ride without a power meter, or the steps could not be found in the activity.";
 }

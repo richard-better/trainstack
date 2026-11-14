@@ -3,6 +3,9 @@ import { test } from "node:test";
 
 import type { Workout } from "@trainstack/workout";
 
+import { decodeFit } from "@trainstack/fit";
+
+import { trace } from "../../fit/test/goldens.ts";
 import { type AnalysisActivity, intervalCompliance } from "../src/index.ts";
 
 const start = new Date("2026-06-01T06:00:00Z");
@@ -510,4 +513,199 @@ test("a gap in the recorded distance that jumps past a whole distance step leave
       [true, 5],
     ],
   );
+});
+
+const lap = (from: number, seconds: number, workoutStepIndex?: number) => ({
+  startTime: new Date(start.getTime() + from * 1000),
+  elapsedSeconds: seconds,
+  ...(workoutStepIndex === undefined ? {} : { workoutStepIndex }),
+});
+
+const stepSeconds = (result: ReturnType<typeof intervalCompliance>) =>
+  result?.steps.map(({ index, seconds }) => [index, seconds]);
+
+test("a lap the rider marks inside an interval still places the steps by their laps", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 600 ? 200 : 300), 900, {
+      laps: [lap(0, 600, 0), lap(600, 120, 1), lap(720, 180, 1)],
+    }),
+    ride([watts(600, 200), watts(300, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(stepSeconds(result), [
+    [0, 600],
+    [1, 300],
+  ]);
+  assert.ok(share(result)! > 0.99, `${share(result)}`);
+});
+
+test("a step ridden again after going back counts both times it was ridden", () => {
+  const power = (second: number) => (second < 300 || (second >= 400 && second < 700) ? 200 : 300);
+  const result = intervalCompliance(
+    activity(power, 1000, {
+      laps: [lap(0, 300, 0), lap(300, 100, 1), lap(400, 300, 0), lap(700, 300, 1)],
+    }),
+    ride([watts(300, 200), watts(300, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(stepSeconds(result), [
+    [0, 600],
+    [1, 400],
+  ]);
+  assert.ok(share(result)! > 0.98, `${share(result)}`);
+});
+
+test("an interval the rider lengthened is its lap, however long it ran", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 900 ? 200 : 300), 1200, {
+      laps: [lap(0, 900, 0), lap(900, 300, 1)],
+    }),
+    ride([watts(600, 200), watts(300, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(stepSeconds(result), [
+    [0, 900],
+    [1, 300],
+  ]);
+});
+
+test("riding on after the workout ended is left out of every step", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 600 ? 200 : second < 900 ? 300 : 120), 1500, {
+      laps: [lap(0, 600, 0), lap(600, 300, 1), lap(900, 600)],
+    }),
+    ride([watts(600, 200), watts(300, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(stepSeconds(result), [
+    [0, 600],
+    [1, 300],
+  ]);
+  assert.ok(share(result)! > 0.99, `${share(result)}`);
+});
+
+test("a step the ride never reached is not placed", () => {
+  const result = intervalCompliance(
+    activity(() => 200, 600, { laps: [lap(0, 600, 0)] }),
+    ride([watts(600, 200), watts(300, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(
+    result?.steps.map(({ index, placed }) => [index, placed]),
+    [
+      [0, true],
+      [1, false],
+    ],
+  );
+});
+
+test("laps naming steps the planned workout does not have place nothing by step", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 60 ? 200 : 300), 120, {
+      laps: [lap(0, 60, 4), lap(60, 60, 5)],
+    }),
+    ride([watts(60, 200), watts(60, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.ok(share(result)! > 0.95, `${share(result)}`);
+});
+
+test("a Ride file with a marked lap, an added minute, a step back and a free ride scores each step where it was ridden", () => {
+  const file = decodeFit(trace("simulator-lap-extend-back-ride-on"));
+  const quickTest = ride([watts(15, 0.5, "ftp"), watts(15, 0.75, "ftp"), watts(15, 1.2, "ftp")]);
+  const result = intervalCompliance(file, quickTest, { ftp: 200 });
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(stepSeconds(result), [
+    [0, 15],
+    [1, 30],
+    [2, 35],
+  ]);
+});
+
+const ramp = (seconds: number, from: number, to: number) => ({
+  type: "step" as const,
+  duration: { type: "time" as const, seconds },
+  target: {
+    type: "power" as const,
+    unit: "watts" as const,
+    level: { kind: "ramp" as const, from, to },
+  },
+});
+
+test("a ramp stopped on its lap is held against the ramp as planned, not stretched over the lap", () => {
+  const onTheRamp = (second: number) => 100 + (200 * second) / 299;
+  const result = intervalCompliance(
+    activity((second) => (second < 60 ? onTheRamp(second) : 150), 360, {
+      laps: [lap(0, 60, 0), lap(60, 300, 1)],
+    }),
+    ride([ramp(300, 100, 300), watts(300, 150)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.ok(share(result)! > 0.98, `${share(result)}`);
+});
+
+test("a ramp ridden again after going back starts again from its start", () => {
+  const onTheRamp = (second: number) => 100 + (200 * second) / 299;
+  const power = (second: number) =>
+    second < 100
+      ? onTheRamp(second)
+      : second >= 130 && second < 430
+        ? onTheRamp(second - 130)
+        : 150;
+  const result = intervalCompliance(
+    activity(power, 730, {
+      laps: [lap(0, 100, 0), lap(100, 30, 1), lap(130, 300, 0), lap(430, 300, 1)],
+    }),
+    ride([ramp(300, 100, 300), watts(300, 150)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(stepSeconds(result), [
+    [0, 400],
+    [1, 330],
+  ]);
+  assert.ok(share(result)! > 0.98, `${share(result)}`);
+});
+
+test("a workout with repeats does not trust laps' step indices, which a device may count by its own repeat steps", () => {
+  const result = intervalCompliance(
+    activity((second) => (second % 120 < 60 ? 200 : 300), 240, {
+      laps: [lap(0, 60, 0), lap(60, 60, 1), lap(120, 60, 0), lap(180, 60, 1)],
+    }),
+    ride([{ type: "repeat", count: 2, steps: [watts(60, 200), watts(60, 300)] }]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.deepEqual(stepSeconds(result), [
+    [0, 60],
+    [1, 60],
+    [2, 60],
+    [3, 60],
+  ]);
+});
+
+test("a lap marked inside a ramp ridden again carries on from where that visit had reached", () => {
+  const onTheRamp = (second: number) => 100 + (200 * second) / 299;
+  const power = (second: number) =>
+    second < 100
+      ? onTheRamp(second)
+      : second >= 130 && second < 430
+        ? onTheRamp(second - 130)
+        : 150;
+  const result = intervalCompliance(
+    activity(power, 730, {
+      laps: [lap(0, 100, 0), lap(100, 30, 1), lap(130, 100, 0), lap(230, 200, 0), lap(430, 300, 1)],
+    }),
+    ride([ramp(300, 100, 300), watts(300, 150)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.ok(share(result)! > 0.98, `${share(result)}`);
 });

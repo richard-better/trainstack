@@ -17,7 +17,10 @@ export function sampleRide(): Uint8Array {
 }
 
 export function trace(
-  name: (typeof traceNames)[number] | "laps-marked-paused-and-skipped",
+  name:
+    | (typeof traceNames)[number]
+    | "laps-marked-paused-and-skipped"
+    | "simulator-lap-extend-back-ride-on",
 ): Uint8Array {
   return read(`Tests/RideCoreTests/Traces/${name}.fit`);
 }

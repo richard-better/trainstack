@@ -111,7 +111,67 @@ function perSecondOrNaN(samples: Samples, values: Float64Array, length: number) 
 
 type Placed = { from: number; to: number; seconds: number[]; progress?: number[] };
 
-function placedByLaps(activity: AnalysisActivity, steps: readonly Step[], moving: Uint8Array) {
+function movingSeconds(span: { from: number; to: number }, moving: Uint8Array) {
+  const seconds: number[] = [];
+  for (let second = Math.floor(span.from); second < Math.min(span.to, moving.length); second++) {
+    if (second >= 0 && moving[second]) seconds.push(second);
+  }
+  return seconds;
+}
+
+function visitProgress(step: Step, count: number): number[] | undefined {
+  const length = plannedLength(step);
+  if (length?.kind !== "time") return undefined;
+  return Array.from({ length: count }, (_, position) =>
+    length.seconds > 1 ? Math.min(1, position / (length.seconds - 1)) : 0,
+  );
+}
+
+function placedByStepLaps(
+  activity: AnalysisActivity,
+  steps: readonly Step[],
+  moving: Uint8Array,
+): (Placed | null)[] | undefined {
+  const placedLaps = (activity.laps ?? []).filter(
+    (lap) => lap.startTime !== undefined && Number.isFinite(lap.startTime.getTime()),
+  );
+  if (!placedLaps.some((lap) => lap.workoutStepIndex !== undefined)) return undefined;
+  const spans = lapSpans(activity);
+  const placed: (Placed | null)[] = steps.map(() => null);
+  const visited: number[] = [];
+  for (const [index, span] of spans.entries()) {
+    const step = placedLaps[index]?.workoutStepIndex;
+    if (step === undefined) continue;
+    if (!Number.isInteger(step) || step < 0 || step >= steps.length) return undefined;
+    const earlier = placed[step] ?? null;
+    const last = earlier?.seconds.at(-1) ?? -1;
+    const seconds = movingSeconds(span, moving).filter((second) => second > last);
+    const continuesTheVisit = placedLaps[index - 1]?.workoutStepIndex === step;
+    const ridden = (continuesTheVisit ? (visited[step] ?? 0) : 0) + seconds.length;
+    visited[step] = ridden;
+    const progress = visitProgress(steps[step]!, ridden)?.slice(ridden - seconds.length);
+    placed[step] = {
+      from: earlier?.from ?? span.from,
+      to: span.to,
+      seconds: [...(earlier?.seconds ?? []), ...seconds],
+      progress:
+        progress && (earlier === null || earlier.progress !== undefined)
+          ? [...(earlier?.progress ?? []), ...progress]
+          : undefined,
+    };
+  }
+  return placed;
+}
+
+function placedByLaps(
+  activity: AnalysisActivity,
+  workout: Workout,
+  steps: readonly Step[],
+  moving: Uint8Array,
+) {
+  const lapsNameExpandedSteps = workout.steps.every((block) => block.type !== "repeat");
+  const byStep = lapsNameExpandedSteps ? placedByStepLaps(activity, steps, moving) : undefined;
+  if (byStep) return byStep;
   const spans = lapSpans(activity);
   if (spans.length !== steps.length) return undefined;
   if (steps.length < 2 && plannedLength(steps[0]!) !== null) return undefined;
@@ -122,13 +182,11 @@ function placedByLaps(activity: AnalysisActivity, steps: readonly Step[], moving
     return Math.abs(span.to - span.from - length.seconds) <= tolerance;
   });
   if (!fitsThePlan) return undefined;
-  return spans.map((span): Placed => {
-    const seconds: number[] = [];
-    for (let second = Math.floor(span.from); second < Math.min(span.to, moving.length); second++) {
-      if (second >= 0 && moving[second]) seconds.push(second);
-    }
-    return { from: span.from, to: span.to, seconds };
-  });
+  return spans.map((span): Placed => ({
+    from: span.from,
+    to: span.to,
+    seconds: movingSeconds(span, moving),
+  }));
 }
 
 function placedByTime(steps: readonly Step[], moving: Uint8Array, distance: Float64Array) {
@@ -215,7 +273,7 @@ export function intervalCompliance(
     speed: perSecondOrNaN(samples, samples.speed, length),
     heart_rate: perSecondOrNaN(samples, samples.heartRate, length),
   };
-  const byLaps = placedByLaps(activity, steps, timerRunning);
+  const byLaps = placedByLaps(activity, workout, steps, timerRunning);
   const placed =
     byLaps ?? placedByTime(steps, timerRunning, perSecondOrNaN(samples, samples.distance, length));
   let secondsWithData = 0;
