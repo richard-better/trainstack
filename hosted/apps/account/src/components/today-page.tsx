@@ -34,7 +34,7 @@ export function TodayPage() {
     <main className="content today">
       <div className="page-head">
         <h1 className="page-title">Today</h1>
-        <p className="today-date">{dayInFull(today)}</p>
+        {ready && <p className="today-date">{dayInFull(today)}</p>}
       </div>
       <div className="today-grid">
         <div className="today-readiness">
