@@ -7,14 +7,18 @@ import type {
   WorkoutSummary,
 } from "@trainstack/contract";
 import {
+  type FitAthlete,
   type FormatIssue,
+  type Sport,
   type Workout,
-  type WorkoutFormat,
+  type WorkoutFileFormat,
   WorkoutFormatError,
-  formatOfFile,
+  fileFormatOfFile,
   parseWorkoutFile,
-  workoutFormats,
+  workoutFileFormats,
 } from "@trainstack/workout";
+
+import { FitDecodeError, readFitFileId } from "@trainstack/fit";
 
 import type { ApiClient } from "./client.ts";
 
@@ -230,21 +234,32 @@ export type FileReading =
   | {
       readonly kind: "ready";
       readonly file: File;
-      readonly format: WorkoutFormat;
+      readonly format: WorkoutFileFormat;
       readonly workout: Workout;
       readonly warnings: readonly FormatIssue[];
     }
-  | { readonly kind: "refused"; readonly file: File; readonly issues: readonly FormatIssue[] };
+  | {
+      readonly kind: "refused";
+      readonly file: File;
+      readonly issues: readonly FormatIssue[];
+      readonly isActivity?: boolean;
+    };
 
-export const WORKOUT_FILE_TYPES = workoutFormats.map((format) => `.${format}`).join(",");
+export const WORKOUT_FILE_TYPES = workoutFileFormats.map((format) => `.${format}`).join(",");
 
-export async function readWorkoutFile(file: File, maxBytes: number): Promise<FileReading> {
-  const format = formatOfFile(file.name);
+export type AthleteFor = (sport: Sport) => FitAthlete | undefined;
+
+export async function readWorkoutFile(
+  file: File,
+  maxBytes: number,
+  athlete?: AthleteFor,
+): Promise<FileReading> {
+  const format = fileFormatOfFile(file.name);
   if (!format) {
     return {
       kind: "refused",
       file,
-      issues: [{ code: "unsupported", message: "Choose a .zwo, .erg or .mrc file." }],
+      issues: [{ code: "unsupported", message: "Choose a .zwo, .erg, .mrc or .fit file." }],
     };
   }
   if (file.size > maxBytes) {
@@ -259,12 +274,13 @@ export async function readWorkoutFile(file: File, maxBytes: number): Promise<Fil
       ],
     };
   }
+  const content = format === "fit" ? new Uint8Array(await file.arrayBuffer()) : await file.text();
   try {
-    const { value, warnings } = parseWorkoutFile(file.name, await file.text());
+    const { value, warnings } = parseWorkoutFile(file.name, content, { athlete });
     return { kind: "ready", file, format, workout: value, warnings };
   } catch (error) {
-    if (error instanceof WorkoutFormatError) return { kind: "refused", file, issues: error.issues };
-    throw error;
+    if (!(error instanceof WorkoutFormatError)) throw error;
+    return { kind: "refused", file, issues: error.issues, isActivity: isFitActivity(content) };
   }
 }
 
@@ -304,10 +320,15 @@ export type Exported =
 export async function exportWorkout(
   api: ApiClient,
   source: WorkoutSource,
-  format: WorkoutFormat,
+  format: WorkoutFileFormat,
   ftp: number | null,
 ): Promise<Exported> {
-  const input = { id: source.id, format, ...(ftp === null ? {} : { ftp }) };
+  const input = {
+    id: source.id,
+    format,
+    ...(ftp === null ? {} : { ftp }),
+    ...(format === "fit" ? { approximate: true } : {}),
+  };
   const [error, file] = await safe(
     source.kind === "own" ? api.workouts.export(input) : api.builtinWorkouts.export(input),
   );
@@ -318,8 +339,24 @@ export async function exportWorkout(
   throw error;
 }
 
-export const formatNames: Record<WorkoutFormat, string> = {
+export const formatNames: Record<WorkoutFileFormat, string> = {
   zwo: "Zwift (.zwo)",
   erg: "ERG (.erg)",
   mrc: "MRC (.mrc)",
+  fit: "Garmin, Wahoo or COROS (.fit)",
 };
+
+export function exportedBytes(file: ExportedWorkout): BlobPart {
+  if ("text" in file) return file.text;
+  return Uint8Array.from(atob(file.base64), (character) => character.charCodeAt(0));
+}
+
+function isFitActivity(content: string | Uint8Array): boolean {
+  if (typeof content === "string") return false;
+  try {
+    return readFitFileId(content)?.type === "activity";
+  } catch (error) {
+    if (error instanceof FitDecodeError) return false;
+    throw error;
+  }
+}

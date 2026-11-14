@@ -1,15 +1,18 @@
 import { MAX_WORKOUT_FILE_BYTES, type StoredWorkout } from "@trainstack/contract";
-import type { FormatIssue } from "@trainstack/workout";
+import { type FormatIssue, fileFormatOfFile, fitAthlete } from "@trainstack/workout";
+import { profileOn } from "@trainstack/zones";
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
-import { api } from "../api";
+import { api, queryClient } from "../api";
 import {
+  type AthleteFor,
   type FileReading,
   importWorkoutFile,
   readWorkoutFile,
   WORKOUT_FILE_TYPES,
 } from "../lib/library";
+import { datedChanges, localDay, settingsQueryKey } from "../lib/settings";
 import { formatMinutes, overviewOf, sportNames } from "../lib/workout-profile";
 import { FileDropTarget } from "./uploads";
 import { WorkoutThumb } from "./workout-chart";
@@ -38,6 +41,20 @@ type Item =
 
 const sizeLimit = `${MAX_WORKOUT_FILE_BYTES / 1024 / 1024} MB`;
 
+async function athleteToday(): Promise<AthleteFor | undefined> {
+  const history = await queryClient
+    .fetchQuery({
+      queryKey: settingsQueryKey,
+      queryFn: () => api.settings.history({}),
+      staleTime: 5_000,
+    })
+    .catch(() => undefined);
+  if (!history) return undefined;
+  const day = localDay(new Date());
+  const profile = profileOn(datedChanges(history.entries), day);
+  return (sport) => fitAthlete(profile, sport, `your settings on ${day}`);
+}
+
 export function useWorkoutImports() {
   const [items, setItems] = useState<Item[]>([]);
   const stamps = useRef(new Map<string, Date>());
@@ -51,8 +68,11 @@ export function useWorkoutImports() {
       file,
     }));
     setItems((current) => [...added, ...current]);
+    const athlete = files.some((file) => fileFormatOfFile(file.name) === "fit")
+      ? await athleteToday()
+      : undefined;
     for (const item of added) {
-      const reading = await readWorkoutFile(item.file, MAX_WORKOUT_FILE_BYTES).catch(
+      const reading = await readWorkoutFile(item.file, MAX_WORKOUT_FILE_BYTES, athlete).catch(
         (): FileReading => ({
           kind: "refused",
           file: item.file,
@@ -120,7 +140,7 @@ export function ImportDropTarget({ imports }: { imports: WorkoutImports }) {
   return (
     <FileDropTarget
       title="Drop to import"
-      detail={`.zwo, .erg and .mrc workouts, up to ${sizeLimit} each`}
+      detail={`.zwo, .erg, .mrc and .fit workouts, up to ${sizeLimit} each`}
       onFiles={(files) => void imports.add(files)}
     />
   );
@@ -183,7 +203,7 @@ function ImportItem({ item, imports }: { item: Item; imports: WorkoutImports }) 
           </Link>{" "}
           is in your workouts.
         </p>
-        <FormatIssues issues={item.warnings} title="Trainstack left out:" />
+        <FormatIssues issues={item.warnings} title="Trainstack changed or left out:" />
         <div className="import-actions">{dismiss}</div>
       </div>
     );
@@ -193,7 +213,17 @@ function ImportItem({ item, imports }: { item: Item; imports: WorkoutImports }) 
     return (
       <div className="import-card refused" role="alert">
         <p className="import-name">{reading.file.name} cannot be imported.</p>
-        <FormatIssues issues={reading.issues} title="What is wrong:" />
+        {reading.isActivity ? (
+          <p className="lede">
+            This is a recorded activity, not a planned workout.{" "}
+            <Link to="/" className="text-link">
+              Upload it with your activities
+            </Link>{" "}
+            instead.
+          </p>
+        ) : (
+          <FormatIssues issues={reading.issues} title="What is wrong:" />
+        )}
         <div className="import-actions">{dismiss}</div>
       </div>
     );
@@ -238,7 +268,7 @@ function ReadyItem({
           </p>
         </div>
       </div>
-      <FormatIssues issues={reading.warnings} title="Trainstack will leave out:" />
+      <FormatIssues issues={reading.warnings} title="Trainstack will change or leave out:" />
       {item.phase === "failed" && (
         <p role="alert" className="notice">
           {item.issues ? "The server refused this file." : "The workout was not saved. Try again."}

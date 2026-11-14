@@ -3,6 +3,9 @@
   "references": [
     {
       "path": "../fit"
+    },
+    {
+      "path": "../zones"
     }
   ],
   "compilerOptions": {

@@ -6,12 +6,14 @@ import { after, before, test } from "node:test";
 import { MAX_WORKOUT_FILE_BYTES } from "@trainstack/contract";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { profileOn } from "@trainstack/zones";
+import { fitAthlete, parseFit } from "../packages/workout/src/index.ts";
 import {
   addListIn,
   appendedTo,
   dropListIn,
   durationFilter,
   emptyLibrary,
+  exportedBytes,
   exportWorkout,
   forgetIn,
   importWorkoutFile,
@@ -326,7 +328,7 @@ test("an imported file shows the reader's warnings before saving, the same the s
 
 test("a file that is not a workout is refused in the browser and by the server, with why", async () => {
   const { webApp } = await signInOnTheWeb();
-  const wrongKind = await readWorkoutFile(new File(["x"], "ride.fit"), MAX_WORKOUT_FILE_BYTES);
+  const wrongKind = await readWorkoutFile(new File(["x"], "ride.gpx"), MAX_WORKOUT_FILE_BYTES);
   assert.equal(wrongKind.kind, "refused");
   const tooLarge = await readWorkoutFile(new File(["x".repeat(2048)], "big.zwo"), 1024);
   assert.equal(tooLarge.kind, "refused");
@@ -717,4 +719,78 @@ test("an import tried again with its first stamp does not overwrite a later edit
   assert.equal(again.kind, "saved");
   assert.equal(again.workout.name, "Edited on Ride");
   assert.equal((await webApp.workouts.get({ id })).name, "Edited on Ride");
+});
+
+const fitFile = async (name) =>
+  new File([await readFile(`packages/fit/test/fixtures/workouts/${name}`)], name);
+
+test("a FIT workout reads in the browser with the athlete's zones, as the server reads it", async () => {
+  const { webApp } = await signInOnTheWeb();
+  await webApp.settings.write({
+    writes: [
+      put("2026-01-01", {
+        kind: "threshold",
+        sport: null,
+        threshold: "max_heart_rate",
+        value: 190,
+      }),
+    ],
+  });
+  const history = await webApp.settings.history({});
+  const profile = profileOn(datedChanges(history.entries), "2026-11-14");
+  const athlete = (sport) => fitAthlete(profile, sport, "your settings on 2026-11-14");
+  const file = await fitFile("garmin-connect-run-intervals.fit");
+
+  const bare = await readWorkoutFile(file, MAX_WORKOUT_FILE_BYTES);
+  assert.equal(bare.kind, "refused");
+  assert.match(bare.issues[0].message, /set heart rate zones to import it/);
+  assert.equal(bare.isActivity, false);
+
+  const reading = await readWorkoutFile(file, MAX_WORKOUT_FILE_BYTES, athlete);
+  assert.equal(reading.kind, "ready");
+  assert.equal(reading.format, "fit");
+  assert.equal(reading.warnings[0].code, "converted");
+  const saved = await importWorkoutFile(webApp, file);
+  assert.equal(saved.kind, "saved");
+  assert.deepEqual(saved.workout.workout, reading.workout);
+  assert.deepEqual(saved.workout.origin, {
+    kind: "file",
+    format: "fit",
+    fileName: "garmin-connect-run-intervals.fit",
+  });
+});
+
+test("a FIT activity dropped on the workouts page is recognised as an activity", async () => {
+  const ride = new File(
+    [await readFile("apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit")],
+    "ride.fit",
+  );
+  const reading = await readWorkoutFile(ride, MAX_WORKOUT_FILE_BYTES);
+  assert.equal(reading.kind, "refused");
+  assert.equal(reading.isActivity, true);
+});
+
+test("export writes a .fit file, approximating ramps and saying so", async () => {
+  const { webApp } = await signInOnTheWeb();
+  const id = randomUUID();
+  await webApp.workouts.put({
+    id,
+    workout: workout("Ramp warm-up", [
+      power(600, { kind: "ramp", from: 0.5, to: 0.75 }),
+      power(1200, constant(0.9)),
+    ]),
+    updatedAt: new Date(),
+  });
+  const exported = await exportWorkout(webApp, { kind: "own", id }, "fit", null);
+  assert.equal(exported.kind, "file");
+  assert.equal(exported.file.fileName, "ramp-warm-up.fit");
+  assert.deepEqual(
+    exported.file.warnings.map((warning) => warning.code),
+    ["approximated"],
+  );
+  const bytes = exportedBytes(exported.file);
+  const back = parseFit(bytes).value;
+  assert.equal(back.name, "Ramp warm-up");
+  assert.equal(back.steps.length, 11);
+  assert.equal(exportedBytes({ ...exported.file, base64: undefined, text: "x" }), "x");
 });

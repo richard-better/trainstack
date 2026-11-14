@@ -1,12 +1,12 @@
 import { ORPCError } from "@orpc/client";
-import { type StoredWorkout, workoutIdSchema } from "@trainstack/contract";
-import { type Workout, type WorkoutFormat, workoutFormats } from "@trainstack/workout";
+import { type ExportedWorkout, type StoredWorkout, workoutIdSchema } from "@trainstack/contract";
+import { type Workout, type WorkoutFileFormat, workoutFileFormats } from "@trainstack/workout";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { api, queryClient } from "../api";
-import { type Exported, exportWorkout, type WorkoutSource } from "../lib/library";
+import { type Exported, exportedBytes, exportWorkout, type WorkoutSource } from "../lib/library";
 import { sportName } from "../lib/sports";
 import {
   focusNames,
@@ -447,14 +447,16 @@ function ReferenceNote({ overview, reference }: { overview: Overview; reference:
   );
 }
 
-function download(file: { fileName: string; contentType: string; text: string }) {
-  const url = URL.createObjectURL(new Blob([file.text], { type: file.contentType }));
+function download(file: ExportedWorkout) {
+  const url = URL.createObjectURL(new Blob([exportedBytes(file)], { type: file.contentType }));
   const link = document.createElement("a");
   link.href = url;
   link.download = file.fileName;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+const exportFormats = workoutFileFormats.filter((format) => format !== "fit");
 
 function ExportSection({
   source,
@@ -465,18 +467,35 @@ function ExportSection({
   name: string;
   ftp: number | null;
 }) {
-  const [result, setResult] = useState<{ format: WorkoutFormat; exported: Exported } | null>(null);
+  const [result, setResult] = useState<{
+    format: WorkoutFileFormat;
+    exported: Exported;
+    downloaded: boolean;
+  } | null>(null);
   const run = useMutation({
-    mutationFn: async (format: WorkoutFormat) => ({
+    mutationFn: async (format: WorkoutFileFormat) => ({
       format,
       exported: await exportWorkout(api, source, format, ftp),
     }),
     onMutate: () => setResult(null),
-    onSuccess: (answer) => {
-      setResult(answer);
-      if (answer.exported.kind === "file") download(answer.exported.file);
+    onSuccess: ({ format, exported }) => {
+      const waits =
+        format === "fit" && exported.kind === "file" && exported.file.warnings.length > 0;
+      if (exported.kind === "file" && !waits) download(exported.file);
+      setResult({ format, exported, downloaded: !waits });
     },
   });
+  const button = (format: WorkoutFileFormat, label: string) => (
+    <button
+      key={format}
+      type="button"
+      className="secondary compact"
+      disabled={run.isPending}
+      onClick={() => run.mutate(format)}
+    >
+      {label}
+    </button>
+  );
   return (
     <section aria-labelledby="export-title">
       <h2 id="export-title" className="section-title">
@@ -484,24 +503,16 @@ function ExportSection({
       </h2>
       <p className="lede">Download {name} for Zwift, TrainerRoad, Wahoo SYSTM and other apps.</p>
       <div className="export-buttons">
-        {workoutFormats.map((format) => (
-          <button
-            key={format}
-            type="button"
-            className="secondary compact"
-            disabled={run.isPending}
-            onClick={() => run.mutate(format)}
-          >
-            .{format}
-          </button>
-        ))}
+        {exportFormats.map((format) => button(format, `.${format}`))}
       </div>
+      <p className="lede">Or as a .fit file for a Garmin, Wahoo or COROS device.</p>
+      <div className="export-buttons">{button("fit", ".fit")}</div>
       {run.isError && (
         <p role="alert" className="notice">
           The file was not made. Try again.
         </p>
       )}
-      {result?.exported.kind === "file" && (
+      {result?.exported.kind === "file" && result.downloaded && (
         <div role="status" className="export-result">
           <p className="lede">Downloaded {result.exported.file.fileName}.</p>
           <FormatIssues
@@ -510,17 +521,45 @@ function ExportSection({
           />
         </div>
       )}
+      {result?.exported.kind === "file" && !result.downloaded && (
+        <div role="status" className="export-result">
+          <p className="lede">A .fit file cannot say everything in this workout. It will differ:</p>
+          <FormatIssues issues={result.exported.file.warnings} title="Changed or left out:" />
+          <div className="export-buttons">
+            <button
+              type="button"
+              className="primary compact"
+              onClick={() => {
+                if (result.exported.kind !== "file") return;
+                download(result.exported.file);
+                setResult({ ...result, downloaded: true });
+              }}
+            >
+              Download {result.exported.file.fileName}
+            </button>
+          </div>
+        </div>
+      )}
       {result?.exported.kind === "refused" && (
         <div role="alert" className="export-result">
           <p className="notice">This workout cannot be written as a .{result.format} file.</p>
           <FormatIssues issues={result.exported.issues} title="Why:" />
-          {ftp === null && (
+          {result.format === "fit" ? (
             <p className="lede">
               <Link to="/settings" className="text-link">
-                Setting your FTP
+                Setting your thresholds
               </Link>{" "}
-              lets Trainstack write power in watts.
+              lets Trainstack write heart rate and pace targets in bpm and speed.
             </p>
+          ) : (
+            ftp === null && (
+              <p className="lede">
+                <Link to="/settings" className="text-link">
+                  Setting your FTP
+                </Link>{" "}
+                lets Trainstack write power in watts.
+              </p>
+            )
           )}
         </div>
       )}

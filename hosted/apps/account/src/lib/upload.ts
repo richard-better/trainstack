@@ -13,6 +13,8 @@ import {
   decodeActivityFile,
 } from "@trainstack/activity-file";
 
+import { FitDecodeError, readFitFileId } from "@trainstack/fit";
+
 import type { ApiClient } from "./client.ts";
 
 export interface CheckedFile {
@@ -27,6 +29,7 @@ export interface CheckedFile {
 export type Refusal =
   | { readonly kind: "tooLarge" }
   | { readonly kind: "notActivityFile" }
+  | { readonly kind: "workoutFile" }
   | { readonly kind: "noActivity"; readonly format: ActivityFileFormat }
   | { readonly kind: "damaged"; readonly format: ActivityFileFormat };
 
@@ -45,6 +48,15 @@ async function sha256Hex(bytes: Uint8Array<ArrayBuffer>) {
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function isFitWorkout(bytes: Uint8Array): boolean {
+  try {
+    return readFitFileId(bytes)?.type === "workout";
+  } catch (error) {
+    if (error instanceof FitDecodeError) return false;
+    throw error;
+  }
+}
+
 export async function checkActivityFile(file: File): Promise<Check> {
   if (file.size > MAX_ACTIVITY_FILE_BYTES) return { kind: "tooLarge" };
   if (file.size === 0) return { kind: "notActivityFile" };
@@ -55,6 +67,9 @@ export async function checkActivityFile(file: File): Promise<Check> {
   } catch (error) {
     if (!(error instanceof ActivityFileError)) throw error;
     if (error.format === undefined) return { kind: "notActivityFile" };
+    if (error.code === "noActivity" && error.format === "fit" && isFitWorkout(bytes)) {
+      return { kind: "workoutFile" };
+    }
     if (error.code === "noActivity") return { kind: "noActivity", format: error.format };
     return { kind: "damaged", format: error.format };
   }

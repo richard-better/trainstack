@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@trainstack/fit": "workspace:*",
+    "@trainstack/zones": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
