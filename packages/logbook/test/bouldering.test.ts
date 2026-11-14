@@ -121,7 +121,7 @@ describe("bouldering numbers", () => {
     assert.deepEqual(summary.hardestFlash?.grade, { scale: "font", grade: "6B" });
   });
 
-  test("an ungraded colour is the hardest top only among colours of its circuit", () => {
+  test("colours of one circuit compare by the circuit's order, graded or not", () => {
     const summary = boulderingSummary(
       session(
         [
@@ -131,17 +131,20 @@ describe("bouldering numbers", () => {
         circuit,
       ),
     );
-    assert.deepEqual(summary.hardestTop?.grade, { scale: "circuit", colour: "Yellow" });
-    const colours = boulderingSummary(
-      session([problem({ grade: { scale: "circuit", colour: "Black" } })], {
-        name: "Ungraded",
-        colours: [
-          { name: "White", from: null, to: null },
-          { name: "Black", from: null, to: null },
+    assert.deepEqual(summary.hardestTop?.grade, { scale: "circuit", colour: "Black" });
+  });
+
+  test("an ungraded colour does not compare with a Font or V grade, so the graded one stands", () => {
+    const summary = boulderingSummary(
+      session(
+        [
+          problem({ grade: { scale: "circuit", colour: "Black" } }),
+          problem({ grade: { scale: "font", grade: "5" } }),
         ],
-      }),
+        circuit,
+      ),
     );
-    assert.deepEqual(colours.hardestTop?.grade, { scale: "circuit", colour: "Black" });
+    assert.deepEqual(summary.hardestTop?.grade, { scale: "font", grade: "5" });
   });
 
   test("the pyramid counts first ascents and projects by grade, hardest first, and leaves out repeats", () => {

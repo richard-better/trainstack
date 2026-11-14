@@ -71,6 +71,17 @@ describe("strengthDetailSchema", () => {
     assert.equal(result.success, false);
   });
 
+  test("refuses a slug the catalogue does not have, and takes the athlete's own exercise by UUID", () => {
+    const parse = (exerciseId: string) =>
+      strengthDetailSchema.safeParse({
+        sport: "strength",
+        exercises: [exercise(exerciseId, [set()])],
+      }).success;
+    assert.equal(parse("bench_pres"), false);
+    assert.equal(parse("bench_press"), true);
+    assert.equal(parse(crypto.randomUUID()), true);
+  });
+
   test("refuses a set with neither reps nor a time, an RPE off the half steps, and a malformed tempo", () => {
     for (const bad of [
       set({ reps: null, seconds: null }),

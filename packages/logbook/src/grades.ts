@@ -174,13 +174,16 @@ export function compareGrades(
   a: { grade: Grade; circuit: Circuit | null },
   b: { grade: Grade; circuit: Circuit | null },
 ) {
+  const sameCircuit =
+    a.grade.scale === "circuit" &&
+    b.grade.scale === "circuit" &&
+    a.circuit !== null &&
+    a.circuit.name === b.circuit?.name;
+  if (sameCircuit) return colourRank(a.grade, a.circuit) - colourRank(b.grade, b.circuit);
   const da = difficultyOf(a.grade, a.circuit);
   const db = difficultyOf(b.grade, b.circuit);
   if (da && db) return da.from - db.from || da.to - db.to;
   if (da) return 1;
   if (db) return -1;
-  if (a.circuit?.name === b.circuit?.name) {
-    return colourRank(a.grade, a.circuit) - colourRank(b.grade, b.circuit);
-  }
   return 0;
 }

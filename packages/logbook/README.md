@@ -75,8 +75,9 @@ Font grades:
 
 Font to V is therefore exact. V to Font takes the easiest Font grade the V grade covers, so V3
 reads as 6A. A colour converts through the Font range its gym gives, by the easier end; a
-colour without a range does not convert, and compares only with colours of its own circuit, by
-their order. Grades compare by the easier end of their Font range, then the harder.
+colour without a range does not convert. Colours of the same circuit compare by the circuit's
+order, ranges or not; other grades compare by the easier end of their Font range, then the harder,
+and a colour without a range does not compare with them.
 
 ### Numbers
 

@@ -45,7 +45,8 @@ export const catalogueExerciseIdSchema = z
   .string()
   .min(1)
   .max(64)
-  .regex(/^[a-z0-9]+(_[a-z0-9]+)*$/, "lowercase words joined by underscores");
+  .regex(/^[a-z0-9]+(_[a-z0-9]+)*$/, "lowercase words joined by underscores")
+  .refine((id) => catalogueById.has(id), "not a lift in the catalogue");
 
 export const customExerciseIdSchema = z.uuid();
 
