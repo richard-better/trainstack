@@ -78,6 +78,9 @@ export function WorkoutLibrary({ search }: { search: LibrarySearch }) {
         <h1 className="page-title">{builtin ? "Built-in workouts" : "Workouts"}</h1>
         <div className="page-actions">
           <ImportButton imports={imports} />
+          <Link to="/workouts/new" search={{}} className="primary link-button">
+            New workout
+          </Link>
         </div>
       </div>
       <ImportList imports={imports} />
@@ -242,12 +245,17 @@ function OwnResults({ search }: { search: LibrarySearch }) {
       <div className="state empty">
         <p className="state-title">No workouts yet</p>
         <p className="lede">
-          Import .zwo, .erg or .mrc files, drop them anywhere on this page, or copy one of the
-          built-in workouts to make it your own.
+          Build one, import .zwo, .erg or .mrc files by dropping them anywhere on this page, or copy
+          one of the built-in workouts to make it your own.
         </p>
-        <Link to="/workouts" search={{ in: "builtin" }} className="secondary link-button">
-          See built-in workouts
-        </Link>
+        <div className="page-actions">
+          <Link to="/workouts/new" search={{}} className="primary link-button">
+            Build a workout
+          </Link>
+          <Link to="/workouts" search={{ in: "builtin" }} className="secondary link-button">
+            See built-in workouts
+          </Link>
+        </div>
       </div>
     );
   }

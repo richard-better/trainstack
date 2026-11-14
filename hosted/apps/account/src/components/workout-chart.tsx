@@ -1,5 +1,22 @@
-import type { Target } from "@trainstack/workout";
-import { type KeyboardEvent, useId, useLayoutEffect, useRef, useState } from "react";
+import type { Step, Target } from "@trainstack/workout";
+import {
+  type KeyboardEvent,
+  type PointerEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  canDragLevel,
+  type LevelPart,
+  nudgeLength,
+  nudgeLevel,
+  partAt,
+  withLength,
+  withLevelShare,
+} from "../lib/chart-edit";
 
 import {
   durationText,
@@ -201,15 +218,19 @@ export function WorkoutChart({
   highlight,
   onHighlight,
   title,
+  editing,
 }: {
   overview: Overview;
   reference: Reference;
   highlight: string | null;
   onHighlight: (path: string | null) => void;
   title: string;
+  editing?: ChartEditing | undefined;
 }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hovered, setHovered] = useState<string | null>(null);
+  const [grip, setGrip] = useState<Grip | null>(null);
+  const drag = useRef<Drag | null>(null);
   const describedBy = useId();
   const narrow = width < 520;
   const height = narrow ? 200 : 260;
@@ -219,7 +240,7 @@ export function WorkoutChart({
     width: Math.max(0, width - 40 - (narrow ? 8 : 64)),
     height: height - 12 - 24,
     total: overview.seconds,
-    yMax: ceilingOf(overview.segments),
+    yMax: drag.current?.yMax ?? ceilingOf(overview.segments),
   };
   const lines = zoneLines(overview, reference).filter((line) => line.share < geometry.yMax);
   const labelled = (line: Line) =>
@@ -247,8 +268,124 @@ export function WorkoutChart({
     onHighlight(segment ? pathKey(segment.path) : null);
   }
 
+  function gripAt(clientX: number, clientY: number, element: Element) {
+    const box = element.getBoundingClientRect();
+    const x = clientX - box.left;
+    const y = clientY - box.top;
+    const segment = segmentAt(clientX, element);
+    if (!segment) return null;
+    const end = xOf(geometry, segment.start + segment.seconds);
+    const start = xOf(geometry, segment.start);
+    const nearEnd = Math.abs(x - end) <= 6 || (end - x >= 0 && end - x <= 6 && end - start > 12);
+    if (nearEnd) return { segment, kind: "length" as const, x, y };
+    const fraction = (x - start) / Math.max(end - start, 1);
+    const level =
+      segment.shape === "ramp"
+        ? fraction < 0.5
+          ? segment.from
+          : segment.to
+        : segment.shape === "range"
+          ? segment.high
+          : segment.from;
+    if (Math.abs(y - yOf(geometry, level)) <= 10 && canDragLevel(segment.step, reference)) {
+      return { segment, kind: "level" as const, x, y };
+    }
+    return { segment, kind: "select" as const, x, y };
+  }
+
+  function shareAt(y: number) {
+    return Math.max(0, ((geometry.top + geometry.height - y) / geometry.height) * geometry.yMax);
+  }
+
+  function lengthAt(x: number, current: Drag) {
+    const fraction = Math.min(0.98, Math.max(0, (x - geometry.left) / Math.max(geometry.width, 1)));
+    const others = current.total - current.segment.seconds;
+    return Math.max(1, (fraction * others - current.segment.start) / (1 - fraction));
+  }
+
+  function onPointerDown(event: PointerEvent<HTMLDivElement>) {
+    show(segmentAt(event.clientX, event.currentTarget));
+    if (!editing || event.button !== 0) return;
+    const hit = gripAt(event.clientX, event.clientY, event.currentTarget);
+    if (!hit) return;
+    editing.onSelect(hit.segment.path);
+    if (hit.kind === "select") return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const { segment } = hit;
+    const start = xOf(geometry, segment.start);
+    const end = xOf(geometry, segment.start + segment.seconds);
+    const meters = segment.step.duration.type === "distance" ? segment.step.duration.meters : 0;
+    drag.current = {
+      kind: hit.kind,
+      segment,
+      part: partAt(levelOf(segment.step), (hit.x - start) / Math.max(end - start, 1)),
+      fromShare: shareAt(hit.y),
+      total: geometry.total,
+      yMax: geometry.yMax,
+      metersPerSecond: meters > 0 ? meters / segment.seconds : 0,
+      id: `drag:${pathKey(segment.path)}:${Date.now()}`,
+    };
+    setGrip(hit.kind);
+  }
+
+  function onDragMove(event: PointerEvent<HTMLDivElement>) {
+    const current = drag.current;
+    if (!editing || !current) return false;
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - box.left;
+    const y = event.clientY - box.top;
+    const { segment } = current;
+    const next =
+      current.kind === "level"
+        ? withLevelShare(segment.step, current.part, current.fromShare, shareAt(y), reference)
+        : withLength(segment.step, lengthAt(x, current), current.metersPerSecond);
+    editing.onChange(segment.path, next, current.id);
+    return true;
+  }
+
+  function endDrag() {
+    if (!drag.current) return;
+    drag.current = null;
+    setGrip(null);
+  }
+
   function onKeyDown(event: KeyboardEvent) {
-    const index = overview.segments.findIndex((segment) => segment.key === hovered);
+    const cursor = overview.segments.find((segment) => segment.key === hovered);
+    const onSelected = !editing?.selected || (cursor && pathKey(cursor.path) === editing.selected);
+    const index = overview.segments.findIndex((segment) =>
+      onSelected ? segment.key === hovered : pathKey(segment.path) === editing?.selected,
+    );
+    const focused = overview.segments[index];
+    if (editing && focused && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      event.preventDefault();
+      const direction = event.key === "ArrowUp" ? 1 : -1;
+      editing.onChange(
+        focused.path,
+        nudgeLevel(focused.step, direction, event.shiftKey, reference),
+        `keys:${pathKey(focused.path)}:level`,
+      );
+      return;
+    }
+    if (
+      editing &&
+      focused &&
+      event.altKey &&
+      (event.key === "ArrowLeft" || event.key === "ArrowRight")
+    ) {
+      event.preventDefault();
+      editing.onChange(
+        focused.path,
+        nudgeLength(focused.step, event.key === "ArrowRight" ? 1 : -1),
+        `keys:${pathKey(focused.path)}:length`,
+      );
+      return;
+    }
+    if (editing && focused && event.key === "Enter") {
+      event.preventDefault();
+      editing.onSelect(focused.path);
+      return;
+    }
     const next =
       event.key === "ArrowRight"
         ? index + 1
@@ -266,8 +403,14 @@ export function WorkoutChart({
       return;
     }
     event.preventDefault();
-    show(overview.segments[Math.max(0, Math.min(overview.segments.length - 1, next))] ?? null);
+    const target = overview.segments[Math.max(0, Math.min(overview.segments.length - 1, next))];
+    show(target ?? null);
+    if (editing && target) editing.onSelect(target.path);
   }
+
+  const selectedSegment = editing?.selected
+    ? overview.segments.find((segment) => pathKey(segment.path) === editing.selected)
+    : undefined;
 
   return (
     <figure className="workout-chart">
@@ -276,14 +419,30 @@ export function WorkoutChart({
         className="workout-chart-plot"
         tabIndex={0}
         role="group"
-        aria-label={`${title} profile. Use the left and right arrow keys to go through its steps.`}
+        aria-label={
+          editing
+            ? `${title} profile. Left and right arrow keys choose a step, up and down change its target, Alt with left and right changes its length.`
+            : `${title} profile. Use the left and right arrow keys to go through its steps.`
+        }
         aria-describedby={describedBy}
+        data-editing={editing ? true : undefined}
+        data-drag={grip ?? undefined}
         onKeyDown={onKeyDown}
         onBlur={() => show(null)}
-        onPointerDown={(event) => show(segmentAt(event.clientX, event.currentTarget))}
-        onPointerMove={(event) => show(segmentAt(event.clientX, event.currentTarget))}
+        onPointerDown={onPointerDown}
+        onPointerMove={(event) => {
+          if (onDragMove(event)) return;
+          const hit = editing ? gripAt(event.clientX, event.clientY, event.currentTarget) : null;
+          if (editing) setGrip(hit && hit.kind !== "select" ? hit.kind : null);
+          show(segmentAt(event.clientX, event.currentTarget));
+        }}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onLostPointerCapture={endDrag}
         onPointerLeave={(event) => {
-          if (event.pointerType === "mouse") show(null);
+          if (drag.current || event.pointerType !== "mouse") return;
+          setGrip(null);
+          show(null);
         }}
       >
         {width > 0 && (
@@ -326,10 +485,17 @@ export function WorkoutChart({
                 gap={2}
                 radius={3}
                 className={
-                  highlight !== null && pathKey(segment.path) !== highlight ? "dimmed" : undefined
+                  editing?.selected === pathKey(segment.path)
+                    ? "selected"
+                    : highlight !== null && pathKey(segment.path) !== highlight
+                      ? "dimmed"
+                      : undefined
                 }
               />
             ))}
+            {editing && selectedSegment && (
+              <Handles segment={selectedSegment} geometry={geometry} reference={reference} />
+            )}
             {lines.map((line) => (
               <g key={`${line.kind}-${line.label}`} className={`chart-line ${line.kind}`}>
                 <line
@@ -365,6 +531,84 @@ export function WorkoutChart({
         {active ? describe(active, reference) : "The steps follow as a list."}
       </figcaption>
     </figure>
+  );
+}
+
+export type ChartEditing = {
+  readonly selected: string | null;
+  readonly onSelect: (path: readonly number[] | null) => void;
+  readonly onChange: (path: readonly number[], step: Step, key: string) => void;
+};
+
+type Grip = "level" | "length";
+
+type Drag = {
+  readonly kind: Grip;
+  readonly segment: Segment;
+  readonly part: LevelPart;
+  readonly fromShare: number;
+  readonly total: number;
+  readonly yMax: number;
+  readonly metersPerSecond: number;
+  readonly id: string;
+};
+
+const flatLevel = { kind: "constant", value: 0 } as const;
+
+const levelOf = (step: Step) =>
+  step.target && step.target.type !== "maxEffort" ? step.target.level : flatLevel;
+
+function Handles({
+  segment,
+  geometry,
+  reference,
+}: {
+  segment: Segment;
+  geometry: Geometry;
+  reference: Reference;
+}) {
+  const start = xOf(geometry, segment.start);
+  const end = xOf(geometry, segment.start + segment.seconds);
+  const middle = (start + end) / 2;
+  const top = yOf(
+    geometry,
+    segment.shape === "range" ? segment.high : Math.max(segment.from, segment.to),
+  );
+  const base = geometry.top + geometry.height;
+  return (
+    <g className="drag-handles">
+      {canDragLevel(segment.step, reference) &&
+        (segment.shape === "ramp" ? (
+          <>
+            <rect
+              className="drag-handle"
+              x={start + 2}
+              y={yOf(geometry, segment.from) - 2}
+              width={12}
+              height={4}
+              rx={2}
+            />
+            <rect
+              className="drag-handle"
+              x={end - 14}
+              y={yOf(geometry, segment.to) - 2}
+              width={12}
+              height={4}
+              rx={2}
+            />
+          </>
+        ) : (
+          <rect className="drag-handle" x={middle - 8} y={top - 2} width={16} height={4} rx={2} />
+        ))}
+      <rect
+        className="drag-handle"
+        x={end - 2}
+        y={(top + base) / 2 - 8}
+        width={4}
+        height={16}
+        rx={2}
+      />
+    </g>
   );
 }
 

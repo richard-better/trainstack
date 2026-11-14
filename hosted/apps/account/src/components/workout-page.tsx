@@ -94,7 +94,7 @@ function Loading() {
   );
 }
 
-export function OwnWorkoutPage({ id, editLink }: { id: string; editLink?: ReactNode }) {
+export function OwnWorkoutPage({ id }: { id: string }) {
   const { valid, workout, query } = useStoredWorkout(id);
   const error = query.error;
   if (
@@ -118,7 +118,7 @@ export function OwnWorkoutPage({ id, editLink }: { id: string; editLink?: ReactN
         source={{ kind: "own", id }}
         workout={workout.workout}
         stored={workout}
-        actions={<OwnActions stored={workout} editLink={editLink} />}
+        actions={<OwnActions stored={workout} />}
       />
     );
   }
@@ -192,7 +192,7 @@ function CopyButton({
       attempt.current = null;
       await rememberWorkout(copied);
       if (onCopied) onCopied(copied);
-      else await navigate({ to: "/workouts/$id", params: { id: copied.id } });
+      else await navigate({ to: "/workouts/$id/edit", params: { id: copied.id } });
     },
   });
   return (
@@ -203,7 +203,7 @@ function CopyButton({
         onClick={() => copy.mutate()}
         disabled={copy.isPending}
       >
-        {copy.isPending ? "Copying…" : "Copy to my workouts"}
+        {copy.isPending ? "Copying…" : "Copy and edit"}
       </button>
       {copy.isError && (
         <p role="alert" className="notice">
@@ -214,7 +214,7 @@ function CopyButton({
   );
 }
 
-function OwnActions({ stored, editLink }: { stored: StoredWorkout; editLink?: ReactNode }) {
+function OwnActions({ stored }: { stored: StoredWorkout }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const navigate = useNavigate();
   const remove = useMutation({
@@ -228,7 +228,9 @@ function OwnActions({ stored, editLink }: { stored: StoredWorkout; editLink?: Re
   });
   return (
     <>
-      {editLink}
+      <Link to="/workouts/$id/edit" params={{ id: stored.id }} className="primary link-button">
+        Edit
+      </Link>
       <AddToList workoutId={stored.id} />
       <button
         type="button"
