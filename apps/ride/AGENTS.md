@@ -151,8 +151,8 @@ when the ride is saved `AccountCalendar.rode` queues a pairing of that planned w
 activity (its file's SHA-256) in that account's file, signed in or not, stamped when the ride ended. `CalendarSync` sends it with `plannedWorkouts.pair` once
 `ActivitySync` has uploaded the ride; until then the server answers `ACTIVITY_NOT_FOUND` and it waits.
 If the planned workout was moved to another day meanwhile (`NOT_PAIRABLE`), the app moves it back to
-the ride's day (in the athlete's time zone: Ride's FIT files carry no local time, so the server dates
-them by it) with the same stamp and pairs again: a move made on the web during the ride is older
+the ride's day (in the athlete's time zone, by which the server dates a ride whose file carries no
+local time, as Ride's did before they wrote one) with the same stamp and pairs again: a move made on the web during the ride is older
 than the ride's end and loses, and one made after the ride stands, leaving the ride unplanned. A
 pairing still waiting after 30 days is dropped. A ride recovered after a crash does not know its
 planned workout, and pairs by the server's own rule.
@@ -211,6 +211,20 @@ position reaches its end, a lap-button step when the rider laps, and the timelin
 then (a lapped step keeps the length ridden, the current one grows, and later ones are drawn at
 their expected length). A cue on a lap-button step shows only if the rider reaches it before
 lapping. While lap-button steps remain, the time left is the known part, said as such.
+
+Every workout interval is a lap, and the rider can mark one at any moment (`markLap`, the player's
+Lap button, ⌘L), which splits the interval or, on a lap-button step, ends it. `RideSession` keeps
+the laps as marks in ride time, so a pause adds nothing to one and a recovered ride rebuilds them
+by replaying its journal. Each is written as a FIT lap message with its totals over the records
+inside it, `lap_trigger` (manual, time, or session end for the last) and `wkt_step_index`, the
+step of the workout it rode (none once the workout is over). The server places a workout's steps
+by laps only when there is one lap per step, so a lap the rider marks inside an interval makes it
+place them by time, which matches the laps for a workout ridden as planned. The ride's page in
+History lists the laps.
+
+Each ride's file also carries its local time (`local_timestamp` on the activity message), from the
+device's UTC offset when the ride started, kept in the trace header so a replay writes the same
+file.
 
 Speed and distance come from power through `VirtualBike`, as in Zwift and TrainerRoad: many
 trainers report no speed, and in ERG mode what they report follows the gear, not the effort.
