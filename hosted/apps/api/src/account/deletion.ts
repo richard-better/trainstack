@@ -22,14 +22,29 @@ export async function deleteAthleteFiles(buckets: AthleteBuckets, userId: string
   }
 }
 
+export type StravaDeletionEnv = {
+  BETTER_AUTH_SECRET: string;
+  STRAVA_CLIENT_ID?: string;
+  STRAVA_CLIENT_SECRET?: string;
+};
+
 export async function disconnectStravaForGood(
   database: Database,
-  secret: string,
+  env: StravaDeletionEnv,
   userId: string,
   fetcher: typeof fetch = fetch,
 ) {
   const athleteId = await disconnectStrava(
-    { database, vault: await createVault(secret), fetcher },
+    {
+      database,
+      vault: await createVault(env.BETTER_AUTH_SECRET),
+      fetcher,
+      credentials:
+        env.STRAVA_CLIENT_ID && env.STRAVA_CLIENT_SECRET
+          ? { id: env.STRAVA_CLIENT_ID, secret: env.STRAVA_CLIENT_SECRET }
+          : undefined,
+      budget: "ignore",
+    },
     userId,
   );
   const budgets = [budgetOf.connectStarts(userId)];

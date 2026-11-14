@@ -7,9 +7,9 @@ import { bearer } from "better-auth/plugins";
 
 import { APPLE_APP_BUNDLE_ID, APPLE_SERVICES_ID, revokeAppleToken } from "./apple";
 import {
-  deleteAthleteFiles,
   disconnectStravaForGood,
   promiseToSweepFilesAfterDeleting,
+  type StravaDeletionEnv,
   sweepFilesOfDeletedAccount,
 } from "../account/deletion";
 import { appHandoff } from "./app-handoff";
@@ -26,7 +26,7 @@ function logWithoutStoppingTheDeletion(error: unknown) {
   console.error(error);
 }
 
-export type AuthConfig = {
+export type AuthConfig = StravaDeletionEnv & {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   WEB_APP_ORIGIN: string;
@@ -75,10 +75,9 @@ export function createAuth(env: AuthConfig, database: Database, appleWebFlowClie
       deleteUser: {
         enabled: true,
         beforeDelete: async (user) => {
-          await deleteAthleteFiles(env, user.id);
-          await revokeWhatAppleWebFlowGranted(user.id);
-          await disconnectStravaForGood(database, env.BETTER_AUTH_SECRET, user.id);
           await promiseToSweepFilesAfterDeleting(database, user.id);
+          await revokeWhatAppleWebFlowGranted(user.id);
+          await disconnectStravaForGood(database, env, user.id);
         },
         afterDelete: async (user) =>
           sweepFilesOfDeletedAccount(env, database, user.id).catch(logWithoutStoppingTheDeletion),

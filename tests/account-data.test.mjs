@@ -487,6 +487,22 @@ test("deleting an account leaves nothing of the athlete, revokes Strava and Appl
   assert.deepEqual((await again.webApp.workouts.list({})).workouts, []);
 });
 
+test("deleting an account tells Strava even when the athlete's calls to Strava are used up", async () => {
+  const athlete = await athleteWithEverything();
+  await db
+    .prepare("UPDATE strava_budget SET used = 1000, window_start = ? WHERE key = ?")
+    .bind(Math.floor(Date.now() / 1000), `athlete:${athlete.stravaAthleteId}`)
+    .run();
+  strava.deauthorized.length = 0;
+  const deleted = await webRequest(athlete, "/api/auth/delete-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  assert.equal(deleted.status, 200, await deleted.clone().text());
+  assert.equal(strava.deauthorized.length, 1);
+});
+
 async function countMentions(table, trace) {
   const rows = (await db.prepare(`SELECT * FROM "${table}"`).all()).results;
   return rows.filter((row) => JSON.stringify(row).includes(trace)).length;

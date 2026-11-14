@@ -70,7 +70,13 @@ async function spendBudget(database: Database, key: string, limit: number) {
   return spent.length > 0;
 }
 
-export type StravaDisconnectDeps = { database: Database; vault: Vault; fetcher: typeof fetch };
+export type StravaDisconnectDeps = {
+  database: Database;
+  vault: Vault;
+  fetcher: typeof fetch;
+  credentials: strava.StravaCredentials | undefined;
+  budget: "spend" | "ignore";
+};
 
 export async function disconnectStrava(deps: StravaDisconnectDeps, userId: string) {
   const row = await deps.database
@@ -79,18 +85,23 @@ export async function disconnectStrava(deps: StravaDisconnectDeps, userId: strin
     .where(eq(stravaConnection.userId, userId))
     .get();
   if (!row) return undefined;
-  const accessToken = await deps.vault.decrypt(row.accessToken);
-  if (
-    accessToken &&
-    (await spendBudget(deps.database, budgetOf.athlete(row.athleteId), CALLS_PER_ATHLETE))
-  ) {
-    await strava
-      .deauthorize(deps.fetcher, accessToken)
-      .then((response) => {
-        if (!response.ok) console.error(`Strava refused to deauthorize: ${response.status}`);
-      })
-      .catch((error: unknown) => console.error(error));
-  }
+  const mayCall = async () =>
+    deps.budget === "ignore" ||
+    spendBudget(deps.database, budgetOf.athlete(row.athleteId), CALLS_PER_ATHLETE);
+  const tellStrava = async () => {
+    let accessToken = await deps.vault.decrypt(row.accessToken);
+    const refreshToken = await deps.vault.decrypt(row.refreshToken);
+    const expired = row.expiresAt - Math.floor(Date.now() / 1000) <= REFRESH_WHEN_SECONDS_LEFT;
+    if (expired && deps.credentials && refreshToken && (await mayCall())) {
+      const refreshed = await strava.refreshTokens(deps.fetcher, deps.credentials, refreshToken);
+      if (!refreshed.ok) throw new Error(`Strava refused to refresh: ${refreshed.status}`);
+      accessToken = ((await refreshed.json()) as strava.TokenResponse).access_token;
+    }
+    if (!accessToken || !(await mayCall())) return;
+    const response = await strava.deauthorize(deps.fetcher, accessToken);
+    if (!response.ok) throw new Error(`Strava refused to deauthorize: ${response.status}`);
+  };
+  await tellStrava().catch((error: unknown) => console.error(error));
   await deps.database.delete(stravaConnection).where(eq(stravaConnection.userId, userId));
   return row.athleteId;
 }
@@ -413,7 +424,13 @@ export function stravaRoutes(deps: StravaDeps) {
 
   app.delete("/", async (c) => {
     await disconnectStrava(
-      { database: deps.database(), vault: await getVault(), fetcher },
+      {
+        database: deps.database(),
+        vault: await getVault(),
+        fetcher,
+        credentials: credentials(),
+        budget: "spend",
+      },
       riderId(c),
     );
     return c.body(null, 204);

@@ -577,6 +577,23 @@ test("disconnecting tells Strava and forgets the tokens", async () => {
   assert.equal((await uploadWithFreshBudgets(token)).status, 409);
 });
 
+test("disconnecting with an access token about to run out refreshes it, so Strava is told with one it accepts", async () => {
+  reset();
+  const { email, token } = await signUp();
+  await connect(token);
+  await expireToken(email);
+  strava.requests.length = 0;
+  assert.equal((await call(token, "", { method: "DELETE" })).status, 204);
+  assert.deepEqual(
+    strava.requests.map((r) => [r.path, r.auth ?? r.body?.grant_type]),
+    [
+      ["/oauth/token", "refresh_token"],
+      ["/oauth/deauthorize", "Bearer access-2"],
+    ],
+  );
+  assert.deepEqual(await (await call(token, "")).json(), { connected: false });
+});
+
 test("disconnecting forgets the tokens even when Strava cannot be told", async () => {
   for (const [stravaCannotBeTold, deauthorize] of [
     ["Strava is down", () => new Response("{}", { status: 503 })],
