@@ -6,9 +6,15 @@ import {
   profileOn,
   sportMetrics,
   type ZoneMetric,
+  type ZoneSet,
+  isZoneModelName,
   zonesOf,
 } from "@trainstack/zones";
+import type { ZoneSetOutput } from "@trainstack/contract";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+
+import { api } from "../api";
 
 import {
   datedChanges,
@@ -25,47 +31,77 @@ import {
 import type { DecodedActivity } from "@trainstack/activity-file";
 import type { ActivityAnalysis, ZoneShare } from "@trainstack/analysis";
 
-import { analysisOf, recordedMetrics } from "../lib/activity-zones";
+import { analysisOf, recordedMetrics, storedShares } from "../lib/activity-zones";
 import type { Trace } from "../lib/series";
 import { useSettingsHistory } from "./settings-data";
 import { ZoneTimeRows } from "./zones";
+
+export interface StoredZones {
+  readonly statistics: Readonly<Record<string, number>>;
+  readonly day: string;
+}
+
+const knownZoneSet = (set: ZoneSetOutput | undefined): ZoneSet | undefined =>
+  set && isZoneModelName(set.model) ? { ...set, model: set.model } : undefined;
 
 export function TimeInZones({
   activity,
   sport,
   day,
   trace,
+  stored,
 }: {
   activity: DecodedActivity;
   sport: string | null;
   day: string;
   trace: Trace;
+  stored: StoredZones | null;
 }) {
   const history = useSettingsHistory();
-  const profile = history.data && profileOn(datedChanges(history.data.entries), day);
-  const analysis = profile && analysisOf(activity, sport, profile);
+  const storedDay = stored?.day ?? day;
+  const zonesOfDay = useQuery({
+    queryKey: ["settings", "zones", storedDay, sport],
+    queryFn: () => api.settings.zones({ day: storedDay, sport: sport ?? undefined }),
+    enabled: stored !== null,
+  });
+  const profile = history.data && profileOn(datedChanges(history.data.entries), storedDay);
+  const analysis = !stored && profile ? analysisOf(activity, sport, profile) : null;
   const scope = analysis ? analysis.sport : sport;
   const recorded = recordedMetrics(trace, scope);
   if (recorded.length === 0) return null;
+  const sharesOf = (metric: ZoneMetric) => {
+    if (!stored) return { shares: analysis?.timeInZones[metric] ?? [], set: undefined };
+    const set = knownZoneSet(zonesOfDay.data?.zones[metric]);
+    return { shares: set ? storedShares(stored.statistics, set) : [], set: set ?? null };
+  };
+  const loading = stored ? zonesOfDay.isPending : !analysis;
 
   return (
     <section aria-labelledby="time-in-zones">
       <h2 id="time-in-zones" className="section-title">
         Time in zones
       </h2>
-      {history.isError ? (
+      {history.isError || zonesOfDay.isError ? (
         <div className="note inline" role="status">
           <p className="lede">Your zones did not load.</p>
-          <button type="button" className="secondary" onClick={() => history.refetch()}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              void history.refetch();
+              if (stored) void zonesOfDay.refetch();
+            }}
+          >
             Try again
           </button>
         </div>
-      ) : !profile || !analysis ? (
+      ) : !profile || loading ? (
         <div className="traces-loading short" aria-busy="true" aria-label="Loading zones" />
       ) : (
         <>
           <p className="lede zones-day">
-            Using the settings that held on {formatDay(day)}.{loadSentence(analysis)}
+            Using the settings that held on {formatDay(storedDay)}.
+            {analysis && loadSentence(analysis)}
           </p>
           <div className="zone-metrics">
             {recorded.map((metric) => (
@@ -73,7 +109,7 @@ export function TimeInZones({
                 key={metric}
                 metric={metric}
                 scope={scope}
-                shares={analysis.timeInZones[metric] ?? []}
+                {...sharesOf(metric)}
                 profile={profile}
               />
             ))}
@@ -102,15 +138,17 @@ function MetricZones({
   metric,
   scope,
   shares,
+  set,
   profile,
 }: {
   metric: ZoneMetric;
   scope: string | null;
   shares: readonly ZoneShare[];
+  set: ZoneSet | null | undefined;
   profile: Profile;
 }) {
   const settings = metricSettings(profile, metric, scope);
-  const zones = settings && zonesOf(settings);
+  const zones = set === undefined ? settings && zonesOf(settings) : set;
   const listedHere = scope !== null && profile.sports[scope] !== undefined;
   const link =
     listedHere && (metric === "pace" || profile.sports[scope]?.[metric])

@@ -16,7 +16,7 @@ const AXIS_HEIGHT = 22;
 const GUTTER = 40;
 const TOP = 10;
 
-function useWidth() {
+export function useWidth() {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {

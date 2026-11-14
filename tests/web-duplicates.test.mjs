@@ -7,7 +7,9 @@ import {
   arrivalText,
   deletingSource,
   linkCandidates,
+  linkSearchText,
   membersOf,
+  nearWindow,
   primaryIdOf,
   sourceLabel,
   sourcesOf,
@@ -198,30 +200,25 @@ test("a watch file with a wrong clock is found by search, linked by hand, and se
   });
   assert.equal(wrongClock.primary, true, "the server cannot match a file with a wrong clock");
 
-  const firstPage = await client.activities.list({ onePerWorkout: true, limit: 2 });
-  const near = linkCandidates(ride, firstPage.activities, "", true);
+  const near = await client.activities.list({ ...nearWindow(ride), onePerWorkout: true });
   assert.deepEqual(
-    near.near.map(({ id }) => id),
-    [nextDay.id],
-  );
-  assert.equal(near.reachedNear, false, "the newest page alone does not reach back a day");
-
-  const loaded = (await client.activities.list({ onePerWorkout: true, limit: 200 })).activities;
-  const candidates = linkCandidates(ride, loaded, "", false);
-  assert.equal(candidates.reachedNear, true);
-  assert.deepEqual(
-    candidates.near.map(({ id }) => id),
+    linkCandidates(ride, near.activities, null).near.map(({ id }) => id),
     [nextDay.id],
     "only activities within a day are offered without a search, nearest first",
   );
+
+  const search = async (text) => {
+    const query = linkSearchText(text);
+    const { activities } = await client.activities.list({ query, onePerWorkout: true });
+    return linkCandidates(ride, near.activities, activities).matches.map(({ id }) => id);
+  };
+  assert.equal(linkSearchText("   "), null, "a blank search shows what is near");
   assert.deepEqual(
-    linkCandidates(ride, loaded, "1 jan", false).matches.map(({ id }) => id),
-    [wrongClock.id],
+    (await search("  CYCL ")).sort(),
+    [nextDay.id, wrongClock.id].sort(),
+    "the search matches the sport, in any case, and leaves out the activity's own workout",
   );
-  assert.deepEqual(
-    linkCandidates(ride, loaded, "uploaded jan", false).matches.map(({ id }) => id),
-    [wrongClock.id],
-  );
+  assert.deepEqual(await search("running"), []);
 
   const change = { kind: "link", id: ride.id, to: wrongClock.id, joining: membersOf(wrongClock) };
   await applyChange(client, change);
@@ -230,9 +227,10 @@ test("a watch file with a wrong clock is found by search, linked by hand, and se
     linked.duplicates.map(({ id }) => id),
     [wrongClock.id],
   );
+  const { activities: rides } = await client.activities.list({ query: "cycling" });
   assert.deepEqual(
-    linkCandidates(linked, loaded, "jan", false).matches,
-    [],
+    linkCandidates(linked, [], rides).matches.map(({ id }) => id),
+    [nextDay.id],
     "a source already in the workout is not offered again",
   );
 

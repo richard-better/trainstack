@@ -1,10 +1,16 @@
 import type { ActivitySummary } from "@trainstack/activity-file";
-import type { ActivityStatisticName } from "@trainstack/contract";
+import {
+  type ActivityStatisticName,
+  type AnalysisStatisticName,
+  analysisStatistics,
+  zoneTimeStatisticPattern,
+} from "@trainstack/contract";
 
 export type StatisticName = ActivityStatisticName;
 export type Statistics = Readonly<Record<string, number>>;
+export type SpeedStyle = "speed" | "pace_km" | "pace_100m";
 
-const labels = {
+const summaryLabels = {
   timer_s: "Time",
   elapsed_s: "Elapsed",
   distance_m: "Distance",
@@ -19,9 +25,64 @@ const labels = {
   ascent_m: "Ascent",
   descent_m: "Descent",
   calories_kcal: "Energy",
-} satisfies Record<StatisticName, string>;
+} satisfies Record<ActivityStatisticName, string>;
 
-export const statisticNames = Object.keys(labels) as StatisticName[];
+type BestPowerName = `best_power_${number}s_w`;
+type BestTimeName = `best_time_${string}_s`;
+type NamedAnalysisStatistic = Exclude<AnalysisStatisticName, BestPowerName | BestTimeName>;
+
+const analysisLabels = {
+  normalized_power_w: "Normalized power",
+  power_intensity_ratio: "Intensity",
+  power_stress_tss: "Load from power",
+  work_kj: "Work",
+  average_grade_adjusted_speed_mps: "Grade-adjusted speed",
+  normalized_grade_adjusted_speed_mps: "Normalized grade-adjusted speed",
+  pace_intensity_ratio: "Intensity",
+  pace_stress_tss: "Load from pace",
+  heart_rate_stress_tss: "Load from heart rate",
+  load_tss: "Load",
+} satisfies Record<NamedAnalysisStatistic, string>;
+
+const bestPowerPattern = /^best_power_(\d+)s_w$/;
+const bestTimePattern = /^best_time_(.+)_s$/;
+
+export const effortDistances: Readonly<Record<string, { label: string; metres: number }>> = {
+  "400m": { label: "400 m", metres: 400 },
+  "1km": { label: "1 km", metres: 1000 },
+  mile: { label: "Mile", metres: 1609.344 },
+  "5km": { label: "5 km", metres: 5000 },
+  "10km": { label: "10 km", metres: 10_000 },
+  half_marathon: { label: "Half marathon", metres: 21_097.5 },
+  marathon: { label: "Marathon", metres: 42_195 },
+};
+
+export const effortLabel = (effort: string) =>
+  effortDistances[effort]?.label ?? effort.replaceAll("_", " ");
+
+export function durationLabel(seconds: number) {
+  if (seconds < 60) return `${seconds} s`;
+  if (seconds < 3600) return `${seconds / 60} min`;
+  return `${seconds / 3600} h`;
+}
+
+function analysisLabel(name: AnalysisStatisticName) {
+  const bestPower = bestPowerPattern.exec(name);
+  if (bestPower) return `Best ${durationLabel(Number(bestPower[1]))} power`;
+  const bestTime = bestTimePattern.exec(name);
+  if (bestTime) return `Fastest ${effortLabel(bestTime[1]!).toLowerCase()}`;
+  return analysisLabels[name as NamedAnalysisStatistic];
+}
+
+const paceLabels: Partial<Record<ActivityStatisticName | AnalysisStatisticName, string>> = {
+  average_speed_mps: "Avg pace",
+  max_speed_mps: "Best pace",
+  average_grade_adjusted_speed_mps: "Grade-adjusted pace",
+  normalized_grade_adjusted_speed_mps: "Normalized grade-adjusted pace",
+};
+
+export const statisticNames = Object.keys(summaryLabels) as ActivityStatisticName[];
+const analysisNames: readonly string[] = analysisStatistics.map(({ name }) => name);
 
 export interface Figure {
   readonly name: string;
@@ -30,15 +91,19 @@ export interface Figure {
   readonly unit: string;
 }
 
-const isKnown = (name: string): name is StatisticName =>
+const isSummary = (name: string): name is ActivityStatisticName =>
   (statisticNames as readonly string[]).includes(name);
+const isAnalysis = (name: string): name is AnalysisStatisticName => analysisNames.includes(name);
 
-const units = ["s", "m", "w", "bpm", "rpm", "mps", "kcal", "j"] as const;
+const units = ["s", "m", "w", "bpm", "rpm", "mps", "kcal", "kj", "j", "tss", "ratio"] as const;
 
 const unitOf = (name: string) => units.find((unit) => name.endsWith(`_${unit}`)) ?? "";
 
-function labelOf(name: string) {
-  if (isKnown(name)) return labels[name];
+function labelOf(name: string, speed: SpeedStyle) {
+  if (isSummary(name) || isAnalysis(name)) {
+    const pace = speed === "speed" ? undefined : paceLabels[name];
+    return pace ?? (isSummary(name) ? summaryLabels[name] : analysisLabel(name));
+  }
   const words = name
     .slice(0, unitOf(name) ? -(unitOf(name).length + 1) : undefined)
     .replace(/^average_/, "avg_")
@@ -56,13 +121,35 @@ export function formatDuration(seconds: number) {
   return hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}:${rest}` : `${minutes}:${rest}`;
 }
 
+export function formatHours(seconds: number) {
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  return hours > 0 ? `${hours}h ${String(minutes % 60).padStart(2, "0")}m` : `${minutes}m`;
+}
+
 export function formatDistance(metres: number) {
   return metres < 1000
     ? { value: whole(metres), unit: "m" }
     : { value: (metres / 1000).toFixed(metres < 100_000 ? 2 : 1), unit: "km" };
 }
 
-function measure(name: string, value: number): Pick<Figure, "value" | "unit"> {
+export function formatPace(metresPerSecond: number, style: Exclude<SpeedStyle, "speed">) {
+  const metres = style === "pace_km" ? 1000 : 100;
+  return {
+    value: metresPerSecond > 0 ? formatDuration(metres / metresPerSecond) : "-",
+    unit: style === "pace_km" ? "/km" : "/100 m",
+  };
+}
+
+export function formatSpeed(metresPerSecond: number, style: SpeedStyle) {
+  return style === "speed"
+    ? { value: (metresPerSecond * 3.6).toFixed(1), unit: "km/h" }
+    : formatPace(metresPerSecond, style);
+}
+
+export const formatLoad = (stress: number) => whole(stress);
+
+function measure(name: string, value: number, speed: SpeedStyle): Pick<Figure, "value" | "unit"> {
   switch (unitOf(name)) {
     case "s":
       return { value: formatDuration(value), unit: "" };
@@ -71,11 +158,17 @@ function measure(name: string, value: number): Pick<Figure, "value" | "unit"> {
         ? formatDistance(value)
         : { value: whole(value), unit: "m" };
     case "mps":
-      return { value: (value * 3.6).toFixed(1), unit: "km/h" };
+      return formatSpeed(value, speed);
     case "j":
       return { value: whole(value / 1000), unit: "kJ" };
+    case "kj":
+      return { value: whole(value), unit: "kJ" };
     case "w":
       return { value: whole(value), unit: "W" };
+    case "tss":
+      return { value: formatLoad(value), unit: "" };
+    case "ratio":
+      return { value: value.toFixed(2), unit: "" };
     case "bpm":
     case "rpm":
     case "kcal":
@@ -85,8 +178,8 @@ function measure(name: string, value: number): Pick<Figure, "value" | "unit"> {
   }
 }
 
-export function figureOf(name: string, value: number): Figure {
-  return { name, label: labelOf(name), ...measure(name, value) };
+export function figureOf(name: string, value: number, speed: SpeedStyle = "speed"): Figure {
+  return { name, label: labelOf(name, speed), ...measure(name, value, speed) };
 }
 
 const sameDuration = (statistics: Statistics) =>
@@ -94,14 +187,16 @@ const sameDuration = (statistics: Statistics) =>
   statistics.elapsed_s !== undefined &&
   Math.abs(statistics.timer_s - statistics.elapsed_s) < 1;
 
-export function summaryFigures(statistics: Statistics): Figure[] {
+const isZoneTime = (name: string) => zoneTimeStatisticPattern.test(name);
+
+export function summaryFigures(statistics: Statistics, speed: SpeedStyle = "speed"): Figure[] {
   const known = statisticNames.filter(
     (name) => statistics[name] !== undefined && !(name === "elapsed_s" && sameDuration(statistics)),
   );
   const unknown = Object.keys(statistics)
-    .filter((name) => !isKnown(name))
+    .filter((name) => !isSummary(name) && !isAnalysis(name) && !isZoneTime(name))
     .sort();
-  return [...known, ...unknown].map((name) => figureOf(name, statistics[name]!));
+  return [...known, ...unknown].map((name) => figureOf(name, statistics[name]!, speed));
 }
 
 const headlineNames = [
