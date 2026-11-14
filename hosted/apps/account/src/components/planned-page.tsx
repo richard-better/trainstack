@@ -1,4 +1,3 @@
-import { canSkip, pairingChoices } from "../lib/planned-actions";
 import { ORPCError } from "@orpc/client";
 import {
   type CalendarDay,
@@ -15,6 +14,7 @@ import { dayInFull, findPlanned, pairsOf, plannedName } from "../lib/calendar";
 import { savePlannedWorkout } from "../lib/calendar-writes";
 import type { IntervalStep } from "../lib/compliance";
 import { mondayOf } from "../lib/dates";
+import { canSkip, pairingChoices } from "../lib/planned-actions";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad } from "../lib/statistics";
 import { todayIn } from "../lib/time-zone";

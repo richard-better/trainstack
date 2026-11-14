@@ -1,4 +1,3 @@
-import { canSkip } from "../lib/planned-actions";
 import type {
   CalendarActivity,
   CalendarDay,
@@ -37,6 +36,7 @@ import {
   withPlanned,
 } from "../lib/calendar";
 import { weekLabel } from "../lib/dates";
+import { canSkip, pairingChoices } from "../lib/planned-actions";
 import { storedRouteSegments, routePath } from "../lib/route";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad } from "../lib/statistics";
@@ -866,22 +866,19 @@ function PlannedMenu({
               Unpair from {activityTitle(done)}
             </button>
           )}
-          {item.content.kind === "workout" &&
-            activities
-              .filter((activity) => activity.id !== done?.id)
-              .map((activity) => (
-                <button
-                  key={activity.id}
-                  type="button"
-                  className="quiet menu-item"
-                  onClick={() => {
-                    close();
-                    void calendarWrites.pair(item, activity.id);
-                  }}
-                >
-                  {done ? "Pair instead with" : "Pair with"} {activityTitle(activity)}
-                </button>
-              ))}
+          {pairingChoices(item.content, activities, done?.id ?? null).map((activity) => (
+            <button
+              key={activity.id}
+              type="button"
+              className="quiet menu-item"
+              onClick={() => {
+                close();
+                void calendarWrites.pair(item, activity.id);
+              }}
+            >
+              {done ? "Pair instead with" : "Pair with"} {activityTitle(activity)}
+            </button>
+          ))}
           <button
             type="button"
             className="quiet menu-item"
