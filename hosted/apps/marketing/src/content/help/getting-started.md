@@ -40,7 +40,7 @@ once the steps are done, and it never appears for an account that has been train
 while.
 
 1. [Get your activities in](/help/add-activities): upload files from your watch or bike computer,
-   or sign Ride in with the same Apple ID.
+   sign Ride in with the same Apple ID, or let Ride bring in your workouts from Apple Health.
 2. [Set your thresholds](/help/thresholds-and-zones). Without them, Trainstack cannot score the
    load of rides, runs and swims, so they are left out of your fitness chart. (Strength and
    bouldering sessions get their load from how hard you rate them.) Once you have a few hard efforts in,

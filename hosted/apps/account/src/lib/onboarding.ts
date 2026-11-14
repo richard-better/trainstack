@@ -8,6 +8,7 @@ import {
 } from "@trainstack/zones";
 
 import { settingsScopeOf, thresholdPrompt } from "./analysis.ts";
+import { helpUrl } from "./help.ts";
 import {
   parseValue,
   parseWeight,
@@ -58,9 +59,14 @@ export const historySources: readonly HistorySource[] = [
   {
     id: "apple-health",
     name: "Apple Health",
-    state: "coming",
+    state: "available",
     detail:
-      "Ride is learning to bring in your workouts from Apple Health. Until it can, upload the files from the app that recorded them.",
+      "Ride on iPhone brings in every workout in Apple Health, from your Apple Watch or any app that saves there, such as Garmin Connect. In Ride, open Settings, then Account, and turn on Import Workouts from Health.",
+    action: {
+      kind: "link",
+      href: `${helpUrl("add-activities")}#apple-health`,
+      label: "How to turn it on",
+    },
   },
   {
     id: "strava",
@@ -74,7 +80,7 @@ export const historySources: readonly HistorySource[] = [
     name: "Garmin, COROS, Wahoo, Suunto and Polar accounts",
     state: "not_yet",
     detail:
-      "Trainstack cannot connect to them yet. Copy the files off the device, or export them from the app.",
+      "Trainstack cannot connect to them directly yet. If their app saves to Apple Health, Ride brings the workouts in from there; otherwise copy the files off the device, or export them from the app.",
   },
 ];
 

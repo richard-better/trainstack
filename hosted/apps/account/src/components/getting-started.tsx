@@ -95,7 +95,7 @@ const activityCount = ({ count, more }: Onboarding["history"]) =>
 function historyLine(onboarding: Onboarding) {
   return onboarding.history.state === "done"
     ? `${activityCount(onboarding.history)} in.`
-    : "Upload files from your watch or bike computer, or sign Ride in. Analysis, load and threshold suggestions all start from them.";
+    : "Upload files from your watch or bike computer, or let Ride bring in your rides and Apple Health workouts. Analysis, load and threshold suggestions all start from them.";
 }
 
 function thresholdsLine(onboarding: Onboarding, suggested: number) {
