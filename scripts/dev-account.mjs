@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { parseArgs } from "node:util";
 
 import { mockApple } from "../tests/helpers/apple.mjs";
-import { seedHistory } from "./dev-history.mjs";
+import { seedHistory, seedPlan } from "./dev-history.mjs";
 import { migrate, rpcClient, startWorker } from "../tests/helpers/worker.mjs";
 
 const { values: options } = parseArgs({
@@ -233,7 +233,10 @@ if (!options.empty) {
     await ride.workoutLists.place({ id: list.id, workoutId: copy.id, after, updatedAt: now });
     after = copy.id;
   }
-  if (options.history) await seedHistory(ride);
+  if (options.history) {
+    await seedHistory(ride);
+    await seedPlan(ride);
+  }
 }
 
 const ANALYSIS_EVERY_MS = 20_000;
@@ -290,7 +293,7 @@ web?.on("exit", stop);
 
 console.log(`
 API on ${API}, with Apple played by ${APPLE}. ${API}${LOCAL_STORAGE_DUMP} shows everything in D1 and R2.
-${options.empty ? "Nothing is seeded." : `${SEEDED_RIDES.length} rides from apps/ride, three workouts and a list are seeded${options.history ? ", with 30 weeks of rides and runs before today" : ""}.`}
+${options.empty ? "Nothing is seeded." : `${SEEDED_RIDES.length} rides from apps/ride, three workouts and a list are seeded${options.history ? ", with 30 weeks of rides and runs before today and a plan from three weeks back to three ahead" : ""}.`}
 Activities are analysed every ${ANALYSIS_EVERY_MS / 1000} seconds, as the deployed API's cron does every minute.
 ${web ? `Open ${WEB} and sign in with Apple to reach ${ATHLETE.email}.` : `The web app is not started. Start it on ${WEB}, the origin the API trusts, with VITE_SERVER_URL=${API}.`}
 Everything lives in memory and is gone when this stops.

@@ -184,10 +184,17 @@ function BarShape({
   }
 }
 
-export function WorkoutThumb({ overview, label }: { overview: Overview; label?: string }) {
+export function WorkoutThumb({
+  overview,
+  label,
+  height = 36,
+}: {
+  overview: Overview;
+  label?: string;
+  height?: number;
+}) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const fade = fadeIdOf(useId());
-  const height = 36;
   const geometry: Geometry = {
     left: 0,
     top: 0,
@@ -200,6 +207,7 @@ export function WorkoutThumb({ overview, label }: { overview: Overview; label?: 
     <div
       ref={ref}
       className="workout-thumb"
+      style={{ height }}
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}

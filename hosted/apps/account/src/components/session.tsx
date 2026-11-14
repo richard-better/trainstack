@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 
 import { queryClient, uploads } from "../api";
 import { authClient } from "../auth";
+import { calendarWrites } from "./calendar-data";
 import { TimeZoneFromBrowser } from "./time-zone";
 
 type SignedInUser = { name: string; email: string };
@@ -44,6 +45,7 @@ function AppHeader({ user }: { user: SignedInUser }) {
 
   async function signOut() {
     setSigningOut(true);
+    calendarWrites.clear();
     await authClient.signOut();
     uploads.clear();
     queryClient.clear();
@@ -62,6 +64,9 @@ function AppHeader({ user }: { user: SignedInUser }) {
         </Link>
         <Link to="/training" className="nav-link">
           Training
+        </Link>
+        <Link to="/calendar" search={{ view: "month" }} className="nav-link">
+          Calendar
         </Link>
         <Link to="/workouts" className="nav-link">
           Workouts

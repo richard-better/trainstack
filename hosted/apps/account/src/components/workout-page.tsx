@@ -431,7 +431,13 @@ function WorkoutFigures({ overview, reference }: { overview: Overview; reference
   );
 }
 
-function ReferenceNote({ overview, reference }: { overview: Overview; reference: Reference }) {
+export function ReferenceNote({
+  overview,
+  reference,
+}: {
+  overview: Overview;
+  reference: Reference;
+}) {
   const usesPower = overview.segments.some((segment) => segment.step.target?.type === "power");
   const usesPace = overview.segments.some((segment) => segment.step.target?.type === "pace");
   const usesHeartRate = overview.segments.some(

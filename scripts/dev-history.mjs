@@ -374,3 +374,69 @@ export async function seedHistory(client, { today = new Date(), weeks } = {}) {
   }
   return activities.length + (duplicate ? 1 : 0);
 }
+
+const easyPace = (seconds, share) => ({
+  type: "step",
+  duration: { type: "time", seconds },
+  target: { type: "pace", unit: "threshold", level: { kind: "constant", value: share } },
+});
+
+const runs = {
+  easy: { name: "Easy run", sport: "running", steps: [easyPace(2700, 0.78)] },
+  tempo: {
+    name: "Tempo run, 20 min",
+    sport: "running",
+    steps: [easyPace(600, 0.75), easyPace(1200, 0.97), easyPace(600, 0.72)],
+  },
+  long: { name: "Long run", sport: "running", steps: [easyPace(5400, 0.8)] },
+};
+
+export async function seedPlan(
+  client,
+  { today = new Date(), pastWeeks = 3, futureWeeks = 3 } = {},
+) {
+  const todayDay = dayIso(today.getTime());
+  const thisMonday = Date.parse(`${todayDay}T00:00:00Z`) - ((today.getUTCDay() + 6) % 7) * DAY_MS;
+  const builtin = async (id) => {
+    const { workout } = await client.builtinWorkouts.get({ id });
+    return { kind: "workout", workout, source: { kind: "builtin", id }, notes: null };
+  };
+  const ride = {
+    threshold: await builtin("threshold-classic-60"),
+    vo2: await builtin("vo2-max-booster"),
+    long: await builtin("long-endurance-90"),
+  };
+  const run = (key, notes = null) => ({ kind: "workout", workout: runs[key], source: null, notes });
+  let clock = Date.now() - 60_000;
+  let planned = 0;
+  const put = async (day, position, content) => {
+    planned += 1;
+    return client.plannedWorkouts.put({
+      id: crypto.randomUUID(),
+      day,
+      position,
+      content,
+      updatedAt: new Date((clock += 10)),
+    });
+  };
+  for (let week = -pastWeeks; week <= futureWeeks; week++) {
+    const day = (offset) => dayIso(thisMonday + (week * 7 + offset) * DAY_MS);
+    await put(day(0), 0, { kind: "rest", notes: week === 0 ? "Legs up, early night" : null });
+    await put(day(1), 0, week % 2 === 0 ? ride.threshold : ride.vo2);
+    if (week !== -1) await put(day(2), 0, run("easy"));
+    else await put(day(2), 0, { kind: "note", title: "Travel to Vienna", notes: "Train at 7:10" });
+    const tempo = await put(day(3), 0, run("tempo"));
+    if (week === -2) {
+      await client.plannedWorkouts.skip({
+        id: tempo.id,
+        skipped: { reason: "Work ran late" },
+        updatedAt: new Date((clock += 10)),
+      });
+    }
+    if (week === -1) await put(day(4), 0, ride.threshold);
+    await put(day(5), 0, ride.long);
+    if (week === 1) await put(day(5), 1, run("easy", "Brick: straight off the bike"));
+    await put(day(6), 0, run("long"));
+  }
+  return planned;
+}
