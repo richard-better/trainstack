@@ -17,6 +17,7 @@ import {
   withoutPlanned,
 } from "./calendar.ts";
 import type { ApiClient } from "./client.ts";
+import { readinessKey } from "./readiness.ts";
 import { sameWorkout } from "./workout-save.ts";
 
 export const plannedKey = (id: string) => ["planned", id] as const;
@@ -185,6 +186,7 @@ export function createCalendarWrites({
   function settleCaches() {
     void queryClient.invalidateQueries({ queryKey: calendarKey });
     void queryClient.invalidateQueries({ queryKey: ["planned"] });
+    void queryClient.invalidateQueries({ queryKey: readinessKey });
   }
 
   async function sendWithRetries(

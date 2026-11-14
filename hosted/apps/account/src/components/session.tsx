@@ -65,6 +65,9 @@ function AppHeader({ user }: { user: SignedInUser }) {
       </Link>
       <nav aria-label="Main" className="main-nav">
         <Link to="/" className="nav-link" activeOptions={{ exact: true }}>
+          Today
+        </Link>
+        <Link to="/activities" className="nav-link">
           Activities
         </Link>
         <Link to="/training" className="nav-link">

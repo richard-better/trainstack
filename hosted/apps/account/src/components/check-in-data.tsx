@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { type CheckIn, checkInsQueryKey, placeCheckIn } from "../lib/check-in";
+import { readinessKey } from "../lib/readiness";
 
 type Range = Awaited<ReturnType<typeof api.checkIns.range>>;
 
@@ -39,6 +40,7 @@ function useHeld() {
         void queryClient.invalidateQueries({ queryKey: key, exact: true });
       }
     }
+    void queryClient.invalidateQueries({ queryKey: readinessKey });
   };
 }
 

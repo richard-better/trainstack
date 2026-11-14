@@ -81,7 +81,7 @@ export function ActivityPage({ id }: { id: string }) {
           <p className="lede">
             It may have been deleted, or the link belongs to someone else's account.
           </p>
-          <Link to="/" className="secondary link-button">
+          <Link to="/activities" className="secondary link-button">
             See your activities
           </Link>
         </div>
@@ -122,7 +122,7 @@ export function ActivityPage({ id }: { id: string }) {
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="content detail">
-      <Link to="/" className="back">
+      <Link to="/activities" className="back">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
           <path
             d="M10 3 5 8l5 5"
@@ -668,7 +668,7 @@ function Actions({
       await refreshWorkouts();
       await (workoutId
         ? navigate({ to: "/activities/$id", params: { id: workoutId } })
-        : navigate({ to: "/" }));
+        : navigate({ to: "/activities" }));
     },
   });
 

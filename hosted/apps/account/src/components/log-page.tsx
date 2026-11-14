@@ -92,7 +92,7 @@ export function LogPage({ sport, id }: { sport: Draft["sport"]; id: string }) {
 function LogShell({ children }: { children: ReactNode }) {
   return (
     <main className="content log">
-      <Link to="/" className="back">
+      <Link to="/activities" className="back">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
           <path
             d="M10 3 5 8l5 5"

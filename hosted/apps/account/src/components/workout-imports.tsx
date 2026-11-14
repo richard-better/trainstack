@@ -217,7 +217,7 @@ function ImportItem({ item, imports }: { item: Item; imports: WorkoutImports }) 
         {reading.isActivity ? (
           <p className="lede">
             This is a recorded activity, not a planned workout.{" "}
-            <Link to="/" className="text-link">
+            <Link to="/activities" className="text-link">
               Upload it with your activities
             </Link>{" "}
             instead.
