@@ -73,6 +73,7 @@ export function snapSeconds(seconds: number) {
 }
 
 export function withLength(step: Step, seconds: number, metersPerSecond: number): Step {
+  if (step.duration.type === "open") return step;
   if (step.duration.type === "time")
     return { ...step, duration: { type: "time", seconds: snapSeconds(seconds) } };
   const meters = Math.max(10, Math.round((seconds * metersPerSecond) / 10) * 10);
@@ -101,6 +102,7 @@ export function nudgeLevel(
 export function nudgeLength(step: Step, direction: 1 | -1): Step {
   const nudged = (current: number, amount: number, start: number) =>
     direction > 0 ? start + amount : Math.min(current, Math.max(1, start - amount));
+  if (step.duration.type === "open") return step;
   if (step.duration.type === "time") {
     const seconds = step.duration.seconds;
     const amount = seconds < 120 ? 5 : 15;

@@ -205,6 +205,20 @@ test("a distance step's time comes from its pace and the athlete's threshold pac
   assert.equal(formatSpan(5430), "1 h 30 min 30 s");
 });
 
+test("a lap-button step draws at its expected length, or five minutes, and is marked estimated", () => {
+  const reference = noReference("cycling");
+  const lap = (expected) => ({
+    type: "step",
+    duration: expected ? { type: "open", expected } : { type: "open" },
+  });
+  const expected = overviewOf({ steps: [lap({ type: "time", seconds: 600 })] }, reference);
+  assert.equal(expected.seconds, 600);
+  assert.equal(expected.estimated, true);
+  assert.equal(overviewOf({ steps: [lap()] }, reference).seconds, 300);
+  assert.equal(durationText(lap()), "Until lap");
+  assert.equal(durationText(lap({ type: "distance", meters: 2000 })), "Until lap, about 2 km");
+});
+
 test("repeats expand into the profile, each round its own segment of the same step", () => {
   const overview = overviewOf(
     {

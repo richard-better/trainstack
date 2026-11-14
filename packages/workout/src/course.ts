@@ -1,13 +1,14 @@
 import { type Converted, IssueLog } from "./issues.ts";
 import type { Cue, Level, Step, Workout } from "./model.ts";
 import { formatNumber, withoutFloatNoise } from "./numbers.ts";
+import { withOpenStepsTimed } from "./open.ts";
 import { powerLevel } from "./power.ts";
 import { CuePlacementError, flatten, repeatsWithin } from "./timeline.ts";
 import { checkedInput, validated } from "./validate.ts";
 
 export type CourseFormat = "erg" | "mrc";
 export type CourseParseOptions = { name?: string };
-export type CourseWriteOptions = { ftp?: number };
+export type CourseWriteOptions = { ftp?: number; approximate?: boolean };
 
 type Unit = "WATTS" | "PERCENT";
 type Point = { seconds: number; value: number; line: number };
@@ -222,9 +223,11 @@ export function writeCourse(
     if (repeat.name) log.warn("dropped", `Name "${repeat.name}" has no place in this format`);
   }
 
+  const blocks = withOpenStepsTimed(log, input.steps, options.approximate);
+  if (log.errors.length > 0) return log.result("");
   let steps: Step[];
   try {
-    steps = flatten(input.steps);
+    steps = flatten(blocks);
   } catch (error) {
     if (!(error instanceof CuePlacementError)) throw error;
     return log.abort("unsupported", error.message);

@@ -292,12 +292,7 @@ class FitReader {
         this.log.fail("malformed", `${label} covers no distance`, at);
         return undefined;
       case "open":
-        this.log.fail(
-          "unsupported",
-          `${label} lasts until the lap button is pressed, and TrainStack does not support lap-button steps yet`,
-          at,
-        );
-        return undefined;
+        return { type: "open" };
       case "repeat":
         return undefined;
       case "other": {
@@ -310,8 +305,8 @@ class FitReader {
         this.log.fail(
           "unsupported",
           condition
-            ? `${label} lasts until ${condition}, and TrainStack steps last a time or a distance`
-            : `${label} has FIT duration type ${type}, and TrainStack steps last a time or a distance`,
+            ? `${label} lasts until ${condition}, and TrainStack steps last a time, a distance or until the lap button is pressed`
+            : `${label} has FIT duration type ${type}, and TrainStack steps last a time, a distance or until the lap button is pressed`,
           at,
         );
         return undefined;

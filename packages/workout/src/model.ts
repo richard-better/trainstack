@@ -93,9 +93,22 @@ const positive = z.number().finite().positive();
 export const timeDurationSchema = z.object({ type: z.literal("time"), seconds: positive });
 export const distanceDurationSchema = z.object({ type: z.literal("distance"), meters: positive });
 
+export const measuredDurationSchema = z.discriminatedUnion("type", [
+  timeDurationSchema,
+  distanceDurationSchema,
+]);
+export type MeasuredDuration = z.infer<typeof measuredDurationSchema>;
+
+export const openDurationSchema = z.object({
+  type: z.literal("open"),
+  expected: measuredDurationSchema.optional(),
+});
+export type OpenDuration = z.infer<typeof openDurationSchema>;
+
 export const durationSchema = z.discriminatedUnion("type", [
   timeDurationSchema,
   distanceDurationSchema,
+  openDurationSchema,
 ]);
 export type Duration = z.infer<typeof durationSchema>;
 
@@ -115,16 +128,25 @@ export type Cue = z.infer<typeof cueSchema>;
 export const intensitySchema = z.enum(["warmUp", "active", "recovery", "rest", "coolDown"]);
 export type Intensity = z.infer<typeof intensitySchema>;
 
-export const stepSchema = z.object({
-  type: z.literal("step"),
-  duration: durationSchema,
-  target: targetSchema.optional(),
-  cadence: cadenceSchema.optional(),
-  intensity: intensitySchema.optional(),
-  name: z.string().min(1).optional(),
-  notes: z.string().min(1).optional(),
-  cues: z.array(cueSchema).optional(),
-});
+export const stepSchema = z
+  .object({
+    type: z.literal("step"),
+    duration: durationSchema,
+    target: targetSchema.optional(),
+    cadence: cadenceSchema.optional(),
+    intensity: intensitySchema.optional(),
+    name: z.string().min(1).optional(),
+    notes: z.string().min(1).optional(),
+    cues: z.array(cueSchema).optional(),
+  })
+  .refine(
+    (step) =>
+      step.duration.type !== "open" ||
+      !step.target ||
+      !("level" in step.target) ||
+      step.target.level.kind !== "ramp",
+    { message: "A lap-button step cannot ramp, since its length is not known", path: ["target"] },
+  );
 export type Step = z.infer<typeof stepSchema>;
 
 export type Repeat = {

@@ -305,6 +305,121 @@ describe("writing course files", () => {
   }
 });
 
+describe("lap-button steps in course files", () => {
+  const lapped: Workout = {
+    name: "Lapped",
+    sport: "cycling",
+    steps: [
+      {
+        type: "step",
+        duration: { type: "open", expected: { type: "time", seconds: 600 } },
+        target: ftp(0.5),
+      },
+      { type: "step", duration: seconds(300), target: ftp(1) },
+    ],
+  };
+
+  for (const [format, write] of [
+    ["erg", writeErg],
+    ["mrc", writeMrc],
+  ] as const) {
+    test(`a .${format} file cannot hold a lap-button step, so writing one fails`, () => {
+      assert.deepEqual(failure(() => write(lapped, { ftp: 200 })).issues, [
+        {
+          code: "unsupported",
+          message: `A lap-button step has no place in a .${format} file`,
+          at: "steps.0",
+        },
+      ]);
+    });
+
+    test(`approximate writes a lap-button step to .${format} as a step of its expected length`, () => {
+      const { value, warnings } = write(lapped, { ftp: 200, approximate: true });
+      assert.deepEqual(warnings, [
+        {
+          code: "approximated",
+          message: "The lap-button step is written as a step of its expected length, 600 s",
+          at: "steps.0",
+        },
+      ]);
+      const read = format === "erg" ? parseErg(value) : parseMrc(value);
+      assert.deepEqual(
+        flatten(read.value.steps).map((step) => step.duration),
+        [seconds(600), seconds(300)],
+      );
+    });
+  }
+
+  test("approximate leaves out a cue that comes after the expected length, and says so", () => {
+    const cued: Workout = {
+      ...lapped,
+      steps: [
+        {
+          type: "step",
+          duration: { type: "open", expected: seconds(600) },
+          target: ftp(0.5),
+          cues: [
+            { at: seconds(60), text: "Settle in" },
+            { at: seconds(900), text: "Press lap" },
+          ],
+        },
+        { type: "step", duration: seconds(300), target: ftp(1) },
+      ],
+    };
+    const { value, warnings } = writeMrc(cued, { approximate: true });
+    assert.deepEqual(
+      warnings.filter((warning) => warning.code === "dropped").map((warning) => warning.message),
+      ['Cue "Press lap" comes after the step\'s expected length'],
+    );
+    assert.deepEqual(
+      parseMrc(value).value.steps.flatMap((step) =>
+        step.type === "step" ? (step.cues ?? []) : [],
+      ),
+      [{ at: seconds(60), text: "Settle in" }],
+    );
+  });
+
+  test("approximate keeps a repeat's cue out of the step after the lap-button step it falls in", () => {
+    const repeated: Workout = {
+      ...lapped,
+      steps: [
+        {
+          type: "repeat",
+          count: 2,
+          steps: [
+            { type: "step", duration: { type: "open", expected: seconds(600) }, target: ftp(0.5) },
+            { type: "step", duration: seconds(600), target: ftp(1) },
+          ],
+          cues: [{ at: seconds(900), text: "Press lap" }],
+        },
+      ],
+    };
+    const { value, warnings } = writeMrc(repeated, { approximate: true });
+    assert.ok(
+      warnings.some(
+        (warning) => warning.message === 'Cue "Press lap" comes after the step\'s expected length',
+      ),
+    );
+    assert.deepEqual(
+      parseMrc(value).value.steps.flatMap((step) =>
+        step.type === "step" ? (step.cues ?? []) : [],
+      ),
+      [],
+    );
+  });
+
+  test("approximate still fails for a lap-button step with no expected length", () => {
+    const unknown: Workout = {
+      ...lapped,
+      steps: [{ type: "step", duration: { type: "open" }, target: ftp(0.5) }],
+    };
+    assert.deepEqual(
+      failure(() => writeMrc(unknown, { approximate: true })).issues.map((issue) => issue.message),
+      ["A lap-button step with no expected length cannot be written as a timed step"],
+    );
+  });
+});
+
 describe("parseWorkoutFile", () => {
   test("picks the format from the extension and names the workout after the file", () => {
     const text =

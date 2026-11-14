@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { CuePlacementError, flatten, totals, type Workout, workoutSchema } from "../src/index.ts";
+import {
+  CuePlacementError,
+  flatten,
+  type MeasuredDuration,
+  type Step,
+  totals,
+  type Workout,
+  workoutSchema,
+} from "../src/index.ts";
 
 const easy = {
   type: "step",
@@ -220,8 +228,97 @@ test("totals add up time and distance through repeats", () => {
         steps: [easy, { type: "step", duration: { type: "distance", meters: 400 } }],
       },
     ]),
-    { seconds: 300, meters: 1600 },
+    {
+      seconds: 300,
+      meters: 1600,
+      open: { steps: 0, withoutExpected: 0, expectedSeconds: 0, expectedMeters: 0 },
+    },
   );
+});
+
+const lap = (expected?: MeasuredDuration): Step => ({
+  type: "step",
+  duration: expected ? { type: "open", expected } : { type: "open" },
+});
+
+describe("lap-button steps", () => {
+  test("hold any target but a ramp, with or without an expected length", () => {
+    const workout: Workout = {
+      name: "Tempo on lap",
+      sport: "running",
+      steps: [
+        { ...lap({ type: "time", seconds: 600 }), intensity: "warmUp" },
+        {
+          ...lap({ type: "distance", meters: 1000 }),
+          target: {
+            type: "pace",
+            unit: "threshold",
+            level: { kind: "range", low: 0.9, high: 0.95 },
+          },
+        },
+        { ...lap(), target: { type: "maxEffort" } },
+      ],
+    };
+    assert.deepEqual(workoutSchema.parse(workout), workout);
+    const ramp = {
+      ...workout,
+      steps: [
+        {
+          ...lap({ type: "time", seconds: 600 }),
+          target: { type: "power", unit: "ftp", level: { kind: "ramp", from: 0.5, to: 0.7 } },
+        },
+      ],
+    };
+    const parsed = workoutSchema.safeParse(ramp);
+    assert.equal(parsed.success, false);
+    assert.match(parsed.error!.issues[0]!.message, /cannot ramp/);
+    assert.equal(
+      workoutSchema.safeParse({ ...workout, steps: [lap({ type: "time", seconds: 0 })] }).success,
+      false,
+    );
+  });
+
+  test("totals keep the certain time and distance apart from what lap-button steps are expected to take", () => {
+    assert.deepEqual(
+      totals([
+        lap({ type: "time", seconds: 600 }),
+        easy,
+        {
+          type: "repeat",
+          count: 3,
+          steps: [easy, lap(), lap({ type: "distance", meters: 200 })],
+        },
+      ]),
+      {
+        seconds: 240,
+        meters: 0,
+        open: { steps: 7, withoutExpected: 3, expectedSeconds: 600, expectedMeters: 600 },
+      },
+    );
+  });
+
+  test("flatten places a repeat cue that falls at or after a lap-button step's start in that step", () => {
+    const steps = flatten([
+      {
+        type: "repeat",
+        count: 2,
+        steps: [easy, lap()],
+        cues: [
+          { at: { type: "time", seconds: 30 }, text: "Settle" },
+          { at: { type: "time", seconds: 900 }, text: "Press lap when ready" },
+        ],
+      },
+    ]);
+    assert.deepEqual(
+      steps.map((step) => step.cues?.map((cue) => [cue.text, cue.at])),
+      [
+        [["Settle", { type: "time", seconds: 30 }]],
+        [["Press lap when ready", { type: "time", seconds: 840 }]],
+        undefined,
+        undefined,
+      ],
+    );
+  });
 });
 
 test("a workout cannot expand past the step limit, so a file cannot exhaust memory", () => {

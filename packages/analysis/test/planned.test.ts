@@ -31,6 +31,7 @@ test("an hour at FTP is 100 TSS, by the definition of TSS", () => {
     seconds: 3600,
     meters: null,
     load: 100,
+    includesExpected: false,
   });
 });
 
@@ -39,7 +40,12 @@ test("an hour at 75 % of FTP is 56 TSS, and watts need the day's FTP", () => {
     timeStep(3600, { type: "power", unit: "watts", level: { kind: "constant", value: 150 } }),
   ]);
   assert.equal(plannedEstimate(watts, { ftp: 200 }).load, 56);
-  assert.deepEqual(plannedEstimate(watts, {}), { seconds: 3600, meters: null, load: null });
+  assert.deepEqual(plannedEstimate(watts, {}), {
+    seconds: 3600,
+    meters: null,
+    load: null,
+    includesExpected: false,
+  });
 });
 
 test("intervals count by their normalized intensity, so they weigh more than their average", () => {
@@ -91,7 +97,12 @@ test("a distance run takes its time and load from the day's threshold pace", () 
   assert.equal(estimate.meters, 10_000);
   assert.ok(Math.abs(estimate.seconds! - 2400) < 1e-9);
   assert.equal(estimate.load, Math.round((2400 / 3600) * 100));
-  assert.deepEqual(plannedEstimate(tempo, {}), { seconds: null, meters: null, load: null });
+  assert.deepEqual(plannedEstimate(tempo, {}), {
+    seconds: null,
+    meters: null,
+    load: null,
+    includesExpected: false,
+  });
 });
 
 test("a run mixing time and distance gives its whole distance", () => {
@@ -125,5 +136,58 @@ test("a distance step at a speed in metres per second takes its time without a t
       level: { kind: "constant", value: 4 },
     }),
   ]);
-  assert.deepEqual(plannedEstimate(steady, {}), { seconds: 250, meters: 1000, load: null });
+  assert.deepEqual(plannedEstimate(steady, {}), {
+    seconds: 250,
+    meters: 1000,
+    load: null,
+    includesExpected: false,
+  });
+});
+
+const openStep = (
+  expected?: Step["duration"] & { type: "time" | "distance" },
+  target?: Step["target"],
+) =>
+  ({
+    type: "step",
+    duration: expected ? { type: "open", expected } : { type: "open" },
+    ...(target ? { target } : {}),
+  }) satisfies Step;
+
+test("a lap-button step counts at its expected length, and the estimate says it rests on it", () => {
+  const warmed = ride([
+    openStep({ type: "time", seconds: 600 }, ftpShare(1)),
+    timeStep(3000, ftpShare(1)),
+  ]);
+  assert.deepEqual(plannedEstimate(warmed, {}), {
+    seconds: 3600,
+    meters: null,
+    load: 100,
+    includesExpected: true,
+  });
+});
+
+test("a lap-button step expected to cover a distance takes the time its speed needs", () => {
+  const easy = run([
+    openStep(
+      { type: "distance", meters: 1000 },
+      { type: "pace", unit: "metersPerSecond", level: { kind: "constant", value: 4 } },
+    ),
+  ]);
+  assert.deepEqual(plannedEstimate(easy, {}), {
+    seconds: 250,
+    meters: 1000,
+    load: null,
+    includesExpected: true,
+  });
+});
+
+test("a lap-button step with no expected length leaves every figure unknown, not zero", () => {
+  const unknown = ride([openStep(undefined, ftpShare(0.5)), timeStep(3600, ftpShare(1))]);
+  assert.deepEqual(plannedEstimate(unknown, {}), {
+    seconds: null,
+    meters: null,
+    load: null,
+    includesExpected: false,
+  });
 });

@@ -9,6 +9,7 @@ function offsetAmount(cue: Cue): number {
 }
 
 function stepAmount(step: Step, type: Cue["at"]["type"]): number | undefined {
+  if (step.duration.type === "open") return Number.POSITIVE_INFINITY;
   if (type === "time") return step.duration.type === "time" ? step.duration.seconds : undefined;
   return step.duration.type === "distance" ? step.duration.meters : undefined;
 }
@@ -87,23 +88,63 @@ function expand(blocks: readonly Block[]): Step[] {
   });
 }
 
-export type Totals = { seconds: number; meters: number };
+export type OpenTotals = {
+  steps: number;
+  withoutExpected: number;
+  expectedSeconds: number;
+  expectedMeters: number;
+};
+
+export type Totals = { seconds: number; meters: number; open: OpenTotals };
+
+const noTotals: Totals = {
+  seconds: 0,
+  meters: 0,
+  open: { steps: 0, withoutExpected: 0, expectedSeconds: 0, expectedMeters: 0 },
+};
+
+function added(sum: Totals, other: Totals, times: number): Totals {
+  return {
+    seconds: sum.seconds + other.seconds * times,
+    meters: sum.meters + other.meters * times,
+    open: {
+      steps: sum.open.steps + other.open.steps * times,
+      withoutExpected: sum.open.withoutExpected + other.open.withoutExpected * times,
+      expectedSeconds: sum.open.expectedSeconds + other.open.expectedSeconds * times,
+      expectedMeters: sum.open.expectedMeters + other.open.expectedMeters * times,
+    },
+  };
+}
+
+function stepTotals(step: Step): Totals {
+  const duration = step.duration;
+  switch (duration.type) {
+    case "time":
+      return { ...noTotals, seconds: duration.seconds };
+    case "distance":
+      return { ...noTotals, meters: duration.meters };
+    case "open": {
+      const expected = duration.expected;
+      return {
+        ...noTotals,
+        open: {
+          steps: 1,
+          withoutExpected: expected ? 0 : 1,
+          expectedSeconds: expected?.type === "time" ? expected.seconds : 0,
+          expectedMeters: expected?.type === "distance" ? expected.meters : 0,
+        },
+      };
+    }
+  }
+}
 
 export function totals(blocks: readonly Block[]): Totals {
   return blocks.reduce<Totals>(
-    (sum, block) => {
-      if (block.type === "repeat") {
-        const inner = totals(block.steps);
-        return {
-          seconds: sum.seconds + inner.seconds * block.count,
-          meters: sum.meters + inner.meters * block.count,
-        };
-      }
-      return block.duration.type === "time"
-        ? { ...sum, seconds: sum.seconds + block.duration.seconds }
-        : { ...sum, meters: sum.meters + block.duration.meters };
-    },
-    { seconds: 0, meters: 0 },
+    (sum, block) =>
+      block.type === "repeat"
+        ? added(sum, totals(block.steps), block.count)
+        : added(sum, stepTotals(block), 1),
+    noTotals,
   );
 }
 

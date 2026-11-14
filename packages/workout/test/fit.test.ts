@@ -34,6 +34,27 @@ function messages(error: WorkoutFormatError): string[] {
   return error.issues.map((issue) => `${issue.code} ${issue.at ?? "-"}: ${issue.message}`);
 }
 
+const heartRateZones = [
+  { low: 100, high: 120 },
+  { low: 120, high: 140 },
+  { low: 140, high: 160 },
+  { low: 160, high: 175 },
+  { low: 175, high: 190 },
+];
+
+function blockDuration(block: Block): string {
+  if (block.type === "repeat") {
+    return `${block.count} x [${block.steps.map(blockDuration).join(", ")}]`;
+  }
+  const duration = block.duration;
+  if (duration.type === "open") return "open";
+  return duration.type === "time" ? `${duration.seconds} s` : `${duration.meters} m`;
+}
+
+function durations(workout: Workout): string[] {
+  return workout.steps.map(blockDuration);
+}
+
 const powerStep = (seconds: number, value: number): Block => ({
   type: "step",
   duration: { type: "time", seconds },
@@ -233,13 +254,104 @@ describe("parseFit on files written by other tools", () => {
     );
   });
 
-  test("Garmin Connect: a lap-button step is refused by name, as TrainStack has no lap-button steps yet", () => {
-    const error = failure(() => parseFit(reference("garmin-connect-lap-button.fit")));
-    assert.deepEqual(messages(error), [
-      "unsupported step 1: Step 1 lasts until the lap button is pressed, and TrainStack does not support lap-button steps yet",
-      "unsupported step 2: The target is 80-87% of max heart rate; set a max heart rate to import it",
-      "unsupported step 3: Step 3 lasts until the lap button is pressed, and TrainStack does not support lap-button steps yet",
+  test("Garmin Connect: lap-button steps import as open steps with their targets and notes", () => {
+    const { value } = parseFit(reference("garmin-connect-lap-button.fit"), {
+      athlete: { maxHeartRate: 190 },
+    });
+    assert.deepEqual(value.steps, [
+      {
+        type: "step",
+        duration: { type: "open" },
+        intensity: "warmUp",
+        notes: "Press lap when warm",
+      },
+      {
+        type: "step",
+        duration: { type: "time", seconds: 1200 },
+        target: { type: "heartRate", unit: "bpm", level: { kind: "range", low: 152, high: 165.3 } },
+        intensity: "active",
+      },
+      { type: "step", duration: { type: "open" }, intensity: "coolDown" },
     ]);
+  });
+
+  const zone = (low: number, high: number) => ({
+    type: "heartRate",
+    unit: "bpm",
+    level: { kind: "range", low, high },
+  });
+
+  test("Garmin Connect: a big-endian workout with zones keeps lap-button steps inside a repeat", () => {
+    const { value } = parseFit(reference("garmin-connect-lap-intervals.fit"), {
+      athlete: { zones: { heartRate: heartRateZones } },
+    });
+    assert.equal(value.name, "Threshold 4 x 5 min, on lap");
+    assert.deepEqual(value.steps.slice(4), [
+      { type: "step", duration: { type: "open" }, target: zone(120, 140), intensity: "active" },
+      {
+        type: "repeat",
+        count: 4,
+        steps: [
+          {
+            type: "step",
+            duration: { type: "time", seconds: 300 },
+            target: zone(160, 175),
+            intensity: "active",
+          },
+          {
+            type: "step",
+            duration: { type: "open" },
+            target: zone(120, 140),
+            intensity: "recovery",
+            notes: "Recover as long as you need, then lap.",
+          },
+        ],
+      },
+      { type: "step", duration: { type: "open" }, target: zone(120, 140), intensity: "active" },
+    ]);
+  });
+
+  test("TrainerRoad: a lap-button step without a duration value keeps its lap power target", () => {
+    const { value, warnings } = parseFit(reference("trainerroad-lap.fit"));
+    assert.deepEqual(durations(value), ["600 s", "open", "2400 s", "300 s", "open"]);
+    assert.deepEqual(value.steps[1], {
+      type: "step",
+      duration: { type: "open" },
+      target: { type: "power", unit: "watts", level: { kind: "range", low: 1, high: 150 } },
+      intensity: "rest",
+      notes: "Press lap when ready to start.",
+    });
+    assert.ok(warnings.every((warning) => warning.message.includes("lap average power")));
+  });
+
+  test("TrainingPeaks: lap-button steps with invalid duration values, one with no target at all", () => {
+    const bike = parseFit(reference("trainingpeaks-lap-bike.fit"));
+    assert.deepEqual(bike.warnings, []);
+    assert.deepEqual(durations(bike.value), ["open", "4 x [360 s, 180 s]", "600 s", "open"]);
+    assert.deepEqual(bike.value.steps.at(-1), {
+      type: "step",
+      duration: { type: "open" },
+      intensity: "coolDown",
+    });
+    const heartRate = parseFit(reference("trainingpeaks-lap-heart-rate.fit"));
+    assert.deepEqual(heartRate.warnings, []);
+    assert.deepEqual(durations(heartRate.value), ["600 s", "open"]);
+  });
+
+  test("a ZWO converter: an unnamed workout whose first step is open with a zero duration value", () => {
+    const bike = parseFit(reference("zwo-converter-bike-lap.fit"), { name: "VO2 6 x 2" });
+    assert.equal(bike.value.name, "VO2 6 x 2");
+    assert.deepEqual(durations(bike.value), ["open", "120 s", "120 s", "120 s", "600 s"]);
+    const run = parseFit(reference("zwo-converter-run-lap.fit"), {
+      athlete: { zones: { heartRate: heartRateZones } },
+    });
+    assert.deepEqual(durations(run.value), ["open", "1200 s", "20 s", "60 s", "300 s"]);
+    assert.deepEqual(run.value.steps[0], {
+      type: "step",
+      duration: { type: "open" },
+      target: zone(100, 120),
+      intensity: "warmUp",
+    });
   });
 
   test("percent of max heart rate becomes bpm from the athlete's max heart rate", () => {
@@ -265,7 +377,7 @@ describe("parseFit on files written by other tools", () => {
   test("Garmin Connect: a step until heart rate drops is refused, saying what it waits for", () => {
     const error = failure(() => parseFit(reference("garmin-connect-hr-recovery.fit")));
     assert.deepEqual(messages(error), [
-      "unsupported step 2: Step 2 lasts until heart rate drops below a value, and TrainStack steps last a time or a distance",
+      "unsupported step 2: Step 2 lasts until heart rate drops below a value, and TrainStack steps last a time, a distance or until the lap button is pressed",
     ]);
   });
 
@@ -417,16 +529,23 @@ describe("parseFit on files it cannot take", () => {
 
   test("a refused step inside a repeat does not also make the repeat malformed", () => {
     const bytes = encodeFitWorkout({
-      name: "Lap",
+      name: "Calories",
       sport: "cycling",
       steps: [
         { duration: { type: "time", seconds: 60 } },
-        { duration: { type: "open" } },
+        {
+          duration: {
+            type: "other",
+            durationType: "calories",
+            durationValue: 100,
+            targetValue: undefined,
+          },
+        },
         { duration: { type: "repeat", fromStep: 1, count: 3 } },
       ],
     });
     assert.deepEqual(messages(failure(() => parseFit(bytes))), [
-      "unsupported step 2: Step 2 lasts until the lap button is pressed, and TrainStack does not support lap-button steps yet",
+      "unsupported step 2: Step 2 lasts until a number of calories is burned, and TrainStack steps last a time, a distance or until the lap button is pressed",
     ]);
   });
 
@@ -534,6 +653,57 @@ describe("writeFit", () => {
     const written = writeFit(sample);
     assert.deepEqual(written.warnings, []);
     assert.deepEqual(parseFit(written.value), { value: sample, warnings: [] });
+  });
+
+  test("writes lap-button steps as FIT's open duration, inside a repeat too, and says the expected length is dropped", () => {
+    const workout: Workout = {
+      name: "Lap intervals",
+      sport: "running",
+      steps: [
+        { type: "step", duration: { type: "open" }, intensity: "warmUp", name: "Warm up" },
+        {
+          type: "repeat",
+          count: 3,
+          steps: [
+            {
+              type: "step",
+              duration: { type: "distance", meters: 1000 },
+              target: {
+                type: "pace",
+                unit: "metersPerSecond",
+                level: { kind: "range", low: 4, high: 4.2 },
+              },
+            },
+            {
+              type: "step",
+              duration: { type: "open" },
+              intensity: "recovery",
+              target: {
+                type: "heartRate",
+                unit: "bpm",
+                level: { kind: "range", low: 120, high: 140 },
+              },
+            },
+          ],
+        },
+        { type: "step", duration: { type: "open", expected: { type: "time", seconds: 600 } } },
+      ],
+    };
+    const written = writeFit(workout);
+    assert.deepEqual(written.warnings, [
+      {
+        code: "dropped",
+        message: "The lap-button step's expected length of 600 s has no place in a .fit file",
+        at: "steps.2",
+      },
+    ]);
+    assert.deepEqual(
+      decodeFitWorkout(written.value).steps.map((step) => step.duration.type),
+      ["open", "distance", "open", "repeat", "open"],
+    );
+    const back = parseFit(written.value);
+    assert.deepEqual(back.value.steps.slice(0, 2), workout.steps.slice(0, 2));
+    assert.deepEqual(back.value.steps[2], { type: "step", duration: { type: "open" } });
   });
 
   test("writes a running, swimming or cycling workout with its sport", () => {

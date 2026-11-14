@@ -10,8 +10,18 @@ import {
   workoutPowerWattsOffset,
 } from "@trainstack/fit";
 import { type Converted, IssueLog } from "./issues.ts";
-import type { Block, Duration, Intensity, Level, Repeat, Step, Target, Workout } from "./model.ts";
-import { formatNumber } from "./numbers.ts";
+import type {
+  Block,
+  Duration,
+  Intensity,
+  Level,
+  MeasuredDuration,
+  Repeat,
+  Step,
+  Target,
+  Workout,
+} from "./model.ts";
+import { describeLength, formatNumber } from "./numbers.ts";
 import { checkedInput } from "./validate.ts";
 
 export type FitWriteOptions = {
@@ -103,11 +113,13 @@ class FitWriter {
 
   private written(step: Step): number {
     const level = step.target && "level" in step.target ? step.target.level : undefined;
-    if (level?.kind !== "ramp" || !this.options.approximate) return 1;
+    if (level?.kind !== "ramp" || !this.options.approximate || step.duration.type === "open") {
+      return 1;
+    }
     return this.stairs(step.duration);
   }
 
-  private stairs(duration: Duration): number {
+  private stairs(duration: MeasuredDuration): number {
     return duration.type === "time"
       ? Math.max(2, Math.ceil(duration.seconds / staircaseSecondsPerStep))
       : Math.max(2, Math.ceil(duration.meters / staircaseMetersPerStep));
@@ -199,8 +211,8 @@ class FitWriter {
       return;
     }
     const level = target && target.level;
-    if (target && level?.kind === "ramp") {
-      this.ramp(step, target, level, base, cadence, at);
+    if (target && level?.kind === "ramp" && step.duration.type !== "open") {
+      this.ramp(step.duration, target, level, base, cadence, at);
       return;
     }
     this.push({
@@ -211,7 +223,7 @@ class FitWriter {
   }
 
   private ramp(
-    step: Step,
+    duration: MeasuredDuration,
     target: Exclude<Target, { type: "maxEffort" }>,
     level: Extract<Level, { kind: "ramp" }>,
     base: FitWorkoutStep,
@@ -222,29 +234,29 @@ class FitWriter {
       this.fail("unsupported", "A ramp has no place in a .fit file", at);
       return;
     }
-    const count = this.stairs(step.duration);
-    const parts = this.split(step.duration, count, at);
+    const count = this.stairs(duration);
+    const parts = this.split(duration, count, at);
     const [length, per, symbol] =
-      step.duration.type === "time"
-        ? [step.duration.seconds, staircaseSecondsPerStep, "s"]
-        : [step.duration.meters, staircaseMetersPerStep, "m"];
+      duration.type === "time"
+        ? [duration.seconds, staircaseSecondsPerStep, "s"]
+        : [duration.meters, staircaseMetersPerStep, "m"];
     this.warn(
       "approximated",
       `The ramp ${rampRange(target, level)} is written as ${count} steady steps of ${formatNumber(Number((length / count).toFixed(3)))} ${symbol}, one per ${per} ${symbol} and at least two, each at the ramp's level at its midpoint, which keeps its length and average to FIT's precision`,
       at,
     );
-    parts.forEach((duration, index) => {
+    parts.forEach((part, index) => {
       const value = level.from + ((level.to - level.from) * (index + 0.5)) / count;
       this.push({
         ...base,
         notes: index === 0 ? base.notes : undefined,
-        duration,
+        duration: part,
         ...this.targets(this.target(target, { kind: "constant", value }, at, true), cadence),
       });
     });
   }
 
-  private split(duration: Duration, count: number, at: string): FitWorkoutDuration[] {
+  private split(duration: MeasuredDuration, count: number, at: string): FitWorkoutDuration[] {
     const whole =
       duration.type === "time"
         ? this.integer(duration.seconds * 1000, "The step's length in milliseconds", at)
@@ -279,6 +291,16 @@ class FitWriter {
   }
 
   private duration(duration: Duration, at: string): FitWorkoutDuration {
+    if (duration.type === "open") {
+      if (duration.expected) {
+        this.warn(
+          "dropped",
+          `The lap-button step's expected length of ${describeLength(duration.expected)} has no place in a .fit file`,
+          at,
+        );
+      }
+      return { type: "open" };
+    }
     if (duration.type === "time") {
       const milliseconds = this.integer(
         duration.seconds * 1000,

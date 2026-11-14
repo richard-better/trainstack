@@ -80,7 +80,7 @@ timestamps and big-endian messages. Run them with `bun run test` from the reposi
 
 `test/fixtures/workouts/` holds workout files laid out the way Garmin Connect, TrainingPeaks and
 intervals.icu write them: fixed-size strings, invalid sentinels for unused fields, zones, power
-past the 1000 offset, lap-button steps, nested repeats and big-endian messages.
+past the 1000 offset, lap-button steps (as Garmin Connect, TrainingPeaks, TrainerRoad and a ZWO converter write them), nested repeats and big-endian messages.
 `test/workout-fixtures.ts` writes them, and a test fails when the committed files differ. After
 changing it, run `node packages/fit/test/workout-fixtures.ts --write`. Garmin's FIT SDK reads
 every fixture and every file `encodeFitWorkout` writes without errors; its licence keeps it out

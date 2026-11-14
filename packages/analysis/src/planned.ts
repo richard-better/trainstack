@@ -12,6 +12,7 @@ export interface PlannedEstimate {
   readonly seconds: number | null;
   readonly meters: number | null;
   readonly load: number | null;
+  readonly includesExpected: boolean;
 }
 
 export const unguidedShares: Readonly<Record<Intensity | "unset", number>> = {
@@ -92,17 +93,19 @@ function stepSpeed(step: Step, shape: Shape | undefined, thresholds: PlanThresho
 }
 
 function timed(step: Step, thresholds: PlanThresholds): Timed | null {
+  const length = step.duration.type === "open" ? step.duration.expected : step.duration;
+  if (length === undefined) return null;
   const shape = stepShape(step, thresholds);
   const speed = stepSpeed(step, shape, thresholds);
-  if (step.duration.type === "time") {
+  if (length.type === "time") {
     return {
-      seconds: step.duration.seconds,
-      meters: speed === undefined ? null : speed * step.duration.seconds,
+      seconds: length.seconds,
+      meters: speed === undefined ? null : speed * length.seconds,
       shape,
     };
   }
   if (speed === undefined || !(speed > 0)) return null;
-  return { seconds: step.duration.meters / speed, meters: step.duration.meters, shape };
+  return { seconds: length.meters / speed, meters: length.meters, shape };
 }
 
 function perSecondShares(steps: readonly Timed[], totalSeconds: number) {
@@ -131,11 +134,16 @@ function intensityFactor(shares: Float64Array) {
 
 export function plannedEstimate(workout: Workout, thresholds: PlanThresholds): PlannedEstimate {
   const steps = expanded(workout.steps);
-  const isDistanceBased = steps.some((step) => step.duration.type === "distance");
+  const isDistanceBased = steps.some(
+    (step) =>
+      step.duration.type === "distance" ||
+      (step.duration.type === "open" && step.duration.expected?.type === "distance"),
+  );
   const timedSteps = steps.map((step) => timed(step, thresholds));
   if (timedSteps.some((step) => step === null)) {
-    return { seconds: null, meters: null, load: null };
+    return { seconds: null, meters: null, load: null, includesExpected: false };
   }
+  const includesExpected = steps.some((step) => step.duration.type === "open");
   const known = timedSteps as Timed[];
   const seconds = known.reduce((sum, step) => sum + step.seconds, 0);
   const meters =
@@ -149,5 +157,5 @@ export function plannedEstimate(workout: Workout, thresholds: PlanThresholds): P
   const load = canLoad
     ? stressScore(seconds, intensityFactor(perSecondShares(known, seconds)))
     : null;
-  return { seconds, meters, load };
+  return { seconds, meters, load, includesExpected };
 }
