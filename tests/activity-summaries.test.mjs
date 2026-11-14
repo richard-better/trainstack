@@ -202,6 +202,11 @@ test("Ride's golden files summarise as indoor cycling, named after their workout
       },
     },
   };
+  const intervals = {
+    "quick-test-trainer-drop": 3,
+    "recovery-every-control": 9,
+    "trainer-and-strap": 4,
+  };
   for (const [trace, { name, startedAt, statistics }] of Object.entries(expected)) {
     const bytes = await readFile(`${TRACES}/${trace}.fit`);
     const uploaded = await client.activities.upload({
@@ -213,7 +218,11 @@ test("Ride's golden files summarise as indoor cycling, named after their workout
     assert.equal(uploaded.name, name, trace);
     assert.equal(uploaded.startedAt.toISOString(), startedAt, trace);
     assert.deepEqual(uploaded.statistics, statistics, trace);
-    assert.equal((await client.activities.get({ id: uploaded.id })).events.length, 1, trace);
+    assert.equal(
+      (await client.activities.get({ id: uploaded.id })).events.length,
+      intervals[trace],
+      `${trace} has a lap per workout interval`,
+    );
   }
 });
 
