@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { queryClient } from "../api";
 import styles from "../styles/app.css?url";
+import workoutStyles from "../styles/workouts.css?url";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -21,6 +22,7 @@ export const Route = createRootRoute({
         href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap",
       },
       { rel: "stylesheet", href: styles },
+      { rel: "stylesheet", href: workoutStyles },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
   }),

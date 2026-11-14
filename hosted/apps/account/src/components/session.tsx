@@ -44,11 +44,14 @@ function AppHeader({ user }: { user: SignedInUser }) {
     <header className="app-header">
       <Link to="/" className="brand">
         <img src="/trainstack-logo.svg" alt="" width={24} height={24} />
-        Trainstack
+        <span className="brand-name">Trainstack</span>
       </Link>
       <nav aria-label="Main" className="main-nav">
         <Link to="/" className="nav-link" activeOptions={{ exact: true }}>
           Activities
+        </Link>
+        <Link to="/workouts" className="nav-link">
+          Workouts
         </Link>
         <Link to="/settings" className="nav-link">
           Settings

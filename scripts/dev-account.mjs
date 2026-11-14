@@ -129,6 +129,21 @@ if (!options.empty) {
     const file = new File([await readFile(path)], path.split("/").at(-1));
     await ride.activities.upload({ file, source: "trainstack" });
   }
+  const now = new Date();
+  const copies = [];
+  for (const id of ["threshold-classic-60", "vo2-max-booster", "long-endurance-90"]) {
+    copies.push(await ride.builtinWorkouts.copy({ id, as: crypto.randomUUID(), updatedAt: now }));
+  }
+  const list = await ride.workoutLists.put({
+    id: crypto.randomUUID(),
+    name: "This week",
+    updatedAt: now,
+  });
+  let after = null;
+  for (const copy of copies) {
+    await ride.workoutLists.place({ id: list.id, workoutId: copy.id, after, updatedAt: now });
+    after = copy.id;
+  }
 }
 
 const web = options["api-only"]
@@ -148,7 +163,7 @@ web?.on("exit", stop);
 
 console.log(`
 API on ${API}, with Apple played by ${APPLE}.
-${options.empty ? "No activities are seeded." : `${SEEDED_RIDES.length} rides from apps/ride are seeded.`}
+${options.empty ? "Nothing is seeded." : `${SEEDED_RIDES.length} rides from apps/ride, three workouts and a list are seeded.`}
 ${web ? `Open ${WEB} and sign in with Apple to reach ${ATHLETE.email}.` : "The web app is not started."}
 Everything lives in memory and is gone when this stops.
 `);
