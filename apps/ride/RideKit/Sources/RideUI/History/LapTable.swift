@@ -9,10 +9,10 @@ struct LapTable: View {
       GridRow {
         Text("Lap").gridColumnAlignment(.leading)
         Text("Time")
-        Text("Power")
-        Text("Max")
-        Text("Heart rate")
-        Text("Cadence")
+        Text("Avg W")
+        Text("Max W")
+        Text("Avg bpm")
+        Text("Avg rpm")
       }
       .font(.caption)
       .foregroundStyle(.secondary)
@@ -29,17 +29,30 @@ struct LapTable: View {
             }
           }
           Text(lap.duration.clockString)
-          Text(lap.averagePower.map { "\($0) W" } ?? "—")
-          Text(lap.maxPower.map { "\($0) W" } ?? "—")
-          Text(lap.averageHeartRate.map { "\($0) bpm" } ?? "—")
-          Text(lap.averageCadence.map { "\($0) rpm" } ?? "—")
+          Text(lap.averagePower.map(String.init) ?? "—")
+          Text(lap.maxPower.map(String.init) ?? "—")
+          Text(lap.averageHeartRate.map(String.init) ?? "—")
+          Text(lap.averageCadence.map(String.init) ?? "—")
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken(lap, number: number + 1))
       }
     }
     .monospacedDigit()
     .lineLimit(1)
     .minimumScaleFactor(0.7)
+  }
+}
+
+extension LapTable {
+  fileprivate func spoken(_ lap: RideLap, number: Int) -> String {
+    let marked = laps.isMarkedMidStep(at: number - 1) && lap.trigger == .manual
+    return [
+      "Lap \(number)\(marked ? ", marked by you" : "")", lap.duration.clockString,
+      lap.averagePower.map { "average \($0) watts" }, lap.maxPower.map { "max \($0) watts" },
+      lap.averageHeartRate.map { "\($0) beats per minute" },
+      lap.averageCadence.map { "\($0) rpm" },
+    ].compactMap(\.self).joined(separator: ", ")
   }
 }
 
