@@ -17,7 +17,7 @@ struct KeychainStaysInItsStoreTests {
 
   @Test func flagsKeychainCallsAnywhereElse() {
     let source = """
-      struct TrainStackAccount {
+      struct TrainstackAccount {
         init() { SecItemCopyMatching(query, &result) }
       }
       func load() { SecItemCopyMatching(query, &result) }

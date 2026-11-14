@@ -17,7 +17,7 @@ struct PlannedItemDetailView: View {
       ContentUnavailableView(
         "No Longer Planned", systemImage: "calendar.badge.minus",
         description: Text(
-          "This was deleted from your TrainStack calendar, or moved out of the weeks Ride keeps."))
+          "This was deleted from your Trainstack calendar, or moved out of the weeks Ride keeps."))
     }
   }
 

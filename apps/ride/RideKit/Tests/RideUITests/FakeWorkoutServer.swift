@@ -171,7 +171,7 @@ actor FakeWorkoutServer: WorkoutServer {
       return .refused(reason: "No such built-in workout")
     }
     let copy = try LibraryWorkout(
-      id: id, workout: template.trainStackWorkout, copiedFromBuiltin: builtin,
+      id: id, workout: template.trainstackWorkout, copiedFromBuiltin: builtin,
       updatedAt: updatedAt)
     let stored = put(copy, for: account.id)
     if holdingCopies { await withCheckedContinuation { held.append($0) } }

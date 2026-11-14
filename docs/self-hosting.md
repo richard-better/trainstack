@@ -121,7 +121,7 @@ So what works depends on what you have:
 - **A membership, and those three constants changed to your own identifiers.** The web app
   signs athletes in. Set this up as below.
 - **The App Store, TestFlight or Homebrew Ride.** It talks only to `api.trainstackhq.com`
-  (`apps/ride/RideKit/Sources/RideStrava/TrainStackClient.swift`), so it cannot use your
+  (`apps/ride/RideKit/Sources/RideStrava/TrainstackClient.swift`), so it cannot use your
   instance. See [Pointing Ride at your server](#pointing-ride-at-your-server).
 
 Changing the constants is a change to the code, so `bun run test` then fails in the tests that
@@ -438,7 +438,7 @@ The Ride app on the App Store, TestFlight and Homebrew talks only to `api.trains
 there is no setting to change it. To use Ride with your instance, build it yourself: see
 [apps/ride/AGENTS.md](../apps/ride/AGENTS.md). In your build:
 
-- Set `TrainStackClient.server` in `apps/ride/RideKit/Sources/RideStrava/TrainStackClient.swift`
+- Set `TrainstackClient.server` in `apps/ride/RideKit/Sources/RideStrava/TrainstackClient.swift`
   to `https://api.<domain>`.
 - Change the bundle identifiers and development team in `apps/ride/Ride.xcodeproj` to your own,
   and give the app's App ID the Sign in with Apple capability. Native Sign in with Apple sends

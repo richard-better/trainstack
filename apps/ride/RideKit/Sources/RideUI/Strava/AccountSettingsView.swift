@@ -3,7 +3,7 @@ import RideStrava
 import SwiftUI
 
 struct AccountSettingsView: View {
-  @Environment(TrainStackAccount.self) private var account
+  @Environment(TrainstackAccount.self) private var account
   @Environment(\.webAuthenticationSession) private var webAuthenticationSession
   @Environment(\.authorizationController) private var authorizationController
   @State private var nonce = AppleSignInNonce()
@@ -56,19 +56,19 @@ struct AccountSettingsView: View {
         WebSignInWithAppleButton(isWorking: isWorking, action: signInThroughBrowser)
       }
     } header: {
-      Text("TrainStack account")
+      Text("Trainstack account")
     } footer: {
       Text(
         account.isSignedIn
-          ? "Your account holds your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Ride sends your rides to it, so you can see them on the TrainStack website, and keeps your settings the same on every device you sign in on."
-          : "Ride works without an account. Sign in to see your rides on the TrainStack website, keep your settings the same on all your devices, and send rides to Strava."
+          ? "Your account holds your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Ride sends your rides to it, so you can see them on the Trainstack website, and keeps your settings the same on every device you sign in on."
+          : "Ride works without an account. Sign in to see your rides on the Trainstack website, keep your settings the same on all your devices, and send rides to Strava."
       )
     }
   }
 
   private var deletionWarning: String {
     let warning =
-      "This permanently deletes your account and everything it holds: your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Every device is signed out. Rides and settings on your devices and in iCloud stay, and Ride adds them to any account you sign in to later. Rides on Strava stay too. To keep a copy, download Your data from Settings on the TrainStack website first."
+      "This permanently deletes your account and everything it holds: your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Every device is signed out. Rides and settings on your devices and in iCloud stay, and Ride adds them to any account you sign in to later. Rides on Strava stay too. To keep a copy, download Your data from Settings on the Trainstack website first."
     guard AppleSignIn.isNative else { return warning }
     return warning
       + "\n\nApple then asks you to confirm, so Ride's Sign in with Apple access ends too. If you cancel, the account is still deleted."
@@ -127,7 +127,7 @@ struct AccountSettingsView: View {
     run {
       try await account.signInThroughBrowser { url in
         try await webAuthenticationSession.authenticate(
-          using: url, callback: .customScheme(TrainStackClient.callbackScheme),
+          using: url, callback: .customScheme(TrainstackClient.callbackScheme),
           preferredBrowserSession: .ephemeral, additionalHeaderFields: [:])
       }
     }
@@ -153,7 +153,7 @@ struct AccountSettingsView: View {
     run {
       try await account.connectStrava { url in
         try await webAuthenticationSession.authenticate(
-          using: url, callback: .customScheme(TrainStackClient.callbackScheme),
+          using: url, callback: .customScheme(TrainstackClient.callbackScheme),
           additionalHeaderFields: [:])
       }
     }
@@ -181,12 +181,12 @@ struct AccountSettingsView: View {
 
 #Preview("Signed out") {
   NavigationStack { AccountSettingsView() }
-    .environment(TrainStackAccount.signedOut)
+    .environment(TrainstackAccount.signedOut)
     .frame(width: 500, height: 600)
 }
 
 #Preview("Signed in") {
   NavigationStack { AccountSettingsView() }
-    .environment(TrainStackAccount.sample)
+    .environment(TrainstackAccount.sample)
     .frame(width: 500, height: 600)
 }

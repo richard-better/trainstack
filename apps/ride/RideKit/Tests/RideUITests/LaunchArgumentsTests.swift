@@ -6,7 +6,7 @@ import Testing
 struct LaunchArgumentsTests {
   #if DEBUG
     @Test func aDebugLaunchWithAServerAndSessionIsSignedInWithThatSession() async {
-      let account = TrainStackAccount.launchAccount(arguments: [
+      let account = TrainstackAccount.launchAccount(arguments: [
         "Ride", "-trainstack-server", "http://localhost:8787", "-trainstack-session", "token",
       ])
       await account.restore()

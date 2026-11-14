@@ -58,7 +58,7 @@ final class SyncPasses {
         return
       } catch {
         failuresInARow += 1
-        log.error("\(self.what) not synced with TrainStack: \(error.localizedDescription)")
+        log.error("\(self.what) not synced with Trainstack: \(error.localizedDescription)")
         retryLater()
         return
       }

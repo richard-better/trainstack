@@ -1,6 +1,6 @@
 import Foundation
 
-extension TrainStackClient {
+extension TrainstackClient {
   public func keepAppleAuthorization(code: String, for session: AccountSession) async throws {
     try await keepAppleAuthorization(
       code: code, for: ActivityAccount(id: session.userID ?? "", token: session.token))

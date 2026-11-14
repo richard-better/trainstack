@@ -58,9 +58,9 @@ final class SettingsSync {
     try checkStillSyncing(account)
     store.receive(history.writes, through: history.cursor)
     let unsent = store.settings.ledger.unsent.filter { !refusedThisLaunch.contains($0) }
-    for start in stride(from: 0, to: unsent.count, by: TrainStackClient.maxSettingWrites) {
+    for start in stride(from: 0, to: unsent.count, by: TrainstackClient.maxSettingWrites) {
       let batch = Array(
-        unsent[start..<min(start + TrainStackClient.maxSettingWrites, unsent.count)])
+        unsent[start..<min(start + TrainstackClient.maxSettingWrites, unsent.count)])
       let result = try await server.writeSettings(batch, for: account)
       try checkStillSyncing(account)
       switch result {
@@ -69,7 +69,7 @@ final class SettingsSync {
       case .refused(let index, let reason):
         guard batch.indices.contains(index) else { throw StravaError.unavailable }
         refusedThisLaunch.append(batch[index])
-        log.error("TrainStack refused a setting: \(reason, privacy: .public)")
+        log.error("Trainstack refused a setting: \(reason, privacy: .public)")
         passes.passAgain()
         return
       }

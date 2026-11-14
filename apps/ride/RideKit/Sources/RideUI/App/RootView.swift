@@ -8,7 +8,7 @@ public struct RootView: View {
   @State private var library = RideLibrary.launched
   @State private var settings = RiderSettingsStore.launched
   @State private var launcher = RideLauncher.launchLauncher()
-  @State private var account = TrainStackAccount.launched
+  @State private var account = TrainstackAccount.launched
   @State private var accountWorkouts = AccountWorkouts.launched
   @State private var accountCalendar = AccountCalendar.launched
   @State private var destinationBeforeSettings = AppDestination.today

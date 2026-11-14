@@ -3,7 +3,7 @@ import SwiftUI
 
 struct CalendarView: View {
   @Environment(AccountCalendar.self) private var calendar
-  @Environment(TrainStackAccount.self) private var account
+  @Environment(TrainstackAccount.self) private var account
   @Environment(\.syncCalendar) private var syncCalendar
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -19,8 +19,8 @@ struct CalendarView: View {
         } description: {
           Text(
             account.isSignedIn
-              ? "Ride is reading your TrainStack calendar."
-              : "Sign in to TrainStack in Settings to see the workouts you plan on the web.")
+              ? "Ride is reading your Trainstack calendar."
+              : "Sign in to Trainstack in Settings to see the workouts you plan on the web.")
         }
       }
     }

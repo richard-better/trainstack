@@ -35,7 +35,7 @@ struct WorkoutGrid: View {
               start: start(template.planned))
           }
         } header: {
-          if !shelves.isEmpty { header("TrainStack Workouts") }
+          if !shelves.isEmpty { header("Trainstack Workouts") }
         }
       }
       .padding(Design.wideContentMargin)

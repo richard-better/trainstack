@@ -9,10 +9,10 @@ let signedInSession = AccountSession(token: "session-token", name: "Ada Rider")
 
 func client(
   _ replies: [Reply], signedIn: Bool = true, pollLimit: Int = 5
-) -> (TrainStackClient, ScriptedTransport, InMemorySessionStore) {
+) -> (TrainstackClient, ScriptedTransport, InMemorySessionStore) {
   let transport = ScriptedTransport(replies)
   let store = InMemorySessionStore(signedIn ? signedInSession : nil)
-  let client = TrainStackClient(
+  let client = TrainstackClient(
     server: URL(string: "https://api.example.com")!, store: store, transport: transport,
     pollInterval: .zero, pollLimit: pollLimit)
   return (client, transport, store)

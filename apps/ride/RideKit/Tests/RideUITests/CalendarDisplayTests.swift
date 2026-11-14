@@ -11,7 +11,7 @@ struct CalendarDisplayTests {
 
   private func paired(
     _ compliance: PlannedCompliance?, by maker: PlannedItem.Pairing.Maker = .auto,
-    activity: String = "ride", workout: TrainStackWorkout? = nil
+    activity: String = "ride", workout: TrainstackWorkout? = nil
   ) throws -> PlannedItem {
     var item = try CalendarSyncTests.workout("Threshold")
     if let workout { item.content = .workout(body: try JSONEncoder().encode(workout), notes: nil) }
@@ -54,7 +54,7 @@ struct CalendarDisplayTests {
   }
 
   @Test func aLapButtonWorkoutIsScoredOnItsIntervalsAlone() throws {
-    let workout = TrainStackWorkout(
+    let workout = TrainstackWorkout(
       name: "Climbs", sport: .cycling,
       blocks: [
         .step(

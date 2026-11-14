@@ -60,7 +60,7 @@ final class AccountWorkouts {
     let updatedAt = SettingStamp(now()).date
     guard
       let copy = try? LibraryWorkout(
-        id: id, workout: template.trainStackWorkout, copiedFromBuiltin: template.builtinID,
+        id: id, workout: template.trainstackWorkout, copiedFromBuiltin: template.builtinID,
         updatedAt: updatedAt)
     else { return nil }
     let changed = update { state in
@@ -99,7 +99,7 @@ final class AccountWorkouts {
         state.deleted.insert(copy.id)
       case .refused(let reason):
         state.workouts[copy.id] = nil
-        log.error("TrainStack refused a copy of \(copy.builtin, privacy: .public): \(reason)")
+        log.error("Trainstack refused a copy of \(copy.builtin, privacy: .public): \(reason)")
       }
     }
   }

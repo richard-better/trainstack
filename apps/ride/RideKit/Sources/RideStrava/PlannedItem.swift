@@ -79,9 +79,9 @@ public struct PlannedItem: Hashable, Codable, Identifiable, Sendable {
     self.updatedAt = updatedAt
   }
 
-  public var workout: TrainStackWorkout? {
+  public var workout: TrainstackWorkout? {
     guard case .workout(let body, _) = content else { return nil }
-    return try? JSONDecoder().decode(TrainStackWorkout.self, from: body)
+    return try? JSONDecoder().decode(TrainstackWorkout.self, from: body)
   }
 
   public var rideability: Rideability? { workout?.rideability }

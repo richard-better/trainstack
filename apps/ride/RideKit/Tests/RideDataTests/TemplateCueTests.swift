@@ -51,12 +51,12 @@ struct TemplateCueTests {
   }
 
   @Test func aCopyOfABuiltInCarriesItsText() {
-    let copy = WorkoutTemplate.named("Recovery 30")!.trainStackWorkout
+    let copy = WorkoutTemplate.named("Recovery 30")!.trainstackWorkout
     guard case .step(let step) = copy.blocks[4] else {
       Issue.record("Recovery 30 starts with steps")
       return
     }
     #expect(
-      step.cues == [TrainStackWorkout.Cue(at: .seconds(0), text: "The gentle peak. Still easy")])
+      step.cues == [TrainstackWorkout.Cue(at: .seconds(0), text: "The gentle peak. Still easy")])
   }
 }

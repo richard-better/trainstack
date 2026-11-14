@@ -114,7 +114,7 @@ final class ActivitySync {
       library.remove(id)
     case .refused:
       refusedThisLaunch.insert(id)
-      log.error("TrainStack refused ride \(id, privacy: .public)")
+      log.error("Trainstack refused ride \(id, privacy: .public)")
     }
   }
 

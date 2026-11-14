@@ -120,7 +120,7 @@ struct ComplianceWords: Equatable {
   }
 
   private static func intervalsUnscored(
-    _ intervals: PlannedCompliance.Intervals?, steps: [TrainStackWorkout.Step]
+    _ intervals: PlannedCompliance.Intervals?, steps: [TrainstackWorkout.Step]
   ) -> String {
     let targeted = steps.contains {
       guard let target = $0.target else { return false }

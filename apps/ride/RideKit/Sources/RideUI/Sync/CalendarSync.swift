@@ -109,10 +109,10 @@ final class CalendarSync {
       case .deletedOnTheServer, .refused(code: "NOT_FOUND"):
         calendar.forgetWrites(to: write.plannedID)
       case .refused(code: "EDITED_IN_THE_FUTURE"):
-        log.error("TrainStack says this device's clock is ahead; the calendar edit waits")
+        log.error("Trainstack says this device's clock is ahead; the calendar edit waits")
         return
       case .refused(let code):
-        log.error("TrainStack refused a calendar edit: \(code, privacy: .public)")
+        log.error("Trainstack refused a calendar edit: \(code, privacy: .public)")
         calendar.sent(write)
       }
     }

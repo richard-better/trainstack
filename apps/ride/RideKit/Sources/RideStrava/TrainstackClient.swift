@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import Security
 
-public actor TrainStackClient {
+public actor TrainstackClient {
   public static let server = URL(string: "https://api.trainstackhq.com")!
   public static let callbackScheme = "trainstackride"
 
@@ -16,7 +16,7 @@ public actor TrainStackClient {
   private var knowsCurrentSession = false
 
   public init(
-    server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
+    server: URL = TrainstackClient.server, store: any SessionStore = KeychainSessionStore(),
     transport: any HTTPTransport = URLSession.shared,
     pollInterval: Duration = .seconds(3), pollLimit: Int = 15
   ) {
