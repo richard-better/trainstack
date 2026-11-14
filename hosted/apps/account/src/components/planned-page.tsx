@@ -99,7 +99,7 @@ function Loading() {
 
 export function PlannedPage({ id }: { id: string }) {
   const { item, query, gone } = usePlannedItem(id);
-  if (item) return <PlannedView item={item} />;
+  if (item) return <PlannedView item={item} confirmed={query.data?.content ?? item.content} />;
   if (gone || query.isError) return <Unavailable gone={gone} retry={() => query.refetch()} />;
   return <Loading />;
 }
@@ -130,7 +130,7 @@ function sourceLink(content: PlannedContent) {
   );
 }
 
-function PlannedView({ item }: { item: PlannedWorkout }) {
+function PlannedView({ item, confirmed }: { item: PlannedWorkout; confirmed: PlannedContent }) {
   const navigate = useNavigate();
   const [dialog, setDialog] = useState<"copy" | "move" | "skip" | "delete" | null>(null);
   const settings = useAthleteSettings();
@@ -213,7 +213,7 @@ function PlannedView({ item }: { item: PlannedWorkout }) {
         <PlannedWorkoutBody item={item} workout={item.content.workout} />
       )}
 
-      <NotesForm key={item.id} item={item} />
+      <NotesForm key={item.id} item={item} confirmed={confirmed} />
 
       {(dialog === "copy" || dialog === "move") && (
         <CopyDialog item={item} today={today} mode={dialog} onClose={() => setDialog(null)} />
@@ -289,10 +289,10 @@ function PlannedWorkoutBody({ item, workout }: { item: PlannedWorkout; workout: 
   );
 }
 
-function NotesForm({ item }: { item: PlannedWorkout }) {
+function NotesForm({ item, confirmed }: { item: PlannedWorkout; confirmed: PlannedContent }) {
   const { content } = item;
-  const savedTitle = content.kind === "note" ? content.title : "";
-  const savedNotes = content.notes ?? "";
+  const savedTitle = confirmed.kind === "note" ? confirmed.title : "";
+  const savedNotes = confirmed.notes ?? "";
   const [baseline, setBaseline] = useState({ title: savedTitle, notes: savedNotes });
   const [title, setTitle] = useState(savedTitle);
   const [notes, setNotes] = useState(savedNotes);
