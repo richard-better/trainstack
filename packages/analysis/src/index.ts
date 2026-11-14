@@ -136,6 +136,7 @@ export {
   type ThresholdEvidence,
   type ThresholdMethod,
   type ThresholdSignal,
+  thresholdStatistics,
   thresholdWindowDays,
   twentyMinuteShare,
 } from "./thresholds.ts";
