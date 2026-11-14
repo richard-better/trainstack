@@ -1559,8 +1559,7 @@ input[aria-invalid="true"] {
     order: 3;
     flex-basis: 100%;
     flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 4px 0;
+    gap: 4px 8px;
     margin: 0 -6px;
   }
 
