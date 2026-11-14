@@ -68,6 +68,30 @@ every request is bound to the session it started with, so signing out stops uplo
 account's deletions never reach another. A ride removed while signed out is deleted from the
 account this device last signed in to, when it signs in again.
 
+Rider settings (thresholds, zone models, a sport's own zones, weight and FTP tests) are kept
+as a `SettingsLedger`, the same registers the settings API keeps (`docs/deployment.md`): one
+per setting and day, holding the change or its removal and `updatedAt`, the moment the athlete
+made the edit, to the millisecond. `ZoneHistory`, the FTP tests and the weight are derived from
+it, so it is the one source of truth on the device, and what this app cannot show (a sport or
+model it does not know) is kept as it came. An edit is stamped with the device's clock, and
+always after the value it replaced, so an edit made on a device whose clock is behind still
+beats what that device saw. Settings are not in iCloud: without an account they stay on the
+device, as before. Signed in, `SettingsSync` reads the account's history after its cursor,
+takes each register whose stamp is not older than the device's, then sends every unsent one,
+up to 100 a request, and takes the answer, which holds what won, so a stale edit learns the
+winner. It passes like `ActivitySync` (`SyncPasses`), after every edit, and when the app
+becomes active. A setting the server refuses stays on this device and is not sent again until
+the next launch.
+
+The ledger belongs to the first account it syncs with (`SettingsLedger.account`), so the first
+sign-in merges the device's settings into whatever the account has, and edits made while
+signed out go to that account when it signs in again. Signing in to another account keeps
+this ledger in `Application Support/SettingsSync` and switches to that account's, so one
+athlete's settings never reach another's account. Deleting the account leaves the settings on
+the device, unclaimed, for the next account. Settings saved before the ledger are brought over
+stamped at the Unix epoch, so any real edit, from any device or the web, wins over them; a
+weight other than the default goes on the day of the first zone history entry.
+
 HealthKit and iCloud can launch the app in the background with no window, so `RideApp.init`
 calls `WatchSupport.activateAtLaunch()` and `SyncSupport.activateAtLaunch()`.
 

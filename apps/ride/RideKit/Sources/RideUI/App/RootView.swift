@@ -6,7 +6,7 @@ import SwiftUI
 public struct RootView: View {
   @State private var destination = RideLibrary.launchDestination()
   @State private var library = RideLibrary.launched
-  @State private var settings = RiderSettingsStore.launchStore()
+  @State private var settings = RiderSettingsStore.launched
   @State private var launcher = RideLauncher.launchLauncher()
   @State private var account = TrainStackAccount.launched
   @State private var destinationBeforeSettings = AppDestination.today

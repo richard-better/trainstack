@@ -11,13 +11,26 @@ final class TrainStackAccount {
   private(set) var isStravaConnected = false
   private(set) var stravaAthleteName: String?
   @ObservationIgnored let client: TrainStackClient
-  @ObservationIgnored var onSignInChange: (() -> Void)?
+  @ObservationIgnored private var signInObservers: [() -> Void] = []
+  @ObservationIgnored private var deletionObservers: [(String) -> Void] = []
 
   init(
     server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
     transport: any HTTPTransport = URLSession.shared
   ) {
     client = TrainStackClient(server: server, store: store, transport: transport)
+  }
+
+  func observeSignInChanges(_ observer: @escaping () -> Void) {
+    signInObservers.append(observer)
+  }
+
+  func observeAccountDeletion(_ observer: @escaping (String) -> Void) {
+    deletionObservers.append(observer)
+  }
+
+  private func signInChanged() {
+    for observer in signInObservers { observer() }
   }
 
   func restore() async {
@@ -29,7 +42,7 @@ final class TrainStackAccount {
     try await client.signInWithApple(
       identityToken: identityToken, nonce: nonce, fullName: fullName)
     await refreshFromClient()
-    onSignInChange?()
+    signInChanged()
     await refreshStrava()
   }
 
@@ -45,22 +58,24 @@ final class TrainStackAccount {
     }
     try await client.finishAppleWebSignIn(attempt, callback: callback)
     await refreshFromClient()
-    onSignInChange?()
+    signInChanged()
     await refreshStrava()
   }
 
   func signOut() async {
     await client.signOut()
     await refreshFromClient()
-    onSignInChange?()
+    signInChanged()
     isStravaConnected = false
     stravaAthleteName = nil
   }
 
   func deleteAccount() async throws {
+    let deleted = try? await client.signedInAccount()
     try await client.deleteAccount()
     await refreshFromClient()
-    onSignInChange?()
+    if let deleted { for observer in deletionObservers { observer(deleted.id) } }
+    signInChanged()
     isStravaConnected = false
     stravaAthleteName = nil
   }

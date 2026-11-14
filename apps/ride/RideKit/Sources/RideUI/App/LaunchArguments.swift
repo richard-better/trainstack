@@ -5,6 +5,8 @@ import RideData
 import RideStrava
 
 extension RiderSettingsStore {
+  static let launched = launchStore()
+
   static func launchStore() -> RiderSettingsStore {
     #if DEBUG
       if CommandLine.arguments.contains("-sample-rides") { return .sample }
