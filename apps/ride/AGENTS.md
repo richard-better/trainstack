@@ -72,8 +72,11 @@ Rider settings (thresholds, zone models, a sport's own zones, weight and FTP tes
 as a `SettingsLedger`, the same registers the settings API keeps (`docs/deployment.md`): one
 per setting and day, holding the change or its removal and `updatedAt`, the moment the athlete
 made the edit, to the millisecond. `ZoneHistory`, the FTP tests and the weight are derived from
-it, so it is the one source of truth on the device, and what this app cannot show (a sport or
-model it does not know) is kept as it came. An edit is stamped with the device's clock, and
+it, so it is the one source of truth on the device, and what this app cannot show (a sport it
+does not know) is kept as it came. Changes for a sport it does not know still apply to the
+profile as the server applies them (`ZoneProfile.apply(unknownSport:)`), so they end the earliest
+settings on the same day on both, and the app and the server give an old activity the same
+zones. An edit is stamped with the device's clock, and
 always after the value it replaced, so an edit made on a device whose clock is behind still
 beats what that device saw. Settings are not in iCloud: without an account they stay on the
 device, as before. Signed in, `SettingsSync` reads the account's history after its cursor,

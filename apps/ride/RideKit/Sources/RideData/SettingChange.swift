@@ -21,6 +21,24 @@ public enum SettingChange: Equatable, Codable, Sendable {
     }
   }
 
+  var unknownSportApplyOrder: Int {
+    switch self {
+    case .sport: 0
+    case .ownZones: 2
+    default: 3
+    }
+  }
+
+  var isForASportRideDoesNotKnow: Bool {
+    let sport: String? =
+      switch self {
+      case .threshold(let sport, _, _), .zones(let sport, _, _, _): sport
+      case .ownZones(let sport, _, _), .sport(let sport, _): sport
+      case .weight, .thresholdTest: nil
+      }
+    return sport.map { Sport(rawValue: $0) == nil } ?? false
+  }
+
   private enum CodingKeys: String, CodingKey {
     case kind, sport, threshold, value, metric, model, customLimits, own, listed, kg, id
     case `protocol`, activityId

@@ -200,6 +200,28 @@ struct ZoneParityTests {
         ], "2026-02-15"
       ),
       (
+        "listing a sport Ride does not know ends the earliest settings",
+        [("2026-01-01", .sport("bouldering", listed: true)), ("2026-02-01", ftp(250))],
+        "2026-01-15"
+      ),
+      (
+        "unlisting a sport Ride does not know that was never listed changes nothing",
+        [("2026-01-01", .sport("bouldering", listed: false)), ("2026-02-01", ftp(250))],
+        "2026-01-15"
+      ),
+      (
+        "own zones for a sport Ride does not know start as a copy of the default",
+        [
+          ("2026-01-01", ftp(250)), ("2026-02-01", .sport("bouldering", listed: true)),
+          ("2026-02-01", .ownZones(sport: "bouldering", metric: "power", own: true)),
+          ("2026-03-01", .threshold(sport: "bouldering", threshold: "ftp", value: 300)),
+          (
+            "2026-04-01",
+            .zones(sport: "bouldering", metric: "power", model: "coggan_7", customLimits: nil)
+          ),
+        ], "2026-05-01"
+      ),
+      (
         "a weight before the first zones does not decide which zones hold",
         [("2026-01-01", .weight(kg: 70)), ("2026-02-01", ftp(250))], "2026-01-15"
       ),

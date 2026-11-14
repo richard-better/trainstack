@@ -230,7 +230,9 @@ struct RiderSettingsTests {
       unknown.map {
         SettingWrite(SettingAddress($0.key, on: settingDay(5, 1)), $0, at: .init(day(5, 1)))
       }, through: nil)
-    #expect(settings.history.entries.isEmpty)
+    #expect(settings.history.entries.flatMap(\.changes).isEmpty)
+    #expect(settings.history.current.listedSports.isEmpty)
+    #expect(settings.history.current.value(of: .ftp, in: .all) == nil)
     #expect(settings.ftpTests.isEmpty)
     #expect(settings.ledger.live.count == unknown.count)
   }

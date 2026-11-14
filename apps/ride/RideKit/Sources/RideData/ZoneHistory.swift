@@ -5,12 +5,28 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
     public var id: UUID
     public var day: Date
     public var changes: [ZoneChange]
+    var unknownSportChanges: [SettingChange] = []
 
-    init(day: Date, changes: [ZoneChange], calendar: Calendar) {
+    private enum CodingKeys: String, CodingKey { case id, day, changes }
+
+    init(
+      day: Date, changes: [ZoneChange], unknownSportChanges: [SettingChange] = [],
+      calendar: Calendar
+    ) {
       let settingDay = SettingDay(day, calendar: calendar)
       id = Self.id(of: settingDay)
       self.day = day
       self.changes = changes.sorted { $0.applyOrder < $1.applyOrder }
+      self.unknownSportChanges = unknownSportChanges
+    }
+
+    func apply(to profile: inout ZoneProfile) {
+      for order in 0...3 {
+        for change in changes where change.applyOrder == order { profile.apply(change) }
+        for change in unknownSportChanges where change.unknownSportApplyOrder == order {
+          profile.apply(unknownSport: change)
+        }
+      }
     }
 
     static func id(of day: SettingDay) -> UUID {
@@ -27,12 +43,16 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
 
   public init() {}
 
-  init(_ changes: [(day: SettingDay, change: ZoneChange)], calendar: Calendar) {
+  init(
+    _ changes: [(day: SettingDay, change: ZoneChange)],
+    unknownSportChanges: [(day: SettingDay, change: SettingChange)] = [], calendar: Calendar
+  ) {
     let days = Dictionary(grouping: changes, by: \.day)
-    entries = days.keys.sorted().map { day in
+    let unknownSportDays = Dictionary(grouping: unknownSportChanges, by: \.day)
+    entries = Set(days.keys).union(unknownSportDays.keys).sorted().map { day in
       Entry(
         day: day.date(in: calendar), changes: days[day, default: []].map(\.change),
-        calendar: calendar)
+        unknownSportChanges: unknownSportDays[day, default: []].map(\.change), calendar: calendar)
     }
   }
 
@@ -43,7 +63,7 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
     for entry in entries {
       if entry.day > day && tookEffect { break }
       let before = profile
-      for change in entry.changes { profile.apply(change) }
+      entry.apply(to: &profile)
       tookEffect = tookEffect || profile != before
     }
     return profile
@@ -75,7 +95,9 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
       dayChanges.removeAll { $0.key == change.key }
       dayChanges.append(change)
     }
-    entries[index] = Entry(day: day, changes: dayChanges, calendar: calendar)
+    entries[index] = Entry(
+      day: day, changes: dayChanges, unknownSportChanges: entries[index].unknownSportChanges,
+      calendar: calendar)
     dropNoOpChanges(at: index)
   }
 
@@ -99,6 +121,8 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
       profile.apply(change)
       return profile != before
     }
-    if entries[index].changes.isEmpty { entries.remove(at: index) }
+    if entries[index].changes.isEmpty && entries[index].unknownSportChanges.isEmpty {
+      entries.remove(at: index)
+    }
   }
 }

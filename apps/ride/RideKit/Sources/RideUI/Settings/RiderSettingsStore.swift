@@ -42,7 +42,9 @@ final class RiderSettingsStore {
     }
   }
 
-  var historyEntries: [ZoneHistory.Entry] { settings.history.entries }
+  var historyEntries: [ZoneHistory.Entry] {
+    settings.history.entries.filter { !$0.changes.isEmpty }
+  }
 
   func zones(for metric: ZoneMetric, of recording: RideRecording) -> ZoneSet? {
     settings.history.profile(on: recording.startDate).zones(for: metric, in: recording.sport)

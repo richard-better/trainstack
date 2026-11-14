@@ -68,18 +68,22 @@ public struct RiderSettings: Codable, Equatable, Sendable {
 
   private mutating func derive() {
     var zoneChanges: [(day: SettingDay, change: ZoneChange)] = []
+    var unknownSportChanges: [(day: SettingDay, change: SettingChange)] = []
     var tests: [FTPTest] = []
     var latestWeight: (day: SettingDay, kg: Double)?
     for (address, change) in ledger.live {
       if let zoneChange = ZoneChange(change) {
         zoneChanges.append((address.day, zoneChange))
+      } else if change.isForASportRideDoesNotKnow {
+        unknownSportChanges.append((address.day, change))
       } else if let test = FTPTest(change, on: address.day, calendar: calendar) {
         tests.append(test)
       } else if case .weight(let kg) = change, latestWeight.map({ $0.day < address.day }) ?? true {
         latestWeight = (address.day, kg)
       }
     }
-    history = ZoneHistory(zoneChanges, calendar: calendar)
+    history = ZoneHistory(
+      zoneChanges, unknownSportChanges: unknownSportChanges, calendar: calendar)
     ftpTests = tests.sorted { ($0.date, $0.id.uuidString) < ($1.date, $1.id.uuidString) }
     weight = latestWeight?.kg ?? Self.defaultWeight
   }
