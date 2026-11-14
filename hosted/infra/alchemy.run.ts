@@ -143,6 +143,7 @@ export default Alchemy.Stack(
       account: accountWorker.url,
       server: serverWorker.url,
       database: (yield* db).databaseId,
+      databaseName: (yield* db).databaseName,
       activityFiles: (yield* activityFiles).bucketName,
       axiomDataset: observabilityResources.AXIOM_DATASET,
     };
