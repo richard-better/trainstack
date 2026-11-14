@@ -49,9 +49,9 @@ If signing in stops at **Sign in was cancelled.** or **Sign in did not finish. T
 Trainstack is young, and some things you might expect from other training apps are not there.
 Each page says what is missing where it matters; in short:
 
-- _No automatic import._ Activities do not arrive from Garmin, Strava, Apple Health, COROS,
-  Wahoo, Suunto or Polar on their own. You upload their files, or ride with Ride. See
-  [Getting activities in](/help/add-activities).
+- _Little automatic import._ Ride brings in your Apple Health workouts, and with them a Garmin
+  or other watch that saves to Health. Activities do not arrive from Strava, COROS, Wahoo, Suunto
+  or Polar on their own: you upload their files. See [Getting activities in](/help/add-activities).
 - _No outdoor recording._ Ride records indoor rides on a trainer. Runs and outdoor rides come
   from your watch or bike computer's files.
 - _No training plans._ You plan each workout yourself. Nothing generates a plan or adapts one.

@@ -15,6 +15,7 @@ actor FakeActivityServer: ActivityServer {
   }
 
   private(set) var calls: [Call] = []
+  private(set) var files: [ActivityFile] = []
   private var activities: [String: Set<String>] = [:]
   private var tombstones: [String: Set<String>] = [:]
   private var signedIn: ActivityAccount?
@@ -94,6 +95,7 @@ actor FakeActivityServer: ActivityServer {
     try check(account)
     let id = Ride(recording: try FITDecoder.decode(file.data), fileData: file.data).id
     calls.append(.upload(id, account: account.id))
+    files.append(file)
     let result: ActivityUploadResult =
       tombstones(of: account.id).contains(id) ? .deletedOnTheServer : .stored
     if result == .stored { store(id, for: account.id) }

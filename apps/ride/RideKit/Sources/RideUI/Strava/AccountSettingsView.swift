@@ -15,6 +15,9 @@ struct AccountSettingsView: View {
     Form {
       accountSection
       if !account.isRestoring {
+        #if os(iOS)
+          if account.isSignedIn { HealthImportSection() }
+        #endif
         stravaSection
       }
       Section {

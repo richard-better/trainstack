@@ -8,6 +8,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
@@ -65,7 +66,9 @@ export const activity = sqliteTable(
     ),
     index("activity_user_workout_idx").on(table.userId, table.workoutId),
     index("activity_match_version_idx").on(table.matchVersion),
-    index("activity_user_source_idx").on(table.userId, table.source, table.sourceId),
+    uniqueIndex("activity_user_source_idx")
+      .on(table.userId, table.source, table.sourceId)
+      .where(sql`${table.sourceId} IS NOT NULL`),
     index("activity_summary_version_idx").on(table.summaryVersion),
   ],
 );
@@ -136,9 +139,16 @@ export const deletedActivity = sqliteTable(
   {
     userId: ownedBy(),
     id: text("id").notNull(),
+    source: text("source"),
+    sourceId: text("source_id"),
     deletedAt: timestamp("deleted_at").default(now).notNull(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.id] })],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.id] }),
+    index("deleted_activity_user_source_idx")
+      .on(table.userId, table.source, table.sourceId)
+      .where(sql`${table.sourceId} IS NOT NULL`),
+  ],
 );
 
 export const activitySync = sqliteTable(

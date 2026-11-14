@@ -1,11 +1,11 @@
 ---
 title: Getting activities in
-summary: Upload files from a watch or bike computer, or ride with Ride, and what to do when a file is refused.
+summary: Upload files from a watch or bike computer, ride with Ride, or let Ride bring in your workouts from Apple Health, and what to do when a file is refused.
 section: Activities
 order: 10
 ---
 
-Activities reach Trainstack in two ways today.
+Activities reach Trainstack in three ways today.
 
 ## Upload files
 
@@ -29,6 +29,28 @@ twice does nothing: it is already in your account.
 Rides you record with the Ride app reach Trainstack when Ride is signed in to your account with the
 same Apple ID. Ride uploads its rides by itself, including the ones you rode before signing in.
 
+## Apple Health
+
+Ride on iPhone can bring every workout in Apple Health into your account: runs, rides, swims,
+strength sessions and the rest, from your Apple Watch or any app that saves to Health, such as
+Garmin Connect. In Ride, open Settings, then Account, and turn on Import Workouts from Health. Ride
+asks Health for your workouts with their routes, heart rate, power, cadence, speed, distance and
+energy, and reads nothing else. Health lets you choose how far back Ride may read; to bring in
+your history, allow all recorded data.
+
+Ride then adds every workout Health holds, the ones from before too, newest first, and each new one
+a few minutes after it ends, whenever Ride is open. Each becomes an activity with its sport, its
+route on the map and its charts, from **Apple Health**. Ride never adds the rides it saved to Health
+itself: those reach your account from Ride already. A workout of a kind Trainstack has no sport for,
+such as dance or tennis, still comes in, without a sport, and counts toward your load by heart rate.
+
+Each Health workout is one activity, however often Ride reads it and on however many of your
+devices. If you delete one, it stays deleted: Ride does not bring it back.
+
+Turning Import Workouts from Health off stops new workouts coming in. The ones already imported stay
+in your account until you delete them here. To stop Ride reading Health altogether, also turn its
+access off in the Health app, under your profile, then Apps.
+
 ## When a file is refused
 
 | What you see                                                           | What it means and what to do                                                                                                                                                                                            |
@@ -47,7 +69,8 @@ activity's page says why it has no numbers, such as **Trainstack found this file
 ## The same activity from two places
 
 If your watch and Ride both recorded the same ride, upload the watch's file anyway. Trainstack
-notices they are the same workout and links them, so it is counted once. See
+notices they are the same workout and links them, so it is counted once. The same goes for a Garmin
+ride that reached Apple Health and whose file you also uploaded. See
 [Fixing a wrong or duplicate activity](/help/fix-activities).
 
 ## Not supported yet
@@ -57,8 +80,8 @@ notices they are the same workout and links them, so it is counted once. See
 - _Strava import._ Trainstack cannot read your activities from Strava. Ride can send rides
   to Strava, but nothing comes back. Strava lets you download one activity's original file, or
   your whole history from its account settings.
-- _Apple Health._ Trainstack cannot read workouts from Apple Health yet. Ride saves its rides
-  to Health, but nothing comes the other way.
+- _Apple Health in the background._ Ride imports Health workouts while it is open, not while it
+  is closed.
 - _COROS, Wahoo, Suunto and Polar connections._ Upload their files.
 - _Outdoor recording._ Ride does not record outdoor rides or runs on your phone or watch.
 - _Editing an activity._ You cannot change an activity's name, sport or time in Trainstack. They

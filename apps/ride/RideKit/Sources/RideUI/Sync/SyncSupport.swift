@@ -5,5 +5,8 @@ public enum SyncSupport {
     _ = AppSettingsSync.shared
     _ = AppWorkoutSync.shared
     _ = AppCalendarSync.shared
+    #if os(iOS)
+      _ = AppHealthImport.shared
+    #endif
   }
 }

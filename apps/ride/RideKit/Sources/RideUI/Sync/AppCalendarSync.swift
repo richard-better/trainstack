@@ -15,6 +15,7 @@ enum AppCalendarSync {
     sync.onSignedOut = { Task { await account.refreshSignIn() } }
     AppActivitySync.shared.onUploaded = { sync.syncSoon() }
     #if os(iOS)
+      AppHealthImport.shared.onImported = { sync.syncSoon() }
       let becameActive = UIApplication.didBecomeActiveNotification
     #else
       let becameActive = NSApplication.didBecomeActiveNotification

@@ -23,6 +23,7 @@ enum FITProfile {
   enum BaseType {
     static let enumeration: UInt8 = 0x00
     static let uint8: UInt8 = 0x02
+    static let sint32: UInt8 = 0x85
     static let string: UInt8 = 0x07
     static let byteArray: UInt8 = 0x0D
     static let uint16: UInt8 = 0x84
@@ -67,11 +68,14 @@ enum FITProfile {
   }
 
   enum RecordField {
+    static let positionLat = 0
+    static let positionLong = 1
     static let heartRate = 3
     static let cadence = 4
     static let distance = 5
     static let speed = 6
     static let power = 7
+    static let enhancedAltitude = 78
   }
 
   enum LapField {
@@ -84,6 +88,7 @@ enum FITProfile {
     static let averageCadence = 17
     static let averagePower = 19
     static let maxPower = 20
+    static let totalAscent = 21
     static let lapTrigger = 24
     static let workoutStepIndex = 71
   }
@@ -101,10 +106,12 @@ enum FITProfile {
     static let totalElapsedTime = 7
     static let totalTimerTime = 8
     static let totalDistance = 9
+    static let totalCalories = 11
     static let averageHeartRate = 16
     static let maxHeartRate = 17
     static let averagePower = 20
     static let maxPower = 21
+    static let totalAscent = 22
     static let firstLapIndex = 25
     static let lapCount = 26
   }
@@ -149,21 +156,43 @@ enum FITProfile {
     static let generic = 0
     static let running = 1
     static let cycling = 2
+    static let fitnessEquipment = 4
     static let swimming = 5
     static let training = 10
+    static let walking = 11
+    static let crossCountrySkiing = 12
+    static let alpineSkiing = 13
+    static let snowboarding = 14
     static let rowing = 15
+    static let hiking = 17
+    static let rockClimbing = 31
+    static let hiit = 62
   }
 
   enum SubSport {
     static let generic = 0
+    static let treadmill = 1
+    static let indoorCycling = 6
     static let indoorRowing = 14
+    static let elliptical = 15
+    static let stairClimbing = 16
+    static let lapSwimming = 17
+    static let openWater = 18
     static let strengthTraining = 20
+    static let indoorWalking = 27
+    static let yoga = 43
+    static let pilates = 44
     static let virtualActivity = 58
+    static let indoorClimbing = 68
   }
 
   enum Scale {
     static let distance = 100.0
     static let speed = 1000.0
     static let time = 1000.0
+    static let altitude = 5.0
+    static let semicirclesPerDegree = 2_147_483_648.0 / 180
   }
+
+  static let altitudeOffsetMetres = 500.0
 }
