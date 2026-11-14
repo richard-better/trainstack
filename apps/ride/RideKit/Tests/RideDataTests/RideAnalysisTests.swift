@@ -125,6 +125,38 @@ struct RideAnalysisTests {
     #expect(recording(samples).workKilojoules() == 18)
   }
 
+  @Test func holdsARecordUntilTheNextOneUpTo30SecondsLater() {
+    let ride = recording([
+      .init(elapsed: 0, power: 200), .init(elapsed: 30, power: 200), .init(elapsed: 61, power: 200),
+    ])
+    #expect(ride.workKilojoules() == 6)
+    #expect(ride.powerPerSecond().filter { $0 > 0 }.count == 32)
+  }
+
+  @Test func ignoresRecordsWhileTheTimerIsStopped() {
+    var ride = recording((0...10).map { .init(elapsed: Double($0), power: 300) })
+    ride.pauses = [3.5..<6.5]
+    #expect(ride.workKilojoules() == 2)
+    #expect(ride.powerPerSecond() == [300, 300, 300, 300, 0, 0, 0, 300, 300, 300, 300])
+  }
+
+  @Test func hasNoPowerWhenItsOnlyPowerIsWhileTheTimerIsStopped() {
+    var ride = recording([
+      .init(elapsed: 0, heartRate: 120), .init(elapsed: 10, power: 300),
+      .init(elapsed: 40, heartRate: 120),
+    ])
+    ride.pauses = [5..<15]
+    #expect(ride.workKilojoules() == nil)
+    #expect(ride.normalizedPower() == nil)
+    #expect(ride.powerCurve().isEmpty)
+  }
+
+  @Test func countsNoTimeInZonesWhileTheTimerIsStopped() {
+    var ride = recording((0...10).map { .init(elapsed: Double($0), heartRate: 190) })
+    ride.pauses = [3.5..<6.5]
+    #expect(ride.timeInZones(heartRateZones, of: .heartRate).map(\.seconds).reduce(0, +) == 6.5)
+  }
+
   @Test func hasNoStressForAVeryShortRide() {
     let samples = (0..<10).map { RideRecording.Sample(elapsed: Double($0), power: 200) }
     let ride = RideRecording(startDate: .now, samples: samples, summary: .init(duration: 9))

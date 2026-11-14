@@ -167,23 +167,11 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
 
 ### Where this differs from Ride
 
-Ride's Swift uses the same rule with a 5 s ceiling and no timer events. The ceiling is
-`maxSampleGap: TimeInterval = 5` in `powerPerSecond` (`PowerCurve.swift`), `workKilojoules`
-(`TrainingStress.swift`) and `timeInZones` (`TimeInZones.swift`). The results differ on exactly
-these inputs:
-
-- a gap of more than 5 and at most 30 s between records, with some time outside a timer pause, which Ride
-  reads as a pause and TrainStack holds;
-- a timer pause that overlaps a gap of at most 5 s (5 s included), whose stopped part Ride
-  counts and TrainStack leaves out;
-- a record written strictly inside a timer pause, which Ride uses and TrainStack ignores.
-
-Ride writes timer events only at the start and the end of a ride, so on its own files only
-the first case can occur.
-
-On Ride's own 1 Hz files, and on any file without such gaps or pauses, the numbers are the
-same. `test/swift-parity.test.ts` checks this. A synthetic ride with 6 and 30 s steps matches
-Ride only when read with a 5 s ceiling.
+Ride's Swift holds, pauses and fills power per second by the same rule (`SamplingRule` in
+`RideData`), with the pauses from the file's timer events, so the numbers are the same for the
+same file. Ride does not sort records, check that values are plausible, derive speed from
+distance or stop a week after the start, so a file that needs any of those can still differ.
+Ride's own files need none of them.
 
 ## Cost
 
@@ -203,11 +191,12 @@ included. GPX and TCX files of 25 MB hold far fewer points and take about 0.5 s 
 ## Parity with Ride
 
 `test/fixtures/ride-reference.json` holds the values Ride's Swift code computes for the golden
-FIT files (`SampleRide.fit` and the three RideCore traces), for four synthetic rides (steady
-1 Hz, irregular steps with pauses and dropouts, half-second steps, and one too short for
-normalized power), and for fitness and fatigue over 126 days. `test/swift-parity.test.ts`
-requires the TypeScript to give exactly the same numbers. The synthetic rides come from a seeded
-generator written in both languages. When Ride's analysis changes, regenerate the fixture on a
+FIT files (`SampleRide.fit`, the three RideCore traces, and a smart-recorded ride with records
+5 to 8 s apart, a 45 s dropout and a 60 s timer pause, from `test/smart-recorded-ride.ts`), for
+four synthetic rides (steady 1 Hz, irregular steps of up to 30 s with missing values,
+half-second steps, and one too short for normalized power), and for fitness and fatigue over
+126 days. `test/swift-parity.test.ts` requires the TypeScript to give exactly the same numbers.
+The synthetic rides come from a seeded generator written in both languages. When Ride's analysis changes, regenerate the fixture on a
 Mac:
 
 ```sh

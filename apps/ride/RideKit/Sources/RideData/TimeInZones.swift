@@ -1,9 +1,7 @@
 import Foundation
 
 extension RideRecording {
-  public func timeInZones(
-    _ zones: ZoneSet, of metric: ZoneMetric, maxSampleGap: TimeInterval = 5
-  ) -> [ZoneShare] {
+  public func timeInZones(_ zones: ZoneSet, of metric: ZoneMetric) -> [ZoneShare] {
     let value: (Sample) -> Int?
     switch metric {
     case .heartRate: value = \.heartRate
@@ -17,11 +15,9 @@ extension RideRecording {
       }
     }
     var seconds = [TimeInterval](repeating: 0, count: zones.zones.count)
-    for (sample, next) in zip(samples, samples.dropFirst()) {
-      guard let value = value(sample) else { continue }
-      let duration = next.elapsed - sample.elapsed
-      guard duration > 0, duration <= maxSampleGap else { continue }
-      seconds[zones.zone(containing: value).index] += duration
+    for interval in heldIntervals {
+      guard let value = value(samples[interval.sample]) else { continue }
+      seconds[zones.zone(containing: value).index] += interval.duration
     }
     let total = seconds.reduce(0, +)
     guard total > 0 else { return [] }

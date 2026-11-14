@@ -5,6 +5,7 @@ public struct RideRecording: Equatable, Sendable {
   public var workoutName: String?
   public var sport: Sport?
   public var samples: [Sample]
+  public internal(set) var pauses: [Range<TimeInterval>] = []
   public var summary: Summary
 
   public init(
@@ -74,6 +75,12 @@ public struct RideRecording: Equatable, Sendable {
   public var hasTarget: Bool { samples.contains { $0.targetPower != nil } }
   public var hasHeartRate: Bool { samples.contains { $0.heartRate != nil } }
   public var hasSpeed: Bool { samples.contains { $0.speedMetresPerSecond != nil } }
+
+  var hasPowerWhileRunning: Bool {
+    samples.contains { $0.power != nil && !SamplingRule.isPaused($0.elapsed, by: pauses) }
+  }
+
+  var heldIntervals: [HeldInterval] { SamplingRule.heldIntervals(of: samples, pauses: pauses) }
 }
 
 extension RideRecording.Sample {

@@ -11,7 +11,9 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   for the Apple Watch app, which the iOS app embeds.
 - `RideKit/` - a local Swift package where the app's code lives, one module per concern.
   The app links the `RideUI` product. `RideData` decodes FIT files into a `RideRecording`
-  and analyses it (zones, power curve) with no UI dependency. `RideBluetooth` finds nearby
+  and analyses it (zones, power curve) with no UI dependency, holding and pausing records by
+  the same rule as `@trainstack/analysis` on the server (`SamplingRule`), so the app and the web
+  give a ride the same numbers. `packages/analysis/test/swift-parity.test.ts` checks this. `RideBluetooth` finds nearby
   devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
   (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`,
   `Health`, `Sync`) and

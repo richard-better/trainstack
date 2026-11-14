@@ -59,4 +59,43 @@ struct FITDecoderTests {
     let data = try RideRecording.sampleFITData()
     #expect(throws: FITError.truncated) { try FITDecoder.decode(data.prefix(data.count - 40)) }
   }
+
+  @Test func readsTheTimerPausesOfASmartRecordedRide() throws {
+    let ride = try FITDecoder.decode(smartRecordedRide(stoppedFrom: 60, until: 90))
+    #expect(ride.pauses == [60..<90])
+    #expect(ride.workKilojoules() == 18)
+  }
+
+  @Test func keepsOnlyThePausesThatFallBetweenItsRecords() throws {
+    let ride = try FITDecoder.decode(smartRecordedRide(stoppedFrom: 120, until: nil))
+    #expect(ride.pauses.isEmpty)
+    #expect(ride.workKilojoules() == 24)
+  }
+
+  private func smartRecordedRide(
+    stoppedFrom stop: UInt32, until restart: UInt32?
+  ) -> Data {
+    typealias Event = FITProfile.EventField
+    let timestamp = FITProfile.CommonField.timestamp
+    let start: UInt32 = 1_000_000_000
+    var writer = FITWriter()
+    func timer(_ seconds: UInt32, _ type: UInt8) {
+      writer.message(
+        local: 0, global: FITProfile.MessageNumber.event,
+        [
+          .uint32(timestamp, start + seconds),
+          .enumeration(Event.event, FITProfile.Event.timer), .enumeration(Event.eventType, type),
+        ])
+    }
+    timer(0, FITProfile.EventType.start)
+    for seconds in stride(from: UInt32(0), through: 120, by: 6) {
+      if seconds == stop { timer(stop, FITProfile.EventType.stop) }
+      if seconds == restart { timer(seconds, FITProfile.EventType.start) }
+      writer.message(
+        local: 1, global: FITProfile.MessageNumber.record,
+        [.uint32(timestamp, start + seconds), .uint16(FITProfile.RecordField.power, 200)])
+    }
+    timer(120, FITProfile.EventType.stopAll)
+    return writer.file()
+  }
 }

@@ -147,6 +147,48 @@
         "workKilojoules": 7
       },
       "samples": 50
+    },
+    {
+      "file": "smart-recorded-ride.fit",
+      "results": {
+        "duration": 665,
+        "intensityFactor": 1.195,
+        "normalizedPower": 239,
+        "powerCurve": [
+          {
+            "duration": 5,
+            "power": 300
+          },
+          {
+            "duration": 15,
+            "power": 300
+          },
+          {
+            "duration": 30,
+            "power": 300
+          },
+          {
+            "duration": 60,
+            "power": 300
+          },
+          {
+            "duration": 300,
+            "power": 238
+          },
+          {
+            "duration": 600,
+            "power": 204
+          }
+        ],
+        "timeInZones": {
+          "heartRate": [0, 0, 360, 200, 0],
+          "pace": [],
+          "power": [0, 0, 0, 300, 0, 260]
+        },
+        "trainingStressScore": 26,
+        "workKilojoules": 135
+      },
+      "samples": 90
     }
   ],
   "synthetic": [
@@ -211,53 +253,53 @@
       "name": "irregular with pauses",
       "results": {
         "duration": 22016,
-        "intensityFactor": 0.67,
-        "normalizedPower": 134,
+        "intensityFactor": 1.46,
+        "normalizedPower": 292,
         "powerCurve": [
           {
             "duration": 5,
-            "power": 478
+            "power": 479
           },
           {
             "duration": 15,
-            "power": 392
+            "power": 477
           },
           {
             "duration": 30,
-            "power": 321
+            "power": 477
           },
           {
             "duration": 60,
-            "power": 263
+            "power": 440
           },
           {
             "duration": 300,
-            "power": 137
+            "power": 335
           },
           {
             "duration": 600,
-            "power": 120
+            "power": 324
           },
           {
             "duration": 1200,
-            "power": 106
+            "power": 291
           },
           {
             "duration": 1800,
-            "power": 99
+            "power": 286
           },
           {
             "duration": 3600,
-            "power": 93
+            "power": 269
           }
         ],
         "timeInZones": {
-          "heartRate": [1339.5, 1018, 1052, 1046.5, 1036],
-          "pace": [534, 1075, 575.5, 486, 437.5, 753.5, 1805],
-          "power": [443.5, 539.5, 430.5, 430.5, 379.5, 3149]
+          "heartRate": [5221.5, 3352, 3902, 3752.5, 3988],
+          "pace": [2376, 4159, 2369.5, 1662, 1469.5, 2373.5, 6353],
+          "power": [1601.5, 1997.5, 1444.5, 1570.5, 1651.5, 11645]
         },
-        "trainingStressScore": 275,
-        "workKilojoules": 1483
+        "trainingStressScore": 1304,
+        "workKilojoules": 5525
       },
       "seed": 2,
       "steps": [0.5, 1, 1, 1, 2, 3, 5, 6, 30]
