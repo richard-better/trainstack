@@ -120,7 +120,9 @@ async function reply(response, res) {
 
 async function towardsTheStandIn(response) {
   const started = await response.json();
-  started.url = started.url.replace("https://appleid.apple.com", APPLE);
+  if (typeof started.url === "string") {
+    started.url = started.url.replace("https://appleid.apple.com", APPLE);
+  }
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   return new Response(JSON.stringify(started), { status: response.status, headers });
