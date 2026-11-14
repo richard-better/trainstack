@@ -255,6 +255,17 @@ test("deleting again removes a file the first delete could not", async () => {
   assert.equal(await bucket.head(`activities/${user.id}/${id}`), null);
 });
 
+test("restoring an activity whose file went missing stores the file again", async () => {
+  const { client, user } = await rider();
+  const { id } = await client.activities.upload({ file: fitFile(), source: "trainstack" });
+  await bucket.delete(`activities/${user.id}/${id}`);
+  await client.activities.upload({ file: fitFile(), source: "trainstack" });
+  assert.equal(await bucket.head(`activities/${user.id}/${id}`), null, "only restore repairs it");
+  await client.activities.restore({ file: fitFile(), source: "upload" });
+  const file = await client.activities.file({ id });
+  assert.deepEqual(Buffer.from(await file.arrayBuffer()), rideBytes);
+});
+
 test("restore refuses what is not an activity file", async () => {
   const { client } = await rider();
   await assert.rejects(

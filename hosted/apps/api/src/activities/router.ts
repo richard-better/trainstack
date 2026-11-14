@@ -270,8 +270,17 @@ async function addFromFile(
     const deletedBeforeUpload = await deletedRefusal();
     if (deletedBeforeUpload) throw deletedBeforeUpload;
   }
+  const keepFile = async () => {
+    if (restoring && !(await ENV.ACTIVITY_FILES.head(fileKey(userId, id)))) {
+      await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
+    }
+  };
+
   const existing = await findActivity(db, userId, id);
-  if (existing) return withStatistics(db, existing);
+  if (existing) {
+    await keepFile();
+    return withStatistics(db, existing);
+  }
 
   await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
   const insert = db.run(sql`
@@ -314,10 +323,10 @@ async function addFromFile(
       console.error(error);
     }
     const current = await findActivity(db, userId, id);
-    if (current && restoring && !(await ENV.ACTIVITY_FILES.head(fileKey(userId, id)))) {
-      await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
+    if (current) {
+      await keepFile();
+      return withStatistics(db, current);
     }
-    if (current) return withStatistics(db, current);
   }
   const deletedDuringUpload = await deletedRefusal();
   await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
