@@ -391,7 +391,7 @@ done
 Files never change once stored, so a restore only puts back what is missing. A folder is dated by
 the backup that found the deletion, not the deletion, and the bucket copy is as of the latest
 backup, so a restore can also bring back files of activities the restored database does not have.
-Such a file is never read, and goes with the rest when its athlete's account is deleted.
+Such a file is never read; it only takes space.
 
 ### One athlete's copy
 
