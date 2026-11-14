@@ -450,7 +450,7 @@ function LoggedActions({ activity, stored }: { activity: ActivityDetail; stored:
       const remaining = activity.duplicates[0];
       await (remaining
         ? navigate({ to: "/activities/$id", params: { id: remaining.id } })
-        : navigate({ to: "/" }));
+        : navigate({ to: "/activities" }));
     },
   });
   const sport = stored.session.detail.sport;

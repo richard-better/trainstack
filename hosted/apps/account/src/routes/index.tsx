@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as z from "zod";
 
-import { ActivityList } from "../components/activity-list";
 import { SignedIn } from "../components/session";
+import { TodayPage } from "../components/today-page";
 
 export const Route = createFileRoute("/")({
   validateSearch: z.object({
@@ -17,7 +17,7 @@ function Home() {
   const { error, deleted } = Route.useSearch();
   return (
     <SignedIn signInError={error} accountDeleted={deleted}>
-      <ActivityList />
+      <TodayPage />
     </SignedIn>
   );
 }

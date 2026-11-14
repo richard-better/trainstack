@@ -3,7 +3,8 @@
 An athlete tells TrainStack how they feel each day: how they slept, how fresh, sore, stressed and
 happy they are, whether they are ill or injured, and anything else in a note. It is the first part
 of the recovery picture in section 4 of the roadmap (#64), and the only one that needs no device.
-Sleep, resting heart rate and HRV from Apple Health, Whoop and Oura, a readiness view, and plan
+Daily readiness (`packages/readiness`, the web app's Today page) reads it against the athlete's
+own usual. Sleep, resting heart rate and HRV from Apple Health, Whoop and Oura, and plan
 adaptation come later and read what this stores.
 
 The contract is `checkIns` in `packages/contract/src/check-ins.ts`; the server is
@@ -55,8 +56,9 @@ Each rating can be left unrated, stored as null. Nothing is filled in by the ser
   less, or cannot train.
 - **A note**, up to 1000 characters, in the athlete's words.
 
-Nothing is diagnosed and no advice follows from an answer. A readiness view or plan adaptation that
-later reads these must say what it reads and why.
+Nothing is diagnosed. Readiness reads these answers and says what it read and why, with every
+weight and threshold in `packages/readiness/README.md`; its suggestions change nothing unless the
+athlete acts on them. Plan adaptation, later, must do the same.
 
 ## Storage and sync
 

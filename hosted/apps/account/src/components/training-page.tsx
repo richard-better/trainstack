@@ -44,6 +44,7 @@ import {
 } from "../lib/training";
 import { useBests } from "./activity-bests";
 import { CheckInPrompt } from "./check-in-prompt";
+import { ReadinessStrip, useReadiness } from "./readiness";
 import { LoadChart } from "./load-chart";
 import { PeriodPicker } from "./period-picker";
 import { PowerCurve } from "./power-curve";
@@ -94,6 +95,7 @@ export function TrainingPage({ range, period }: { range: LoadRangeKey; period: B
       </div>
       <TimeZoneOffer where="training" />
       <CheckInPrompt />
+      <TodayReadiness today={today} enabled={!settings.isPending} />
       {(load.data?.analysesDue ?? 0) > 0 && <UpdatingNote />}
       {load.isPending ? (
         <div
@@ -129,6 +131,12 @@ export function TrainingPage({ range, period }: { range: LoadRangeKey; period: B
       <LogbookProgress today={today} />
     </main>
   );
+}
+
+function TodayReadiness({ today, enabled }: { today: string; enabled: boolean }) {
+  const readiness = useReadiness(today, today, { enabled });
+  const day = readiness.data?.days.find((entry) => entry.day === today);
+  return day && day.level !== null ? <ReadinessStrip readiness={day} /> : null;
 }
 
 function Load({
@@ -346,7 +354,7 @@ function NoLoad({
           Fitness, fatigue and form come from the load of each activity. Upload files or record a
           ride in Ride, and they build up here.
         </p>
-        <Link to="/" className="secondary link-button">
+        <Link to="/activities" className="secondary link-button">
           Go to activities
         </Link>
       </div>

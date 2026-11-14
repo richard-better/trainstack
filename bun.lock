@@ -34,6 +34,7 @@
         "@trainstack/contract": "workspace:*",
         "@trainstack/fit": "workspace:*",
         "@trainstack/logbook": "workspace:*",
+        "@trainstack/readiness": "workspace:*",
         "@trainstack/workout": "workspace:*",
         "@trainstack/zones": "workspace:*",
         "better-auth": "catalog:",
