@@ -86,11 +86,21 @@ const threshold = (minutes = 60) => ({
 const plan = (client, day, content = threshold(), position = 1) =>
   client.plannedWorkouts.put({ id: randomUUID(), day, position, content, updatedAt: new Date() });
 
-function device(client, day) {
+function device(client, day, overrides = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const writes = createCalendarWrites({
     queryClient,
-    api: { calendar: client.calendar, plannedWorkouts: client.plannedWorkouts },
+    api: {
+      calendar: client.calendar,
+      plannedWorkouts: {
+        get: (input) => client.plannedWorkouts.get(input),
+        put: (input) => client.plannedWorkouts.put(input),
+        move: (input) => client.plannedWorkouts.move(input),
+        skip: (input) => client.plannedWorkouts.skip(input),
+        delete: (input) => client.plannedWorkouts.delete(input),
+        ...overrides,
+      },
+    },
     retryDelays: [5],
     whenOnline: () => () => {},
   });
@@ -192,6 +202,30 @@ test("a swap the server refuses leaves the session as it was, not skipped", asyn
   assert.equal(
     (await client.calendar.range({ from: today, through: today })).days[0].planned.length,
     20,
+  );
+});
+
+test("a swap whose skip the server refuses keeps both sessions and says so", async () => {
+  const { client, today } = await athlete();
+  const hard = await plan(client, today);
+  const { writes, load } = device(client, today, {
+    skip: (input) =>
+      client.plannedWorkouts.skip({ ...input, updatedAt: new Date(Date.now() + 3_600_000) }),
+  });
+  const range = await load();
+  await swapForEasy(writes, hard, range.days[0].planned, today);
+  assert.deepEqual(
+    writes.notices().map(({ kind, name }) => [kind, name]),
+    [["refused", "Threshold hour"]],
+  );
+  const planned = (await client.calendar.range({ from: today, through: today })).days[0].planned;
+  assert.deepEqual(
+    planned.map((item) => [item.content.workout.name, item.skipped]),
+    [
+      ["Threshold hour", null],
+      ["Easy ride", null],
+    ],
+    "nothing is lost: the session stays to do, with the easy one beside it",
   );
 });
 
