@@ -366,8 +366,9 @@ function Bests({
   onPeriod: (period: BestsPeriodKey) => void;
 }) {
   const shown = bestsPeriod(period, today);
-  const rides = useBests(shown.from, "cycling");
-  const runs = useBests(shown.from, "running");
+  const refresh = { refetchInterval: analysisRefreshMs(false) };
+  const rides = useBests(shown.from, "cycling", refresh);
+  const runs = useBests(shown.from, "running", refresh);
   return (
     <section aria-labelledby="bests-title">
       <div className="section-head">

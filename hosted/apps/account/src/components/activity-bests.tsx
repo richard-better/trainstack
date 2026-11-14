@@ -18,11 +18,16 @@ import { membersOf } from "../lib/workouts";
 import { PeriodPicker } from "./period-picker";
 import { PowerCurve } from "./power-curve";
 
-export function useBests(from: string, sport: string | null, enabled = true) {
+export function useBests(
+  from: string,
+  sport: string | null,
+  { enabled = true, refetchInterval = false as number | false } = {},
+) {
   return useQuery({
     queryKey: bestsQueryKey(from, sport),
     queryFn: () => api.training.bests({ from, sport: sport ?? undefined }),
     enabled,
+    refetchInterval,
   });
 }
 
@@ -38,7 +43,7 @@ export function ActivityBests({
   const efforts = activityBestEfforts(activity.statistics);
   const today = localDay(new Date());
   const period = bestsPeriod(periodKey, today);
-  const bests = useBests(period.from, sport, curve.length > 0 || efforts.length > 0);
+  const bests = useBests(period.from, sport, { enabled: curve.length > 0 || efforts.length > 0 });
   if (curve.length === 0 && efforts.length === 0) return null;
 
   const own = new Set(membersOf(activity));
