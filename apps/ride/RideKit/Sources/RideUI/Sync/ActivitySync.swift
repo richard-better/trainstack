@@ -96,7 +96,8 @@ final class ActivitySync {
       update(account.id) { $0.restoresToSend.remove(id) }
       receive(result, for: id, account: account.id)
     }
-    let onServer = try await server.activityIDs(for: account)
+    let listing = try await server.activities(for: account)
+    let onServer = Set(listing.map(\.id))
     try checkStillSyncing(account)
     dropRidesDeletedOnTheServer(keeping: onServer, account: account.id)
     for ride in library.rides where needsUploading(ride.id, account: account.id) {

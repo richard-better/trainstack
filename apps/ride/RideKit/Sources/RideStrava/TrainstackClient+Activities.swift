@@ -33,13 +33,12 @@ extension TrainstackClient: ActivityServer {
     return nil
   }
 
-  public func activityIDs(for account: ActivityAccount) async throws -> Set<String> {
+  public func activities(for account: ActivityAccount) async throws -> [AccountActivity] {
     struct Page: Decodable {
-      struct Activity: Decodable { let id: String }
-      let activities: [Activity]
+      let activities: [AccountActivity]
       let nextCursor: String?
     }
-    var ids: Set<String> = []
+    var activities: [AccountActivity] = []
     var cursor: String?
     repeat {
       var query = [URLQueryItem(name: "limit", value: String(Self.activityPageSize))]
@@ -47,13 +46,31 @@ extension TrainstackClient: ActivityServer {
       let (data, response) = try await send(
         "GET", Self.activitiesPath, query: query, as: account)
       try checkActivityResponse(response, for: account)
-      guard let page = try? Self.decoder.decode(Page.self, from: data) else {
+      guard let page = try? Self.calendarDecoder.decode(Page.self, from: data) else {
         throw StravaError.unavailable
       }
-      ids.formUnion(page.activities.map(\.id))
+      activities.append(contentsOf: page.activities)
       cursor = page.nextCursor
     } while cursor != nil
-    return ids
+    return activities
+  }
+
+  public func activityDetail(_ id: String, for account: ActivityAccount) async throws
+    -> AccountActivityDetail
+  {
+    let (data, response) = try await send(
+      "GET", "\(Self.activitiesPath)/\(id)", as: account)
+    try checkActivityResponse(response, for: account)
+    guard let detail = try? Self.calendarDecoder.decode(AccountActivityDetail.self, from: data)
+    else { throw StravaError.unavailable }
+    return detail
+  }
+
+  public func activityFile(_ id: String, for account: ActivityAccount) async throws -> Data {
+    let (data, response) = try await send(
+      "GET", "\(Self.activitiesPath)/\(id)/file", as: account)
+    try checkActivityResponse(response, for: account)
+    return data
   }
 
   public func upload(_ file: ActivityFile, for account: ActivityAccount) async throws
