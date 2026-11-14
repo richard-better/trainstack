@@ -61,8 +61,17 @@ let runtime;
 let migrated = false;
 const apiServer = createServer((req, res) => handleApi(req, res));
 const appleStandIn = createServer((req, res) => handleApple(req, res));
-const apiPort = await listen(apiServer, await portFor(options["api-port"], 3000));
-const applePort = await listen(appleStandIn, await portFor(options["apple-port"], 3002));
+const ONLY_THIS_MACHINE = "localhost";
+const apiPort = await listen(
+  apiServer,
+  await portFor(options["api-port"], 3000),
+  ONLY_THIS_MACHINE,
+);
+const applePort = await listen(
+  appleStandIn,
+  await portFor(options["apple-port"], 3002),
+  ONLY_THIS_MACHINE,
+);
 const webPort = await portFor(options["web-port"], 3001);
 const API = `http://localhost:${apiPort}`;
 const APPLE = `http://localhost:${applePort}`;
@@ -238,8 +247,16 @@ const web = options["api-only"]
       { stdio: "inherit", env: { ...process.env, VITE_SERVER_URL: API }, detached: true },
     );
 
+let webAppStopped = false;
+
 function stopTheWebApp() {
-  if (web && web.exitCode === null) process.kill(-web.pid);
+  if (!web || webAppStopped) return;
+  webAppStopped = true;
+  try {
+    process.kill(-web.pid);
+  } catch (error) {
+    if (error.code !== "ESRCH") throw error;
+  }
 }
 
 async function stop() {
