@@ -152,6 +152,17 @@ and `tss` (stress scores, which all use the TSS scale, so an hour at threshold s
   expected length, a time or a distance like any other step, and `includesExpected` says the
   figures rest on such an estimate. A lap-button step with no expected length makes all three
   numbers null: its length is unknown, not zero.
+- **Interval compliance.** `intervalCompliance(activity, workout, thresholds)` says how closely
+  an activity held a planned workout's targets. Each step with a power, pace or heart rate
+  target gets a band in watts, metres per second or beats per minute: a set value or a ramp
+  ±5 %, a range widened by 2.5 % at each end, a share of threshold against the day's FTP,
+  threshold speed or lactate threshold heart rate. Steps are placed by laps when the activity
+  has exactly one lap per step, as a watch running a structured workout records. Otherwise
+  they are laid end to end over the activity's moving seconds from its start, a time step for
+  its seconds and a distance step until its distance is covered. Each moving second of a step
+  with data counts in target when the value is in the band, with power averaged over the
+  trailing 3 s and speed over 10 s, as head units display them, and heart rate as recorded. The
+  result gives the seconds with data and in target, overall and for the first 200 steps.
 
 ## Threshold detection
 
