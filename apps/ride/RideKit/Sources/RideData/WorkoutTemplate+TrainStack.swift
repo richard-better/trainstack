@@ -26,11 +26,14 @@ extension WorkoutTemplate {
     TrainStackWorkout(
       name: name, sport: .cycling, description: about.isEmpty ? nil : about,
       focus: TrainStackWorkout.Focus(category),
-      blocks: steps.map {
+      blocks: steps.enumerated().map { index, step in
         .step(
           .init(
-            duration: .seconds($0.duration),
-            target: .power(unit: "ftp", level: .constant($0.intensity))))
+            duration: .seconds(step.duration),
+            target: .power(unit: "ftp", level: .constant(step.intensity)),
+            cues: cues(onStep: index).map {
+              TrainStackWorkout.Cue(at: .seconds($0.at), text: $0.text)
+            }))
       })
   }
 

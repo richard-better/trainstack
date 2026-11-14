@@ -9,6 +9,18 @@ const packageFixture = "packages/workout/test/fixtures/ride-library.json";
 
 const powerZones = ["recovery", "endurance", "tempo", "threshold", "vo2Max", "anaerobic"];
 
+const cuePattern = /\.cue\((\d+), (?:at: ([\d.]+), )?"([^"]*)"\),?/g;
+
+function cuesOf(list) {
+  const unread = list.replace(cuePattern, "").trim();
+  assert.equal(unread, "", `every cue is written as .cue(step, at: seconds, "text"): ${unread}`);
+  return [...list.matchAll(cuePattern)].map(([, step, at, text]) => ({
+    step: Number(step),
+    at: Number(at ?? 0),
+    text,
+  }));
+}
+
 function swiftLibrary() {
   const source = readFileSync(swiftSource, "utf8");
   const start = source.indexOf("public static let library: [WorkoutTemplate] = [");
@@ -21,6 +33,7 @@ function swiftLibrary() {
     const category = /category: \.(\w+)/.exec(entry)?.[1];
     const about = /about:\s*"([^"]*)"/.exec(entry)?.[1];
     const steps = /steps: (minutes\([\s\S]*?\)),\s*about:/.exec(entry)?.[1];
+    const cues = cuesOf(/cues: \[([\s\S]*?)\n {6}\]/.exec(entry)?.[1] ?? "");
     assert.ok(name && category && about && steps, `every template reads: ${entry}`);
     const expression = steps
       .replace(/\(([^()[\]]+?),\s*([\d.]+)\)/g, "[$1, $2]")
@@ -36,7 +49,7 @@ function swiftLibrary() {
       repeated: (count, pairs) => Array.from({ length: count }, () => pairs).flat(),
       sum: (...parts) => parts.flat(),
     });
-    return { name, category: powerZones.indexOf(category), about, steps: evaluated };
+    return { name, category: powerZones.indexOf(category), about, steps: evaluated, cues };
   });
 }
 
@@ -46,16 +59,21 @@ const rounded = (library) =>
   );
 
 const normalised = (library) =>
-  library.map(({ name, category, about, steps }) => ({
+  library.map(({ name, category, about, steps, cues }) => ({
     name,
     category,
     about,
     steps: steps.map(({ duration, intensity }) => ({ duration, intensity })),
+    cues: (cues ?? []).map(({ step, at, text }) => ({ step, at, text })),
   }));
 
 test("the server's built-in library is Ride's WorkoutTemplate.library, read from the Swift source", () => {
   const fromSwift = swiftLibrary();
   assert.equal(fromSwift.length, 11);
+  assert.ok(
+    fromSwift.every((template) => template.cues.length > 0),
+    "every bundled workout's text is read from the Swift source",
+  );
   const server = JSON.parse(readFileSync(serverCopy, "utf8"));
   assert.deepEqual(
     rounded(normalised(server)),
@@ -66,4 +84,15 @@ test("the server's built-in library is Ride's WorkoutTemplate.library, read from
 
 test("the server's built-in library and the workout package's fixture are the same file", () => {
   assert.equal(readFileSync(serverCopy, "utf8"), readFileSync(packageFixture, "utf8"));
+});
+
+test("a cue written in a form this test cannot read fails it instead of being skipped", () => {
+  assert.deepEqual(
+    cuesOf(`\n        .cue(0, "Warm up"),\n        .cue(6, at: 360, "Hold on"),\n`),
+    [
+      { step: 0, at: 0, text: "Warm up" },
+      { step: 6, at: 360, text: "Hold on" },
+    ],
+  );
+  assert.throws(() => cuesOf(`\n        .cue(1, at: 1 * 60, "New cue absent from server"),\n`));
 });

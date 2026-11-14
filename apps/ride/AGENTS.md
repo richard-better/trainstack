@@ -226,6 +226,14 @@ Each ride's file also carries its local time (`local_timestamp` on the activity 
 device's UTC offset when the ride started, kept in the trace header so a replay writes the same
 file.
 
+A cue shows over the chart for its shown-for time (`PlannedCue.defaultShownFor` when it has none),
+large enough to read from the bike, and ten seconds before a timed step ends the player announces
+the next step by its name, target and length the same way (`PlayerBanner`), also to VoiceOver. The
+glance carries a cue short enough for the watch (`RideGlance.longestCue`). The bundled workouts'
+text is `WorkoutTemplate.cues`, placed by step beside their steps in `WorkoutTemplate.library`, so
+the server's built-ins, generated from that source (`packages/workout/README.md`), carry the same
+text, and `tests/ride-library-source.test.mjs` fails if either drifts.
+
 The rider can change the workout as it plays, each change a journalled input: add a minute to the
 current timed interval (`extendInterval`, also how the cool-down is lengthened), skip it
 (`skipInterval`), or go back (`previousInterval`), which ends the current interval where it is and

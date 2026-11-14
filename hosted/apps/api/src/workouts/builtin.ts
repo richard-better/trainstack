@@ -9,6 +9,7 @@ type RideTemplate = {
   category: number;
   about: string;
   steps: { duration: number; intensity: number }[];
+  cues?: { step: number; at: number; text: string }[];
 };
 
 const rideCategories: Focus[] = [
@@ -26,11 +27,17 @@ export function workoutOfRideTemplate(template: RideTemplate): Workout {
     sport: "cycling",
     description: template.about,
     focus: rideCategories[template.category],
-    steps: template.steps.map((step) => ({
-      type: "step",
-      duration: { type: "time", seconds: step.duration },
-      target: { type: "power", unit: "ftp", level: { kind: "constant", value: step.intensity } },
-    })),
+    steps: template.steps.map((step, index) => {
+      const cues = (template.cues ?? [])
+        .filter((cue) => cue.step === index)
+        .map((cue) => ({ at: { type: "time", seconds: cue.at }, text: cue.text }));
+      return {
+        type: "step",
+        duration: { type: "time", seconds: step.duration },
+        target: { type: "power", unit: "ftp", level: { kind: "constant", value: step.intensity } },
+        ...(cues.length > 0 ? { cues } : {}),
+      };
+    }),
   });
 }
 

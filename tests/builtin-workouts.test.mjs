@@ -57,6 +57,7 @@ test("every athlete reads Ride's eleven bundled workouts, in the app's order", a
       type: "step",
       duration: { type: "time", seconds: 40 },
       target: { type: "power", unit: "ftp", level: { kind: "constant", value: 1.7 } },
+      cues: [{ at: { type: "time", seconds: 0 }, text: "Sprint 1 of 4. All out" }],
     },
     {
       type: "step",

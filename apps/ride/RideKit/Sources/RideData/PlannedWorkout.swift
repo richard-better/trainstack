@@ -24,8 +24,10 @@ extension WorkoutTemplate {
   public var planned: PlannedWorkout {
     PlannedWorkout(
       name: name, category: category, about: about,
-      steps: steps.map {
-        PlannedStep(duration: $0.duration, target: .shareOfFTP(.constant($0.intensity)))
+      steps: steps.enumerated().map { index, step in
+        PlannedStep(
+          duration: step.duration, target: .shareOfFTP(.constant(step.intensity)),
+          cues: cues(onStep: index))
       })
   }
 }

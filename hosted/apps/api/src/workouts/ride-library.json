@@ -2,6 +2,43 @@
   {
     "about": "Three 10-minute blocks at tempo with easy spinning between. Steady, honest work that builds aerobic strength without draining you.",
     "category": 2,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Easy spin to warm up"
+      },
+      {
+        "at": 0,
+        "step": 2,
+        "text": "Block 1 of 3. Steady, you could still talk"
+      },
+      {
+        "at": 0,
+        "step": 3,
+        "text": "Ease off and drink"
+      },
+      {
+        "at": 0,
+        "step": 4,
+        "text": "Block 2 of 3. Same rhythm as the first"
+      },
+      {
+        "at": 0,
+        "step": 5,
+        "text": "Ease off and drink"
+      },
+      {
+        "at": 0,
+        "step": 6,
+        "text": "Last block. Hold it steady to the end"
+      },
+      {
+        "at": 0,
+        "step": 7,
+        "text": "Done. Spin it out"
+      }
+    ],
     "name": "Zone 3 · 3×10",
     "steps": [
       {
@@ -41,6 +78,53 @@
   {
     "about": "Three 12-minute blocks that creep from just under threshold to just over it. Stretches how long you can hold your FTP.",
     "category": 3,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Warm up easy"
+      },
+      {
+        "at": 0,
+        "step": 1,
+        "text": "A little pressure to open the legs"
+      },
+      {
+        "at": 0,
+        "step": 2,
+        "text": "Wave 1: just under threshold"
+      },
+      {
+        "at": 0,
+        "step": 3,
+        "text": "Recover. Spin light"
+      },
+      {
+        "at": 0,
+        "step": 4,
+        "text": "Wave 2: right at threshold"
+      },
+      {
+        "at": 0,
+        "step": 5,
+        "text": "Recover. Spin light"
+      },
+      {
+        "at": 0,
+        "step": 6,
+        "text": "Wave 3: just over. Hang on"
+      },
+      {
+        "at": 360,
+        "step": 6,
+        "text": "Six minutes left. Stay smooth"
+      },
+      {
+        "at": 0,
+        "step": 7,
+        "text": "Cool down"
+      }
+    ],
     "name": "Threshold waves 3×12",
     "steps": [
       {
@@ -80,6 +164,33 @@
   {
     "about": "Short efforts that climb from tempo to well over threshold, with easy spinning between. Wakes the legs up before a race or a hard day.",
     "category": 4,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Easy spin to warm up"
+      },
+      {
+        "at": 0,
+        "step": 2,
+        "text": "First opener: tempo"
+      },
+      {
+        "at": 0,
+        "step": 6,
+        "text": "Over threshold for a minute"
+      },
+      {
+        "at": 0,
+        "step": 12,
+        "text": "Last and hardest. Smooth, not ragged"
+      },
+      {
+        "at": 0,
+        "step": 13,
+        "text": "Cool down. Legs are ready"
+      }
+    ],
     "name": "Ramp openers 30",
     "steps": [
       {
@@ -143,6 +254,48 @@
   {
     "about": "Two sets of surges just over threshold that settle back to tempo rather than resting. Teaches you to recover while still working.",
     "category": 3,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Warm up"
+      },
+      {
+        "at": 0,
+        "step": 1,
+        "text": "Settle into tempo"
+      },
+      {
+        "at": 0,
+        "step": 2,
+        "text": "Over: lift just above threshold"
+      },
+      {
+        "at": 0,
+        "step": 3,
+        "text": "Under: back to tempo, not to rest"
+      },
+      {
+        "at": 0,
+        "step": 8,
+        "text": "Hold tempo between the sets"
+      },
+      {
+        "at": 0,
+        "step": 9,
+        "text": "Set 2. Over again"
+      },
+      {
+        "at": 0,
+        "step": 15,
+        "text": "Tempo to finish the work"
+      },
+      {
+        "at": 0,
+        "step": 16,
+        "text": "Cool down"
+      }
+    ],
     "name": "Over-unders 2×10",
     "steps": [
       {
@@ -218,6 +371,28 @@
   {
     "about": "Over an hour of steady endurance riding. Builds the aerobic base everything else rests on.",
     "category": 1,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Warm up easy"
+      },
+      {
+        "at": 0,
+        "step": 1,
+        "text": "Long and steady. Eat and drink every 20 minutes"
+      },
+      {
+        "at": 2400,
+        "step": 1,
+        "text": "Halfway. Keep the cadence up"
+      },
+      {
+        "at": 0,
+        "step": 2,
+        "text": "Cool down"
+      }
+    ],
     "name": "Long endurance 90",
     "steps": [
       {
@@ -237,6 +412,43 @@
   {
     "about": "A ramping warm-up, one six-minute effort well above threshold, then a long endurance spin. Raises the ceiling on your aerobic power.",
     "category": 4,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "The warm-up starts easy and ramps"
+      },
+      {
+        "at": 0,
+        "step": 4,
+        "text": "Warm-up tops out at tempo"
+      },
+      {
+        "at": 0,
+        "step": 5,
+        "text": "Easy before the effort"
+      },
+      {
+        "at": 0,
+        "step": 6,
+        "text": "Six minutes well over threshold. Pace it evenly"
+      },
+      {
+        "at": 180,
+        "step": 6,
+        "text": "Halfway. Breathe deep"
+      },
+      {
+        "at": 0,
+        "step": 7,
+        "text": "Long endurance spin"
+      },
+      {
+        "at": 0,
+        "step": 8,
+        "text": "Cool down"
+      }
+    ],
     "name": "VO2 max booster",
     "steps": [
       {
@@ -280,6 +492,48 @@
   {
     "about": "Four all-out 40-second sprints with 20 seconds' rest between them. Short, brutal and over quickly.",
     "category": 5,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Warm up"
+      },
+      {
+        "at": 0,
+        "step": 2,
+        "text": "One-minute primer"
+      },
+      {
+        "at": 0,
+        "step": 3,
+        "text": "Recover before the sprints"
+      },
+      {
+        "at": 0,
+        "step": 4,
+        "text": "Sprint 1 of 4. All out"
+      },
+      {
+        "at": 0,
+        "step": 6,
+        "text": "Sprint 2 of 4"
+      },
+      {
+        "at": 0,
+        "step": 8,
+        "text": "Sprint 3 of 4"
+      },
+      {
+        "at": 0,
+        "step": 10,
+        "text": "Last sprint. Empty the tank"
+      },
+      {
+        "at": 0,
+        "step": 12,
+        "text": "Cool down"
+      }
+    ],
     "name": "Tabata 4×40\/20",
     "steps": [
       {
@@ -339,6 +593,23 @@
   {
     "about": "Gentle spinning that rises a little in the middle and eases off again. Keeps the legs turning on a rest day.",
     "category": 1,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Easy. No pressure on the pedals"
+      },
+      {
+        "at": 0,
+        "step": 4,
+        "text": "The gentle peak. Still easy"
+      },
+      {
+        "at": 0,
+        "step": 8,
+        "text": "Wind down"
+      }
+    ],
     "name": "Recovery 30",
     "steps": [
       {
@@ -382,6 +653,58 @@
   {
     "about": "Three 10-minute blocks just under threshold, each finished with a one-minute push over it. A good benchmark for whether your FTP still feels right.",
     "category": 3,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Warm up"
+      },
+      {
+        "at": 0,
+        "step": 4,
+        "text": "Block 1 of 3, just under threshold"
+      },
+      {
+        "at": 0,
+        "step": 5,
+        "text": "Push over for one minute"
+      },
+      {
+        "at": 0,
+        "step": 6,
+        "text": "Recover"
+      },
+      {
+        "at": 0,
+        "step": 7,
+        "text": "Block 2 of 3"
+      },
+      {
+        "at": 0,
+        "step": 8,
+        "text": "Push over for one minute"
+      },
+      {
+        "at": 0,
+        "step": 9,
+        "text": "Recover"
+      },
+      {
+        "at": 0,
+        "step": 10,
+        "text": "Last block"
+      },
+      {
+        "at": 0,
+        "step": 11,
+        "text": "Final push"
+      },
+      {
+        "at": 0,
+        "step": 12,
+        "text": "Cool down"
+      }
+    ],
     "name": "Threshold classic 60",
     "steps": [
       {
@@ -441,6 +764,28 @@
   {
     "about": "Eight short surges over an endurance base. Playful enough to pass the time, easy enough to recover from.",
     "category": 1,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Warm up"
+      },
+      {
+        "at": 0,
+        "step": 3,
+        "text": "Surge 1 of 8. Quick and light"
+      },
+      {
+        "at": 0,
+        "step": 17,
+        "text": "Last surge"
+      },
+      {
+        "at": 0,
+        "step": 18,
+        "text": "Cool down"
+      }
+    ],
     "name": "Pixel sprints 30",
     "steps": [
       {
@@ -524,6 +869,23 @@
   {
     "about": "Fifteen seconds each at easy, medium and hard. Too short to train anything; it is here to check a trainer and the ride from start to finish.",
     "category": 4,
+    "cues": [
+      {
+        "at": 0,
+        "step": 0,
+        "text": "Easy"
+      },
+      {
+        "at": 0,
+        "step": 1,
+        "text": "Medium"
+      },
+      {
+        "at": 0,
+        "step": 2,
+        "text": "Hard"
+      }
+    ],
     "name": "Quick test 45s",
     "steps": [
       {

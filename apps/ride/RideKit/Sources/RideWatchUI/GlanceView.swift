@@ -28,7 +28,13 @@
         }
         heartRate
         Spacer(minLength: 0)
-        if !isLuminanceReduced, glance.heartRate != nil, let source = glance.heartRateSource {
+        if !isLuminanceReduced, let cue = glance.cue {
+          Text(cue)
+            .font(.system(size: 15, weight: .semibold))
+            .lineLimit(2)
+            .accessibilityAddTraits(.updatesFrequently)
+        } else if !isLuminanceReduced, glance.heartRate != nil, let source = glance.heartRateSource
+        {
           HeartRateSourceLabel(source: source)
         }
       }
@@ -175,7 +181,9 @@
   }
 
   extension RideGlance {
-    static func sample(heartRateSource: HeartRateSource = .watch) -> RideGlance {
+    static func sample(
+      heartRateSource: HeartRateSource = .watch, cue: String? = nil
+    ) -> RideGlance {
       RideGlance(
         workoutName: "Threshold waves 3×12",
         interval: .init(
@@ -184,7 +192,7 @@
           duration: 720),
         next: .init(zone: .recovery, targetPower: 120), power: 248,
         heartRate: heartRateSource == .chestStrap ? 154 : 152, heartRateSource: heartRateSource,
-        heartRateZone: .init(label: "3", index: 2, zoneCount: 5))
+        heartRateZone: .init(label: "3", index: 2, zoneCount: 5), cue: cue)
     }
   }
 
@@ -197,6 +205,12 @@
   #Preview("Chest strap") {
     NavigationStack {
       GlanceView(glance: .sample(heartRateSource: .chestStrap))
+    }
+  }
+
+  #Preview("Interval text") {
+    NavigationStack {
+      GlanceView(glance: .sample(cue: "Wave 3: just over. Hang on"))
     }
   }
 

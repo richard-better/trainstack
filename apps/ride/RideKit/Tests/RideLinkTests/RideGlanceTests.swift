@@ -148,4 +148,49 @@ struct RideGlanceTests {
     #expect(glance.interval?.progress == 0)
     #expect(glance.interval?.targetPower == 200)
   }
+
+  @Test func carriesTheIntervalTextWhileItShowsIfTheWatchHasRoomForIt() {
+    var session = RideSession(
+      workout: Workout(
+        name: "Text",
+        steps: [
+          .init(
+            duration: 60, target: .power(.constant(150)), name: "Openers",
+            cues: [
+              PlannedCue(at: 0, text: "Settle in"),
+              PlannedCue(at: 30, text: String(repeating: "Far too long for a wrist ", count: 3)),
+            ])
+        ]))
+    session.advance(by: 1, reading: .init(power: 150))
+    let glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+    #expect(glance.cue == "Settle in")
+    #expect(glance.interval?.label == "Openers")
+    for _ in 0..<12 { session.advance(by: 1, reading: .init(power: 150)) }
+    #expect(RideGlance(session: session, ftp: 200, heartRateZones: nil).cue == nil)
+    for _ in 0..<20 { session.advance(by: 1, reading: .init(power: 150)) }
+    #expect(session.cue != nil)
+    #expect(RideGlance(session: session, ftp: 200, heartRateZones: nil).cue == nil)
+  }
+
+  @Test func aPhoneWithoutIntervalTextStillSendsAGlanceTheWatchReads() throws {
+    let older = try JSONEncoder().encode(RideGlance(workoutName: "Old", power: 100))
+    let json = try #require(String(data: older, encoding: .utf8))
+    #expect(!json.contains("cue"))
+    #expect(try JSONDecoder().decode(RideGlance.self, from: older).cue == nil)
+  }
+
+  @Test func aNamedHeartRateStepKeepsItsTargetBesideItsName() {
+    var session = RideSession(
+      workout: Workout(
+        name: "Named",
+        steps: [
+          .init(
+            duration: 60, target: .heartRate(.beatsPerMinute(.constant(140))), name: "Openers"),
+          .init(duration: 60, target: .power(.constant(200)), name: "Push"),
+        ]))
+    session.advance(by: 1, reading: .init(power: 150))
+    let glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+    #expect(glance.interval?.label == "Openers · Heart rate 140 bpm")
+    #expect(glance.next?.label == "Push")
+  }
 }
