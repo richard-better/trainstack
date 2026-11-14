@@ -73,6 +73,26 @@ every request is bound to the session it started with, so signing out stops uplo
 account's deletions never reach another. A ride removed while signed out is deleted from the
 account this device last signed in to, when it signs in again.
 
+Signed in, History is the account's history, not the device's. The listing `ActivitySync` takes
+each pass (`activities.list` without `onePerWorkout`, which it needs for ids anyway) also goes to
+`AccountHistory`, which keeps what History shows of each activity in `Application Support/AccountHistory`,
+so History reads it offline. `HistoryEntry.merging` shows each workout once: the activity the server
+made primary, opened from this device's file when it has it, and the rides the account does not list
+yet; a duplicate is not shown, even when it is this device's ride. A row is drawn from the account's
+summary once there is one, so a ride looks the same on every device. Detail comes from the file, not
+the server's derived data: Ride downloads an activity's file when it is opened (`AccountHistory.download`,
+`activities.file`) and shows it with `ActivityDetailView`, the same code that shows its own rides, so an
+activity looks the same wherever it was recorded and keeps every chart, lap and zone Ride draws, which
+the server's statistics alone could not give. The server's derived data fills what a file cannot: the
+route map (`activities.get`) for any outdoor activity, the summary while a file downloads or offline,
+and the whole page for what has no FIT file (a logged strength or bouldering session, or a GPX or TCX
+upload), which shows its statistics, laps and route and says what is on the web instead. Downloaded
+files are a cache (`Caches/AccountHistory`, the least recently opened dropped past
+`AccountHistory.defaultCacheLimit`), never part of `RideLibrary`, so they are never uploaded, sent
+through iCloud or saved to Health. Deleting an activity the device does not hold sends its deletion
+like a removed ride's (`ActivitySync.delete`). Signing out, or another account signing in, removes the
+listing and the files; the device's own rides stay.
+
 On iPhone, `HealthImport` brings the athlete's Apple Health workouts into the account once they
 turn on Import from Health (Settings, Account), which asks Health only then and only for
 what it reads (`HealthKitWorkouts.readTypes`). A Health workout has no file, so Ride writes one:
