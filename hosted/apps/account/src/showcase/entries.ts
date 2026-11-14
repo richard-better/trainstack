@@ -432,7 +432,7 @@ export const showcaseEntries: readonly ShowcaseEntry[] = [
     title: "Choosing a circuit colour",
     route: "/log/bouldering",
     world: "athlete",
-    path: () => "/log/bouldering",
+    path: ({ boulderingSession }) => `/log/bouldering?id=${boulderingSession}`,
     steps: [{ click: "Colours" }, { click: "Use these colours" }],
   },
   {
