@@ -36,7 +36,7 @@ async function runCronUntilAnalysed() {
   for (let run = 0; run < 30; run++) {
     const { n } = await db
       .prepare(
-        `SELECT (SELECT count(*) FROM activity_analysis WHERE due = 1 OR version < 1)
+        `SELECT (SELECT count(*) FROM activity_analysis WHERE due = 1 OR version < 2)
               + (SELECT count(*) FROM activity WHERE file_format IS NOT NULL AND summary_version IS NULL) AS n`,
       )
       .first();
