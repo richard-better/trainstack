@@ -7,6 +7,7 @@ import {
   meterOf,
   moved,
   nudged,
+  pairsOf,
   periodOf,
   placementFor,
   positionAt,
@@ -21,6 +22,7 @@ import {
   savePlannedWorkout,
 } from "../hosted/apps/account/src/lib/calendar-writes.ts";
 import { mockApple } from "./helpers/apple.mjs";
+import { denseRide } from "./helpers/fit-files.mjs";
 import { migrate, rpcClient, startWorker } from "./helpers/worker.mjs";
 
 let worker;
@@ -568,4 +570,218 @@ test("saving an edited copy warns about an older content edit that arrived after
   assert.equal(replaced.kind, "refused");
   assert.match(replaced.reason, /rest day/);
   assert.equal((await client.plannedWorkouts.get({ id: spin.id })).content.kind, "rest");
+});
+
+test("a day pairs each activity with at most one planned workout, the athlete's choice first", () => {
+  const activity = (id) => ({ id });
+  const planned = (id, pairing) => ({ id, pairing });
+  const day = {
+    planned: [
+      planned("auto", { activityId: "a", by: "auto" }),
+      planned("mine", { activityId: "a", by: "athlete" }),
+      planned("gone", { activityId: "deleted", by: "auto" }),
+      planned("free", null),
+    ],
+    activities: [activity("a"), activity("b")],
+  };
+  const { planned: entries, unplanned } = pairsOf(day);
+  assert.deepEqual(
+    entries.map(({ item, done }) => [item.id, done?.id ?? null]),
+    [
+      ["auto", null],
+      ["mine", "a"],
+      ["gone", null],
+      ["free", null],
+    ],
+  );
+  assert.deepEqual(
+    unplanned.map(({ id }) => id),
+    ["b"],
+  );
+});
+
+test("pairing by hand shows at once, displaces the automatic pair, and unpairing takes it apart", async () => {
+  const { client } = await athlete();
+  const day = "2026-06-01";
+  const ride = (minutes, hour) =>
+    new File(
+      [denseRide(Math.round(minutes * 60 * 25 + 200), `${day}T0${hour}:00:00Z`)],
+      "ride.fit",
+    );
+  const morning = await client.activities.upload({
+    file: ride(60, 6),
+    source: "upload",
+    sport: "cycling",
+  });
+  const evening = await client.activities.upload({
+    file: ride(20, 8),
+    source: "upload",
+    sport: "cycling",
+  });
+  const [spin] = await planDay(client, day, ["Spin"]);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const writes = createCalendarWrites({
+    queryClient,
+    api: client,
+    retryDelays: [5],
+    whenOnline: () => () => {},
+  });
+  const key = rangeKey(day, day);
+  const range = await queryClient.fetchQuery({
+    queryKey: key,
+    queryFn: () => client.calendar.range({ from: day, through: day }),
+  });
+  const shown = () => pairsOf(writes.view(queryClient.getQueryData(key)).days[0]);
+  const auto = range.days[0].planned[0];
+  assert.deepEqual([auto.pairing?.activityId, auto.pairing?.by], [morning.id, "auto"]);
+
+  const pairing = writes.pair(auto, evening.id);
+  assert.equal(shown().planned[0].done.id, evening.id);
+  assert.deepEqual(
+    shown().unplanned.map(({ id }) => id),
+    [morning.id],
+  );
+  await pairing;
+  const paired = await client.plannedWorkouts.get({ id: spin.id });
+  assert.deepEqual(
+    [paired.pairing.activityId, paired.pairing.by, paired.state],
+    [evening.id, "athlete", "completed"],
+  );
+
+  const unpairing = writes.unpair(paired, evening.id);
+  assert.equal(shown().planned[0].done, null);
+  await unpairing;
+  await writes.settled();
+  const apart = await client.plannedWorkouts.get({ id: spin.id });
+  assert.notEqual(apart.pairing?.activityId, evening.id, "the rule never pairs these two again");
+  assert.deepEqual(writes.notices(), []);
+});
+
+test("the latest pairing choice holds the activity on screen, whichever workout comes first in the day", async () => {
+  const { client } = await athlete();
+  const day = "2026-06-08";
+  const file = new File(
+    [denseRide(Math.round(60 * 60 * 25 + 200), `${day}T06:00:00Z`)],
+    "ride.fit",
+  );
+  const done = await client.activities.upload({ file, source: "upload", sport: "cycling" });
+  const [first, second] = await planDay(client, day, ["First", "Second"]);
+  await client.plannedWorkouts.pair({ id: first.id, activityId: done.id, updatedAt: new Date() });
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const writes = createCalendarWrites({
+    queryClient,
+    api: {
+      ...client,
+      plannedWorkouts: {
+        get: (input) => client.plannedWorkouts.get(input),
+        pair: async (input) => {
+          await held;
+          return client.plannedWorkouts.pair(input);
+        },
+      },
+    },
+    retryDelays: [5],
+    whenOnline: () => () => {},
+  });
+  const key = rangeKey(day, day);
+  const range = await queryClient.fetchQuery({
+    queryKey: key,
+    queryFn: () => client.calendar.range({ from: day, through: day }),
+  });
+  const shown = () => writes.view(queryClient.getQueryData(key)).days[0];
+  const holder = () =>
+    pairsOf(shown())
+      .planned.filter(({ done: activity }) => activity)
+      .map(({ item }) => item.content.workout.name);
+  const states = () => shown().planned.map((item) => [item.content.workout.name, item.state]);
+  const [firstHeld, secondHeld] = range.days[0].planned;
+
+  const toSecond = writes.pair(secondHeld, done.id);
+  assert.deepEqual(holder(), ["Second"]);
+  assert.deepEqual(states(), [
+    ["First", "missed"],
+    ["Second", "completed"],
+  ]);
+
+  const backToFirst = writes.pair(firstHeld, done.id);
+  assert.deepEqual(holder(), ["First"]);
+  assert.deepEqual(states(), [
+    ["First", "completed"],
+    ["Second", "missed"],
+  ]);
+
+  release();
+  await Promise.all([toSecond, backToFirst]);
+  const stored = await client.calendar.range({ from: day, through: day });
+  assert.equal(
+    stored.days[0].planned.find((item) => item.id === first.id).pairing.activityId,
+    done.id,
+  );
+  assert.equal(stored.days[0].planned.find((item) => item.id === second.id).pairing, null);
+});
+
+test("a newer pairing confirmed first is not undone by an older one still waiting", async () => {
+  const { client } = await athlete();
+  const day = "2026-06-15";
+  const file = new File(
+    [denseRide(Math.round(60 * 60 * 25 + 200), `${day}T06:00:00Z`)],
+    "ride.fit",
+  );
+  const done = await client.activities.upload({ file, source: "upload", sport: "cycling" });
+  await planDay(client, day, ["First", "Second"]);
+  const gates = new Map();
+  const gate = (id) => {
+    let open;
+    const opened = new Promise((resolve) => (open = resolve));
+    gates.set(id, open);
+    return opened;
+  };
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const writes = createCalendarWrites({
+    queryClient,
+    api: {
+      ...client,
+      plannedWorkouts: {
+        pair: async (input) => {
+          await gate(input.id);
+          return client.plannedWorkouts.pair(input);
+        },
+      },
+    },
+    retryDelays: [5],
+    whenOnline: () => () => {},
+  });
+  const key = rangeKey(day, day);
+  const range = await queryClient.fetchQuery({
+    queryKey: key,
+    queryFn: () => client.calendar.range({ from: day, through: day }),
+  });
+  const holder = () =>
+    pairsOf(writes.view(queryClient.getQueryData(key)).days[0])
+      .planned.filter(({ done: activity }) => activity)
+      .map(({ item }) => item.content.workout.name);
+  const [first, second] = range.days[0].planned.toSorted((a, b) =>
+    a.content.workout.name < b.content.workout.name ? -1 : 1,
+  );
+
+  const toFirst = writes.pair(first, done.id);
+  const toSecond = writes.pair(second, done.id);
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.deepEqual(holder(), ["Second"]);
+  gates.get(second.id)();
+  await toSecond;
+  assert.deepEqual(holder(), ["Second"], "the older choice still waiting does not take it back");
+  gates.get(first.id)();
+  await toFirst;
+  await writes.settled();
+  assert.deepEqual(holder(), ["Second"]);
+  const stored = await client.calendar.range({ from: day, through: day });
+  assert.deepEqual(
+    pairsOf(stored.days[0])
+      .planned.filter(({ done: activity }) => activity)
+      .map(({ item }) => item.id),
+    [second.id],
+  );
 });

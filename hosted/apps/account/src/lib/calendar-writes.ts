@@ -10,6 +10,7 @@ import {
   draftPlanned,
   findPlanned,
   moved,
+  pairedAs,
   plannedName,
   skippedAs,
   withPlanned,
@@ -27,9 +28,15 @@ interface Pending {
   readonly id: string;
   readonly base: PlannedWorkout;
   readonly apply: Apply;
+  readonly choice?: PairingChoice;
 }
 
-export type WriteKind = "plan" | "change" | "move" | "skip" | "delete";
+interface PairingChoice {
+  readonly activityId: string;
+  readonly paired: boolean;
+}
+
+export type WriteKind = "plan" | "change" | "move" | "skip" | "pair" | "unpair" | "delete";
 
 export type Notice =
   | {
@@ -64,6 +71,7 @@ interface Write {
   readonly won?: (result: PlannedWorkout) => boolean;
   readonly retry?: () => void;
   readonly intended?: Placement;
+  readonly choice?: PairingChoice;
 }
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 5_000, 10_000, 30_000];
@@ -89,6 +97,10 @@ function refusal(error: unknown): string | null {
       return "Your device's clock is ahead of Trainstack's. Set it to the right time and try again.";
     case "WORKOUT_TOO_LARGE":
       return "This workout is too large to plan.";
+    case "NOT_PAIRABLE":
+      return "Only a workout pairs, and only with an activity of its own day.";
+    case "ACTIVITY_NOT_FOUND":
+      return "That activity is no longer in your account.";
     default:
       return null;
   }
@@ -128,6 +140,7 @@ export function createCalendarWrites({
   let version = 0;
   const tails = new Map<string, Promise<void>>();
   const answered = new Map<string, PlannedWorkout | null>();
+  const latestChoice = new Map<string, number>();
   const sleepers = new Set<() => void>();
   let epoch = 0;
   const listeners = new Set<() => void>();
@@ -171,6 +184,7 @@ export function createCalendarWrites({
 
   function settleCaches() {
     void queryClient.invalidateQueries({ queryKey: calendarKey });
+    void queryClient.invalidateQueries({ queryKey: ["planned"] });
   }
 
   async function sendWithRetries(
@@ -207,7 +221,13 @@ export function createCalendarWrites({
 
   function run(write: Write): Promise<void> {
     seq += 1;
-    const entry: Pending = { seq, id: write.base.id, base: write.base, apply: write.apply };
+    const entry: Pending = {
+      seq,
+      id: write.base.id,
+      base: write.base,
+      apply: write.apply,
+      ...(write.choice ? { choice: write.choice } : {}),
+    };
     pending = [...pending, entry];
     changed();
     const updatedAt = stamp();
@@ -220,6 +240,10 @@ export function createCalendarWrites({
         await remember(outcome.result);
         const result = outcome.result;
         answered.set(entry.id, "deletedAt" in result ? null : result);
+        if (entry.choice) {
+          const { activityId } = entry.choice;
+          latestChoice.set(activityId, Math.max(latestChoice.get(activityId) ?? 0, entry.seq));
+        }
         if (!("deletedAt" in result) && write.won && !write.won(result) && write.retry) {
           notify({
             kind: "overruled",
@@ -249,6 +273,11 @@ export function createCalendarWrites({
       }
       pending = pending.filter((held) => held !== entry);
       if (!pending.some((held) => held.id === entry.id)) answered.delete(entry.id);
+      for (const activityId of latestChoice.keys()) {
+        if (!pending.some((held) => held.choice?.activityId === activityId)) {
+          latestChoice.delete(activityId);
+        }
+      }
       changed();
       settleCaches();
     });
@@ -271,10 +300,30 @@ export function createCalendarWrites({
 
     view(range: CalendarRange): CalendarRange {
       const ids = [...new Set(pending.map((entry) => entry.id))];
-      return ids.reduce((current, id) => {
+      const folded = ids.reduce((current, id) => {
         const next = writes.viewItem(findPlanned(current, id), id, current.today);
         return next ? withPlanned(current, next) : withoutPlanned(current, id);
       }, range);
+      return pending.reduce((current, { seq, id, base, choice }) => {
+        const chooser = choice && findPlanned(current, id);
+        if (!choice || !chooser || chooser.day !== base.day) return current;
+        const { activityId, paired } = choice;
+        const overtaken = (latestChoice.get(activityId) ?? 0) > seq;
+        if (!paired || overtaken) {
+          if (overtaken && !paired) return current;
+          return chooser.pairing?.activityId === activityId
+            ? withPlanned(current, pairedAs(chooser, null, current.today))
+            : current;
+        }
+        const day = current.days.find((held) => held.day === chooser.day);
+        const displaced = (day?.planned ?? []).filter(
+          (other) => other.id !== id && other.pairing?.activityId === activityId,
+        );
+        return displaced.reduce(
+          (next, other) => withPlanned(next, pairedAs(other, null, next.today)),
+          withPlanned(current, pairedAs(chooser, activityId, current.today)),
+        );
+      }, folded);
     },
 
     viewItem(item: PlannedWorkout | null, id: string, today: string): PlannedWorkout | null {
@@ -292,6 +341,7 @@ export function createCalendarWrites({
       pending = [];
       notices = [];
       answered.clear();
+      latestChoice.clear();
       tails.clear();
       for (const wake of sleepers) wake();
       changed();
@@ -351,6 +401,31 @@ export function createCalendarWrites({
         send: (updatedAt) => api.plannedWorkouts.skip({ id: item.id, skipped, updatedAt }),
         won: (result) => sameSkip(result.skipped, skipped),
         retry: () => void writes.skip(item, skipped),
+      });
+    },
+
+    pair(item: PlannedWorkout, activityId: string): Promise<void> {
+      return run({
+        kind: "pair",
+        base: item,
+        apply: (current, today) => pairedAs(current, activityId, today),
+        send: (updatedAt) => api.plannedWorkouts.pair({ id: item.id, activityId, updatedAt }),
+        won: (result) => result.pairing?.activityId === activityId,
+        retry: () => void writes.pair(item, activityId),
+        choice: { activityId, paired: true },
+      });
+    },
+
+    unpair(item: PlannedWorkout, activityId: string): Promise<void> {
+      return run({
+        kind: "unpair",
+        base: item,
+        apply: (current, today) =>
+          current.pairing?.activityId === activityId ? pairedAs(current, null, today) : current,
+        send: (updatedAt) => api.plannedWorkouts.unpair({ id: item.id, activityId, updatedAt }),
+        won: (result) => result.pairing?.activityId !== activityId,
+        retry: () => void writes.unpair(item, activityId),
+        choice: { activityId, paired: false },
       });
     },
 
