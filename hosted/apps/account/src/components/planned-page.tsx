@@ -17,6 +17,7 @@ import { formatHours, formatLoad } from "../lib/statistics";
 import { todayIn } from "../lib/time-zone";
 import { formatMeters, overviewOf, sportNames } from "../lib/workout-profile";
 import { CalendarIcon } from "./calendar-icons";
+import { Notices } from "./calendar-page";
 import { calendarWrites, usePlanned, useReferenceOn, useWritesVersion } from "./calendar-data";
 import { CopyDialog, DeleteDialog, SkipDialog } from "./calendar-dialogs";
 import { SportIcon } from "./sport-icon";
@@ -39,6 +40,7 @@ function Frame({ day, children }: { day: string | null; children: ReactNode }) {
   return (
     <main className="content detail planned-detail">
       <CalendarBack day={day} />
+      <Notices />
       {children}
     </main>
   );
@@ -54,8 +56,9 @@ function usePlannedItem(id: string) {
   const settings = useAthleteSettings();
   const today = todayIn(settings.data?.timeZone ?? null);
   useWritesVersion();
-  const item = valid ? calendarWrites.viewItem(query.data ?? null, id, today) : null;
-  const gone = !valid || isGone(query.error) || (query.data !== undefined && item === null);
+  const deleted = !valid || isGone(query.error);
+  const item = deleted ? null : calendarWrites.viewItem(query.data ?? null, id, today);
+  const gone = deleted || (query.data !== undefined && item === null);
   return { item, query, gone };
 }
 

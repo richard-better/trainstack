@@ -318,7 +318,7 @@ function Legend() {
   );
 }
 
-function Notices() {
+export function Notices() {
   useWritesVersion();
   const notices = calendarWrites.notices();
   const retrying = calendarWrites.retrying();
