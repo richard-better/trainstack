@@ -86,4 +86,13 @@ struct SettingWireTests {
     #expect(SettingDay(lateEveningInLondon, calendar: tokyo).text == "2026-11-14")
     #expect(SettingDay("2026-11-14")!.date(in: tokyo) == tokyo.startOfDay(for: lateEveningInLondon))
   }
+
+  @Test func namesDaysInTheGregorianCalendarWhateverCalendarTheRiderUses() throws {
+    var buddhist = Calendar(identifier: .buddhist)
+    buddhist.timeZone = TimeZone(identifier: "Asia/Bangkok")!
+    let noonInBangkok = Date(timeIntervalSince1970: 1_794_636_000)
+    let day = SettingDay(noonInBangkok, calendar: buddhist)
+    #expect(day.text == "2026-11-14")
+    #expect(day.date(in: buddhist) == buddhist.startOfDay(for: noonInBangkok))
+  }
 }

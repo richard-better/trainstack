@@ -17,15 +17,23 @@ public struct SettingDay: Hashable, Comparable, Codable, Sendable {
   }
 
   public init(_ date: Date, calendar: Calendar = .current) {
-    let components = calendar.dateComponents([.year, .month, .day], from: date)
+    let components = Self.gregorian(in: calendar).dateComponents(
+      [.year, .month, .day], from: date)
     year = components.year ?? 1970
     month = components.month ?? 1
     day = components.day ?? 1
   }
 
   public func date(in calendar: Calendar = .current) -> Date {
-    calendar.date(from: DateComponents(year: year, month: month, day: day))
-      .map(calendar.startOfDay(for:)) ?? .distantPast
+    let gregorian = Self.gregorian(in: calendar)
+    return gregorian.date(from: DateComponents(year: year, month: month, day: day))
+      .map(gregorian.startOfDay(for:)) ?? .distantPast
+  }
+
+  private static func gregorian(in calendar: Calendar) -> Calendar {
+    var gregorian = Calendar(identifier: .gregorian)
+    gregorian.timeZone = calendar.timeZone
+    return gregorian
   }
 
   public var text: String {
