@@ -49,9 +49,10 @@ injury then set the level no better than they allow.
 For each of the five ratings the athlete gave (sleep, energy, soreness, stress, mood):
 
 - **Usual** is the mean of that rating over the 28 days before, from at least 7 check-ins, leaving
-  out days marked ill, rounded to the nearest anchor (a half rounds up). Rounding keeps a
-  fraction from deciding the weight: without it, a second bad day in a row lowers the mean just
-  enough that the same answers no longer count as below usual. With fewer, usual is 3, the scale's "Normal": the check-in's scale is
+  out days marked ill, rounded to the nearest anchor (a half rounds up). Without rounding, a
+  second bad day in a row lowers the mean just enough that the same answers no longer count as
+  below usual. Rounding stops that drift from deciding the weight, except where the mean sits
+  near a half: half 3s and half 4s make 3.5, which rounds to 4, and one more 3 tips it to 3. With fewer, usual is 3, the scale's "Normal": the check-in's scale is
   anchored on the athlete's own normal, so it is a fair fallback, but a person who habitually
   answers 4 reads better against their own mean. Comparing with the athlete's own recent normal
   rather than a population is how wellness questionnaires are meant to be read (McLean and others
