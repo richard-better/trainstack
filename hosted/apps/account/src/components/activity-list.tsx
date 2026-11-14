@@ -4,18 +4,21 @@ import { Link } from "@tanstack/react-router";
 
 import { activitiesQueryKey, api } from "../api";
 import { ACTIVITIES_PER_PAGE } from "../lib/client";
-import { analysisRefreshMs, analysisState } from "../lib/analysis";
+import {
+  analysisRefreshMs,
+  analysisState,
+  analysisUpdating,
+  anyAnalysisDue,
+} from "../lib/analysis";
 import { activityWeeks, type WeekTotals } from "../lib/activity-weeks";
 import { activityDate, weekLabel } from "../lib/dates";
 import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
-import { useSettingsChangedRecently } from "./settings-data";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
 
 export function ActivityList() {
-  const settling = useSettingsChangedRecently();
   const activities = useInfiniteQuery({
     queryKey: activitiesQueryKey,
     queryFn: ({ pageParam }) =>
@@ -24,11 +27,7 @@ export function ActivityList() {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     refetchInterval: (query) =>
       analysisRefreshMs(
-        settling ||
-          (query.state.data?.pages.some((page) =>
-            page.activities.some((activity) => analysisState(activity).kind === "pending"),
-          ) ??
-            false),
+        query.state.data?.pages.some((page) => anyAnalysisDue(page.activities)) ?? false,
       ),
   });
 
@@ -170,7 +169,10 @@ function ActivityRow({ activity }: { activity: Activity }) {
           {load !== undefined ? (
             <div>
               <dt>Load</dt>
-              <dd>{formatLoad(load)}</dd>
+              <dd>
+                {formatLoad(load)}
+                {analysisUpdating(activity) && <span className="unit"> updating</span>}
+              </dd>
             </div>
           ) : (
             analysing && (

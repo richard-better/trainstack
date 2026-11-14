@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { thresholdPrompt } from "../hosted/apps/account/src/lib/analysis.ts";
+import {
+  ANALYSIS_POLL_MS,
+  ANALYSIS_REFRESH_MS,
+  analysisRefreshMs,
+  thresholdPrompt,
+} from "../hosted/apps/account/src/lib/analysis.ts";
 import { timeZoneName, todayIn } from "../hosted/apps/account/src/lib/time-zone.ts";
 import {
   bestsPeriod,
@@ -102,6 +107,34 @@ test("the Training page reads today's fitness, fatigue and form, counting a work
   assert.equal(summary.zone.key, formZoneOf(summary.day.form).key);
   const weekAgo = days.find(({ day }) => day === "2026-10-27");
   assert.ok(Math.abs(summary.ramp - (summary.day.fitness - weekAgo.fitness)) < 1e-9);
+});
+
+test("the load and bests poll while their analyses are due, and settle when the server says they are final", async () => {
+  const client = await athlete();
+  await client.settings.write({ writes: [ftp("2026-01-01", 250)] });
+  await client.activities.upload(ride("2026-10-20"));
+  const window = { from: "2026-10-01", through: "2026-11-01" };
+  const due = async () => [
+    (await client.training.load(window)).analysesDue,
+    (await client.training.bests({ from: window.from, sport: "cycling" })).analysesDue,
+  ];
+
+  assert.deepEqual(await due(), [1, 1], "a new upload is not analysed yet");
+  assert.equal(analysisRefreshMs(true), ANALYSIS_POLL_MS);
+  await runCronUntilAnalysed();
+  assert.deepEqual(await due(), [0, 0]);
+  assert.equal(analysisRefreshMs(false), ANALYSIS_REFRESH_MS);
+  const before = (await client.training.load(window)).days.find(({ day }) => day === "2026-10-20");
+
+  await client.settings.write({ writes: [ftp("2026-01-01", 300)] });
+  assert.deepEqual(await due(), [1, 1], "a threshold change makes the numbers due again");
+  await runCronUntilAnalysed();
+  assert.deepEqual(await due(), [0, 0]);
+  const after = (await client.training.load(window)).days.find(({ day }) => day === "2026-10-20");
+  assert.ok(
+    after.stress < before.stress,
+    `${after.stress} after a higher FTP, ${before.stress} before`,
+  );
 });
 
 test("an athlete with activities but no thresholds sees no load, and what to set", async () => {

@@ -1,10 +1,9 @@
 import { ORPCError } from "@orpc/client";
 import type { SettingWrite } from "@trainstack/contract";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 
 import { activitiesQueryKey, api, queryClient } from "../api";
-import { ANALYSIS_POLL_MS } from "../lib/analysis";
 import {
   changeSummary,
   type Overruled,
@@ -21,22 +20,6 @@ export function useSettingsHistory() {
     staleTime: 5_000,
     refetchOnWindowFocus: true,
   });
-}
-
-export const SETTLING_MS = 3 * 60_000;
-
-export function useSettingsChangedRecently() {
-  const history = useSettingsHistory();
-  const changes = [...(history.data?.entries ?? []), ...(history.data?.removed ?? [])];
-  const latest = Math.max(0, ...changes.map((change) => change.updatedAt.getTime()));
-  const [now, setNow] = useState(() => Date.now());
-  const settling = now - latest < SETTLING_MS;
-  useEffect(() => {
-    if (!settling) return;
-    const timer = setTimeout(() => setNow(Date.now()), ANALYSIS_POLL_MS);
-    return () => clearTimeout(timer);
-  }, [settling, now]);
-  return settling;
 }
 
 async function refreshAnalysis() {

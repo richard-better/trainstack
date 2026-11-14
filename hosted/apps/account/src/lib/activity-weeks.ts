@@ -3,10 +3,7 @@ import type { Activity } from "@trainstack/contract";
 import { byWeek } from "./dates.ts";
 import { localDay } from "./settings.ts";
 
-type Listed = Pick<
-  Activity,
-  "localDay" | "startedAt" | "createdAt" | "statistics" | "analyzedAt" | "analysisError" | "file"
->;
+type Listed = Pick<Activity, "localDay" | "startedAt" | "createdAt" | "statistics" | "analysisDue">;
 
 export const dayOfActivity = (activity: Pick<Activity, "localDay" | "startedAt" | "createdAt">) =>
   activity.localDay ?? localDay(activity.startedAt ?? activity.createdAt);
@@ -25,15 +22,14 @@ export function weekTotals(activities: readonly Listed[]): WeekTotals {
   let load = 0;
   let scored = 0;
   let pending = 0;
-  for (const { statistics, analyzedAt, analysisError, file } of activities) {
+  for (const { statistics, analysisDue } of activities) {
     seconds += statistics.timer_s ?? statistics.elapsed_s ?? 0;
     metres += statistics.distance_m ?? 0;
     if (statistics.load_tss !== undefined) {
       load += statistics.load_tss;
       scored += 1;
-    } else if (analyzedAt === null && analysisError === null && file !== null) {
-      pending += 1;
     }
+    if (analysisDue) pending += 1;
   }
   return { seconds, metres, load, scored, pending };
 }

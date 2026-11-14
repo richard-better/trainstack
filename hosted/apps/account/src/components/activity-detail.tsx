@@ -17,6 +17,7 @@ import {
   analysisErrorText,
   settingsScopeOf,
   analysisState,
+  analysisUpdating,
   effortFigures,
   lapsFromEvents,
   loadOf,
@@ -42,7 +43,7 @@ import {
 } from "../lib/statistics";
 import { deletingSource } from "../lib/workouts";
 import { ActivityBests } from "./activity-bests";
-import { useSettingsChangedRecently, useSettingsHistory } from "./settings-data";
+import { useSettingsHistory } from "./settings-data";
 import { SportIcon } from "./sport-icon";
 import { TimeInZones } from "./time-in-zones";
 import { Traces } from "./traces";
@@ -54,17 +55,12 @@ const refused = (error: Error) => error instanceof ORPCError && error.status < 5
 
 export function ActivityPage({ id }: { id: string }) {
   const valid = activityIdSchema.safeParse(id).success;
-  const settling = useSettingsChangedRecently();
   const detail = useQuery({
     queryKey: activityKey(id),
     queryFn: () => api.activities.get({ id }),
     enabled: valid,
     retry: (failures, error) => !refused(error) && failures < 2,
-    refetchInterval: (query) =>
-      analysisRefreshMs(
-        settling ||
-          (query.state.data !== undefined && analysisState(query.state.data).kind === "pending"),
-      ),
+    refetchInterval: (query) => analysisRefreshMs(query.state.data?.analysisDue ?? false),
   });
 
   if (
@@ -296,6 +292,11 @@ function Effort({ activity, sport }: { activity: ActivityDetail; sport: string |
         <p className="lede analysing-note" role="status">
           Trainstack is analysing this {noun}. Its load, bests and stored zones appear here within a
           minute.
+        </p>
+      )}
+      {analysisUpdating(activity) && (
+        <p className="updating-note" role="status">
+          Updating. These numbers may change in a moment.
         </p>
       )}
       {state.kind === "failed" && (
