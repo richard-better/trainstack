@@ -168,9 +168,11 @@ stage: it is the only one that puts the Workers on your domain. Other stages use
 addresses, where the web app and API are different sites, so browsers that block third-party
 cookies do not keep the session.
 
-Add the secret and the Apple key without printing them anywhere but the file:
+The file holds secrets, so make it readable only by you, then add the secret and the Apple key
+without printing them anywhere but the file:
 
 ```bash
+touch hosted/infra/.env && chmod 600 hosted/infra/.env
 printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -base64 48)" >> hosted/infra/.env
 { printf 'APPLE_SIGN_IN_PRIVATE_KEY="'; cat AuthKey_ABCDE12345.p8; printf '"\n'; } >> hosted/infra/.env
 ```
@@ -299,6 +301,12 @@ two copies are not one snapshot: an activity uploaded or deleted between them ca
 without its file. Take them while nobody is uploading or deleting, which on an instance of your
 own is easy to arrange.
 
+Keep `BETTER_AUTH_SECRET` too, somewhere safe outside the machine, such as a password manager. The
+database's Strava and Apple tokens are encrypted with a key derived from it. A database restored
+under a different secret still works, but everyone is signed out, Strava connections stop working
+until you clear them with `DELETE FROM strava_connection` and athletes connect again, and deleting
+an account can no longer revoke what Apple granted.
+
 The commands use Wrangler, Cloudflare's CLI, through `bunx`. It reads `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN` from the environment, not from `hosted/infra/.env`, so export them in the
 shell first; the token above is enough. Set `DB` to the database name the deploy printed.
@@ -355,13 +363,9 @@ the revision of TrainStack that made it, and upgrade afterwards.
 
 R2 has no history of its own, so copy the bucket. [rclone](https://rclone.org) does it through
 R2's S3 API. Create an R2 API token with **Object Read & Write** on the bucket under **R2 >
-Manage API tokens**, and configure a remote:
-
-```bash
-rclone config create r2 s3 provider=Cloudflare \
-  access_key_id=<access key id> secret_access_key=<secret access key> \
-  endpoint=https://<account id>.r2.cloudflarestorage.com
-```
+Manage API tokens**. Then run `rclone config` and add a remote named `r2` at its prompts, so the
+keys stay out of your shell history: storage `s3`, provider `Cloudflare`, the token's access key
+ID and secret access key, and the endpoint `https://<account id>.r2.cloudflarestorage.com`.
 
 Set `BUCKET` to the bucket name the deploy printed. Back up with
 
