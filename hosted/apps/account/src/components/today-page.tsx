@@ -17,6 +17,7 @@ import {
 import { formatHours, formatLoad } from "../lib/statistics";
 import { todayIn } from "../lib/time-zone";
 import { calendarWrites, useCalendar } from "./calendar-data";
+import { Notices } from "./calendar-page";
 import { CheckInForm } from "./check-in-form";
 import { useCheckInOn } from "./check-in-data";
 import { ReadinessSummary, useReadiness } from "./readiness";
@@ -36,6 +37,7 @@ export function TodayPage() {
         <h1 className="page-title">Today</h1>
         {ready && <p className="today-date">{dayInFull(today)}</p>}
       </div>
+      <Notices />
       <div className="today-grid">
         <div className="today-readiness">
           {settings.isError && !ready ? (

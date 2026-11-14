@@ -181,12 +181,12 @@ export function createCalendarWrites({
       );
       queryClient.setQueryData(plannedKey(result.id), result);
     }
+    void queryClient.invalidateQueries({ queryKey: readinessKey });
   }
 
   function settleCaches() {
     void queryClient.invalidateQueries({ queryKey: calendarKey });
     void queryClient.invalidateQueries({ queryKey: ["planned"] });
-    void queryClient.invalidateQueries({ queryKey: readinessKey });
   }
 
   async function sendWithRetries(

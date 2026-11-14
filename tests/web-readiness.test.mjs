@@ -283,6 +283,25 @@ test("a change to the calendar makes the readiness on screen stale, so it is rea
   await writes.settled();
   assert.equal(queryClient.getQueryState(key).isInvalidated, true);
   assert.deepEqual(key.slice(0, 1), [...readinessKey]);
+
+  await queryClient.fetchQuery({
+    queryKey: key,
+    queryFn: () => client.readiness.range({ from: today, through: today }),
+  });
+  assert.equal(queryClient.getQueryState(key).isInvalidated, false);
+  const edited = await client.plannedWorkouts.put({
+    id: hard.id,
+    day: today,
+    position: 1,
+    content: threshold(30),
+    updatedAt: new Date(),
+  });
+  await writes.remember(edited);
+  assert.equal(
+    queryClient.getQueryState(key).isInvalidated,
+    true,
+    "a save from the editor, which the page remembers, makes readiness stale too",
+  );
 });
 
 test("an easy swap goes after its session even when another shares its position", () => {
