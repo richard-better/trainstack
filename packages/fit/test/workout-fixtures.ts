@@ -201,11 +201,33 @@ function webTool(
   return writer.file();
 }
 
+type Group = {
+  global: number;
+  fields: readonly (readonly [number, FieldSpec["type"]] | readonly [number, "string", number])[];
+  rows: readonly (readonly (number | string | null)[])[];
+};
+
+function laidOut(
+  groups: readonly Group[],
+  { bigEndian = false, headerSize = 14 }: { bigEndian?: boolean; headerSize?: 12 | 14 } = {},
+): Uint8Array {
+  const writer = new FitWriter();
+  for (const group of groups) {
+    const fields = group.fields.map(([number, type, size]) =>
+      size === undefined ? { number, type } : { number, type, size },
+    );
+    writer.define(0, group.global, fields, { bigEndian });
+    for (const row of group.rows) writer.data(0, row);
+  }
+  return writer.file({ headerSize });
+}
+
 const minutes = (count: number) => count * 60_000;
 const watts = (value: number) => value + 1000;
 const bpm = (value: number) => value + 100;
 const metres = (value: number) => value * 100;
 const development = 255;
+const invalid32 = 0xffffffff;
 
 export const workoutFixtures = {
   "garmin-connect-run-intervals.fit": () =>
@@ -490,6 +512,499 @@ export const workoutFixtures = {
         },
       ],
       { bigEndian: true },
+    ),
+  "garmin-connect-lap-intervals.fit": () =>
+    laidOut(
+      [
+        {
+          global: 0,
+          fields: [
+            [0, "enum"],
+            [1, "uint16"],
+            [2, "uint16"],
+            [4, "uint32"],
+            [3, "uint32z"],
+          ],
+          rows: [[5, 1, 65534, fitTime("2026-10-12T06:40:00Z"), 1_677_000_123]],
+        },
+        {
+          global: 49,
+          fields: [
+            [1, "uint8"],
+            [0, "uint16"],
+          ],
+          rows: [[0, 2210]],
+        },
+        {
+          global: 26,
+          fields: [
+            [8, "string", 28],
+            [17, "string", 64],
+            [4, "enum"],
+            [11, "enum"],
+            [5, "uint32z"],
+            [6, "uint16"],
+            [254, "uint16"],
+          ],
+          rows: [
+            [
+              "Threshold 4 x 5 min, on lap",
+              "Warm up, then press lap to start each interval.",
+              2,
+              0,
+              32,
+              9,
+              0,
+            ],
+          ],
+        },
+        {
+          global: 27,
+          fields: [
+            [254, "uint16"],
+            [7, "enum"],
+            [3, "enum"],
+            [4, "uint32"],
+            [19, "enum"],
+            [20, "uint32"],
+            [1, "enum"],
+            [2, "uint32"],
+          ],
+          rows: [
+            [0, Intensity.warmup, Target.heartRate, 2, 255, 0, Duration.time, minutes(5)],
+            [1, Intensity.warmup, Target.heartRate, 3, 255, 0, Duration.time, minutes(5)],
+            [2, Intensity.warmup, Target.heartRate, 4, 255, 0, Duration.time, minutes(5)],
+            [3, Intensity.warmup, Target.heartRate, 1, 255, 0, Duration.time, minutes(2)],
+            [4, Intensity.active, Target.heartRate, 2, 255, 0, Duration.open, invalid32],
+            [5, Intensity.active, Target.heartRate, 4, 255, 0, Duration.time, minutes(5)],
+          ],
+        },
+        {
+          global: 27,
+          fields: [
+            [254, "uint16"],
+            [7, "enum"],
+            [3, "enum"],
+            [4, "uint32"],
+            [19, "enum"],
+            [20, "uint32"],
+            [1, "enum"],
+            [8, "string", 40],
+          ],
+          rows: [
+            [
+              6,
+              Intensity.recovery,
+              Target.heartRate,
+              2,
+              255,
+              0,
+              Duration.open,
+              "Recover as long as you need, then lap.",
+            ],
+          ],
+        },
+        {
+          global: 27,
+          fields: [
+            [1, "enum"],
+            [4, "uint32"],
+            [254, "uint16"],
+            [2, "uint32"],
+          ],
+          rows: [[Duration.repeatUntilStepsCmplt, 4, 7, 5]],
+        },
+        {
+          global: 27,
+          fields: [
+            [254, "uint16"],
+            [7, "enum"],
+            [3, "enum"],
+            [4, "uint32"],
+            [19, "enum"],
+            [20, "uint32"],
+            [1, "enum"],
+          ],
+          rows: [[8, Intensity.active, Target.heartRate, 2, 255, 0, Duration.open]],
+        },
+      ],
+      { bigEndian: true },
+    ),
+  "trainerroad-lap.fit": () => {
+    const stepFields = (notes: number, withValue: boolean): Group["fields"] => [
+      [254, "uint16"],
+      [7, "enum"],
+      [1, "enum"],
+      ...(withValue ? ([[2, "uint32"]] as const) : []),
+      [3, "enum"],
+      [4, "uint32"],
+      [6, "uint32"],
+      [5, "uint32"],
+      [8, "string", notes],
+    ];
+    const step = (
+      index: number,
+      intensity: number,
+      duration: number,
+      value: number | undefined,
+      low: number,
+      high: number,
+      notes: string,
+    ): Group => ({
+      global: 27,
+      fields: stepFields(notes.length + 1, value !== undefined),
+      rows: [
+        [
+          index,
+          intensity,
+          duration,
+          ...(value !== undefined ? [value] : []),
+          10,
+          0,
+          watts(high),
+          watts(low),
+          notes,
+        ],
+      ],
+    });
+    return laidOut([
+      {
+        global: 0,
+        fields: [
+          [0, "enum"],
+          [1, "uint16"],
+          [2, "uint16"],
+          [3, "uint32z"],
+          [4, "uint32"],
+        ],
+        rows: [[5, 281, 1, 812_345, fitTime("2026-09-20T17:00:00Z")]],
+      },
+      {
+        global: 26,
+        fields: [
+          [6, "uint16"],
+          [4, "enum"],
+          [8, "string", 5],
+          [5, "uint32z"],
+        ],
+        rows: [[5, 2, "Pine", 2048]],
+      },
+      step(0, Intensity.warmup, Duration.time, minutes(10), 150, 195, "Ten minutes to warm up."),
+      step(1, Intensity.rest, Duration.open, undefined, 1, 150, "Press lap when ready to start."),
+      step(2, Intensity.active, Duration.time, minutes(40), 195, 225, "Forty minutes steady."),
+      step(3, Intensity.cooldown, Duration.time, minutes(5), 1, 150, "Five minutes easy."),
+      step(4, Intensity.cooldown, Duration.open, invalid32, 1, 150, "Press lap to finish."),
+    ]);
+  },
+  "trainingpeaks-lap-bike.fit": () => {
+    const stepFields = (name: number): Group["fields"] => [
+      [0, "string", name],
+      [2, "uint32"],
+      [3, "enum"],
+      [4, "uint32"],
+      [5, "uint32"],
+      [6, "uint32"],
+      [7, "enum"],
+      [19, "enum"],
+      [20, "uint32"],
+      [21, "uint32"],
+      [22, "uint32"],
+      [254, "uint16"],
+      [1, "enum"],
+    ];
+    const none = [255, invalid32, invalid32, invalid32] as const;
+    return laidOut([
+      {
+        global: 0,
+        fields: [
+          [0, "enum"],
+          [1, "uint16"],
+          [2, "uint16"],
+          [3, "uint32z"],
+          [4, "uint32"],
+        ],
+        rows: [[5, 28, 0, 2_301_234_567, fitTime("2026-08-03T05:30:00Z")]],
+      },
+      { global: 49, fields: [[0, "uint16"]], rows: [[0]] },
+      {
+        global: 27,
+        fields: stepFields(8),
+        rows: [
+          [
+            "Warm up",
+            invalid32,
+            Target.power,
+            0,
+            watts(110),
+            watts(130),
+            Intensity.warmup,
+            ...none,
+            0,
+            Duration.open,
+          ],
+          [
+            "Hard",
+            minutes(6),
+            Target.power,
+            0,
+            watts(240),
+            watts(260),
+            Intensity.active,
+            Target.cadence,
+            0,
+            95,
+            105,
+            1,
+            Duration.time,
+          ],
+          [
+            "Easy",
+            minutes(3),
+            Target.power,
+            0,
+            watts(120),
+            watts(140),
+            Intensity.rest,
+            ...none,
+            2,
+            Duration.time,
+          ],
+        ],
+      },
+      {
+        global: 27,
+        fields: stepFields(9),
+        rows: [
+          ["", 1, 255, 4, invalid32, invalid32, 255, ...none, 3, Duration.repeatUntilStepsCmplt],
+        ],
+      },
+      {
+        global: 27,
+        fields: stepFields(10),
+        rows: [
+          [
+            "Cool Down",
+            minutes(10),
+            Target.power,
+            0,
+            watts(110),
+            watts(130),
+            Intensity.cooldown,
+            ...none,
+            4,
+            Duration.time,
+          ],
+          [
+            "",
+            invalid32,
+            255,
+            invalid32,
+            invalid32,
+            invalid32,
+            Intensity.cooldown,
+            ...none,
+            5,
+            Duration.open,
+          ],
+        ],
+      },
+      {
+        global: 26,
+        fields: [
+          [4, "enum"],
+          [8, "string", 12],
+          [6, "uint16"],
+        ],
+        rows: [[2, "Lap to cool", 6]],
+      },
+    ]);
+  },
+  "trainingpeaks-lap-heart-rate.fit": () => {
+    const stepFields = (name: number): Group["fields"] => [
+      [0, "string", name],
+      [2, "uint32"],
+      [3, "enum"],
+      [4, "uint32"],
+      [5, "uint32"],
+      [6, "uint32"],
+      [7, "enum"],
+      [254, "uint16"],
+      [1, "enum"],
+    ];
+    return laidOut([
+      {
+        global: 0,
+        fields: [
+          [0, "enum"],
+          [1, "uint16"],
+          [2, "uint16"],
+          [3, "uint32z"],
+          [4, "uint32"],
+        ],
+        rows: [[5, 28, 0, 2_023_176_670, fitTime("2026-08-04T05:30:00Z")]],
+      },
+      { global: 49, fields: [[0, "uint16"]], rows: [[0]] },
+      {
+        global: 27,
+        fields: stepFields(7),
+        rows: [
+          [
+            "Active",
+            minutes(10),
+            Target.heartRate,
+            0,
+            bpm(140),
+            bpm(160),
+            Intensity.active,
+            0,
+            Duration.time,
+          ],
+        ],
+      },
+      {
+        global: 27,
+        fields: stepFields(14),
+        rows: [
+          [
+            "",
+            invalid32,
+            255,
+            invalid32,
+            invalid32,
+            invalid32,
+            Intensity.cooldown,
+            1,
+            Duration.open,
+          ],
+        ],
+      },
+      {
+        global: 26,
+        fields: [
+          [4, "enum"],
+          [8, "string", 21],
+          [6, "uint16"],
+        ],
+        rows: [[2, "Heart rate, then lap", 2]],
+      },
+    ]);
+  },
+  "zwo-converter-bike-lap.fit": () =>
+    laidOut(
+      [
+        {
+          global: 0,
+          fields: [
+            [0, "enum"],
+            [1, "uint16"],
+            [2, "uint16"],
+            [3, "uint32z"],
+            [4, "uint32"],
+          ],
+          rows: [[5, 1, 0, 305_419_896, fitTime("2026-09-01T12:00:00Z")]],
+        },
+        {
+          global: 26,
+          fields: [
+            [4, "enum"],
+            [5, "uint32z"],
+            [6, "uint16"],
+          ],
+          rows: [[2, 32, 5]],
+        },
+        {
+          global: 27,
+          fields: [
+            [254, "uint16"],
+            [1, "enum"],
+            [2, "uint32"],
+            [3, "enum"],
+            [4, "uint32"],
+            [5, "uint32"],
+            [6, "uint32"],
+            [7, "enum"],
+          ],
+          rows: [
+            [0, Duration.open, 0, Target.power, 0, watts(114), watts(126), Intensity.warmup],
+            [
+              1,
+              Duration.time,
+              minutes(2),
+              Target.power,
+              0,
+              watts(251),
+              watts(277),
+              Intensity.active,
+            ],
+            [2, Duration.time, minutes(2), Target.power, 0, watts(125), watts(139), Intensity.rest],
+            [
+              3,
+              Duration.time,
+              minutes(2),
+              Target.power,
+              0,
+              watts(251),
+              watts(277),
+              Intensity.active,
+            ],
+            [
+              4,
+              Duration.time,
+              minutes(10),
+              Target.power,
+              0,
+              watts(125),
+              watts(164),
+              Intensity.cooldown,
+            ],
+          ],
+        },
+      ],
+      { headerSize: 12 },
+    ),
+  "zwo-converter-run-lap.fit": () =>
+    laidOut(
+      [
+        {
+          global: 0,
+          fields: [
+            [0, "enum"],
+            [1, "uint16"],
+            [2, "uint16"],
+            [3, "uint32z"],
+            [4, "uint32"],
+          ],
+          rows: [[5, 1, 0, 305_419_896, fitTime("2026-09-02T12:00:00Z")]],
+        },
+        {
+          global: 26,
+          fields: [
+            [4, "enum"],
+            [5, "uint32z"],
+            [6, "uint16"],
+          ],
+          rows: [[1, 32, 5]],
+        },
+        {
+          global: 27,
+          fields: [
+            [254, "uint16"],
+            [1, "enum"],
+            [2, "uint32"],
+            [3, "enum"],
+            [4, "uint32"],
+            [7, "enum"],
+          ],
+          rows: [
+            [0, Duration.open, 0, Target.heartRate, 1, Intensity.warmup],
+            [1, Duration.time, minutes(20), Target.heartRate, 2, Intensity.active],
+            [2, Duration.time, 20_000, Target.heartRate, 5, Intensity.active],
+            [3, Duration.time, minutes(1), Target.heartRate, 2, Intensity.rest],
+            [4, Duration.time, minutes(5), Target.heartRate, 2, Intensity.cooldown],
+          ],
+        },
+      ],
+      { headerSize: 12 },
     ),
 } satisfies Record<string, () => Uint8Array>;
 
