@@ -2,6 +2,12 @@
 
 Use Scoped Commits format for every PR title and commit in its branch: `<scope>: <short description>`, where the scope names the affected area, such as `agents`, `web`, or `db`. For changes spanning areas, use their common parent scope or a comma-separated list of scopes.
 
+## The product name
+
+The product is "Trainstack", with one capital, in prose, strings and identifiers alike.
+`tests/product-name.test.mjs` fails on any other spelling in a tracked file. Lowercase
+`trainstack` stays where it already is: package names, bundle ids, domains and other identifiers.
+
 ## No comments in code
 
 Code has no comments. If code needs explaining, give it a better name or a type, or pin the
