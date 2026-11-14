@@ -166,3 +166,30 @@ export function recordsAtOneMoment(count, startIso = "2026-09-03T06:00:00Z") {
   for (let i = 0; i < count; i++) writer.data(0, [start, 200]);
   return writer.file();
 }
+
+export function effortRide({ start, blocks }) {
+  const startTime = fitTime(start);
+  const record = [
+    { number: 253, type: "uint32" },
+    { number: 7, type: "uint16" },
+    { number: 3, type: "uint8" },
+  ];
+  const session = [
+    { number: 253, type: "uint32" },
+    { number: 2, type: "uint32" },
+    { number: 5, type: "enum" },
+    { number: 7, type: "uint32" },
+    { number: 8, type: "uint32" },
+  ];
+  const writer = new FitWriter().define(1, 20, record);
+  let second = 0;
+  for (const { seconds, power, heartRate } of blocks) {
+    for (let index = 0; index < seconds; index++, second++) {
+      writer.data(1, [startTime + second, power, heartRate]);
+    }
+  }
+  return writer
+    .define(2, 18, session)
+    .data(2, [startTime + second, startTime, FIT_SPORTS.cycling, second * 1000, second * 1000])
+    .file();
+}

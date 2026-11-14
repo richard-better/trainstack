@@ -17,6 +17,7 @@ import { forgetSpentStravaBudgets, sweepFilesOfDeletedAccounts } from "./account
 import { analyzeDueActivities } from "./activities/analysis";
 import { summarizeDueActivities } from "./activities/summary";
 import { matchDueActivities } from "./activities/workouts";
+import { detectDueThresholds } from "./thresholds/detection";
 import { createContext } from "./context";
 import { ENV } from "./env.server";
 import { feedbackRoutes } from "./feedback";
@@ -152,12 +153,14 @@ async function summarizeWhatIsDue() {
   const summaries = await summarizeDueActivities(db, ENV.ACTIVITY_FILES);
   const matches = await matchDueActivities(db);
   const analyses = await analyzeDueActivities(db, ENV.ACTIVITY_FILES);
+  const detections = await detectDueThresholds(db);
   const sweeps = await sweepFilesOfDeletedAccounts(ENV, db);
   await forgetSpentStravaBudgets(db);
   for (const failure of [
     ...summaries.failures,
     ...matches.failures,
     ...analyses.failures,
+    ...detections.failures,
     ...sweeps.failures,
   ]) {
     console.error(failure);

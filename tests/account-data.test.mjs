@@ -149,6 +149,36 @@ async function athleteWithEverything(identity) {
     .prepare("INSERT INTO feedback (id, user_id, created_at, issue_number) VALUES (?, ?, ?, 7)")
     .bind(randomUUID(), athlete.userId, Math.floor(Date.now() / 1000))
     .run();
+  const detectedAt = Date.now();
+  const evidence = JSON.stringify([
+    {
+      activityId: athlete.rides[0].id,
+      day: "2026-03-01",
+      statistic: "best_power_1200s_w",
+      value: 280,
+    },
+  ]);
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO threshold_suggestion (user_id, scope, threshold, id, value, method, confidence,
+          activity_id, effort_day, evidence, signals, fingerprint, detected_at)
+        VALUES (?, '', 'ftp', ?, 266, 'twenty_minute', 'medium', ?, '2026-03-01', ?, '[]', ?, ?)`,
+      )
+      .bind(athlete.userId, randomUUID(), athlete.rides[0].id, evidence, evidence, detectedAt),
+    db
+      .prepare(
+        `INSERT INTO threshold_answer (user_id, scope, threshold, fingerprint, value, answer, answered_at)
+        VALUES (?, '', 'max_heart_rate', '[]', 188, 'dismissed', ?)`,
+      )
+      .bind(athlete.userId, detectedAt),
+    db
+      .prepare(
+        `INSERT INTO threshold_detection (user_id, analysed_through, analysed_count, settings_revision, detected_at)
+        VALUES (?, 0, 0, 0, ?)`,
+      )
+      .bind(athlete.userId, detectedAt),
+  ]);
   await webApp.settings.write({
     writes: [
       {
