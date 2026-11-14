@@ -10,6 +10,7 @@ public struct RideCommands: Commands {
     CommandMenu("Controls") {
       item(.togglePause)
       item(.skipInterval)
+      item(.lap)
       Section("Trainer Mode") {
         ForEach(TrainerMode.allCases, id: \.self) { mode in
           Toggle(RideCommand.mode(mode).title(in: launcher), isOn: modeBinding(mode))

@@ -49,6 +49,16 @@ struct RideCommandTests {
     #expect(!RideCommand.skipInterval.isEnabled(in: launcher))
     #expect(RideCommand.togglePause.isEnabled(in: launcher))
     #expect(RideCommand.end.isEnabled(in: launcher))
+    #expect(RideCommand.lap.isEnabled(in: launcher))
+  }
+
+  @Test func theLapKeyMarksALapInTheJournalledRide() throws {
+    let launcher = riding()
+    let ride = try #require(launcher.ride)
+    for _ in 0..<10 { ride.tick(seconds: 1) }
+    RideCommand.lap.perform(in: launcher)
+    #expect(ride.session.lapMarks.map(\.start) == [0, 10])
+    #expect(ride.session.lapMarks.first?.endedBy == .manual)
   }
 
   @Test func nothingIsAvailableWhileConfirmingTheEnd() {
@@ -120,6 +130,6 @@ struct RideCommandTests {
     let symbols = RideCommand.allCases.compactMap { $0.shortcut(playerPresented: true)?.symbols }
     #expect(symbols.count == RideCommand.allCases.count)
     #expect(Set(symbols).count == symbols.count)
-    #expect(symbols == ["Space", "⌘→", "⌘1", "⌘2", "⌘3", "⌘-", "⌘+", "⇧⌘P", "⇧⌘E"])
+    #expect(symbols == ["Space", "⌘→", "⌘L", "⌘1", "⌘2", "⌘3", "⌘-", "⌘+", "⇧⌘P", "⇧⌘E"])
   }
 }

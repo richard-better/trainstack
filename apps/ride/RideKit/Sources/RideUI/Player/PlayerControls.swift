@@ -15,18 +15,20 @@ struct PlayerControls: View {
       .buttonStyle(.glass)
       .keyboardShortcut(pause)
       .help(session.isPaused ? "Resume the ride" : "Pause the ride", shortcut: pause)
-      Button(
-        session.awaitsLap ? "Lap" : "Skip interval",
-        systemImage: session.awaitsLap ? "flag.fill" : "forward.end.fill",
-        action: controller.skipInterval
-      )
-      .labelStyle(.iconOnly)
-      .buttonStyle(.glass)
-      .disabled(session.isComplete)
-      .keyboardShortcut(skip)
-      .help(
-        session.awaitsLap ? "End this step and start the next" : "Skip to the next interval",
-        shortcut: skip)
+      Button("Skip interval", systemImage: "forward.end.fill", action: controller.skipInterval)
+        .labelStyle(.iconOnly)
+        .buttonStyle(.glass)
+        .disabled(session.isComplete)
+        .keyboardShortcut(skip)
+        .help(
+          session.awaitsLap ? "End this step and start the next" : "Skip to the next interval",
+          shortcut: skip)
+      Button("Lap", systemImage: "flag.fill", action: controller.markLap)
+        .labelStyle(.iconOnly)
+        .buttonStyle(.glass)
+        .keyboardShortcut(lap)
+        .help(
+          session.awaitsLap ? "End this step and start the next" : "Mark a lap", shortcut: lap)
     }
     .controlSize(.large)
     #if os(macOS)
@@ -80,6 +82,8 @@ struct PlayerControls: View {
   private var pause: KeyboardShortcut? { RideCommand.togglePause.shortcut(playerPresented: true) }
 
   private var skip: KeyboardShortcut? { RideCommand.skipInterval.shortcut(playerPresented: true) }
+
+  private var lap: KeyboardShortcut? { RideCommand.lap.shortcut(playerPresented: true) }
 
   private var modeHelp: String {
     let keys = TrainerMode.allCases.compactMap { mode in
