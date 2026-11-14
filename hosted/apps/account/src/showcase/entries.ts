@@ -115,6 +115,15 @@ export const showcaseEntries: readonly ShowcaseEntry[] = [
     steps: [{ fill: { FTP: "2000", "Max heart rate": "188" } }, { click: "Save" }],
   },
   {
+    id: "start-offline",
+    screen: "Getting started",
+    title: "The server cannot be reached",
+    route: "/start",
+    world: "newcomer",
+    network: "fails",
+    path: () => "/start",
+  },
+  {
     id: "start-done",
     screen: "Getting started",
     title: "Every step done",

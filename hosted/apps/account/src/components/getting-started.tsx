@@ -43,19 +43,32 @@ interface OnboardingView {
   readonly awaitingDetection: boolean;
 }
 
-function useOnboarding(): OnboardingView | null {
+interface OnboardingLoad {
+  readonly view: OnboardingView | null;
+  readonly failed: boolean;
+  readonly retry: () => void;
+}
+
+function useOnboarding(): OnboardingLoad {
   const settings = useAthleteSettings();
   const today = todayIn(settings.data?.timeZone ?? null);
   const activities = useActivityPages();
   const history = useSettingsHistory();
-  const { range } = useCalendar({
+  const { query: calendar, range } = useCalendar({
     from: shiftDay(today, -PLANNED_REACH_DAYS),
     through: shiftDay(today, PLANNED_REACH_DAYS),
   });
   const first = activities.data?.pages[0];
-  if (!settings.data || !first || !history.data || !range) return null;
+  const failing = [settings, activities, history, calendar].filter(
+    (query) => query.isError && query.data === undefined,
+  );
+  const failed = failing.length > 0;
+  const retry = () => {
+    for (const query of failing) void query.refetch();
+  };
+  if (!settings.data || !first || !history.data || !range) return { view: null, failed, retry };
   const profile = profileOn(datedChanges(history.data.entries), today);
-  return {
+  const view: OnboardingView = {
     today,
     entries: history.data.entries,
     profile,
@@ -67,6 +80,7 @@ function useOnboarding(): OnboardingView | null {
       planned: range.days.some((day) => day.planned.length > 0),
     }),
   };
+  return { view, failed: false, retry };
 }
 
 function useAccountCreatedAt() {
@@ -126,7 +140,7 @@ export function GettingStarted() {
 }
 
 function Checklist({ createdAt }: { createdAt: Date | null }) {
-  const view = useOnboarding();
+  const { view } = useOnboarding();
   const suggestions = useThresholdSuggestions({
     refetchInterval: view?.awaitingDetection ? ANALYSIS_POLL_MS : false,
   });
@@ -215,7 +229,7 @@ function ChecklistStep({
 }
 
 export function StartPage() {
-  const view = useOnboarding();
+  const { view, failed, retry } = useOnboarding();
   return (
     <main className="content start">
       <DropTarget />
@@ -227,7 +241,15 @@ export function StartPage() {
           ? "All three steps are done. Everything here stays at hand if you want to add more."
           : "Three steps from a new account to one that knows your training. Do them in any order, skip any of them, and come back here from Today whenever you like."}
       </p>
-      {view === null ? (
+      {view === null && failed ? (
+        <div className="state" role="alert">
+          <p className="state-title">Getting started did not load.</p>
+          <p className="lede">Check your connection and try again.</p>
+          <button type="button" className="secondary" onClick={retry}>
+            Try again
+          </button>
+        </div>
+      ) : view === null ? (
         <div className="skeleton start-skeleton" aria-busy="true" aria-label="Loading">
           <span className="bar" style={{ width: "50%" }} />
           <span className="bar tall" style={{ width: "80%" }} />
@@ -438,7 +460,8 @@ function QuickThresholds({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const answer = quickWrites(entries, values, today);
+    const offered = Object.fromEntries(fields.map((field) => [field.id, values[field.id]]));
+    const answer = quickWrites(entries, offered, today);
     setEmpty(answer.kind === "empty");
     setProblems(answer.kind === "problems" ? answer.problems : {});
     if (answer.kind === "writes") save(answer.writes, { onSaved: () => setValues({}) });
@@ -479,6 +502,7 @@ function QuickThresholds({
           <QuickInput
             key={field.id}
             field={field}
+            disabled={saving}
             value={values[field.id] ?? ""}
             problem={problems[field.id] ?? null}
             onChange={(text) => setValues((current) => ({ ...current, [field.id]: text }))}
@@ -498,11 +522,13 @@ function QuickThresholds({
 
 function QuickInput({
   field,
+  disabled,
   value,
   problem,
   onChange,
 }: {
   field: QuickField;
+  disabled: boolean;
   value: string;
   problem: string | null;
   onChange: (text: string) => void;
@@ -520,6 +546,7 @@ function QuickInput({
         <input
           id={id}
           value={value}
+          disabled={disabled}
           inputMode={field.inputMode}
           placeholder={field.placeholder}
           autoComplete="off"
