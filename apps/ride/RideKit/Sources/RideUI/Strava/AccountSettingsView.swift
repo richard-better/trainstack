@@ -68,10 +68,10 @@ struct AccountSettingsView: View {
 
   private var deletionWarning: String {
     let warning =
-      "This permanently deletes your account and everything it holds: your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. The account's link to your Apple Account is removed, every device is signed out, and signing in again starts an empty account. Rides and settings on your devices and in iCloud stay, and so do rides on Strava. To keep a copy, download Your data from Settings on the TrainStack website first."
+      "This permanently deletes your account and everything it holds: your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Every device is signed out. Rides and settings on your devices and in iCloud stay, and Ride adds them to any account you sign in to later. Rides on Strava stay too. To keep a copy, download Your data from Settings on the TrainStack website first."
     guard AppleSignIn.isNative else { return warning }
     return warning
-      + "\n\nApple then asks you to confirm, so Ride can end its Sign in with Apple access. If you cancel, the account is still deleted."
+      + "\n\nApple then asks you to confirm, so Ride's Sign in with Apple access ends too. If you cancel, the account is still deleted."
   }
 
   @ViewBuilder private var stravaSection: some View {
