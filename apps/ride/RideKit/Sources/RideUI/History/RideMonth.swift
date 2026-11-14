@@ -2,15 +2,14 @@ import Foundation
 
 struct RideMonth: Identifiable {
   let start: Date
-  let rides: [Ride]
+  let entries: [HistoryEntry]
   var id: Date { start }
   var label: String { start.formatted(.dateTime.month(.wide).year()) }
 
-  static func grouping(_ rides: [Ride], calendar: Calendar) -> [RideMonth] {
-    let grouped = Dictionary(grouping: rides) {
-      calendar.dateInterval(of: .month, for: $0.recording.startDate)?.start
-        ?? $0.recording.startDate
+  static func grouping(_ entries: [HistoryEntry], calendar: Calendar) -> [RideMonth] {
+    let grouped = Dictionary(grouping: entries) {
+      calendar.dateInterval(of: .month, for: $0.date)?.start ?? $0.date
     }
-    return grouped.keys.sorted(by: >).map { RideMonth(start: $0, rides: grouped[$0] ?? []) }
+    return grouped.keys.sorted(by: >).map { RideMonth(start: $0, entries: grouped[$0] ?? []) }
   }
 }

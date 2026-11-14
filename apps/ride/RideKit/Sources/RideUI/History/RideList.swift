@@ -2,21 +2,22 @@ import RideData
 import SwiftUI
 
 struct RideList: View {
+  let entries: [HistoryEntry]
   let library: RideLibrary
-  @Binding var selection: Ride.ID?
+  @Binding var selection: HistoryEntry.ID?
   @Binding var isImporting: Bool
   @Environment(\.calendar) private var calendar
 
   var body: some View {
     List(selection: $selection) {
-      ForEach(RideMonth.grouping(library.rides, calendar: calendar)) { month in
+      ForEach(RideMonth.grouping(entries, calendar: calendar)) { month in
         Section(month.label) {
-          ForEach(month.rides) { RideRow(ride: $0, isOnStrava: library.isOnStrava($0)).tag($0.id) }
+          ForEach(month.entries) { HistoryRow(entry: $0, library: library).tag($0.id) }
         }
       }
     }
     .overlay {
-      if library.rides.isEmpty {
+      if entries.isEmpty {
         ContentUnavailableView {
           Label("No rides yet", systemImage: "clock")
         } description: {

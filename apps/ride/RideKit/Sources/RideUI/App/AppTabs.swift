@@ -5,7 +5,7 @@ struct AppTabs: View {
   @Binding var destination: AppDestination
   @Binding var today: TodayState
   @Binding var workouts: WorkoutsState
-  @Binding var historySelection: Ride.ID?
+  @Binding var historySelection: HistoryEntry.ID?
   @Binding var settingsPath: [SettingsPage]
   let library: RideLibrary
   let player: Namespace.ID

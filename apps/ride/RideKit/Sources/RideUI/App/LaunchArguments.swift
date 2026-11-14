@@ -108,3 +108,15 @@ extension AccountWorkouts {
 extension AccountCalendar {
   static let launched = AccountCalendar()
 }
+
+extension AccountHistory {
+  static let launched = AccountHistory(server: TrainstackAccount.launched.client)
+
+  static var preview: AccountHistory {
+    let directory = URL.temporaryDirectory.appending(
+      path: "AccountHistory preview \(UUID().uuidString)", directoryHint: .isDirectory)
+    return AccountHistory(
+      server: TrainstackAccount.sample.client, directory: directory,
+      cache: directory.appending(path: "Caches"))
+  }
+}

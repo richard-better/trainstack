@@ -7,21 +7,9 @@ extension CalendarActivity {
     return sportName
   }
 
-  var sportName: String {
-    let sport = (sport ?? "activity").capitalized
-    return indoor == true ? "Indoor \(sport.lowercased())" : sport
-  }
+  var sportName: String { ActivitySport.name(of: sport, indoor: indoor) }
 
-  var symbol: String {
-    switch sport {
-    case "running": "figure.run"
-    case "swimming": "figure.pool.swim"
-    case "cycling": indoor == true ? "figure.indoor.cycle" : "figure.outdoor.cycle"
-    case "strength": "dumbbell"
-    case "bouldering": "figure.climbing"
-    default: "figure.mixed.cardio"
-    }
-  }
+  var symbol: String { ActivitySport.symbol(of: sport, indoor: indoor) }
 
   var summary: String {
     var parts: [String] = []

@@ -11,12 +11,13 @@ public struct RootView: View {
   @State private var account = TrainstackAccount.launched
   @State private var accountWorkouts = AccountWorkouts.launched
   @State private var accountCalendar = AccountCalendar.launched
+  @State private var accountHistory = AccountHistory.launched
   @State private var destinationBeforeSettings = AppDestination.today
   @State private var settingsPage = SettingsPage.zones(.all)
   @State private var settingsPath: [SettingsPage] = []
   @State private var today = TodayState()
   @State private var workouts = WorkoutsState()
-  @State private var historySelection: Ride.ID?
+  @State private var historySelection: HistoryEntry.ID?
   @State private var feedback: FeedbackContext?
   @State private var windowSize: CGSize?
   @Namespace private var player
@@ -50,6 +51,8 @@ public struct RootView: View {
     .environment(account)
     .environment(accountWorkouts)
     .environment(accountCalendar)
+    .environment(accountHistory)
+    .environment(\.deleteActivity, DeleteActivityAction { AppActivitySync.shared.delete($0) })
     .environment(\.syncWorkouts, SyncWorkoutsAction { AppWorkoutSync.shared.syncSoon() })
     .environment(\.syncCalendar, SyncCalendarAction { AppCalendarSync.shared.syncSoon() })
     .focusedSceneValue(\.rideLauncher, launcher)

@@ -94,6 +94,10 @@ used with temporal checking. Each model explores all schedules in its bounds.
   (`RideLibrary.open`): it stays on that device in iCloud, and `ActivitySync` restores it on the
   account with `activities.restore`, outside every transition here. `ActivitySyncTests` pins that
   background sync never restores.
+  `ActivitySync.delete`, deleting from History an activity this device does not hold, is a
+  `DeleteOnServer` from this rider's devices. `AccountHistory` keeps the account's listing and the
+  files Ride downloads to show it, outside `RideLibrary`, so neither is a transition here;
+  `AccountHistoryTests` pins that a downloaded file is never uploaded or added to the library.
 - `TrainerPause`: `RideCore/RideEngine.swift` maps `.togglePause` to `Toggle`,
   and `pauseIfTrainerDropped` plus `session.advance` in `.tick` to atomic `Tick`.
   Connection changes, manual toggles and ticks interleave arbitrarily.

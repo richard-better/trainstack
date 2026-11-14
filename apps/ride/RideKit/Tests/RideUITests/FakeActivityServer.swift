@@ -5,13 +5,15 @@ import RideStrava
 @testable import RideUI
 
 actor FakeActivityServer: ActivityServer, HealthDayServer {
-  enum Request { case list, upload, restore }
+  enum Request { case list, upload, restore, file }
 
   enum Call: Equatable {
     case list(account: String)
     case upload(String, account: String)
     case restore(String, account: String)
     case delete(String, account: String)
+    case detail(String, account: String)
+    case file(String, account: String)
   }
 
   private(set) var calls: [Call] = []
@@ -20,6 +22,9 @@ actor FakeActivityServer: ActivityServer, HealthDayServer {
     []
   private var activities: [String: Set<String>] = [:]
   private var tombstones: [String: Set<String>] = [:]
+  private var listed: [String: AccountActivity] = [:]
+  private var storedFiles: [String: Data] = [:]
+  private var storedDetails: [String: AccountActivityDetail] = [:]
   private var signedIn: ActivityAccount?
   private var offline = false
   private var holding: Request?
@@ -52,6 +57,20 @@ actor FakeActivityServer: ActivityServer, HealthDayServer {
 
   func store(_ id: String, for account: String) { activities[account, default: []].insert(id) }
 
+  func store(_ activity: AccountActivity, file: Data? = nil, for account: String) {
+    store(activity.id, for: account)
+    listed[activity.id] = activity
+    storedFiles[activity.id] = file
+  }
+
+  func describeOnceStored(_ activity: AccountActivity) { listed[activity.id] = activity }
+
+  func store(_ detail: AccountActivityDetail, of id: String) { storedDetails[id] = detail }
+
+  var downloads: [String] {
+    calls.compactMap { if case .file(let id, _) = $0 { id } else { nil } }
+  }
+
   func deleteElsewhere(_ id: String, for account: String) {
     activities[account, default: []].remove(id)
     tombstones[account, default: []].insert(id)
@@ -83,12 +102,31 @@ actor FakeActivityServer: ActivityServer, HealthDayServer {
     if offline { throw StravaError.unavailable }
   }
 
-  func activityIDs(for account: ActivityAccount) async throws -> Set<String> {
+  func activities(for account: ActivityAccount) async throws -> [AccountActivity] {
     try check(account)
     calls.append(.list(account: account.id))
-    let ids = activities(of: account.id)
+    let listing = activities(of: account.id).sorted().map { listed[$0] ?? AccountActivity(id: $0) }
     await replyWhenReleased(to: .list)
-    return ids
+    return listing
+  }
+
+  func activityDetail(_ id: String, for account: ActivityAccount) async throws
+    -> AccountActivityDetail
+  {
+    try check(account)
+    calls.append(.detail(id, account: account.id))
+    guard activities(of: account.id).contains(id) else { throw StravaError.unavailable }
+    return storedDetails[id] ?? AccountActivityDetail()
+  }
+
+  func activityFile(_ id: String, for account: ActivityAccount) async throws -> Data {
+    try check(account)
+    calls.append(.file(id, account: account.id))
+    guard activities(of: account.id).contains(id), let data = storedFiles[id] else {
+      throw StravaError.unavailable
+    }
+    await replyWhenReleased(to: .file)
+    return data
   }
 
   func upload(_ file: ActivityFile, for account: ActivityAccount) async throws

@@ -3,7 +3,9 @@ import SwiftUI
 
 struct HistoryView: View {
   let library: RideLibrary
-  @Binding var selection: Ride.ID?
+  @Binding var selection: HistoryEntry.ID?
+  @Environment(AccountHistory.self) private var history
+  @Environment(\.deleteActivity) private var deleteActivity
   @State private var workoutPath: [WorkoutTemplate] = []
   @State private var isImporting = false
   @State private var failures: [String]?
@@ -19,21 +21,27 @@ struct HistoryView: View {
     #endif
   }
 
+  private var entries: [HistoryEntry] {
+    HistoryEntry.merging(rides: library.rides, account: history.activities)
+  }
+
   private func selectNewestRideWhenBothColumnsShow() {
-    if showsBothColumns, selection == nil { selection = library.rides.first?.id }
+    if showsBothColumns, selection == nil { selection = entries.first?.id }
   }
 
   var body: some View {
     NavigationSplitView {
-      RideList(library: library, selection: $selection, isImporting: $isImporting)
-        .navigationTitle("History")
-        .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
+      RideList(
+        entries: entries, library: library, selection: $selection, isImporting: $isImporting
+      )
+      .navigationTitle("History")
+      .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
     } detail: {
-      if let ride = library[selection] {
+      if let entry = entries.first(where: { $0.id == selection }) {
         NavigationStack(path: $workoutPath) {
-          ActivityDetailView(ride: ride, library: library) { remove(ride) }
-            .id(ride.id)
-            .navigationTitle(ride.title)
+          detail(of: entry)
+            .id(entry.id)
+            .navigationTitle(entry.activity?.title ?? entry.ride?.title ?? "")
             #if os(iOS)
               .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -41,11 +49,11 @@ struct HistoryView: View {
         }
         .environment(\.openWorkout, OpenWorkoutAction { workoutPath.append($0) })
       } else {
-        ContentUnavailableView("Select a ride", systemImage: "chart.xyaxis.line")
+        ContentUnavailableView("Select an activity", systemImage: "chart.xyaxis.line")
       }
     }
     .onChange(of: selection) { workoutPath = [] }
-    .onChange(of: library.rides.first?.id, initial: true) { selectNewestRideWhenBothColumnsShow() }
+    .onChange(of: entries.first?.id, initial: true) { selectNewestRideWhenBothColumnsShow() }
     .onChange(of: showsBothColumns) { selectNewestRideWhenBothColumnsShow() }
     .fileImporter(
       isPresented: $isImporting, allowedContentTypes: [.fitFile], allowsMultipleSelection: true
@@ -67,15 +75,30 @@ struct HistoryView: View {
     self.failures = failures.isEmpty ? nil : failures
   }
 
-  private func remove(_ ride: Ride) {
+  @ViewBuilder private func detail(of entry: HistoryEntry) -> some View {
+    if let ride = entry.ride {
+      ActivityDetailView(ride: ride, library: library, activity: entry.activity) {
+        remove(entry)
+      }
+    } else if let activity = entry.activity {
+      AccountActivityDetailView(activity: activity, library: library) { remove(entry) }
+    }
+  }
+
+  private func remove(_ entry: HistoryEntry) {
     selection = nil
-    library.remove(ride.id)
+    if entry.ride != nil {
+      library.remove(entry.id)
+    } else {
+      deleteActivity(entry.id)
+    }
   }
 }
 
 #Preview {
-  @Previewable @State var selection: Ride.ID?
+  @Previewable @State var selection: HistoryEntry.ID?
   HistoryView(library: .sample(), selection: $selection)
+    .environment(AccountHistory.preview)
     .environment(RiderSettingsStore.sample)
     .environment(TrainstackAccount.sample)
     .environment(RideLauncher(simulated: true))

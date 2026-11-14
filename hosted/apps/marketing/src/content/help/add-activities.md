@@ -29,6 +29,17 @@ twice does nothing: it is already in your account.
 Rides you record with the Ride app reach Trainstack when Ride is signed in to your account with the
 same Apple ID. Ride uploads its rides by itself, including the ones you rode before signing in.
 
+Signed in, History in Ride shows your account's activities, every sport and source, beside the
+rides on that device, each once: what you upload here, import from Health, log as strength or
+bouldering, or record with Ride on another device. A workout recorded twice shows as the activity
+that stands for it. Ride downloads an activity's file only when you open it, to draw its charts,
+laps and zones the way it draws its own rides, and keeps the files you opened lately, not your
+whole history. Offline, History shows what Ride last saw, and an activity you have not opened on
+that device says it needs a connection for its charts. Logged sessions show what they sum up to;
+their exercises and problems are on the web. Deleting an activity in Ride deletes it from your
+account, and one you delete here leaves Ride the next time it syncs. Signing out of Ride removes
+your account's activities from it and keeps the rides recorded on that device.
+
 ## Apple Health
 
 Ride on iPhone can bring every workout in Apple Health into your account: runs, rides, swims,
