@@ -111,7 +111,7 @@ type Lists = { lists: WorkoutList[] };
 
 type ListChange = (list: WorkoutList) => WorkoutList;
 
-type ListQueue = { tail: Promise<unknown>; pending: ListChange[] };
+type ListQueue = { tail: Promise<unknown>; pending: ListChange[]; waiting: number };
 
 const queues = new WeakMap<QueryClient, Map<string, ListQueue>>();
 
@@ -150,26 +150,29 @@ export function queueListWrite(
   send: () => Promise<WorkoutList>,
 ): Promise<WorkoutList> {
   const byList = queuesOf(queryClient, queryKey);
-  const queue: ListQueue = byList.get(id) ?? { tail: Promise.resolve(), pending: [] };
+  const queue: ListQueue = byList.get(id) ?? { tail: Promise.resolve(), pending: [], waiting: 0 };
   byList.set(id, queue);
   setList(queryClient, queryKey, id, optimistic);
   queue.pending.push(optimistic);
-  const settle = async () => {
-    queue.pending.splice(queue.pending.indexOf(optimistic), 1);
-    if (queue.pending.length > 0) return false;
+  queue.waiting += 1;
+  const drained = async (applied: boolean) => {
+    queue.waiting -= 1;
+    if (!applied) queue.pending.splice(queue.pending.indexOf(optimistic), 1);
+    if (queue.waiting > 0) return false;
+    queue.pending = [];
     await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
     return true;
   };
   const written = queue.tail.then(send).then(
     async (answer: WorkoutList) => {
-      if (await settle()) {
+      if (await drained(true)) {
         setList(queryClient, queryKey, id, () => answer);
         void queryClient.invalidateQueries({ queryKey, exact: true });
       }
       return answer;
     },
     async (error: unknown) => {
-      await settle();
+      await drained(false);
       void queryClient.invalidateQueries({ queryKey, exact: true });
       throw error;
     },

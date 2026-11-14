@@ -558,3 +558,91 @@ test("a lists read that lands after a rename does not bring the old name back", 
   unsubscribe();
   queryClient.clear();
 });
+
+test("an answered rename holds while a later move to the same list still waits", async () => {
+  const { webApp } = await signInOnTheWeb();
+  const ids = [];
+  for (const name of ["A", "B"]) {
+    const id = randomUUID();
+    ids.push(id);
+    await webApp.workouts.put({
+      id,
+      workout: workout(name, [power(600, constant(0.6))]),
+      updatedAt: new Date(),
+    });
+  }
+  let list = await webApp.workoutLists.put({
+    id: randomUUID(),
+    name: "Before",
+    updatedAt: new Date(),
+  });
+  for (const id of ids) {
+    list = await webApp.workoutLists.place({
+      id: list.id,
+      ...appendedTo(list, id),
+      updatedAt: new Date(),
+    });
+  }
+  const queryClient = new QueryClient();
+  const queryKey = ["lists"];
+  queryClient.setQueryData(queryKey, { lists: [list] });
+  const gate = () => {
+    let open;
+    const shut = new Promise((resolve) => {
+      open = resolve;
+    });
+    return { shut, open };
+  };
+  const staleRead = gate();
+  const slowMove = gate();
+  let reads = 0;
+  const observer = new QueryObserver(queryClient, {
+    queryKey,
+    staleTime: 0,
+    queryFn: async () => {
+      reads += 1;
+      const answer = await webApp.workoutLists.list({});
+      if (reads === 1) await staleRead.shut;
+      return answer;
+    },
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  while (reads === 0) await new Promise((resolve) => setTimeout(resolve, 5));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  const rename = queueListWrite(
+    queryClient,
+    queryKey,
+    list.id,
+    (held) => ({ ...held, name: "After" }),
+    () => webApp.workoutLists.put({ id: list.id, name: "After", updatedAt: new Date() }),
+  );
+  const move = queueListWrite(
+    queryClient,
+    queryKey,
+    list.id,
+    (held) => ({ ...held, workoutIds: [ids[1], ids[0]] }),
+    async () => {
+      await slowMove.shut;
+      return webApp.workoutLists.place({
+        id: list.id,
+        workoutId: ids[1],
+        after: null,
+        updatedAt: new Date(),
+      });
+    },
+  );
+  await rename;
+  staleRead.open();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const shown = () => queryClient.getQueryData(queryKey).lists[0];
+  assert.equal(shown().name, "After");
+  assert.deepEqual(shown().workoutIds, [ids[1], ids[0]]);
+  slowMove.open();
+  await move;
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(shown().name, "After");
+  assert.deepEqual(shown().workoutIds, [ids[1], ids[0]]);
+  unsubscribe();
+  queryClient.clear();
+});
