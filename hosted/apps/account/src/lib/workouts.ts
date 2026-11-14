@@ -12,6 +12,7 @@ const sourceNames: Record<string, string> = {
   suunto: "Suunto",
   polar: "Polar",
   garmin: "Garmin",
+  logbook: "Your log",
 };
 
 export function sourceName(source: string) {
@@ -65,6 +66,7 @@ export function arrivalText(activity: Pick<Activity, "duplicates">, uploaded: bo
 }
 
 export function fileOf(source: Pick<DuplicateActivity, "source" | "file">) {
+  if (source.source === "logbook") return "logged session";
   if (source.source === "upload") {
     return source.file ? `uploaded ${source.file.format.toUpperCase()} file` : "uploaded file";
   }

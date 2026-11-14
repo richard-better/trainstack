@@ -65,10 +65,11 @@ export function loadOf(statistics: Statistics, sport: string | null) {
   return { stress, source: source ?? null };
 }
 
-export const sourceWords: Record<LoadSource, string> = {
+export const sourceWords: Record<LoadSource | "rpe", string> = {
   power: "power",
   pace: "pace",
   heart_rate: "heart rate",
+  rpe: "session RPE",
 };
 
 export function effortFigures(statistics: Statistics, sport: string | null): Figure[] {
