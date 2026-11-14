@@ -515,3 +515,46 @@ test("list writes made in quick succession reach the server in order, and the pa
   assert.deepEqual(current(), server);
   queryClient.clear();
 });
+
+test("a lists read that lands after a rename does not bring the old name back", async () => {
+  const { webApp } = await signInOnTheWeb();
+  const list = await webApp.workoutLists.put({
+    id: randomUUID(),
+    name: "Before",
+    updatedAt: new Date(),
+  });
+  const queryClient = new QueryClient();
+  const queryKey = ["lists"];
+  queryClient.setQueryData(queryKey, { lists: [list] });
+  let release;
+  const held = new Promise((resolve) => {
+    release = resolve;
+  });
+  let reads = 0;
+  const observer = new QueryObserver(queryClient, {
+    queryKey,
+    staleTime: 0,
+    queryFn: async () => {
+      reads += 1;
+      const answer = await webApp.workoutLists.list({});
+      if (reads === 1) await held;
+      return answer;
+    },
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  while (reads === 0) await new Promise((resolve) => setTimeout(resolve, 5));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  await queueListWrite(
+    queryClient,
+    queryKey,
+    list.id,
+    (held) => ({ ...held, name: "After" }),
+    () => webApp.workoutLists.put({ id: list.id, name: "After", updatedAt: new Date() }),
+  );
+  release();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.equal(queryClient.getQueryData(queryKey).lists[0].name, "After");
+  unsubscribe();
+  queryClient.clear();
+});

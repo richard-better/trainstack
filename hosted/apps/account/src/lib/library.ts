@@ -109,7 +109,9 @@ export function placementFor(ids: readonly string[], from: number, to: number) {
 
 type Lists = { lists: WorkoutList[] };
 
-type ListQueue = { tail: Promise<unknown>; pending: number };
+type ListChange = (list: WorkoutList) => WorkoutList;
+
+type ListQueue = { tail: Promise<unknown>; pending: ListChange[] };
 
 const queues = new WeakMap<QueryClient, Map<string, ListQueue>>();
 
@@ -117,34 +119,57 @@ function setList(
   queryClient: QueryClient,
   queryKey: readonly unknown[],
   id: string,
-  change: (list: WorkoutList) => WorkoutList,
+  change: ListChange,
 ) {
   queryClient.setQueryData<Lists>(queryKey, (data) =>
     data ? { lists: data.lists.map((list) => (list.id === id ? change(list) : list)) } : data,
   );
 }
 
+function queuesOf(queryClient: QueryClient, queryKey: readonly unknown[]) {
+  const known = queues.get(queryClient);
+  if (known) return known;
+  const byList = new Map<string, ListQueue>();
+  queues.set(queryClient, byList);
+  const key = JSON.stringify(queryKey);
+  queryClient.getQueryCache().subscribe((event) => {
+    if (event.type !== "updated" || event.action.type !== "success" || event.action.manual) return;
+    if (JSON.stringify(event.query.queryKey) !== key) return;
+    for (const [id, queue] of byList) {
+      for (const change of queue.pending) setList(queryClient, queryKey, id, change);
+    }
+  });
+  return byList;
+}
+
 export function queueListWrite(
   queryClient: QueryClient,
   queryKey: readonly unknown[],
   id: string,
-  optimistic: (list: WorkoutList) => WorkoutList,
+  optimistic: ListChange,
   send: () => Promise<WorkoutList>,
 ): Promise<WorkoutList> {
-  const byList = queues.get(queryClient) ?? new Map<string, ListQueue>();
-  queues.set(queryClient, byList);
-  const queue: ListQueue = byList.get(id) ?? { tail: Promise.resolve(), pending: 0 };
+  const byList = queuesOf(queryClient, queryKey);
+  const queue: ListQueue = byList.get(id) ?? { tail: Promise.resolve(), pending: [] };
   byList.set(id, queue);
   setList(queryClient, queryKey, id, optimistic);
-  queue.pending += 1;
+  queue.pending.push(optimistic);
+  const settle = async () => {
+    queue.pending.splice(queue.pending.indexOf(optimistic), 1);
+    if (queue.pending.length > 0) return false;
+    await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
+    return true;
+  };
   const written = queue.tail.then(send).then(
-    (answer: WorkoutList) => {
-      queue.pending -= 1;
-      if (queue.pending === 0) setList(queryClient, queryKey, id, () => answer);
+    async (answer: WorkoutList) => {
+      if (await settle()) {
+        setList(queryClient, queryKey, id, () => answer);
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+      }
       return answer;
     },
-    (error: unknown) => {
-      queue.pending -= 1;
+    async (error: unknown) => {
+      await settle();
       void queryClient.invalidateQueries({ queryKey, exact: true });
       throw error;
     },
