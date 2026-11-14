@@ -18,7 +18,7 @@ struct RideAccessoryContent: View {
             .fill(zoneColor)
             .frame(width: 4, height: isInline ? 16 : 28)
           VStack(alignment: .leading, spacing: 0) {
-            Text(controller.template.name)
+            Text(controller.workout.name)
               .font(.subheadline)
               .bold()
             if !isInline {
@@ -60,14 +60,16 @@ struct RideAccessoryContent: View {
   }
 
   private var zoneColor: Color {
-    session.currentInterval.map { controller.zone(of: $0).color } ?? .secondary
+    session.currentInterval?.zone(ftp: controller.ftp)?.color ?? .secondary
   }
 
   private var status: String {
     guard let interval = session.currentInterval else { return "Workout complete" }
     if session.isPaused { return "Paused · \(session.elapsed.clockString)" }
-    let zone = controller.zone(of: interval)
     let left = session.intervalRemaining.map { " · \($0.clockString) left" } ?? ""
+    guard interval.step.name == nil, case .power = interval.step.target,
+      let zone = interval.zone(ftp: controller.ftp)
+    else { return "\(interval.title(ftp: controller.ftp))\(left)" }
     return "Z\(zone.rawValue + 1) \(zone.name)\(left)"
   }
 }

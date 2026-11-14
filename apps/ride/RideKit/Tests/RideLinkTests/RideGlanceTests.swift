@@ -91,4 +91,40 @@ struct RideGlanceTests {
       #expect(try LinkMessage(data: message.encoded()) == message)
     }
   }
+
+  @Test func callsAStepWithoutAPowerTargetAFreeRideAndFollowsARamp() {
+    let planned = PlannedWorkout(
+      name: "Free and ramp", category: nil,
+      steps: [
+        PlannedStep(duration: 60, target: nil),
+        PlannedStep(duration: 100, target: .watts(.ramp(from: 100, to: 200))),
+      ])
+    var session = RideSession(workout: planned.workout(ftp: 200))
+    var glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+    #expect(glance.interval?.zone == nil)
+    #expect(glance.interval?.title == RideGlance.freeRideTitle)
+    #expect(glance.interval?.targetPower == nil)
+    #expect(glance.next == .init(zone: .tempo, targetPower: 100))
+    for _ in 0..<110 { session.advance(by: 1, reading: .init(power: 150)) }
+    glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+    #expect(glance.interval?.targetPower == 150)
+    #expect(glance.interval?.zone == .tempo)
+  }
+
+  @Test func namesAHeartRateStepAndItsTargetRatherThanAFreeRide() {
+    let planned = PlannedWorkout(
+      name: "Heart rate", category: nil,
+      steps: [
+        PlannedStep(duration: 60, target: .beatsPerMinute(.constant(140))),
+        PlannedStep(duration: 60, target: .shareOfThresholdHeartRate(.range(low: 0.8, high: 0.85))),
+        PlannedStep(duration: 20, target: .maxEffort),
+      ])
+    var session = RideSession(workout: planned.workout(ftp: 200))
+    let glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+    #expect(glance.interval?.title == "Heart rate 140 bpm")
+    #expect(glance.next?.title == "Heart rate 80–85% threshold")
+    for _ in 0..<60 { session.advance(by: 1, reading: .init(power: 150)) }
+    #expect(
+      RideGlance(session: session, ftp: 200, heartRateZones: nil).next?.title == "Max effort")
+  }
 }

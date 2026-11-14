@@ -4,29 +4,33 @@ import RideData
 public struct RideGlance: Codable, Equatable, Sendable {
   public struct Interval: Codable, Equatable, Sendable {
     public var index: Int
-    public var zone: PowerZone
+    public var zone: PowerZone?
     public var numberInZone: Int?
     public var countInZone: Int?
     public var targetPower: Int?
+    public var label: String?
     public var remaining: TimeInterval
     public var duration: TimeInterval
 
     public init(
-      index: Int, zone: PowerZone, numberInZone: Int? = nil, countInZone: Int? = nil,
-      targetPower: Int? = nil, remaining: TimeInterval, duration: TimeInterval
+      index: Int, zone: PowerZone?, numberInZone: Int? = nil, countInZone: Int? = nil,
+      targetPower: Int? = nil, label: String? = nil, remaining: TimeInterval,
+      duration: TimeInterval
     ) {
       self.index = index
       self.zone = zone
       self.numberInZone = numberInZone
       self.countInZone = countInZone
       self.targetPower = targetPower
+      self.label = label
       self.remaining = remaining
       self.duration = duration
     }
 
     public var title: String {
-      guard let numberInZone, let countInZone else { return zone.name }
-      return "\(zone.name) \(numberInZone)/\(countInZone)"
+      let name = label ?? zone?.name ?? RideGlance.freeRideTitle
+      guard let numberInZone, let countInZone else { return name }
+      return "\(name) \(numberInZone)/\(countInZone)"
     }
 
     public var progress: Double {
@@ -35,13 +39,17 @@ public struct RideGlance: Codable, Equatable, Sendable {
   }
 
   public struct NextInterval: Codable, Equatable, Sendable {
-    public var zone: PowerZone
+    public var zone: PowerZone?
     public var targetPower: Int?
+    public var label: String?
 
-    public init(zone: PowerZone, targetPower: Int? = nil) {
+    public init(zone: PowerZone?, targetPower: Int? = nil, label: String? = nil) {
       self.zone = zone
       self.targetPower = targetPower
+      self.label = label
     }
+
+    public var title: String { label ?? zone?.name ?? RideGlance.freeRideTitle }
   }
 
   public struct HeartRateZone: Codable, Equatable, Sendable {
@@ -85,27 +93,33 @@ public struct RideGlance: Codable, Equatable, Sendable {
 }
 
 extension RideGlance {
+  public static let freeRideTitle = "Free ride"
+
   public init(
     session: RideSession, ftp: Int, heartRateZones: ZoneSet?,
     powerDisplay: PowerDisplay = .standard
   ) {
-    let zones = session.intervals.map { PowerZone.zone(power: $0.plannedPower, ftp: ftp) }
-    let ergTarget = { (interval: RideSession.Interval) in
-      session.mode == .erg ? session.adjusted(interval.plannedPower) : nil
+    let zones = session.intervals.map { $0.zone(ftp: ftp) }
+    let labels = session.intervals.map { Self.label(of: $0.step.target) }
+    let ergTarget = { (interval: RideSession.Interval, position: TimeInterval) in
+      session.mode == .erg ? interval.plannedPower(at: position).map(session.adjusted) : nil
     }
     let interval = session.currentInterval.map { interval in
       let zone = zones[interval.index]
-      let sameZone = zones.indices.filter { zones[$0] == zone }
+      let label = labels[interval.index]
+      let sameZone = zones.indices.filter { zones[$0] == zone && labels[$0] == label }
       return Interval(
         index: interval.index, zone: zone,
         numberInZone: sameZone.count > 1
           ? (sameZone.firstIndex(of: interval.index) ?? 0) + 1 : nil,
         countInZone: sameZone.count > 1 ? sameZone.count : nil,
-        targetPower: ergTarget(interval), remaining: interval.end - session.position,
+        targetPower: ergTarget(interval, session.position), label: label,
+        remaining: interval.end - session.position,
         duration: interval.end - interval.start)
     }
     let next = session.nextInterval.map {
-      NextInterval(zone: zones[$0.index], targetPower: ergTarget($0))
+      NextInterval(
+        zone: zones[$0.index], targetPower: ergTarget($0, $0.start), label: labels[$0.index])
     }
     let reading = session.latest
     self.init(
@@ -118,5 +132,25 @@ extension RideGlance {
           return HeartRateZone(label: zone.label, index: zone.index, zoneCount: zone.zoneCount)
         }
       })
+  }
+
+  static func label(of target: StepTarget?) -> String? {
+    switch target {
+    case .power: nil
+    case .maxEffort: "Max effort"
+    case .heartRate(.beatsPerMinute(let level)): "Heart rate \(text(level)) bpm"
+    case .heartRate(.shareOfThreshold(let level)):
+      "Heart rate \(text(level.scaled(by: 100)))% threshold"
+    case nil: freeRideTitle
+    }
+  }
+
+  private static func text(_ level: TargetLevel) -> String {
+    let whole = { (value: Double) in "\(Int(value.rounded()))" }
+    return switch level {
+    case .constant(let value): whole(value)
+    case .range(let low, let high): "\(whole(low))–\(whole(high))"
+    case .ramp(let from, let to): "\(whole(from))→\(whole(to))"
+    }
   }
 }

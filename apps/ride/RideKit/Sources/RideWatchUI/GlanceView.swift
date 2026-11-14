@@ -16,7 +16,7 @@
             .tracking(-1)
             .padding(.top, 4)
           if !isLuminanceReduced {
-            IntervalProgress(progress: interval.progress, color: interval.zone.color)
+            IntervalProgress(progress: interval.progress, color: interval.zone?.color ?? .gray)
           }
           power(in: interval)
             .padding(.top, isLuminanceReduced ? 16 : 8)
@@ -58,7 +58,7 @@
       if let target = interval.targetPower {
         Text("\(target) W")
           .font(.system(size: 30, weight: .medium))
-          .foregroundStyle(interval.zone.color.opacity(0.55))
+          .foregroundStyle((interval.zone?.color ?? .gray).opacity(0.55))
       }
     }
 
@@ -66,7 +66,7 @@
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Text(glance.power.map(String.init) ?? "--")
           .font(.system(size: 30, weight: .semibold))
-          .foregroundStyle(interval.zone.color)
+          .foregroundStyle(interval.zone?.color ?? .gray)
           .contentTransition(.numericText())
         Text(interval.targetPower.map { "/ \($0) W" } ?? "W")
           .font(.system(size: 14))

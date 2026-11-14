@@ -19,7 +19,7 @@ struct WorkoutGrid: View {
             start: settings.ftp.map { ftp in
               {
                 launcher.start(
-                  template, ftp: ftp, heartRateZones: settings.heartRateZones,
+                  template.planned, ftp: ftp, heartRateZones: settings.heartRateZones,
                   riderWeight: settings.weight)
               }
             })

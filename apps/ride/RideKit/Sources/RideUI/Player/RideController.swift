@@ -10,7 +10,7 @@ final class RideController {
   private(set) var engine: RideEngine
   var session: RideSession { engine.session }
   var pausedForTrainer: Bool { engine.isPausedForTrainer }
-  let template: WorkoutTemplate
+  let workout: PlannedWorkout
   let ftp: Int
   let heartRateZones: ZoneSet?
   var powerDisplay = PowerDisplay.standard
@@ -24,17 +24,17 @@ final class RideController {
   @ObservationIgnored private var lastTick = ContinuousClock.now
 
   init(
-    template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet? = nil,
+    workout: PlannedWorkout, ftp: Int, heartRateZones: ZoneSet? = nil,
     heartRate: HeartRateFeed? = nil, devices: BluetoothDevices? = nil,
     session: RideSession? = nil, journal: RideJournal? = nil, simulated: Bool
   ) {
-    self.template = template
+    self.workout = workout
     self.ftp = ftp
     self.heartRateZones = heartRateZones
     self.heartRate = heartRate
     self.devices = devices
     self.journal = journal
-    engine = RideEngine(session: session ?? RideSession(workout: template.workout(ftp: ftp)))
+    engine = RideEngine(session: session ?? RideSession(workout: workout.workout(ftp: ftp)))
     simulator = simulated ? SimulatedTrainer() : nil
     apply(.begin(trainerConnected: isTrainerConnected == true))
   }
@@ -44,7 +44,7 @@ final class RideController {
     heartRate: HeartRateFeed? = nil, devices: BluetoothDevices? = nil,
     journal: RideJournal? = nil, simulated: Bool
   ) {
-    template = interrupted.trace.header.template
+    workout = interrupted.trace.header.workout
     ftp = interrupted.trace.header.ftp
     self.heartRateZones = heartRateZones
     self.heartRate = heartRate
@@ -172,10 +172,6 @@ final class RideController {
 
   var power: Int? { session.power(powerDisplay) }
 
-  func zone(of interval: RideSession.Interval) -> PowerZone {
-    PowerZone.zone(power: interval.plannedPower, ftp: ftp)
-  }
-
   var heartRateZone: Zone? {
     guard let bpm = session.latest.heartRate else { return nil }
     return heartRateZones?.zone(containing: bpm)
@@ -189,7 +185,7 @@ final class RideController {
   static func preview(
     _ template: WorkoutTemplate = .named("Recovery 30")!, ftp: Int = 200, minutes: Double = 16.5
   ) -> RideController {
-    let controller = RideController(template: template, ftp: ftp, simulated: true)
+    let controller = RideController(workout: template.planned, ftp: ftp, simulated: true)
     for _ in 0..<Int(minutes * 60) { controller.tick(seconds: 1) }
     return controller
   }

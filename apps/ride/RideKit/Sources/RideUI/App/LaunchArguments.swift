@@ -49,7 +49,7 @@ extension RideLauncher {
       guard let flag = arguments.firstIndex(of: "-ride"), flag + 1 < arguments.count,
         let template = WorkoutTemplate.named(arguments[flag + 1]), let ftp
       else { return }
-      start(template, ftp: ftp, heartRateZones: heartRateZones, riderWeight: riderWeight)
+      start(template.planned, ftp: ftp, heartRateZones: heartRateZones, riderWeight: riderWeight)
     }
   #endif
 }

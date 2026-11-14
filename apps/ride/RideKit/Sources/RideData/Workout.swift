@@ -3,11 +3,30 @@ import Foundation
 public struct Workout: Equatable, Sendable {
   public struct Step: Equatable, Sendable {
     public var duration: TimeInterval
-    public var targetPower: Int
+    public var target: StepTarget?
+    public var cadence: TargetLevel?
+    public var name: String?
+    public var notes: String?
+    public var cues: [PlannedCue]
+
+    public init(
+      duration: TimeInterval, target: StepTarget?, cadence: TargetLevel? = nil,
+      name: String? = nil, notes: String? = nil, cues: [PlannedCue] = []
+    ) {
+      self.duration = duration
+      self.target = target
+      self.cadence = cadence
+      self.name = name
+      self.notes = notes
+      self.cues = cues
+    }
 
     public init(duration: TimeInterval, targetPower: Int) {
-      self.duration = duration
-      self.targetPower = targetPower
+      self.init(duration: duration, target: .power(.constant(Double(targetPower))))
+    }
+
+    public func targetPower(atOffset offset: TimeInterval) -> Int? {
+      target?.power(atShareOfStep: duration > 0 ? offset / duration : 0)
     }
   }
 
@@ -20,10 +39,11 @@ public struct Workout: Equatable, Sendable {
   }
 
   public func targetPower(at elapsed: TimeInterval) -> Int? {
-    var end: TimeInterval = 0
+    var start: TimeInterval = 0
     for step in steps {
-      end += step.duration
-      if elapsed < end { return step.targetPower }
+      let end = start + step.duration
+      if elapsed < end { return step.targetPower(atOffset: elapsed - start) }
+      start = end
     }
     return nil
   }

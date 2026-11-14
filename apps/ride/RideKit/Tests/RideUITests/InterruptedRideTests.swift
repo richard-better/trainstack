@@ -29,7 +29,7 @@ struct InterruptedRideTests {
       header: .init(
         template: template, ftp: 200, startDate: session.startDate, riderWeight: 75))
     let controller = RideController(
-      template: template, ftp: 200, session: session, journal: journal, simulated: true)
+      workout: template.planned, ftp: 200, session: session, journal: journal, simulated: true)
     for _ in 0..<seconds { controller.tick(seconds: 1) }
   }
 
@@ -47,7 +47,7 @@ struct InterruptedRideTests {
     try withDirectory { directory in
       let session = RideSession(workout: template.workout(ftp: 200))
       let controller = RideController(
-        template: template, ftp: 200, session: session,
+        workout: template.planned, ftp: 200, session: session,
         journal: RideJournal(
           directory: directory,
           header: .init(
@@ -136,7 +136,7 @@ struct InterruptedRideTests {
       try crashedRide(10, in: directory)
       let launcher = launcher(journalDirectory: directory)
       launcher.checkForInterruptedRide()
-      launcher.start(template, ftp: 200, heartRateZones: nil, riderWeight: 75)
+      launcher.start(template.planned, ftp: 200, heartRateZones: nil, riderWeight: 75)
       #expect(launcher.ride == nil)
       #expect(RideJournal.recover(from: directory)?.session.samples.count == 10)
     }

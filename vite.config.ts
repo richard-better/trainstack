@@ -70,6 +70,7 @@ export default defineConfig({
       ".wrangler/**",
       "**/.wrangler/**",
       "apps/**/*.xcassets/**",
+      "apps/ride/RideKit/Tests/RideDataTests/Workouts/played.json",
       "apps/ride/RideKit/Tests/RideDataTests/Zones/**",
       ".agents/skills/swift-concurrency-pro/**",
       ".agents/skills/swift-testing-pro/**",

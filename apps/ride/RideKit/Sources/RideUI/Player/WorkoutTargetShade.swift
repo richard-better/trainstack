@@ -16,7 +16,7 @@ struct WorkoutTargetShade: Equatable {
     } else {
       stage = interval.start <= position ? .current : .upcoming
     }
-    zone = ftp.flatMap { $0 > 0 ? PowerZone.zone(power: interval.plannedPower, ftp: $0) : nil }
+    zone = ftp.flatMap { interval.zone(ftp: $0) }
   }
 
   var opacity: Double {

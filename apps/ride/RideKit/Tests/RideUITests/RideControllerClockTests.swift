@@ -7,7 +7,7 @@ import Testing
 struct RideControllerClockTests {
   @Test func aTickThatComesAHairBeforeASecondStillMovesTheRideOn() {
     let controller = RideController(
-      template: WorkoutTemplate.named("Recovery 30")!, ftp: 200, simulated: true)
+      workout: WorkoutTemplate.named("Recovery 30")!.planned, ftp: 200, simulated: true)
     controller.start()
     defer { controller.stop() }
     controller.tickIfDue(at: .now + .milliseconds(950))

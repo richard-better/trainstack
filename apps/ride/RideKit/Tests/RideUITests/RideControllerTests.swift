@@ -11,7 +11,8 @@ struct RideControllerTests {
 
   @Test(.timeLimit(.minutes(1)))
   func releasingTheControllerCancelsItsClock() async throws {
-    var controller: RideController? = RideController(template: template, ftp: 200, simulated: true)
+    var controller: RideController? = RideController(
+      workout: template.planned, ftp: 200, simulated: true)
     weak let released = controller
     let clock = try #require(controller?.start())
     controller = nil
@@ -24,7 +25,7 @@ struct RideControllerTests {
   func stoppingTheClockDoesNotRecordAnotherSampleOrReclaimTheTrainer() async throws {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: true)
+      workout: template.planned, ftp: 200, devices: devices, simulated: true)
     let (ticks, continuation) = AsyncStream.makeStream(
       of: Void.self, bufferingPolicy: .bufferingNewest(1))
     controller.onTick = { continuation.yield(()) }
@@ -55,7 +56,7 @@ struct RideControllerTests {
   func trainerMeasurementsMoveTheRideOnWhenTheClockIsNotRunning() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     controller.start()
     defer { controller.stop() }
     let start = ContinuousClock.now
@@ -73,7 +74,7 @@ struct RideControllerTests {
   @Test func stopsListeningForTrainerMeasurementsWhenTheRideStops() {
     let (devices, _, _) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     controller.start()
     #expect(devices.onCyclingActivity != nil)
     controller.stop()
@@ -83,7 +84,7 @@ struct RideControllerTests {
   @Test func pausesWhenTheTrainerDropsAndWaitsForTheRiderToResume() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     controller.tick(seconds: 1)
     #expect(controller.trainerNotice == nil)
     #expect(controller.session.samples.count == 1)
@@ -111,7 +112,7 @@ struct RideControllerTests {
   @Test func doesNotPauseAgainWhenResumedBeforeTheTrainerIsBack() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     controller.tick(seconds: 1)
     transport.onDisconnect?(trainer.id)
     controller.tick(seconds: 1)
@@ -124,7 +125,8 @@ struct RideControllerTests {
   }
 
   @Test func leavesARideWithoutAConnectedTrainerRunning() {
-    let controller = RideController(template: template, ftp: 200, simulated: true)
+    let controller = RideController(
+      workout: template.planned, ftp: 200, simulated: true)
     controller.tick(seconds: 1)
     #expect(controller.trainerNotice == nil)
     #expect(!controller.session.isPaused)
@@ -134,7 +136,7 @@ struct RideControllerTests {
       transport: transport, defaults: UserDefaults(suiteName: "RideControllerTests.\(UUID())")!)
     devices.pair(DiscoveredDevice(id: UUID(), name: "KICKR", services: [.trainer]))
     let waiting = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     waiting.tick(seconds: 1)
     #expect(!waiting.session.isPaused)
     #expect(waiting.trainerNotice == "KICKR is not connected. Reconnecting…")
@@ -143,7 +145,7 @@ struct RideControllerTests {
   @Test func takesHeartRateFromARealSensorOverTheSimulator() {
     let feed = HeartRateFeed()
     let controller = RideController(
-      template: template, ftp: 200, heartRate: feed, simulated: true)
+      workout: template.planned, ftp: 200, heartRate: feed, simulated: true)
     let now = Date.now
     controller.tick(seconds: 1, at: now)
     #expect(controller.session.latest.heartRateSource == .simulated)
@@ -163,7 +165,7 @@ struct RideControllerTests {
     let zones = try #require(RiderSettingsStore.sample.heartRateZones)
     let feed = HeartRateFeed()
     let controller = RideController(
-      template: template, ftp: 200, heartRateZones: zones, heartRate: feed, simulated: false)
+      workout: template.planned, ftp: 200, heartRateZones: zones, heartRate: feed, simulated: false)
     let now = Date.now
     controller.tick(seconds: 1, at: now)
     #expect(controller.heartRateZone == nil)
@@ -182,7 +184,7 @@ struct RideControllerTests {
     #expect(settings.heartRateZones == nil)
     let feed = HeartRateFeed()
     let controller = RideController(
-      template: template, ftp: 200, heartRateZones: settings.heartRateZones, heartRate: feed,
+      workout: template.planned, ftp: 200, heartRateZones: settings.heartRateZones, heartRate: feed,
       simulated: false)
     let now = Date.now
     feed.record(150, from: .chestStrap, at: now)
@@ -192,7 +194,8 @@ struct RideControllerTests {
   }
 
   @Test func reportsEachSecondForTheWatch() {
-    let controller = RideController(template: template, ftp: 200, simulated: true)
+    let controller = RideController(
+      workout: template.planned, ftp: 200, simulated: true)
     var glances: [RideGlance] = []
     controller.onTick = { glances.append(controller.glance) }
     defer { controller.onTick = nil }
@@ -203,7 +206,8 @@ struct RideControllerTests {
   }
 
   @Test func keepsTheTotalsUpToDateAsTheRideMovesOn() throws {
-    let controller = RideController(template: template, ftp: 200, simulated: true)
+    let controller = RideController(
+      workout: template.planned, ftp: 200, simulated: true)
     for _ in 0..<90 { controller.tick(seconds: 1) }
     #expect(controller.totals == RideTotals(session: controller.session, ftp: 200))
     #expect(controller.totals.normalizedPower != nil)
@@ -221,17 +225,18 @@ struct RideControllerTests {
   }
 
   @Test func aResumedRideStartsWithTheTotalsItHadAddedUpTo() {
-    let controller = RideController(template: template, ftp: 200, simulated: true)
+    let controller = RideController(
+      workout: template.planned, ftp: 200, simulated: true)
     for _ in 0..<90 { controller.tick(seconds: 1) }
     let resumed = RideController(
-      template: template, ftp: 200, session: controller.session, simulated: true)
+      workout: template.planned, ftp: 200, session: controller.session, simulated: true)
     #expect(resumed.totals == controller.totals)
   }
 
   @Test func recordsLivePowerAndCadenceAndRefreshesThemWhilePaused() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 250, 0]))
     controller.tick(seconds: 1)
     #expect(controller.session.latest.power == 250)
@@ -251,7 +256,7 @@ struct RideControllerTests {
   @Test func showsPowerAsTheRiderChoseButRecordsEachReading() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 180, 0, 250, 0]))
     controller.tick(seconds: 1)
     transport.onCyclingMeasurement?(trainer.id, .indoorBike, Data([0x45, 0, 0, 0, 0, 0]))
@@ -268,8 +273,9 @@ struct RideControllerTests {
   @Test func liveCyclingReadingsOverrideSimulationAndExpire() {
     let (devices, _, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: true)
-    let simulated = RideController(template: template, ftp: 200, simulated: true)
+      workout: template.planned, ftp: 200, devices: devices, simulated: true)
+    let simulated = RideController(
+      workout: template.planned, ftp: 200, simulated: true)
     let now = Date.now
     devices.receiveCycling(
       Data([0x45, 0, 180, 0, 250, 0]), from: trainer.id, characteristic: .indoorBike, at: now)
@@ -286,7 +292,7 @@ struct RideControllerTests {
   @Test func disconnectedAndExpiredSensorsLeaveGapsInTheRecording() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     let now = Date.now
     devices.receiveCycling(
       Data([0x45, 0, 180, 0, 250, 0]), from: trainer.id, characteristic: .indoorBike, at: now)
@@ -310,7 +316,7 @@ struct RideControllerTests {
     transport.onCyclingMeasurement?(meter.id, .power, Data([0, 0, 220, 0]))
     devices.select(trainer, for: .cadence)
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     controller.tick(seconds: 1)
     #expect(controller.session.latest.power == 220)
     #expect(controller.session.latest.cadence == 90)
@@ -322,7 +328,7 @@ struct RideControllerTests {
   @Test func setsTheTrainerForEachModeAndHandsItBackWhenTheRideStops() {
     let (devices, transport, trainer) = cyclingDevices()
     let controller = RideController(
-      template: template, ftp: 200, devices: devices, simulated: false)
+      workout: template.planned, ftp: 200, devices: devices, simulated: false)
     func answerLastWrite() {
       guard let opCode = transport.trainerWrites.last?.first else { return }
       transport.onTrainerValue?(trainer.id, .controlPoint, Data([0x80, opCode, 0x01]))
@@ -364,7 +370,7 @@ struct RideControllerTests {
     let duringAnEarlierRide = session.startDate - 60
     heartRate.record(140, from: .watch, at: duringAnEarlierRide)
     let controller = RideController(
-      template: template, ftp: 200, heartRate: heartRate, devices: devices, session: session,
+      workout: template.planned, ftp: 200, heartRate: heartRate, devices: devices, session: session,
       simulated: false)
     let now = Date.now
     #expect(controller.hasSensors)
@@ -374,7 +380,10 @@ struct RideControllerTests {
     #expect(controller.sensorStatuses(at: now).map(\.source) == [.trainer, .watch])
     transport.onDisconnect?(trainer.id)
     #expect(controller.sensorStatuses(at: now).first?.health == .connecting)
-    #expect(!RideController(template: template, ftp: 200, simulated: true).hasSensors)
+    #expect(
+      !RideController(
+        workout: template.planned, ftp: 200, simulated: true
+      ).hasSensors)
   }
 
   private func cyclingDevices() -> (BluetoothDevices, CyclingTestTransport, DiscoveredDevice) {

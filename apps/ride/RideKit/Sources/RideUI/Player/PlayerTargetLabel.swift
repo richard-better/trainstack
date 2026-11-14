@@ -2,10 +2,11 @@ import RideData
 import SwiftUI
 
 struct PlayerTargetLabel: View {
-  let zone: PowerZone?
+  let interval: RideSession.Interval?
+  let ftp: Int
 
   var body: some View {
-    let badge = zone.map { PowerZoneBadge(zone: $0) }
+    let badge = interval.map { IntervalBadge(interval: $0, ftp: ftp) }
     ViewThatFits(in: .horizontal) {
       HStack(spacing: 8) {
         Text("Target")

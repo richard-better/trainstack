@@ -34,12 +34,12 @@ struct PlayerNextInterval: View {
   @ViewBuilder private func details(isNear: Bool) -> some View {
     let session = controller.session
     if let next = session.nextInterval {
-      PowerZoneBadge(zone: controller.zone(of: next), isHighlighted: isNear)
-      if session.mode == .erg {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-          Text("\(session.adjusted(next.plannedPower))").font(Design.statValueFont)
-          Text("W").font(.subheadline).foregroundStyle(.secondary)
-        }
+      IntervalBadge(interval: next, ftp: controller.ftp, isHighlighted: isNear)
+      if session.mode == .erg, let watts = next.plannedPower(at: next.start) {
+        target(value: "\(session.adjusted(watts))", unit: "W")
+      } else if case .heartRate(let heartRate) = next.step.target {
+        let text = StepTargetText.heartRate(heartRate)
+        target(value: text.value, unit: text.unit)
       }
       Text("for \((next.end - next.start).clockString)")
         .font(.subheadline)
@@ -48,6 +48,13 @@ struct PlayerNextInterval: View {
       Label("Finish", systemImage: "flag.checkered")
         .font(Design.statValueFont)
       Text("Last interval").font(.subheadline).foregroundStyle(.secondary)
+    }
+  }
+
+  private func target(value: String, unit: String) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: 4) {
+      Text(value).font(Design.statValueFont)
+      Text(unit).font(.subheadline).foregroundStyle(.secondary)
     }
   }
 }

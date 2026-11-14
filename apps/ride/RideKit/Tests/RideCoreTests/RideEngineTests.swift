@@ -56,9 +56,9 @@ struct RideEngineTests {
     #expect(engine.apply(tick()) == nil)
   }
 
-  @Test func asksTheTrainerForTheCurrentModesSetting() {
+  @Test func asksTheTrainerForTheCurrentModesSetting() throws {
     var engine = engine()
-    let firstTarget = template.workout(ftp: 250).steps[0].targetPower
+    let firstTarget = try #require(template.workout(ftp: 250).targetPower(at: 0))
     #expect(engine.trainerCommand == .power(watts: firstTarget))
     engine.apply(.changeMode(.slope))
     engine.apply(.adjust(steps: 2))
@@ -86,5 +86,21 @@ struct RideEngineTests {
     let replayed = RideEngine(replaying: inputs, from: engine().session)
     #expect(replayed.session.recording() == live.session.recording())
     #expect(replayed.session.speedMetresPerSecond == live.session.speedMetresPerSecond)
+  }
+
+  @Test func asksForAFlatRoadInAStepWithoutAPowerTarget() {
+    let free = PlannedWorkout(
+      name: "Free", category: nil,
+      steps: [
+        PlannedStep(duration: 10, target: .watts(.constant(200))),
+        PlannedStep(duration: 10, target: nil), PlannedStep(duration: 10, target: .maxEffort),
+      ])
+    var engine = RideEngine(session: RideSession(workout: free.workout(ftp: 250)))
+    engine.apply(.begin(trainerConnected: true))
+    #expect(engine.trainerCommand == .power(watts: 200))
+    for _ in 0..<10 { engine.apply(tick()) }
+    #expect(engine.trainerCommand == .grade(percent: 0))
+    for _ in 0..<10 { engine.apply(tick()) }
+    #expect(engine.trainerCommand == .grade(percent: 0))
   }
 }

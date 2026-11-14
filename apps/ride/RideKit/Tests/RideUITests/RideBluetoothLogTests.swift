@@ -51,7 +51,7 @@ struct RideBluetoothLogTests {
           header: .init(template: template, ftp: 250, startDate: now, riderWeight: 72)))
       devices.startRecording(to: try #require(BluetoothLog(directory: directory)))
       let controller = RideController(
-        template: template, ftp: 250, devices: devices, session: session, journal: journal,
+        workout: template.planned, ftp: 250, devices: devices, session: session, journal: journal,
         simulated: false)
       var answered = 0
       for quarter in 1...(50 * 4) {

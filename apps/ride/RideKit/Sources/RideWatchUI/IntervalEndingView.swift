@@ -36,12 +36,12 @@
       }
     }
 
-    private var color: Color { glance.next?.zone.color ?? .green }
+    private var color: Color { glance.next.map { $0.zone?.color ?? .gray } ?? .green }
 
     private var nextTitle: String {
       guard let next = glance.next else { return "Finish" }
-      guard let target = next.targetPower else { return next.zone.name }
-      return "\(next.zone.name) · \(target) W"
+      guard let target = next.targetPower else { return next.title }
+      return "\(next.title) · \(target) W"
     }
   }
 

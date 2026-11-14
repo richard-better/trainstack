@@ -29,7 +29,8 @@ struct StartButton: View {
   private func start() {
     if let template, let ftp = settings.ftp {
       launcher.start(
-        template, ftp: ftp, heartRateZones: settings.heartRateZones, riderWeight: settings.weight)
+        template.planned, ftp: ftp, heartRateZones: settings.heartRateZones,
+        riderWeight: settings.weight)
     }
   }
 

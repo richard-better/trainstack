@@ -10,16 +10,25 @@ struct WorkoutProgressChart: View {
 
   var body: some View {
     let scale = scale
+    let bars = bars
     let hasHeartRate = session.samples.contains { $0.sample.heartRate != nil }
     Chart {
-      ForEach(session.intervals) { interval in
+      ForEach(bars) { bar in
+        let shade = WorkoutTargetShade(
+          interval: bar.interval, position: session.position, ftp: ftp)
         RectangleMark(
-          xStart: .value("Start", interval.start), xEnd: .value("End", interval.end),
+          xStart: .value("Start", bar.start), xEnd: .value("End", bar.end),
           yStart: .value("Floor", 0),
-          yEnd: .value("Target", session.adjusted(interval.plannedPower))
+          yEnd: .value("Target", bar.watts.map(Double.init) ?? scale.powerMaximum)
         )
-        .foregroundStyle(
-          WorkoutTargetShade(interval: interval, position: session.position, ftp: ftp).color)
+        .foregroundStyle(shade.color)
+        if let range = bar.range {
+          RectangleMark(
+            xStart: .value("Start", bar.start), xEnd: .value("End", bar.end),
+            yStart: .value("Low", range.lowerBound), yEnd: .value("High", range.upperBound)
+          )
+          .foregroundStyle(shade.color)
+        }
       }
       if let ftp, scale.shows(watts: Double(ftp)) {
         RuleMark(y: .value("FTP", ftp))
@@ -97,8 +106,12 @@ struct WorkoutProgressChart: View {
 
   private var trace: [WorkoutTracePoint] { WorkoutTracePoint.trace(of: session.samples) }
 
+  private var bars: [WorkoutTargetBar] { WorkoutTargetBar.bars(of: session) }
+
   private var scale: WorkoutChartScale {
-    let planned = session.intervals.map { session.adjusted($0.plannedPower) }.max() ?? 100
+    let planned =
+      bars.compactMap { bar in [bar.watts, bar.range?.upperBound].compactMap(\.self).max() }.max()
+      ?? 100
     let recorded = session.samples.compactMap(\.sample.power).max()
     return WorkoutChartScale(
       peakPower: max(Double(planned) * 1.4, Double(recorded ?? 0) * 1.05),

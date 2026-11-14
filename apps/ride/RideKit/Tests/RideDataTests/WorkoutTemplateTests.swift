@@ -19,7 +19,8 @@ struct WorkoutTemplateTests {
   }
 
   @Test func convertsToWattsForARider() {
-    #expect(template.workout(ftp: 250).steps.map(\.targetPower) == [125, 250, 125])
+    #expect(
+      template.workout(ftp: 250).steps.map { $0.targetPower(atOffset: 0) } == [125, 250, 125])
   }
 
   @Test func stretchesOnlyTheEasyStepsWhenLengthened() {
@@ -50,7 +51,7 @@ struct WorkoutTemplateTests {
     let test = try #require(WorkoutTemplate.named("Quick test 45s"))
     #expect(test.duration == 45)
     #expect(test.workout(ftp: 200).steps.map(\.duration) == [15, 15, 15])
-    #expect(test.workout(ftp: 200).steps.map(\.targetPower) == [100, 150, 240])
+    #expect(test.workout(ftp: 200).steps.map { $0.targetPower(atOffset: 0) } == [100, 150, 240])
   }
 
   @Test func treatsStepsBelowTempoAsEasy() {
