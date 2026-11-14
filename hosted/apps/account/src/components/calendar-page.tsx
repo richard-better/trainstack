@@ -23,6 +23,7 @@ import {
   monthNameOf,
   moved,
   nudged,
+  pairsOf,
   periodOf,
   placementFor,
   plannedName,
@@ -305,6 +306,14 @@ function Legend() {
         Done
       </li>
       <li>
+        <span className="legend-pair" aria-hidden="true" />
+        Paired by you
+      </li>
+      <li>
+        <span className="legend-pair" data-by="auto" aria-hidden="true" />
+        Matched automatically
+      </li>
+      <li>
         <CalendarIcon name="skipped" size={12} />
         Skipped
       </li>
@@ -380,6 +389,10 @@ function noticeText(notice: ReturnType<typeof calendarWrites.notices>[number]) {
           return `${name} was ${notice.item.skipped ? "marked skipped" : "marked not skipped"} on another device after your change, so that stands.`;
         case "change":
           return `${name} was changed on another device after your edit, so its version stands.`;
+        case "pair":
+          return `${name} was paired differently on another device after your choice, so that stands.`;
+        case "unpair":
+          return `${name} was paired again on another device after you took it apart, so that stands.`;
       }
     }
   }
@@ -532,19 +545,33 @@ function DayCell({
   const drag = actions.drag.state;
   const dropAt = drag?.spot?.day === day.day ? drag.spot.index : null;
   const empty = day.planned.length === 0 && day.activities.length === 0;
-  const items: ReactNode[] = day.planned.map((item) => (
-    <PlannedCard
-      key={item.id}
-      item={item}
-      reference={
-        item.content.kind === "workout" ? referenceOn(item.day, item.content.workout.sport) : null
-      }
-      moving={item.id === movingId}
-      dragging={item.id === drag?.id}
-      actions={actions}
-      thumbHeight={thumbHeight}
-    />
-  ));
+  const { planned, unplanned } = pairsOf(day);
+  const items: ReactNode[] = planned.map(({ item, done }) => {
+    const card = (
+      <PlannedCard
+        key={item.id}
+        item={item}
+        done={done}
+        activities={day.activities}
+        reference={
+          item.content.kind === "workout" ? referenceOn(item.day, item.content.workout.sport) : null
+        }
+        moving={item.id === movingId}
+        dragging={item.id === drag?.id}
+        actions={actions}
+        thumbHeight={thumbHeight}
+      />
+    );
+    if (!done) return card;
+    return (
+      <li key={item.id} className="pair" data-by={item.pairing?.by}>
+        <ul className="pair-items">
+          {card}
+          <ActivityCard activity={done} pairedBy={item.pairing?.by ?? "auto"} />
+        </ul>
+      </li>
+    );
+  });
   if (dropAt !== null) {
     items.splice(
       lineIndex(day.planned, drag?.id, dropAt),
@@ -597,8 +624,8 @@ function DayCell({
       {(items.length > 0 || day.activities.length > 0) && (
         <ul className="day-items">
           {items}
-          {day.activities.map((activity) => (
-            <ActivityCard key={activity.id} activity={activity} />
+          {unplanned.map((activity) => (
+            <ActivityCard key={activity.id} activity={activity} pairedBy={null} />
           ))}
         </ul>
       )}
@@ -621,6 +648,8 @@ function stateWords(item: PlannedWorkout) {
 
 function PlannedCard({
   item,
+  done,
+  activities,
   reference,
   moving,
   dragging,
@@ -628,6 +657,8 @@ function PlannedCard({
   thumbHeight,
 }: {
   item: PlannedWorkout;
+  done: CalendarActivity | null;
+  activities: readonly CalendarActivity[];
   reference: Reference | null;
   moving: boolean;
   dragging: boolean;
@@ -718,7 +749,7 @@ function PlannedCard({
           {item.state === "planned" && content.kind === "workout" ? ", planned" : ""}
         </span>
       </Link>
-      <PlannedMenu item={item} name={name} actions={actions} />
+      <PlannedMenu item={item} name={name} done={done} activities={activities} actions={actions} />
     </li>
   );
 }
@@ -771,16 +802,48 @@ export function Menu({
 function PlannedMenu({
   item,
   name,
+  done,
+  activities,
   actions,
 }: {
   item: PlannedWorkout;
   name: string;
+  done: CalendarActivity | null;
+  activities: readonly CalendarActivity[];
   actions: Actions;
 }) {
   return (
     <Menu label={`Change ${name}`} className="plan-menu" summary={<CalendarIcon name="more" />}>
       {(close) => (
         <>
+          {done && (
+            <button
+              type="button"
+              className="quiet menu-item"
+              onClick={() => {
+                close();
+                void calendarWrites.unpair(item, done.id);
+              }}
+            >
+              Unpair from {activityTitle(done)}
+            </button>
+          )}
+          {item.content.kind === "workout" &&
+            activities
+              .filter((activity) => activity.id !== done?.id)
+              .map((activity) => (
+                <button
+                  key={activity.id}
+                  type="button"
+                  className="quiet menu-item"
+                  onClick={() => {
+                    close();
+                    void calendarWrites.pair(item, activity.id);
+                  }}
+                >
+                  {done ? "Pair instead with" : "Pair with"} {activityTitle(activity)}
+                </button>
+              ))}
           <button
             type="button"
             className="quiet menu-item"
@@ -872,12 +935,18 @@ function RouteDrawing({ route }: { route: NonNullable<CalendarActivity["route"]>
   );
 }
 
-function ActivityCard({ activity }: { activity: CalendarActivity }) {
+function ActivityCard({
+  activity,
+  pairedBy,
+}: {
+  activity: CalendarActivity;
+  pairedBy: "athlete" | "auto" | null;
+}) {
   const sport = sportName(activity.sport, activity.indoor);
   const distance = activity.meters ? formatDistance(activity.meters) : null;
   const analysing = activity.load === null && activity.analysisDue;
   return (
-    <li className="done-card" data-state="done">
+    <li className="done-card" data-state={pairedBy ? "done" : "unplanned"}>
       <Link to="/activities/$id" params={{ id: activity.id }} className="done-link">
         <span className="plan-title">
           <span className="plan-sport" title={sport.label}>
@@ -906,7 +975,9 @@ function ActivityCard({ activity }: { activity: CalendarActivity }) {
           )}
         </span>
         {activity.route && <RouteDrawing route={activity.route} />}
-        <span className="visually-hidden">, done</span>
+        <span className="done-pairing">
+          {pairedBy === null ? "Unplanned" : pairedBy === "athlete" ? "Paired by you" : "Matched"}
+        </span>
       </Link>
     </li>
   );

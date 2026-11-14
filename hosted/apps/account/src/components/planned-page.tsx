@@ -9,16 +9,22 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { api } from "../api";
-import { dayInFull, plannedName } from "../lib/calendar";
+import { dayInFull, pairsOf, plannedName } from "../lib/calendar";
 import { savePlannedWorkout } from "../lib/calendar-writes";
 import { mondayOf } from "../lib/dates";
-import { sportName } from "../lib/sports";
-import { formatHours, formatLoad } from "../lib/statistics";
+import { activityTitle, sportName } from "../lib/sports";
+import { formatDistance, formatHours, formatLoad } from "../lib/statistics";
 import { todayIn } from "../lib/time-zone";
 import { formatMeters, overviewOf, sportNames } from "../lib/workout-profile";
 import { CalendarIcon } from "./calendar-icons";
 import { Notices } from "./calendar-page";
-import { calendarWrites, usePlanned, useReferenceOn, useWritesVersion } from "./calendar-data";
+import {
+  calendarWrites,
+  useCalendar,
+  usePlanned,
+  useReferenceOn,
+  useWritesVersion,
+} from "./calendar-data";
 import { CopyDialog, DeleteDialog, SkipDialog } from "./calendar-dialogs";
 import { SportIcon } from "./sport-icon";
 import { useAthleteSettings } from "./time-zone";
@@ -208,6 +214,8 @@ function PlannedView({ item, confirmed }: { item: PlannedWorkout; confirmed: Pla
           You skipped this{item.skipped.reason ? `: ${item.skipped.reason}` : "."}
         </p>
       )}
+
+      {item.content.kind === "workout" && item.day <= today && <DoneAs item={item} />}
 
       {item.content.kind === "workout" && (
         <PlannedWorkoutBody item={item} workout={item.content.workout} />
@@ -448,4 +456,123 @@ function plannedTarget(
       keep: "Plan it again",
     },
   };
+}
+
+const distanceText = (meters: number) => {
+  const distance = formatDistance(meters);
+  return `${distance.value} ${distance.unit}`;
+};
+
+function DoneAs({ item }: { item: PlannedWorkout }) {
+  const { query, range } = useCalendar({ from: item.day, through: item.day });
+  const day = range?.days[0];
+  if (!day) {
+    return query.isError ? null : (
+      <section aria-busy="true" className="workout-section done-as">
+        <h2 className="section-title">Done as</h2>
+        <div className="traces-loading short" />
+      </section>
+    );
+  }
+  const { planned } = pairsOf(day);
+  const done = planned.find((entry) => entry.item.id === item.id)?.done ?? null;
+  const others = day.activities.filter((activity) => activity.id !== done?.id);
+  return (
+    <section aria-labelledby="done-as-title" className="workout-section done-as">
+      <h2 id="done-as-title" className="section-title">
+        Done as
+      </h2>
+      {done ? (
+        <>
+          <p className="lede">
+            <Link to="/activities/$id" params={{ id: done.id }} className="text-link">
+              {activityTitle(done)}
+            </Link>
+            {item.pairing?.by === "athlete"
+              ? ", paired by you."
+              : ", matched automatically: the same sport on the same day, closest in time and load. If that is wrong, unpair it or pair another."}
+          </p>
+          <table className="data-table done-table">
+            <caption className="visually-hidden">Planned against done</caption>
+            <thead>
+              <tr>
+                <th scope="col" />
+                <th scope="col">Planned</th>
+                <th scope="col">Done</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Time</th>
+                <td>
+                  {item.planned?.seconds == null ? "unknown" : formatHours(item.planned.seconds)}
+                </td>
+                <td>{done.seconds === null ? "-" : formatHours(done.seconds)}</td>
+              </tr>
+              {(item.planned?.meters != null || done.meters !== null) && (
+                <tr>
+                  <th scope="row">Distance</th>
+                  <td>{item.planned?.meters == null ? "-" : distanceText(item.planned.meters)}</td>
+                  <td>{done.meters === null ? "-" : distanceText(done.meters)}</td>
+                </tr>
+              )}
+              <tr>
+                <th scope="row">Load</th>
+                <td>{item.planned?.load == null ? "unknown" : formatLoad(item.planned.load)}</td>
+                <td>
+                  {done.load !== null
+                    ? formatLoad(done.load)
+                    : done.analysisDue
+                      ? "Analysing"
+                      : "-"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="form-actions">
+            <button
+              type="button"
+              className="secondary compact"
+              onClick={() => void calendarWrites.unpair(item, done.id)}
+            >
+              Unpair
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="lede">
+          {day.activities.length === 0
+            ? "No activity on this day yet."
+            : "Not paired with an activity. Pair it with one done that day:"}
+        </p>
+      )}
+      {others.length > 0 && (
+        <ul className="pair-choices">
+          {others.map((activity) => {
+            const holder = planned.find((entry) => entry.done?.id === activity.id)?.item;
+            return (
+              <li key={activity.id}>
+                <span>
+                  {activityTitle(activity)}
+                  {activity.seconds !== null && (
+                    <span className="muted"> {formatHours(activity.seconds)}</span>
+                  )}
+                  {holder && (
+                    <span className="muted">, now with {plannedName(holder.content)}</span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  className="secondary compact"
+                  onClick={() => void calendarWrites.pair(item, activity.id)}
+                >
+                  {done ? "Pair instead" : "Pair"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
 }
