@@ -8,6 +8,7 @@ import { rolldown } from "rolldown";
 
 export const origin = "https://account.trainstackhq.com";
 export const api = "https://api.trainstackhq.com";
+export const r2Buckets = ["ACTIVITY_FILES"];
 
 export async function startWorker({ bindings = {}, outboundService } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "trainstack-worker-"));
@@ -33,7 +34,7 @@ export async function startWorker({ bindings = {}, outboundService } = {}) {
     compatibilityFlags: ["nodejs_compat"],
     cf: false,
     d1Databases: ["DB"],
-    r2Buckets: ["ACTIVITY_FILES"],
+    r2Buckets,
     outboundService,
     bindings: {
       NODE_ENV: "test",

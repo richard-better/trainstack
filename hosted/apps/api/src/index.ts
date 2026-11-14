@@ -11,6 +11,8 @@ import { evlog, type EvlogVariables } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+import { exportRoutes } from "./account/export";
+import { forgetSpentStravaBudgets } from "./account/deletion";
 import { analyzeDueActivities } from "./activities/analysis";
 import { summarizeDueActivities } from "./activities/summary";
 import { matchDueActivities } from "./activities/workouts";
@@ -79,6 +81,7 @@ const riderOfBearerToken = async (token: string) => {
 };
 
 app.route("/strava", stravaRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
+app.route("/account", exportRoutes({ env: ENV, database: getDb }));
 app.route("/feedback", feedbackRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
@@ -147,6 +150,7 @@ async function summarizeWhatIsDue() {
   const summaries = await summarizeDueActivities(db, ENV.ACTIVITY_FILES);
   const matches = await matchDueActivities(db);
   const analyses = await analyzeDueActivities(db, ENV.ACTIVITY_FILES);
+  await forgetSpentStravaBudgets(db);
   for (const failure of [...summaries.failures, ...matches.failures, ...analyses.failures]) {
     console.error(failure);
   }
