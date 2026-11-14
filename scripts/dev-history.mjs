@@ -180,7 +180,7 @@ export function activityFile({
       if (sport === "cycling") {
         const watts = Math.max(0, block.watts * (1 + (next() - 0.5) * 0.18 + hill * 0.08));
         power = withPower ? Math.round(watts) : null;
-        speed = 4 + Math.cbrt(watts) * 1.55 - hill * 1.2;
+        speed = Math.max(2, 1.5 + Math.cbrt(watts) * 1.15 - hill * 1.6);
         effort = block.watts / 250;
       } else {
         speed = block.speed * (1 + (next() - 0.5) * 0.06 - hill * 0.06);
@@ -273,7 +273,7 @@ export function trainingHistory({ today = new Date(), weeks = 30 } = {}) {
           ],
         ];
     for (const [offset, sport, kind, name, indoor = false] of plan) {
-      const time = monday + offset * DAY_MS + (sport === "running" ? 6.5 : 17.5) * 3600_000;
+      const time = monday + offset * DAY_MS + (sport === "running" ? 6.5 : offset >= 5 ? 8 : 17.5) * 3600_000;
       if (time > today.getTime() - 3600_000 * 3) continue;
       activities.push({
         sport,
