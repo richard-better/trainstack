@@ -21,6 +21,7 @@ import {
   createCalendarWrites,
   savePlannedWorkout,
 } from "../hosted/apps/account/src/lib/calendar-writes.ts";
+import { complianceWords, stepTarget } from "../hosted/apps/account/src/lib/compliance.ts";
 import { mockApple } from "./helpers/apple.mjs";
 import { denseRide } from "./helpers/fit-files.mjs";
 import { migrate, rpcClient, startWorker } from "./helpers/worker.mjs";
@@ -783,5 +784,183 @@ test("a newer pairing confirmed first is not undone by an older one still waitin
       .planned.filter(({ done: activity }) => activity)
       .map(({ item }) => item.id),
     [second.id],
+  );
+});
+
+const part = (planned, done) => {
+  const ratio = done / planned;
+  const off = Math.abs(ratio - 1);
+  return { planned, done, ratio, score: off <= 0.2 ? 1 : Math.max(0, 1 - (off - 0.2) / 0.3) };
+};
+
+const pairedWith = (compliance, content = ride("Threshold")) => ({ content, compliance });
+
+test("a score says which part pulled it down, with planned against done, in the athlete's words", () => {
+  const words = complianceWords(
+    pairedWith({
+      score: 67,
+      rating: "partly",
+      parts: {
+        duration: part(3600, 3900),
+        distance: null,
+        load: part(58, 90),
+        intervals: {
+          secondsWithData: 1800,
+          secondsInTarget: 1500,
+          share: 1500 / 1800,
+          score: 1500 / 1800,
+          alignedBy: "time",
+          steps: null,
+        },
+      },
+      pending: false,
+    }),
+  );
+  assert.equal(words.label, "Partly");
+  assert.equal(words.why, "Load pulled it down: 90 against 58 planned, 55% over.");
+  assert.deepEqual(
+    words.parts.map(({ name, verdict }) => [name, verdict]),
+    [
+      ["Time", "8% over, within 20%"],
+      ["Load", "55% over"],
+      ["Intervals", "83% of the time in target"],
+    ],
+  );
+  assert.deepEqual(words.unscored, []);
+});
+
+test("a part that is not scored says why, a lap step first among them", () => {
+  const lapStep = {
+    kind: "workout",
+    workout: {
+      name: "Hill repeats",
+      sport: "running",
+      steps: [{ type: "step", duration: { type: "open" } }],
+    },
+    source: null,
+    notes: null,
+  };
+  const words = complianceWords(
+    pairedWith(
+      {
+        score: null,
+        rating: null,
+        parts: {
+          duration: null,
+          distance: null,
+          load: null,
+          intervals: {
+            secondsWithData: 0,
+            secondsInTarget: 0,
+            share: null,
+            score: null,
+            alignedBy: "time",
+            steps: [],
+          },
+        },
+        pending: true,
+      },
+      lapStep,
+    ),
+  );
+  assert.equal(words.label, "Not scored");
+  assert.equal(words.provisional, true);
+  assert.match(words.why, /a step lasts until you press lap/);
+  assert.match(words.unscored[1], /no targets to hold/, "its only step has no target");
+});
+
+test("every scored part on target says so", () => {
+  const words = complianceWords(
+    pairedWith({
+      score: 100,
+      rating: "on_target",
+      parts: { duration: part(3600, 3600), distance: null, load: part(60, 62), intervals: null },
+      pending: false,
+    }),
+  );
+  assert.equal(words.why, "On target in every part that was scored.");
+  assert.equal(words.parts[0].verdict, "as planned, within 20%");
+  assert.match(words.unscored[0], /Intervals are not scored/);
+});
+
+test("a step's target reads in the athlete's units", () => {
+  const step = (metric, low, high, average) => ({ metric, low, high, average });
+  assert.deepEqual(stepTarget(step("power", 238, 262, 251.4), "cycling"), {
+    band: "238 W to 262 W",
+    average: "251 W",
+  });
+  assert.deepEqual(stepTarget(step("speed", 1000 / 300, 1000 / 270, null), "running"), {
+    band: "5:00 /km to 4:30 /km",
+    average: "-",
+  });
+});
+
+test("intervals missing for a workout with targets ask for analysis or thresholds, not claim no targets", () => {
+  const words = complianceWords(
+    pairedWith({
+      score: 100,
+      rating: "on_target",
+      parts: { duration: part(3600, 3600), distance: null, load: null, intervals: null },
+      pending: false,
+    }),
+  );
+  assert.match(
+    words.unscored.at(-1),
+    /need the activity's analysis, and for targets set against a threshold/,
+  );
+});
+
+test("a sprint's all-out efforts and a run's missing distance each say why they are not scored", () => {
+  const sprints = {
+    kind: "workout",
+    workout: {
+      name: "Sprints",
+      sport: "cycling",
+      steps: [
+        { type: "step", duration: { type: "time", seconds: 20 }, target: { type: "maxEffort" } },
+      ],
+    },
+    source: null,
+    notes: null,
+  };
+  const sprintWords = complianceWords(
+    pairedWith(
+      {
+        score: 100,
+        rating: "on_target",
+        parts: { duration: part(20, 21), distance: null, load: part(5, 5), intervals: null },
+        pending: false,
+      },
+      sprints,
+    ),
+  );
+  assert.deepEqual(sprintWords.unscored, [
+    "Intervals are not scored: an all-out effort has no target band to hold.",
+  ]);
+
+  const kilometres = {
+    kind: "workout",
+    workout: {
+      name: "5 × 1 km",
+      sport: "running",
+      steps: [{ type: "step", duration: { type: "distance", meters: 1000 } }],
+    },
+    source: null,
+    notes: null,
+  };
+  const runWords = complianceWords(
+    pairedWith(
+      {
+        score: 100,
+        rating: "on_target",
+        parts: { duration: part(300, 310), distance: null, load: part(10, 10), intervals: null },
+        pending: false,
+      },
+      kilometres,
+    ),
+  );
+  assert.equal(
+    runWords.unscored[0],
+    "Distance is not scored: the plan or the activity has no distance.",
   );
 });

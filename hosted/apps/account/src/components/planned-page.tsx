@@ -12,12 +12,14 @@ import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "re
 import { api } from "../api";
 import { dayInFull, findPlanned, pairsOf, plannedName } from "../lib/calendar";
 import { savePlannedWorkout } from "../lib/calendar-writes";
+import type { IntervalStep } from "../lib/compliance";
 import { mondayOf } from "../lib/dates";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad } from "../lib/statistics";
 import { todayIn } from "../lib/time-zone";
 import { formatMeters, overviewOf, sportNames } from "../lib/workout-profile";
 import { CalendarIcon } from "./calendar-icons";
+import { ComplianceDetail } from "./compliance";
 import { Notices } from "./calendar-page";
 import {
   calendarWrites,
@@ -228,7 +230,12 @@ function PlannedView({
       )}
 
       {item.content.kind === "workout" && item.day <= today && (
-        <DoneAs item={item} day={day.range?.days[0]} failed={day.query.isError} />
+        <DoneAs
+          item={item}
+          day={day.range?.days[0]}
+          failed={day.query.isError}
+          steps={held.compliance?.parts.intervals?.steps ?? null}
+        />
       )}
 
       {item.content.kind === "workout" && (
@@ -481,10 +488,12 @@ function DoneAs({
   item,
   day,
   failed,
+  steps,
 }: {
   item: PlannedWorkout;
   day: CalendarDay | undefined;
   failed: boolean;
+  steps: readonly IntervalStep[] | null;
 }) {
   if (!day) {
     return failed ? null : (
@@ -558,6 +567,16 @@ function DoneAs({
               Unpair
             </button>
           </div>
+          <section aria-labelledby="compliance-title" className="compliance-section">
+            <h3 id="compliance-title" className="group-title">
+              How closely it was done
+            </h3>
+            {item.compliance ? (
+              <ComplianceDetail item={item} steps={steps} sport={done.sport} />
+            ) : (
+              <p className="lede">Being worked out. It appears within a minute or two.</p>
+            )}
+          </section>
         </>
       ) : (
         <p className="lede">

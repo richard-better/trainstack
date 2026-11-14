@@ -26,6 +26,7 @@ import {
   speedStyleOf,
   thresholdPrompt,
 } from "../lib/analysis";
+import { dayInShort, plannedName } from "../lib/calendar";
 import { activityDateInFull } from "../lib/dates";
 import { datedChanges, localDay } from "../lib/settings";
 import { type Axis, type LapRow, type Trace, lapsOf, traceOf } from "../lib/series";
@@ -44,6 +45,8 @@ import {
 } from "../lib/statistics";
 import { deletingSource } from "../lib/workouts";
 import { ActivityBests } from "./activity-bests";
+import { useCalendar } from "./calendar-data";
+import { ComplianceDetail } from "./compliance";
 import { useSettingsHistory } from "./settings-data";
 import { SportIcon } from "./sport-icon";
 import { TimeInZones } from "./time-in-zones";
@@ -216,6 +219,8 @@ function Activity({ activity }: { activity: ActivityDetail }) {
             {summaryProblem(activity.summaryError, decoded !== null)}
           </p>
         )}
+
+      <PlannedAs activity={activity} sport={sport} />
 
       <Effort activity={activity} sport={sport} />
 
@@ -753,5 +758,35 @@ function DownloadIcon() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+function PlannedAs({ activity, sport }: { activity: ActivityDetail; sport: string | null }) {
+  const day = activity.localDay ?? localDay(activity.startedAt ?? activity.createdAt);
+  const { range } = useCalendar({ from: day, through: day });
+  const copies = new Set([activity.id, ...activity.duplicates.map((copy) => copy.id)]);
+  const item = range?.days[0]?.planned.find(
+    (planned) => planned.pairing && copies.has(planned.pairing.activityId),
+  );
+  if (!item) return null;
+  return (
+    <section aria-labelledby="planned-as" className="planned-as">
+      <h2 id="planned-as" className="section-title">
+        Planned
+      </h2>
+      <p className="lede">
+        Done as{" "}
+        <Link to="/calendar/planned/$id" params={{ id: item.id }} className="text-link">
+          {plannedName(item.content)}
+        </Link>
+        , planned for {dayInShort(item.day)}
+        {item.pairing?.by === "auto" ? ", matched automatically." : ", paired by you."}
+      </p>
+      {item.compliance ? (
+        <ComplianceDetail item={item} steps={null} sport={sport} />
+      ) : (
+        <p className="lede">How closely it was done is being worked out.</p>
+      )}
+    </section>
   );
 }

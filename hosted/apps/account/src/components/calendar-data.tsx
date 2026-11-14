@@ -45,6 +45,12 @@ export function usePlanned(id: string) {
   const query = useQuery({
     queryKey: plannedKey(id),
     queryFn: () => api.plannedWorkouts.get({ id }),
+    refetchInterval: (query) => {
+      const held = query.state.data;
+      return analysisRefreshMs(
+        held?.compliance?.pending === true || (held?.pairing != null && held.compliance === null),
+      );
+    },
     initialData: seeded,
     initialDataUpdatedAt: 0,
     retry: (failures, error) =>
