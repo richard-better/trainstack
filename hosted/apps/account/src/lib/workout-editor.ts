@@ -387,6 +387,7 @@ function repeatWithBadCues(blocks: readonly Block[], prefix: Path = []): Path | 
       flatten([block]);
     } catch (error) {
       if (error instanceof CuePlacementError) return path;
+      if (error instanceof RangeError) return null;
       throw error;
     }
   }

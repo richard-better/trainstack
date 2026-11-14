@@ -47,7 +47,7 @@ export function withLevelShare(
   let next: Level;
   switch (level.kind) {
     case "constant":
-      next = { kind: "constant", value: set(to) };
+      next = { kind: "constant", value: set(unit(level.value) + delta) };
       break;
     case "range": {
       const low = Math.max(0, unit(level.low) + delta);
@@ -58,9 +58,9 @@ export function withLevelShare(
     case "ramp":
       next =
         part === "from"
-          ? { ...level, from: set(to) }
+          ? { ...level, from: set(unit(level.from) + delta) }
           : part === "to"
-            ? { ...level, to: set(to) }
+            ? { ...level, to: set(unit(level.to) + delta) }
             : { ...level, from: set(unit(level.from) + delta), to: set(unit(level.to) + delta) };
       break;
   }
@@ -99,23 +99,19 @@ export function nudgeLevel(
 }
 
 export function nudgeLength(step: Step, direction: 1 | -1): Step {
+  const nudged = (current: number, amount: number, start: number) =>
+    direction > 0 ? start + amount : Math.min(current, Math.max(1, start - amount));
   if (step.duration.type === "time") {
     const seconds = step.duration.seconds;
     const amount = seconds < 120 ? 5 : 15;
     return {
       ...step,
-      duration: {
-        type: "time",
-        seconds: Math.max(amount, snapSeconds(seconds) + amount * direction),
-      },
+      duration: { type: "time", seconds: nudged(seconds, amount, snapSeconds(seconds)) },
     };
   }
   const meters = step.duration.meters;
   const amount = meters < 400 ? 25 : 100;
-  return {
-    ...step,
-    duration: { type: "distance", meters: Math.max(amount, meters + amount * direction) },
-  };
+  return { ...step, duration: { type: "distance", meters: nudged(meters, amount, meters) } };
 }
 
 export const draggedSeconds = (

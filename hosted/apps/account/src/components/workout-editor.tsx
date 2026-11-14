@@ -201,7 +201,7 @@ function WorkoutEditor({
 
   useBlocker({
     shouldBlockFn: () =>
-      dirty && !save.isPending && !window.confirm("Leave without saving your changes?"),
+      !leaving.current && dirty && !window.confirm("Leave without saving your changes?"),
     enableBeforeUnload: () => dirty,
   });
 
@@ -291,6 +291,8 @@ function WorkoutEditor({
 
   function keepTheirs(stored: StoredWorkout) {
     setChecked(new Set());
+    void rememberWorkout(stored);
+    queryClient.setQueryData(workoutKey(stored.id), stored);
     setHistory((current) => edit(current, stored.workout));
     setSaved({ workout: stored.workout, base: stored });
     setConflict(null);
@@ -381,7 +383,10 @@ function WorkoutEditor({
         {conflict && (
           <ConflictPanel
             conflict={conflict}
-            onKeepMine={() => save.mutate(true)}
+            onKeepMine={() => {
+              if (!invalid && !save.isPending) save.mutate(true);
+            }}
+            canKeepMine={!invalid && !save.isPending}
             onKeepTheirs={keepTheirs}
             onSaveAsNew={saveAsNew}
             onDiscard={() => {
@@ -624,12 +629,14 @@ function focusBlock(path: Path, control: number | null) {
 function ConflictPanel({
   conflict,
   onKeepMine,
+  canKeepMine,
   onKeepTheirs,
   onSaveAsNew,
   onDiscard,
 }: {
   conflict: Conflict;
   onKeepMine: () => void;
+  canKeepMine: boolean;
   onKeepTheirs: (stored: StoredWorkout) => void;
   onSaveAsNew: () => void;
   onDiscard: () => void;
@@ -673,7 +680,12 @@ function ConflictPanel({
         Keep yours to replace it, or take theirs. Undo brings yours back.
       </p>
       <div className="form-actions">
-        <button type="button" className="primary compact" onClick={onKeepMine}>
+        <button
+          type="button"
+          className="primary compact"
+          onClick={onKeepMine}
+          disabled={!canKeepMine}
+        >
           Keep mine
         </button>
         <button

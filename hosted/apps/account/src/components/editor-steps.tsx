@@ -485,7 +485,7 @@ function TargetFields({
     field: string,
   ) => (
     <TextField
-      key={field}
+      key={`${target.type}-${target.unit}-${field}`}
       label={label}
       value={amount}
       format={view.format}
@@ -494,6 +494,7 @@ function TargetFields({
       unit={view.suffix}
       inputMode="decimal"
       width={80}
+      problem={problem}
       onCommit={(next) => setLevel(apply(next), field)}
     />
   );
@@ -534,11 +535,6 @@ function TargetFields({
             {value("Start", level.from, (amount) => ({ ...level, from: amount }), "from")}
             {value("End", level.to, (amount) => ({ ...level, to: amount }), "to")}
           </>
-        )}
-        {problem && (
-          <p className="field-problem" role="alert">
-            {problem}
-          </p>
         )}
       </div>
     </>

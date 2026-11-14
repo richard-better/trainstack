@@ -422,3 +422,40 @@ test("dragging a bar's right edge lengthens it by the distance dragged, the last
   const last = withLength(at(300, 0.5), draggedSeconds(300, 900, 940, 3.3), 0);
   assert.deepEqual(last.duration, { type: "time", seconds: 435 });
 });
+
+test("Alt and left never lengthen a short step, and a drag that only moves sideways keeps the level", () => {
+  const reference = { ...noReference("cycling"), ftp: 250 };
+  assert.deepEqual(nudgeLength(at(1, 0.5), -1).duration, { type: "time", seconds: 1 });
+  assert.deepEqual(nudgeLength(at(7, 0.5), -1).duration, { type: "time", seconds: 1 });
+  const metres = { ...at(60, 0.5), duration: { type: "distance", meters: 10 } };
+  assert.deepEqual(nudgeLength(metres, -1).duration, { type: "distance", meters: 1 });
+  const ramp = {
+    ...at(300, 0.5),
+    target: { ...at(300, 0.5).target, level: { kind: "ramp", from: 0.5, to: 0.7 } },
+  };
+  assert.deepEqual(
+    withLevelShare(ramp, "to", 0.62, 0.62, reference).target.level,
+    ramp.target.level,
+  );
+  assert.equal(
+    withLevelShare(at(300, 0.9), "whole", 0.85, 0.85, reference).target.level.value,
+    0.9,
+  );
+});
+
+test("a workout that expands past the limit shows the schema's problem instead of failing", () => {
+  const huge = {
+    name: "Too many",
+    sport: "cycling",
+    steps: [
+      {
+        type: "repeat",
+        count: 1000,
+        steps: [{ type: "repeat", count: 1000, steps: [at(1, 0.5)] }],
+      },
+    ],
+  };
+  const problems = problemsOf(huge);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0].message, /at most/);
+});
