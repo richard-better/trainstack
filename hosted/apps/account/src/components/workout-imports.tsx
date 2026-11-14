@@ -59,9 +59,9 @@ export function useWorkoutImports() {
   async function save(key: string, reading: Extract<FileReading, { kind: "ready" }>) {
     replace(key, { key, phase: "saving", reading });
     try {
-      const imported = await importWorkoutFile(api, reading.file);
+      const imported = await importWorkoutFile(api, reading.file, key);
       if (imported.kind === "saved") {
-        rememberWorkout(imported.workout);
+        await rememberWorkout(imported.workout);
         replace(key, {
           key,
           phase: "saved",

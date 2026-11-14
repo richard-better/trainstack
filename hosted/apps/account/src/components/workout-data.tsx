@@ -11,9 +11,9 @@ import {
   emptyLibrary,
   isBehind,
   type Library,
+  forgetIn,
   refreshLibrary,
-  withoutWorkout,
-  withWorkout,
+  rememberIn,
 } from "../lib/library";
 import { datedChanges, localDay } from "../lib/settings";
 import { type Reference, referenceFor } from "../lib/workout-profile";
@@ -36,17 +36,13 @@ export function useLibrary() {
   });
 }
 
-export function rememberWorkout(workout: StoredWorkout) {
-  queryClient.setQueryData<Library>(libraryKey, (library) =>
-    withWorkout(library ?? emptyLibrary, workout),
-  );
+export async function rememberWorkout(workout: StoredWorkout) {
   void queryClient.invalidateQueries({ queryKey: searchKey });
+  await rememberIn(queryClient, libraryKey, workout);
 }
 
-export function forgetWorkout(id: string) {
-  queryClient.setQueryData<Library>(libraryKey, (library) =>
-    library ? withoutWorkout(library, id) : library,
-  );
+export async function forgetWorkout(id: string) {
+  void queryClient.invalidateQueries({ queryKey: searchKey });
   queryClient.setQueryData<{ lists: WorkoutList[] }>(listsKey, (data) =>
     data
       ? {
@@ -57,7 +53,7 @@ export function forgetWorkout(id: string) {
         }
       : data,
   );
-  void queryClient.invalidateQueries({ queryKey: searchKey });
+  await forgetIn(queryClient, libraryKey, id);
 }
 
 export type Filters = {

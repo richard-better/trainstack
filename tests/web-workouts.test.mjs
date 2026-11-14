@@ -4,17 +4,20 @@ import { generateKeyPairSync } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { MAX_WORKOUT_FILE_BYTES } from "@trainstack/contract";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { profileOn } from "@trainstack/zones";
 import {
   appendedTo,
   durationFilter,
   emptyLibrary,
   exportWorkout,
+  forgetIn,
   importWorkoutFile,
   isBehind,
   placementFor,
   readWorkoutFile,
   refreshLibrary,
+  rememberIn,
 } from "../hosted/apps/account/src/lib/library.ts";
 import { datedChanges, put } from "../hosted/apps/account/src/lib/settings.ts";
 import {
@@ -379,4 +382,64 @@ test("a copied built-in workout is the athlete's own, with the same steps", asyn
   assert.deepEqual(copy.origin, { kind: "builtin", id: builtin.id });
   const library = await refreshLibrary(webApp, emptyLibrary);
   assert.equal(library.workouts[copy.id].name, builtin.name);
+});
+
+test("a workout saved while the library is being read stays in it when the read lands", async () => {
+  const { webApp } = await signInOnTheWeb();
+  const queryClient = new QueryClient();
+  const queryKey = ["library"];
+  let release;
+  const held = new Promise((resolve) => {
+    release = resolve;
+  });
+  let reads = 0;
+  const slowFirstRead = {
+    workouts: {
+      changes: async (input) => {
+        reads += 1;
+        const answer = await webApp.workouts.changes(input);
+        if (reads === 1) await held;
+        return answer;
+      },
+    },
+  };
+  const observer = new QueryObserver(queryClient, {
+    queryKey,
+    queryFn: () =>
+      refreshLibrary(slowFirstRead, queryClient.getQueryData(queryKey) ?? emptyLibrary),
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  while (reads === 0) await new Promise((resolve) => setTimeout(resolve, 5));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  const id = randomUUID();
+  const saved = await webApp.workouts.put({
+    id,
+    workout: workout("Saved meanwhile", [power(600, constant(0.6))]),
+    updatedAt: new Date(),
+  });
+  await rememberIn(queryClient, queryKey, saved);
+  release();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(queryClient.getQueryData(queryKey).workouts[id]?.name, "Saved meanwhile");
+
+  await webApp.workouts.delete({ id });
+  await forgetIn(queryClient, queryKey, id);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(queryClient.getQueryData(queryKey).workouts[id], undefined);
+  unsubscribe();
+  queryClient.clear();
+});
+
+test("trying an import again after a lost answer saves the same workout, not a second one", async () => {
+  const { webApp } = await signInOnTheWeb();
+  const file = await fixture("sweet-spot.erg");
+  const id = randomUUID();
+  await importWorkoutFile(webApp, file, id);
+  const again = await importWorkoutFile(webApp, file, id);
+  assert.equal(again.kind, "saved");
+  assert.deepEqual(
+    (await webApp.workouts.list({})).workouts.map((summary) => summary.id),
+    [id],
+  );
 });

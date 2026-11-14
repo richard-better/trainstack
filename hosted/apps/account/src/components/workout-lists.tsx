@@ -2,7 +2,14 @@ import { ORPCError, safe } from "@orpc/client";
 import type { StoredWorkout, WorkoutList } from "@trainstack/contract";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type DragEvent, type FormEvent, type KeyboardEvent, useRef, useState } from "react";
+import {
+  type DragEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { api } from "../api";
 import { appendedTo, placementFor } from "../lib/library";
@@ -128,6 +135,7 @@ export function ListPage({ listId }: { listId: string }) {
   const lists = useLists();
   const library = useLibrary();
   const list = lists.data?.lists.find((held) => held.id === listId);
+  useCatchUp(list, library);
 
   if (lists.isPending) {
     return (
@@ -166,10 +174,34 @@ export function ListPage({ listId }: { listId: string }) {
           </Link>
         </div>
       ) : (
-        <ListEntries list={list} workouts={library.data?.workouts ?? {}} />
+        <>
+          {library.isError && (
+            <div className="note inline" role="alert">
+              <p className="lede">Some of this list's workouts did not load.</p>
+              <button type="button" className="secondary" onClick={() => library.refetch()}>
+                Try again
+              </button>
+            </div>
+          )}
+          <ListEntries list={list} workouts={library.data?.workouts ?? {}} />
+        </>
       )}
     </LibraryShell>
   );
+}
+
+function useCatchUp(list: WorkoutList | undefined, library: ReturnType<typeof useLibrary>) {
+  const caughtUpFor = useRef<readonly string[] | null>(null);
+  const missing =
+    list !== undefined &&
+    library.data !== undefined &&
+    list.workoutIds.some((id) => !library.data.workouts[id]);
+  const { refetch, isFetching } = library;
+  useEffect(() => {
+    if (!list || !missing || isFetching || caughtUpFor.current === list.workoutIds) return;
+    caughtUpFor.current = list.workoutIds;
+    void refetch();
+  }, [list, missing, isFetching, refetch]);
 }
 
 function ListHead({ list }: { list: WorkoutList }) {
@@ -252,10 +284,14 @@ function ListHead({ list }: { list: WorkoutList }) {
 
 function useListWrite(list: WorkoutList) {
   const [failed, setFailed] = useState<string | null>(null);
+  const writing = useRef(false);
   async function write(optimistic: string[], send: () => Promise<WorkoutList>) {
+    if (writing.current) return;
+    writing.current = true;
     setFailed(null);
     rememberList({ ...list, workoutIds: optimistic });
     const [error, answer] = await safe(send());
+    writing.current = false;
     if (!error) {
       rememberList(answer);
       return;
@@ -269,7 +305,7 @@ function useListWrite(list: WorkoutList) {
       setFailed("The list was not changed. Try again.");
     }
   }
-  return { failed, write };
+  return { failed, write, busy: () => writing.current };
 }
 
 function ListEntries({
@@ -279,14 +315,14 @@ function ListEntries({
   list: WorkoutList;
   workouts: Readonly<Record<string, StoredWorkout>>;
 }) {
-  const { failed, write } = useListWrite(list);
+  const { failed, write, busy } = useListWrite(list);
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const rows = useRef<(HTMLLIElement | null)[]>([]);
 
   function move(from: number, to: number) {
     const placement = placementFor(list.workoutIds, from, to);
-    if (!placement) return;
+    if (!placement || busy()) return;
     const order = list.workoutIds.filter((_, index) => index !== from);
     order.splice(to, 0, placement.workoutId);
     void write(order, () =>
@@ -451,6 +487,7 @@ export function AddToList({ workoutId }: { workoutId: string }) {
           <label key={list.id} className="menu-check">
             <input
               type="checkbox"
+              disabled={toggle.isPending}
               checked={list.workoutIds.includes(workoutId)}
               onChange={(event) => toggle.mutate({ list, add: event.currentTarget.checked })}
             />

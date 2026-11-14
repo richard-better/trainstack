@@ -1,4 +1,5 @@
 import { isDefinedError, safe } from "@orpc/client";
+import type { QueryClient } from "@tanstack/react-query";
 import type {
   ExportedWorkout,
   StoredWorkout,
@@ -52,6 +53,25 @@ export async function refreshLibrary(api: ApiClient, library: Library): Promise<
   const changes = await api.workouts.changes(library.cursor ? { since: library.cursor } : {});
   return withChanges(library, changes);
 }
+
+async function writeLibrary(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  change: (library: Library) => Library,
+) {
+  await queryClient.cancelQueries({ queryKey, exact: true });
+  queryClient.setQueryData<Library>(queryKey, (library) => change(library ?? emptyLibrary));
+  void queryClient.invalidateQueries({ queryKey, exact: true });
+}
+
+export const rememberIn = (
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  workout: StoredWorkout,
+) => writeLibrary(queryClient, queryKey, (library) => withWorkout(library, workout));
+
+export const forgetIn = (queryClient: QueryClient, queryKey: readonly unknown[], id: string) =>
+  writeLibrary(queryClient, queryKey, (library) => withoutWorkout(library, id));
 
 export const isBehind = (library: Library, summaries: readonly WorkoutSummary[]) =>
   summaries.some((summary) => {

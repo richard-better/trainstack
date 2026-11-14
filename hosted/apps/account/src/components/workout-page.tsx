@@ -186,7 +186,7 @@ function CopyButton({
     mutationFn: () =>
       api.builtinWorkouts.copy({ id, as: crypto.randomUUID(), updatedAt: new Date() }),
     onSuccess: async (copied) => {
-      rememberWorkout(copied);
+      await rememberWorkout(copied);
       if (onCopied) onCopied(copied);
       else await navigate({ to: "/workouts/$id", params: { id: copied.id } });
     },
@@ -217,7 +217,7 @@ function OwnActions({ stored, editLink }: { stored: StoredWorkout; editLink?: Re
     mutationFn: () => api.workouts.delete({ id: stored.id }),
     onSuccess: async () => {
       dialog.current?.close();
-      forgetWorkout(stored.id);
+      await forgetWorkout(stored.id);
       queryClient.removeQueries({ queryKey: workoutKey(stored.id) });
       await navigate({ to: "/workouts", search: {} });
     },
