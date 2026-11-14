@@ -86,6 +86,9 @@ public struct RootView: View {
     .onChange(of: settings.powerDisplay, initial: true) { _, powerDisplay in
       launcher.powerDisplay = powerDisplay
     }
+    .onChange(of: settings.matchesPowerMeter, initial: true) { _, matches in
+      launcher.matchesPowerMeter = matches
+    }
     .onChange(of: destination) { _, destination in
       if destination != .settings { destinationBeforeSettings = destination }
     }

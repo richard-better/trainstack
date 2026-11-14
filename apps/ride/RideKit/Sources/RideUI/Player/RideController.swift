@@ -14,6 +14,7 @@ final class RideController {
   let ftp: Int
   let heartRateZones: ZoneSet?
   var powerDisplay = PowerDisplay.standard
+  var matchesPowerMeter = true
   private(set) var totals = RideTotals()
   @ObservationIgnored var onTick: (() -> Void)?
   @ObservationIgnored private let heartRate: HeartRateFeed?
@@ -111,6 +112,9 @@ final class RideController {
     var reading = simulator?.reading(for: session, after: seconds) ?? TrainerReading()
     if let power = devices?.reading(for: .power, at: date) { reading.power = power }
     if let cadence = devices?.reading(for: .cadence, at: date) { reading.cadence = cadence }
+    if matchesPowerMeter, let pair = devices?.powerMatchReading(at: date) {
+      reading.powerMatch = PowerMatchReading(meter: pair.meter, trainer: pair.trainer)
+    }
     if let live = heartRate?.current(at: date) {
       reading.heartRate = live.bpm
       reading.heartRateSource = live.source
@@ -179,6 +183,11 @@ final class RideController {
   }
 
   var power: Int? { session.power(powerDisplay) }
+
+  var powerMatchCorrection: Int? {
+    guard session.latest.powerMatch != nil, session.mode == .erg else { return nil }
+    return Int((engine.powerMatch.correction * 100).rounded())
+  }
 
   var heartRateZone: Zone? {
     guard let bpm = session.latest.heartRate else { return nil }

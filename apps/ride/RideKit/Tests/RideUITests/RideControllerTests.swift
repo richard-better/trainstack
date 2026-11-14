@@ -379,6 +379,55 @@ struct RideControllerTests {
     #expect(transport.trainerWrites.last == FitnessMachineCommand.reset.data)
   }
 
+  @Test(arguments: [true, false])
+  func powerMatchHoldsThePowerMeterOnTargetAndRecordsIt(matching: Bool) throws {
+    let (devices, transport, trainer) = cyclingDevices()
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    devices.pair(meter)
+    transport.onConnect?(meter.id)
+    let steady = WorkoutTemplate(
+      name: "Steady", category: .endurance, steps: [.init(duration: 600, intensity: 1)])
+    let controller = RideController(
+      workout: steady.planned, ftp: 200, devices: devices, simulated: false)
+    controller.matchesPowerMeter = matching
+    transport.onTrainerControlReady?(trainer.id)
+    var commanded = 0
+    var answered = 0
+    let start = Date.now
+    for second in 0..<180 {
+      let date = start.addingTimeInterval(TimeInterval(second))
+      while let write = transport.trainerWrites.last, let opCode = write.first,
+        transport.trainerWrites.count > answered
+      {
+        answered = transport.trainerWrites.count
+        if opCode == FitnessMachineCommand.targetPower(watts: 0).opCode {
+          commanded = Int(Int16(bitPattern: UInt16(write[1]) | UInt16(write[2]) << 8))
+        }
+        transport.onTrainerValue?(trainer.id, .controlPoint, Data([0x80, opCode, 0x01]))
+      }
+      let trainerWatts = UInt16(commanded)
+      let meterWatts = UInt16((Double(commanded) * 0.95).rounded())
+      devices.receiveCycling(
+        Data([0x45, 0, 180, 0, UInt8(trainerWatts & 0xFF), UInt8(trainerWatts >> 8)]),
+        from: trainer.id, characteristic: .indoorBike, at: date)
+      devices.receiveCycling(
+        Data([0, 0, UInt8(meterWatts & 0xFF), UInt8(meterWatts >> 8)]), from: meter.id,
+        characteristic: .power, at: date)
+      controller.tick(seconds: 1, at: date)
+    }
+    let target = try #require(controller.session.targetPower)
+    let recorded = try #require(controller.session.samples.last?.sample.power)
+    if matching {
+      #expect(abs(commanded - Int((Double(target) / 0.95).rounded())) <= 1)
+      #expect(abs(recorded - target) <= 1)
+      #expect(controller.powerMatchCorrection == 5)
+    } else {
+      #expect(commanded == target)
+      #expect(recorded == Int((Double(target) * 0.95).rounded()))
+      #expect(controller.powerMatchCorrection == nil)
+    }
+  }
+
   @Test func showsTheRidersSensorsAndTheWatchOnceItSendsDuringTheRide() {
     let (devices, transport, trainer) = cyclingDevices()
     let heartRate = HeartRateFeed()
