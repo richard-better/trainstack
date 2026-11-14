@@ -118,7 +118,7 @@ activities, pairings, compliance and the week totals, so Today and the calendar 
 range is the source of what is on screen, because the server works out state, pairing and compliance as
 it reads and an arriving activity bumps no revision. Each pass (`SyncPasses`) reads
 `planned-workouts/changes` after its cursor, which is small, and reads the range again when that shows a
-change, when the screen asks (the app becomes active, Today appears, a ride uploads),
+change, when the screen asks (the app becomes active, Today or the calendar appears, a ride uploads),
 when the day has changed, every 15 minutes, and at each check while an analysis is due. A check runs
 each minute while the app runs, so a change on the web, or an analysis finishing, shows up within a
 minute. Today is the athlete's
@@ -127,6 +127,13 @@ the athlete's midnight offline and does not move when the device travels; a work
 was neither done nor skipped then reads missed, as the server would say. Account rules follow
 `WorkoutSync`: signing out hides the calendar and keeps the file, another account sees only its own, and
 deleting the account removes its file.
+
+The Calendar tab shows those weeks as the web calendar does: a column per day on a wide screen and a
+list of days on a phone, each week with its time, distance and load done against planned. A planned
+workout reads planned (dashed), done (solid, with the activity it was matched with or that the athlete
+paired, and its compliance score and why), skipped (dotted, struck through, with the reason) or missed
+(amber), and an activity no planned workout claims reads unplanned. `ComplianceWords` says why in the
+web's words (`hosted/apps/account/src/lib/compliance.ts`), so the two read the same.
 
 Apple asks apps with Sign in with Apple to revoke the user's tokens when the account is deleted,
 so the server needs a refresh token Ride's own sign-in got. After every native sign-in Ride sends

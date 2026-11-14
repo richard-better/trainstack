@@ -86,6 +86,21 @@ struct CalendarClientTests {
     #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer session-token")
   }
 
+  @Test func aSessionLoggedWithoutAFileReadsAsAnActivityOfItsDay() async throws {
+    let (client, _) = identifiedClient([
+      json(
+        #"{"today":"2026-11-14","analysesDue":0,"weeks":[],"days":[{"day":"2026-11-14","planned":[],"activities":[{"id":"\#(String(repeating: "b", count: 64))","sport":"bouldering","indoor":null,"name":"Board session","startedAt":"2026-11-14T17:00:00.000Z","seconds":5400,"meters":null,"load":62,"route":null,"analysisDue":false,"plannedId":null,"file":null,"source":"logbook","logged":{"rpe":7,"problems":[{"grade":"6B","sent":true}]}}],"totals":{"planned":{"seconds":0,"meters":0,"load":0},"completed":{"seconds":5400,"meters":0,"load":62}}}]}"#
+      )
+    ])
+    let read = try await client.calendar(
+      from: SettingDay("2026-11-14")!, through: SettingDay("2026-11-14")!, for: account)
+    let session = try #require(read.days.first?.activities.first)
+    #expect(session.sport == "bouldering")
+    #expect(session.indoor == nil)
+    #expect(session.seconds == 5400)
+    #expect(session.load == 62)
+  }
+
   @Test func aRangeKeptOnTheDeviceReadsBackTheSame() async throws {
     let (client, _) = identifiedClient([json(range)])
     let read = try await client.calendar(
