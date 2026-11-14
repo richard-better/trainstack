@@ -1838,3 +1838,14 @@ input[aria-invalid="true"] {
   margin-bottom: 20px;
   color: var(--mist);
 }
+
+.account-data {
+  max-width: calc(100% - 320px - 56px);
+  margin-top: 32px;
+}
+
+@media (max-width: 860px) {
+  .account-data {
+    max-width: none;
+  }
+}
