@@ -7,6 +7,7 @@ export const MessageNumber = {
   record: 20,
   event: 21,
   workout: 26,
+  workoutStep: 27,
   activity: 34,
 } as const;
 
@@ -50,8 +51,34 @@ export const EventField = {
 } as const;
 
 export const WorkoutField = {
+  sport: 4,
+  numValidSteps: 6,
   name: 8,
+  subSport: 11,
+  poolLength: 14,
+  poolLengthUnit: 15,
 } as const;
+
+export const WorkoutStepField = {
+  messageIndex: 254,
+  name: 0,
+  durationType: 1,
+  durationValue: 2,
+  targetType: 3,
+  targetValue: 4,
+  customTargetValueLow: 5,
+  customTargetValueHigh: 6,
+  intensity: 7,
+  notes: 8,
+  equipment: 9,
+  secondaryTargetType: 19,
+  secondaryTargetValue: 20,
+  secondaryCustomTargetValueLow: 21,
+  secondaryCustomTargetValueHigh: 22,
+} as const;
+
+export const workoutPowerWattsOffset = 1000;
+export const workoutHeartRateBpmOffset = 100;
 
 export const SessionField = {
   startTime: 2,

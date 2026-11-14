@@ -4,6 +4,7 @@ export type FitDecodeErrorCode =
   | "badChecksum"
   | "malformed"
   | "noActivity"
+  | "noWorkout"
   | "tooLarge";
 
 const messages: Record<FitDecodeErrorCode, string> = {
@@ -12,7 +13,8 @@ const messages: Record<FitDecodeErrorCode, string> = {
   badChecksum: "The FIT file's checksum does not match its contents.",
   malformed: "The FIT file's messages do not follow the FIT protocol.",
   noActivity: "The FIT file has no sessions and no records.",
-  tooLarge: "The FIT file has more laps or sessions than an activity can have.",
+  noWorkout: "The FIT file is not a workout file, or it has no workout steps.",
+  tooLarge: "The FIT file has more laps, sessions or workout steps than it can have.",
 };
 
 export class FitDecodeError extends Error {

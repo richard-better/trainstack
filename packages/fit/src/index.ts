@@ -25,3 +25,24 @@ export {
 } from "./activity.ts";
 export { FitDecodeError, type FitDecodeErrorCode } from "./error.ts";
 export type { FitValue } from "./reader.ts";
+export {
+  decodeFitWorkout,
+  encodeFitWorkout,
+  maxWorkoutSteps,
+  readFitFileId,
+  type FitHeartRate,
+  type FitPower,
+  type FitWorkout,
+  type FitWorkoutDuration,
+  type FitWorkoutEncodeOptions,
+  type FitWorkoutFile,
+  type FitWorkoutStep,
+  type FitWorkoutTarget,
+  type Intensity,
+  type LapAveraging,
+  type PowerAveraging,
+  type StepDurationType,
+  type StepTargetType,
+  type SwimStroke,
+  type WorkoutEquipment,
+} from "./workout.ts";

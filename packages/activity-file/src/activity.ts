@@ -100,7 +100,8 @@ export function decodeTcx(data: Uint8Array | ArrayBuffer): DecodedActivity {
 
 function fitError(error: unknown): unknown {
   if (!(error instanceof FitDecodeError)) return error;
-  const code = error.code === "notAFitFile" ? "malformed" : error.code;
+  const code =
+    error.code === "notAFitFile" || error.code === "noWorkout" ? "malformed" : error.code;
   return new ActivityFileError(code, "fit", { cause: error });
 }
 
