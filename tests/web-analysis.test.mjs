@@ -64,6 +64,8 @@ async function runCronUntilAnalysed() {
   assert.fail("activities were still due after thirty runs");
 }
 
+const defaultsOnly = { listed: false, own: [] };
+
 const intervals = (ftp) => [
   { seconds: 600, watts: 0.6 * ftp },
   { seconds: 600, watts: ftp },
@@ -105,7 +107,7 @@ test("activity detail reads its load, intensity, laps, power curve and zones fro
     effortFigures(activity.statistics, "cycling").map(({ label }) => label),
     ["Load", "Intensity", "Normalized power", "Work"],
   );
-  assert.equal(thresholdPrompt({ ...activity, sport: "cycling" }), null);
+  assert.equal(thresholdPrompt({ ...activity, sport: "cycling" }, defaultsOnly), null);
 
   const labels = summaryFigures(activity.statistics).map(({ label }) => label);
   assert.ok(labels.includes("Avg power"));
@@ -153,12 +155,17 @@ test("a run without its threshold pace says its load is from heart rate and link
 
   assert.deepEqual(activity.missingThresholds, ["threshold_pace"]);
   assert.equal(loadOf(activity.statistics, "running").source, "heart_rate");
-  const prompt = thresholdPrompt(activity);
-  assert.deepEqual(prompt.search, { sport: "running", metric: "pace" });
-  assert.equal(prompt.action, "Set threshold pace");
-  assert.match(prompt.text, /load is from heart rate/);
-  assert.match(prompt.text, /threshold pace was not set on 4 Apr 2026/);
-  assert.match(prompt.text, /score it from pace instead/);
+  const unlisted = thresholdPrompt(activity, defaultsOnly);
+  assert.deepEqual(unlisted.search, {}, "pace is set on running, which is not in Settings yet");
+  assert.equal(unlisted.action, "Add running");
+  assert.match(unlisted.text, /load is from heart rate/);
+  assert.match(unlisted.text, /threshold pace was not set on 4 Apr 2026/);
+  assert.match(unlisted.text, /Add running in Settings, then set its threshold pace/);
+
+  const listed = thresholdPrompt(activity, { listed: true, own: ["pace"] });
+  assert.deepEqual(listed.search, { sport: "running", metric: "pace" });
+  assert.equal(listed.action, "Set threshold pace");
+  assert.match(listed.text, /score it from pace instead/);
 
   const figures = effortFigures(activity.statistics, "running");
   const pace = figures.find(({ name }) => name === "average_grade_adjusted_speed_mps");
@@ -175,8 +182,13 @@ test("a ride with no FTP has no load, and is told to set it from its day", async
   const activity = await client.activities.get({ id });
 
   assert.equal(loadOf(activity.statistics, "cycling"), null);
-  const prompt = thresholdPrompt({ ...activity, sport: "cycling" });
+  const prompt = thresholdPrompt({ ...activity, sport: "cycling" }, defaultsOnly);
   assert.deepEqual(prompt.search, { metric: "power" });
+  assert.deepEqual(
+    thresholdPrompt({ ...activity, sport: "cycling" }, { listed: true, own: ["power"] }).search,
+    { sport: "cycling", metric: "power" },
+    "a sport with its own power zones takes its FTP there",
+  );
   assert.match(prompt.text, /^This ride has no load, because your/);
   assert.match(prompt.text, /from 5 May 2026 or earlier/);
   assert.ok(activityPowerCurve(activity.statistics).length > 0, "the power curve needs no FTP");

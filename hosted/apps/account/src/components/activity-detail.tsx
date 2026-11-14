@@ -5,6 +5,7 @@ import {
   type ActivitySummaryError,
   activityIdSchema,
 } from "@trainstack/contract";
+import { profileOn } from "@trainstack/zones";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -14,6 +15,7 @@ import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/a
 import {
   ANALYSIS_POLL_MS,
   analysisErrorText,
+  settingsScopeOf,
   analysisState,
   effortFigures,
   lapsFromEvents,
@@ -23,7 +25,7 @@ import {
   thresholdPrompt,
 } from "../lib/analysis";
 import { activityDateInFull } from "../lib/dates";
-import { localDay } from "../lib/settings";
+import { datedChanges, localDay } from "../lib/settings";
 import { lapsOf, traceOf } from "../lib/series";
 import { activityTitle, sportName } from "../lib/sports";
 import {
@@ -37,6 +39,7 @@ import {
 } from "../lib/statistics";
 import { deletingSource } from "../lib/workouts";
 import { ActivityBests } from "./activity-bests";
+import { useSettingsChangedRecently, useSettingsHistory } from "./settings-data";
 import { SportIcon } from "./sport-icon";
 import { TimeInZones } from "./time-in-zones";
 import { Traces } from "./traces";
@@ -46,13 +49,14 @@ const refused = (error: Error) => error instanceof ORPCError && error.status < 5
 
 export function ActivityPage({ id }: { id: string }) {
   const valid = activityIdSchema.safeParse(id).success;
+  const settling = useSettingsChangedRecently();
   const detail = useQuery({
     queryKey: activityKey(id),
     queryFn: () => api.activities.get({ id }),
     enabled: valid,
     retry: (failures, error) => !refused(error) && failures < 2,
     refetchInterval: (query) =>
-      query.state.data && analysisState(query.state.data).kind === "pending"
+      settling || (query.state.data && analysisState(query.state.data).kind === "pending")
         ? ANALYSIS_POLL_MS
         : false,
   });
@@ -266,7 +270,13 @@ function Effort({ activity, sport }: { activity: ActivityDetail; sport: string |
   const scored = { ...activity, sport };
   const figures = effortFigures(activity.statistics, sport);
   const load = loadOf(activity.statistics, sport);
-  const prompt = state.kind === "analysed" ? thresholdPrompt(scored) : null;
+  const history = useSettingsHistory();
+  const profile =
+    history.data && profileOn(datedChanges(history.data.entries), localDay(new Date()));
+  const prompt =
+    state.kind === "analysed" && profile
+      ? thresholdPrompt(scored, settingsScopeOf(profile, sport))
+      : null;
   const noun = sportName(sport).noun;
   if (state.kind === "no_file" && figures.length === 0) return null;
   return (

@@ -5,7 +5,7 @@ import {
   type AnalysisStatisticName,
   analysisStatistics,
 } from "@trainstack/contract";
-import { isThresholdName, thresholds, type ZoneMetric } from "@trainstack/zones";
+import { isThresholdName, type Profile, thresholds, type ZoneMetric } from "@trainstack/zones";
 
 import type { LapRow } from "./series.ts";
 import { formatDay, listOfWords, thresholdWord } from "./settings.ts";
@@ -92,11 +92,25 @@ export const metricOfThreshold = (threshold: string): ZoneMetric | null =>
 export interface ThresholdPrompt {
   readonly text: string;
   readonly action: string;
-  readonly search: { sport?: string; metric: ZoneMetric };
+  readonly search: { sport?: string; metric?: ZoneMetric };
+}
+
+export interface SettingsScope {
+  readonly listed: boolean;
+  readonly own: readonly ZoneMetric[];
+}
+
+export function settingsScopeOf(profile: Profile, sport: string | null): SettingsScope {
+  const zones = sport === null ? undefined : profile.sports[sport];
+  return {
+    listed: zones !== undefined,
+    own: zones ? (Object.keys(zones) as ZoneMetric[]) : [],
+  };
 }
 
 export function thresholdPrompt(
   activity: Pick<Activity, "missingThresholds" | "statistics" | "localDay" | "sport">,
+  scope: SettingsScope,
 ): ThresholdPrompt | null {
   const sport = activity.sport;
   const order = loadOrder(sport);
@@ -113,15 +127,22 @@ export function thresholdPrompt(
   const day = activity.localDay ? formatDay(activity.localDay) : "the day it was done";
   const noun = sportName(sport).noun;
   const sincePart = `Set ${missing.length > 1 ? "them" : "it"} from ${day} or earlier`;
+  const addSport = first === "pace" && sport !== null && !scope.listed;
+  const how = addSport
+    ? `Add ${sportName(sport).label.toLowerCase()} in Settings, then set its ${words} from ${day} or earlier`
+    : sincePart;
   const text = load
-    ? `This ${noun}'s load is from ${load.source ? sourceWords[load.source] : "another measure"}, because your ${words} ${missing.length > 1 ? "were" : "was"} not set on ${day}. ${sincePart} to score it from ${sourceWords[first]} instead.`
-    : `This ${noun} has no load, because your ${words} ${missing.length > 1 ? "were" : "was"} not set on ${day}. ${sincePart}, and its load follows within a minute or two.`;
-  const search =
-    first === "pace" ? { sport: sport ?? "running", metric: first } : { metric: first };
+    ? `This ${noun}'s load is from ${load.source ? sourceWords[load.source] : "another measure"}, because your ${words} ${missing.length > 1 ? "were" : "was"} not set on ${day}. ${how} to score it from ${sourceWords[first]} instead.`
+    : `This ${noun} has no load, because your ${words} ${missing.length > 1 ? "were" : "was"} not set on ${day}. ${how}, and its load follows within a minute or two.`;
+  const own = sport !== null && scope.own.includes(first);
   return {
     text,
-    action: missing.length > 1 ? "Set thresholds" : `Set ${words}`,
-    search,
+    action: addSport
+      ? `Add ${sportName(sport).label.toLowerCase()}`
+      : missing.length > 1
+        ? "Set thresholds"
+        : `Set ${words}`,
+    search: addSport ? {} : own ? { sport, metric: first } : { metric: first },
   };
 }
 
