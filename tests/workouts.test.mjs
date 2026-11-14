@@ -107,26 +107,29 @@ test("an athlete creates, reads, changes and deletes a workout", async () => {
   await definedError(client.workouts.get({ id: randomUUID() }), "NOT_FOUND");
 });
 
-test("a workout the model refuses, or one too big or edited in the future, is not stored", async () => {
+test("a workout the model refuses is INVALID_WORKOUT, and one too big or edited in the future, is not stored", async () => {
   const { client } = await athlete();
   const id = randomUUID();
 
-  const [empty] = await safe(
+  const empty = await definedError(
     client.workouts.put({
       id,
       workout: { name: "Empty", sport: "cycling", steps: [] },
       updatedAt: at(0),
     }),
+    "INVALID_WORKOUT",
   );
-  assert.equal(empty.status, 400);
-  const [rowing] = await safe(
+  assert.equal(empty.status, 422);
+  assert.match(empty.data.reason, /^workout\.steps: /);
+  const rowing = await definedError(
     client.workouts.put({
       id,
       workout: workoutNamed("Row", { sport: "rowing" }),
       updatedAt: at(0),
     }),
+    "INVALID_WORKOUT",
   );
-  assert.equal(rowing.status, 400);
+  assert.match(rowing.data.reason, /^workout\.sport: /);
 
   const lateCue = workoutNamed("Late cue", {
     steps: [
@@ -138,11 +141,19 @@ test("a workout the model refuses, or one too big or edited in the future, is no
       },
     ],
   });
-  const unplayable = await definedError(
+  const unplaceable = await definedError(
     client.workouts.put({ id, workout: lateCue, updatedAt: at(0) }),
     "INVALID_WORKOUT",
   );
-  assert.match(unplayable.data.reason, /after the repeat ends/);
+  assert.equal(
+    unplaceable.data.reason,
+    "workout.steps: A cue 600 seconds into a repeat comes after the repeat ends",
+  );
+
+  const [badId] = await safe(
+    client.workouts.put({ id: "not-a-uuid", workout: workoutNamed("Fine"), updatedAt: at(0) }),
+  );
+  assert.equal(badId.code, "BAD_REQUEST", "only the workout's own faults are INVALID_WORKOUT");
 
   const huge = workoutNamed("Huge", {
     steps: Array.from({ length: 2000 }, (_, i) => ({

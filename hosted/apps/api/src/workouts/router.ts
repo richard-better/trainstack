@@ -1,4 +1,4 @@
-import { ORPCError } from "@orpc/server";
+import { ORPCError, ValidationError } from "@orpc/server";
 import {
   MAX_WORKOUT_LIST_ENTRIES,
   type StoredWorkout,
@@ -31,15 +31,25 @@ import {
   listWorkouts,
   putWorkout,
   storedOf,
-  whyUnplayable,
   workoutChanges,
 } from "./store";
+
+function whyTheWorkoutIsInvalid(error: unknown) {
+  if (!(error instanceof ORPCError) || !(error.cause instanceof ValidationError)) return undefined;
+  const issues = error.cause.issues.filter((issue) => issue.path?.[0] === "workout");
+  if (issues.length === 0) return undefined;
+  return issues
+    .map((issue) => {
+      const path = (issue.path ?? []).map((part) => (typeof part === "object" ? part.key : part));
+      return `${path.join(".")}: ${issue.message}`;
+    })
+    .join("; ");
+}
 
 type Written =
   | { stored: StoredWorkout }
   | { editedInTheFuture: true }
   | { tooLarge: true }
-  | { unplayable: string }
   | { deletedAt: Date };
 
 async function write(
@@ -52,8 +62,6 @@ async function write(
 ): Promise<Written> {
   if (isEditedInTheFuture(updatedAt)) return { editedInTheFuture: true };
   if (isTooLarge(value)) return { tooLarge: true };
-  const unplayable = whyUnplayable(value);
-  if (unplayable !== undefined) return { unplayable };
   await putWorkout(db, userId, id, value, updatedAt, origin);
   const row = await findWorkout(db, userId, id);
   if (!row) throw new Error(`Workout ${id} was neither stored nor deleted`);
@@ -76,23 +84,30 @@ export const workoutsRouter = {
     return storedOf(row);
   }),
 
-  put: signedIn.workouts.put.handler(async ({ context, input, errors }) => {
-    const written = await write(
-      getDb(),
-      context.session.user.id,
-      input.id,
-      input.workout,
-      input.updatedAt,
-      null,
-    );
-    if ("stored" in written) return written.stored;
-    if ("editedInTheFuture" in written) throw errors.EDITED_IN_THE_FUTURE();
-    if ("tooLarge" in written) throw errors.WORKOUT_TOO_LARGE();
-    if ("unplayable" in written) {
-      throw errors.INVALID_WORKOUT({ data: { reason: written.unplayable } });
-    }
-    throw errors.WORKOUT_DELETED({ data: { id: input.id, deletedAt: written.deletedAt } });
-  }),
+  put: signedIn.workouts.put
+    .use(async ({ next, errors }) => {
+      try {
+        return await next();
+      } catch (error) {
+        const reason = whyTheWorkoutIsInvalid(error);
+        if (reason === undefined) throw error;
+        throw errors.INVALID_WORKOUT({ data: { reason } });
+      }
+    })
+    .handler(async ({ context, input, errors }) => {
+      const written = await write(
+        getDb(),
+        context.session.user.id,
+        input.id,
+        input.workout,
+        input.updatedAt,
+        null,
+      );
+      if ("stored" in written) return written.stored;
+      if ("editedInTheFuture" in written) throw errors.EDITED_IN_THE_FUTURE();
+      if ("tooLarge" in written) throw errors.WORKOUT_TOO_LARGE();
+      throw errors.WORKOUT_DELETED({ data: { id: input.id, deletedAt: written.deletedAt } });
+    }),
 
   delete: signedIn.workouts.delete.handler(async ({ context, input }) =>
     deleteWorkout(getDb(), context.session.user.id, input.id),
@@ -125,9 +140,6 @@ export const workoutsRouter = {
     if ("stored" in written) return { workout: written.stored, warnings: imported.warnings };
     if ("editedInTheFuture" in written) throw errors.EDITED_IN_THE_FUTURE();
     if ("tooLarge" in written) throw errors.WORKOUT_TOO_LARGE();
-    if ("unplayable" in written) {
-      throw errors.INVALID_WORKOUT({ data: { reason: written.unplayable } });
-    }
     throw errors.WORKOUT_DELETED({ data: { id: input.id, deletedAt: written.deletedAt } });
   }),
 

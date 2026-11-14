@@ -1,7 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import type { StoredWorkout, WorkoutSort, WorkoutSummary } from "@trainstack/contract";
 import { MAX_WORKOUT_BYTES } from "@trainstack/contract";
-import { CuePlacementError, flatten, type Workout } from "@trainstack/workout";
+import type { Workout } from "@trainstack/workout";
 import { and, asc, desc, eq, gt, isNull, sql, type SQL } from "drizzle-orm";
 
 import type { Database } from "../db";
@@ -18,16 +18,6 @@ export function isEditedInTheFuture(updatedAt: Date) {
 
 export function isTooLarge(value: Workout) {
   return new TextEncoder().encode(JSON.stringify(value)).byteLength > MAX_WORKOUT_BYTES;
-}
-
-export function whyUnplayable(value: Workout) {
-  try {
-    flatten(value.steps);
-    return undefined;
-  } catch (error) {
-    if (error instanceof CuePlacementError || error instanceof RangeError) return error.message;
-    throw error;
-  }
 }
 
 function summaryOfRow(row: WorkoutRow): WorkoutSummary {

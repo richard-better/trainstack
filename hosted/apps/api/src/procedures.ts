@@ -3,7 +3,9 @@ import { appContract } from "@trainstack/contract";
 
 import type { Context } from "./context";
 
-export const api = implement(appContract).$context<Context>();
+export const api = implement(appContract, {
+  initialInputValidationIndex: Number.POSITIVE_INFINITY,
+}).$context<Context>();
 
 export const signedIn = api.use(async ({ context, next }) => {
   if (!context.session?.user) {

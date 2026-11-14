@@ -157,7 +157,7 @@ const editTooFarAhead = {
 const invalidWorkout = {
   INVALID_WORKOUT: {
     status: 422,
-    message: "The workout cannot be played as written",
+    message: "The workout is not valid in the workout model",
     data: z.object({ reason: z.string() }),
   },
 };
@@ -260,7 +260,6 @@ export const workoutsContract = {
       ...workoutDeleted,
       ...editTooFarAhead,
       ...workoutTooLarge,
-      ...invalidWorkout,
       ...conversionFailed,
     })
     .input(
