@@ -384,8 +384,10 @@ for day in ./backup/deleted/*/; do
 done
 ```
 
-Files never change once stored, so a restore only puts back what is missing. A file whose
-activity the restored database does not have is never read, and does no harm.
+Files never change once stored, so a restore only puts back what is missing. A folder is dated by
+the backup that found the deletion, not the deletion, and the bucket copy is as of the latest
+backup, so a restore can also bring back files of activities the restored database does not have.
+Such a file is never read, and goes with the rest when its athlete's account is deleted.
 
 ### One athlete's copy
 
