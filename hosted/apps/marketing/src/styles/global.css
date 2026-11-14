@@ -51,3 +51,115 @@
     transform: translateY(12px);
   }
 }
+
+.help-prose {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-ts-silver);
+}
+
+.help-prose h1 {
+  font-family: var(--font-grotesk);
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--color-ts-mist);
+  margin-bottom: 1.25rem;
+}
+
+.help-prose h2 {
+  font-family: var(--font-grotesk);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--color-ts-mist);
+  margin: 2.5rem 0 0.75rem;
+}
+
+.help-prose h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-ts-mist);
+  margin: 1.75rem 0 0.5rem;
+}
+
+.help-prose p,
+.help-prose ul,
+.help-prose ol,
+.help-prose table {
+  margin: 0 0 1rem;
+}
+
+.help-prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.help-prose ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+
+.help-prose li {
+  margin: 0.25rem 0;
+}
+
+.help-prose a {
+  color: var(--color-ts-mist);
+  text-decoration: underline;
+  text-decoration-color: var(--color-ts-slate);
+  text-underline-offset: 3px;
+}
+
+.help-prose a:hover {
+  text-decoration-color: var(--color-ts-mist);
+}
+
+.help-prose strong {
+  font-weight: 600;
+  color: var(--color-ts-mist);
+}
+
+.help-prose code {
+  font-family: var(--font-geist-mono);
+  font-size: 0.9em;
+  background: #18191b;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+.help-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  display: block;
+  overflow-x: auto;
+}
+
+.help-prose th,
+.help-prose td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid #1f2022;
+}
+
+.help-prose th {
+  color: var(--color-ts-mist);
+  font-weight: 500;
+}
+
+.help-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #222326;
+  border-radius: 10px;
+  margin: 1.5rem 0;
+}
+
+.help-prose blockquote {
+  border-left: 2px solid var(--color-ts-line);
+  padding-left: 1rem;
+  color: var(--color-ts-ash);
+}

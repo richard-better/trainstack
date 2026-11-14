@@ -1,0 +1,56 @@
+---
+import { getCollection } from "astro:content";
+
+import SiteFooter from "../site/SiteFooter.astro";
+import SiteHeader from "../site/SiteHeader.astro";
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { helpSections } from "../../lib/help";
+
+interface Props {
+  title: string;
+  description: string;
+  current?: string;
+}
+
+const { title, description, current } = Astro.props;
+const pages = (await getCollection("help")).toSorted((a, b) => a.data.order - b.data.order);
+---
+
+<MarketingLayout title={title} description={description}>
+  <div class="min-h-screen overflow-x-clip bg-[#0b0b0c] font-geist text-ts-mist">
+    <SiteHeader product={{ name: "Help", href: "/help" }} />
+    <div class="mx-auto flex max-w-[1240px] gap-12 px-4 pb-24 pt-6 md:px-8 max-md:flex-col-reverse">
+      <nav aria-label="Help topics" class="w-60 shrink-0 text-[13px] max-md:w-full max-md:border-t max-md:border-[#1c1d1f] max-md:pt-8">
+        {
+          helpSections.map((section) => {
+            const inSection = pages.filter((page) => page.data.section === section);
+            return (
+              inSection.length > 0 && (
+                <div class="mb-6">
+                  <p class="mb-2 font-geist-mono text-[11px] uppercase tracking-[0.08em] text-ts-steel">{section}</p>
+                  <ul class="space-y-1">
+                    {inSection.map((page) => (
+                      <li>
+                        <a
+                          href={`/help/${page.id}`}
+                          aria-current={page.id === current ? "page" : undefined}
+                          class="block rounded-[6px] px-2 py-1 text-ts-ash hover:bg-[#161718] hover:text-ts-mist aria-[current=page]:bg-[#1a1b1d] aria-[current=page]:text-ts-mist"
+                        >
+                          {page.data.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            );
+          })
+        }
+      </nav>
+      <main class="min-w-0 max-w-[720px] flex-1">
+        <slot />
+      </main>
+    </div>
+    <SiteFooter />
+  </div>
+</MarketingLayout>
