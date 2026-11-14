@@ -226,7 +226,7 @@ async function storeFile(key: string, bytes: Uint8Array, contentType: string) {
 }
 
 export async function deleteActivity(db: Database, userId: string, id: string) {
-  const [, [deletion], removed] = await db.batch([
+  const [, [deletion]] = await db.batch([
     electPrimary(db, userId, id, id),
     db
       .insert(deletedActivity)
@@ -236,12 +236,9 @@ export async function deleteActivity(db: Database, userId: string, id: string) {
         set: { deletedAt: sql`${deletedActivity.deletedAt}` },
       })
       .returning(),
-    db
-      .delete(activity)
-      .where(and(eq(activity.userId, userId), eq(activity.id, id)))
-      .returning({ id: activity.id }),
+    db.delete(activity).where(and(eq(activity.userId, userId), eq(activity.id, id))),
   ]);
-  if (removed.length > 0) await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+  await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
   return { id: deletion!.id, deletedAt: deletion!.deletedAt };
 }
 
@@ -317,6 +314,9 @@ async function addFromFile(
       console.error(error);
     }
     const current = await findActivity(db, userId, id);
+    if (current && restoring && !(await ENV.ACTIVITY_FILES.head(fileKey(userId, id)))) {
+      await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
+    }
     if (current) return withStatistics(db, current);
   }
   const deletedDuringUpload = await deletedRefusal();
