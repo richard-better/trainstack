@@ -20,7 +20,13 @@ const richnessChannels = [
 const workoutOf = (userId: string, id: string) =>
   sql`(SELECT workout_id FROM ${activity} WHERE user_id = ${userId} AND id = ${id})`;
 
-export function electPrimary(db: Database, userId: string, memberId: string, leavingId = "") {
+export function electPrimary(
+  db: Database,
+  userId: string,
+  memberId: string,
+  leavingId = "",
+  when: SQL = sql`1`,
+) {
   const workout = workoutOf(userId, memberId);
   const richness = sql`(
     SELECT coalesce(sum(CASE s.name WHEN 'average_power_w' THEN 2 ELSE 1 END), 0)
@@ -39,7 +45,7 @@ export function electPrimary(db: Database, userId: string, memberId: string, lea
         p.file_size DESC, p.created_at, p.id
       LIMIT 1
     ))
-    WHERE user_id = ${userId} AND workout_id = ${workout} AND id != ${leavingId}
+    WHERE user_id = ${userId} AND workout_id = ${workout} AND id != ${leavingId} AND ${when}
   `);
 }
 

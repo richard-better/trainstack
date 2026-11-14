@@ -53,44 +53,6 @@ async function dayOfSession(db: Database, userId: string, activityId: string, st
   return { day: dayIn(zone, startedAt), zone };
 }
 
-type WhenAndWhat = { startedAt: Date | null; sport: string | null; seconds: number | null };
-
-async function whenAndWhat(db: Database, userId: string, activityId: string) {
-  const row = await db
-    .select({
-      startedAt: activity.startedAt,
-      sport: activity.sport,
-      seconds: activityStatistic.value,
-    })
-    .from(activity)
-    .leftJoin(
-      activityStatistic,
-      and(
-        eq(activityStatistic.userId, activity.userId),
-        eq(activityStatistic.activityId, activity.id),
-        eq(activityStatistic.name, "elapsed_s"),
-      ),
-    )
-    .where(and(eq(activity.userId, userId), eq(activity.id, activityId)))
-    .get();
-  return row satisfies WhenAndWhat | undefined;
-}
-
-const movedFrom = (before: WhenAndWhat, session: LoggedSession) =>
-  before.startedAt?.getTime() !== session.startedAt.getTime() ||
-  before.sport !== session.detail.sport ||
-  before.seconds !== session.durationSeconds;
-
-function leaveWorkout(db: Database, userId: string, activityId: string) {
-  return db.batch([
-    electPrimary(db, userId, activityId, activityId),
-    db
-      .update(activity)
-      .set({ workoutId: crypto.randomUUID(), isPrimary: true })
-      .where(and(eq(activity.userId, userId), eq(activity.id, activityId))),
-  ]);
-}
-
 async function unknownExercise(db: Database, userId: string, session: LoggedSession) {
   if (session.detail.sport !== "strength") return undefined;
   const ids = [...new Set(session.detail.exercises.map(({ exerciseId }) => exerciseId))];
@@ -126,6 +88,14 @@ function writeSession(
   const startedAt = session.startedAt.getTime();
   const statistics = JSON.stringify(statisticsOf(session));
   const ours = sql`EXISTS (SELECT 1 FROM ${loggedSession} WHERE user_id = ${userId} AND id = ${id} AND edited_at = ${editedAt.getTime()} AND body = ${body})`;
+  const movedWhileLinked = sql`EXISTS (
+    SELECT 1 FROM ${activity} a
+    LEFT JOIN ${activityStatistic} e ON e.user_id = a.user_id AND e.activity_id = a.id AND e.name = 'elapsed_s'
+    WHERE a.user_id = ${userId} AND a.id = ${activityId}
+      AND (a.started_at IS NOT ${startedAt} OR a.sport IS NOT ${sport} OR e.value IS NOT ${session.durationSeconds})
+      AND EXISTS (SELECT 1 FROM ${activity} o WHERE o.user_id = a.user_id AND o.workout_id = a.workout_id AND o.id != a.id)
+  )`;
+  const leaving = sql`(${ours} AND ${movedWhileLinked})`;
   return db.batch([
     db.run(sql`
       INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, local_day, local_day_source, local_day_zone)
@@ -141,6 +111,11 @@ function writeSession(
       ON CONFLICT (user_id, id) DO UPDATE SET
         sport = excluded.sport, body = excluded.body, edited_at = excluded.edited_at
       WHERE (excluded.edited_at, excluded.body) > (${loggedSession.editedAt}, ${loggedSession.body})
+    `),
+    electPrimary(db, userId, activityId, activityId, leaving),
+    db.run(sql`
+      UPDATE ${activity} SET workout_id = ${crypto.randomUUID()}, is_primary = 1
+      WHERE user_id = ${userId} AND id = ${activityId} AND ${leaving}
     `),
     db.run(sql`
       UPDATE ${activity} SET sport = ${sport}, indoor = ${indoor}, name = ${session.name},
@@ -200,18 +175,12 @@ export const logbookRouter = {
     const unknown = await unknownExercise(db, userId, input.session);
     if (unknown) throw errors.UNKNOWN_EXERCISE({ data: { exerciseId: unknown } });
     const day = await dayOfSession(db, userId, activityId, input.session.startedAt);
-    const before = await whenAndWhat(db, userId, activityId);
     await writeSession(db, userId, input, activityId, day);
     const row = await findSessionRow(db, userId, input.id);
     if (!row) {
       throw (
         (await deletedRefusal()) ?? new Error(`Session ${input.id} was neither stored nor deleted`)
       );
-    }
-    const won =
-      row.editedAt.getTime() === input.editedAt.getTime() && row.body === bodyOf(input.session);
-    if (won && before && movedFrom(before, input.session)) {
-      await leaveWorkout(db, userId, activityId);
     }
     await matchActivity(db, userId, activityId);
     return storedOf(db, userId, row);

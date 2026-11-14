@@ -407,6 +407,44 @@ test("moving a linked session to another day leaves its watch file behind, which
   assert.deepEqual(await workouts(), ["logged 0", "watch 0"]);
 });
 
+test("of two writes in flight at once, the later edit decides which watch file the session is linked to", async () => {
+  const strengthWatch = (start) =>
+    fit({
+      start,
+      elapsedSeconds: 70 * 60,
+      sport: "training",
+      subSport: "strengthTraining",
+      heartRate: 118,
+    });
+  const tuesday = strength([squats()]);
+  const wednesday = strength([squats()], { startedAt: at("2026-11-11T17:00:00Z") });
+  for (let trial = 0; trial < 5; trial++) {
+    const client = await athlete();
+    const tuesdayWatch = await client.activities.upload({
+      file: strengthWatch("2026-11-10T17:02:00Z"),
+      source: "apple_health",
+    });
+    await client.activities.upload({
+      file: strengthWatch("2026-11-11T17:02:00Z"),
+      source: "apple_health",
+    });
+    const id = crypto.randomUUID();
+    await client.logbook.put({ id, session: tuesday, editedAt: at("2026-11-10T19:00:00Z") });
+    await Promise.all([
+      client.logbook.put({ id, session: wednesday, editedAt: at("2026-11-10T19:05:00Z") }),
+      client.logbook.put({ id, session: tuesday, editedAt: at("2026-11-10T19:10:00Z") }),
+    ]);
+    const { activityId, localDay } = await client.logbook.get({ id });
+    assert.equal(localDay, "2026-11-10");
+    const logged = await client.activities.get({ id: activityId });
+    assert.deepEqual(
+      logged.duplicates.map(({ id: duplicate }) => duplicate),
+      [tuesdayWatch.id],
+      `trial ${trial}`,
+    );
+  }
+});
+
 test("two sessions logged by hand are never linked by themselves, however they overlap", async () => {
   const client = await athlete();
   const first = await client.logbook.put({
