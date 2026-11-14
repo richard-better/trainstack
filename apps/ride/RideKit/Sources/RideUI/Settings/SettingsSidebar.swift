@@ -37,6 +37,8 @@ struct SettingsSidebar: View {
           .tag(SettingsPage.player)
         Label("Ramp Test", systemImage: "chart.line.uptrend.xyaxis")
           .tag(SettingsPage.rampTest)
+        Label("Calibrate Trainer", systemImage: "arrow.trianglehead.2.clockwise")
+          .tag(SettingsPage.spinDown)
         Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           .tag(SettingsPage.devices)
         Label("Account", systemImage: "person.crop.circle")
