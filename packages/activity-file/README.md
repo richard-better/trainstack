@@ -23,7 +23,7 @@ Worker. The server uses it; the browser uses the full decode.
 
 `streamActivityFile(bytes, { untilSeconds, maxRecords })` adds the timer events and the records as
 columns (see `streamFit` in `@trainstack/fit`), equal to the full decode's records and timer
-events. A GPX or TCX file keeps its points in growing typed arrays rather than objects. A file
+events. A GPX or TCX file is read twice too, first for its start and number of points, then into typed arrays of exactly the points it keeps. A file
 with more records than `maxRecords` within `untilSeconds` of its start, or more than 20,000 timer
 events, fails with `tooLarge`. The server analyses activities this way, with the limits
 `@trainstack/analysis` gives as `analysisColumnLimits`.

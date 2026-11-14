@@ -14,6 +14,7 @@ import {
 import { ActivityFileError, type ActivityFileFormat } from "./error.ts";
 import { readGpx, type TrackActivity } from "./gpx.ts";
 import { readTcx } from "./tcx.ts";
+import type { TrackKeeps } from "./track.ts";
 import { asUtf8, rootElementName } from "./xml.ts";
 
 export type ActivityRecord = FitRecord;
@@ -149,10 +150,12 @@ function streamedFit(bytes: Uint8Array, limits: StreamLimits): ActivityFileColum
 }
 
 function streamedTrack(
-  { file, start, track }: TrackActivity,
+  read: (keeps: TrackKeeps) => TrackActivity,
   limits: StreamLimits,
 ): ActivityFileColumns {
-  return { ...file, events: track.events, records: track.columns(start, limits) };
+  const { file, start, track: summarized } = read("summary");
+  const { track } = read({ start, points: summarized.points, limits });
+  return { ...file, events: track.events, records: track.columns! };
 }
 
 export function streamActivityFile(
@@ -162,7 +165,13 @@ export function streamActivityFile(
   const bytes = checkedSize(data, undefined);
   const format = detectActivityFileFormat(bytes);
   if (format === "fit") return streamedFit(bytes, limits);
-  if (format === "gpx") return streamedTrack(readGpx(xmlBytes(bytes, "gpx"), "streams"), limits);
-  if (format === "tcx") return streamedTrack(readTcx(xmlBytes(bytes, "tcx"), "streams"), limits);
+  if (format === "gpx") {
+    const xml = xmlBytes(bytes, "gpx");
+    return streamedTrack((keeps) => readGpx(xml, keeps), limits);
+  }
+  if (format === "tcx") {
+    const xml = xmlBytes(bytes, "tcx");
+    return streamedTrack((keeps) => readTcx(xml, keeps), limits);
+  }
   throw new ActivityFileError("unrecognizedFormat", undefined);
 }

@@ -138,3 +138,31 @@ test(`streams a dense 25 MB file of each format in a ${heapMegabytes} MB heap, k
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("refuses a GPX of more points at one moment than it may keep, holding no more than that", () => {
+  const directory = mkdtempSync(join(tmpdir(), "activity-file-crafted-"));
+  try {
+    const point = `<trkpt><time>2026-01-01T00:00:00Z</time></trkpt>`;
+    const count = 1_100_000;
+    const path = join(directory, "crafted.gpx");
+    writeFileSync(
+      path,
+      `<gpx version="1.1"><trk><trkseg>${point.repeat(count)}</trkseg></trk></gpx>`,
+    );
+    const run = spawnSync(
+      process.execPath,
+      [
+        `--max-old-space-size=${heapMegabytes}`,
+        new URL("stream-crafted-file.ts", import.meta.url).pathname,
+        path,
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(run.status, 0, run.stderr);
+    const result = JSON.parse(run.stdout) as { code: string; rssGrowthMegabytes: number };
+    assert.equal(result.code, "tooLarge");
+    assert.ok(result.rssGrowthMegabytes < 64, `grew ${result.rssGrowthMegabytes} MB`);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
