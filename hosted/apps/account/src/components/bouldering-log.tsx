@@ -166,6 +166,14 @@ export function BoulderingEditor({
                     : problem,
                 ),
               });
+              if (grade?.scale === "circuit") {
+                const colour = renamed.get(grade.colour) ?? grade.colour;
+                setGrade(
+                  circuit.colours.some(({ name }) => name === colour)
+                    ? { scale: "circuit", colour }
+                    : null,
+                );
+              }
               setEditingCircuit(false);
             }}
           />
