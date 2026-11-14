@@ -486,9 +486,7 @@ function QuickThresholds({
 
   return (
     <form className="quick-thresholds" onSubmit={submit} noValidate>
-      <h3 className="group-title">
-        {suggested.length > 0 ? "Know the others?" : "Know your numbers?"}
-      </h3>
+      <h3 className="group-title">Know your numbers?</h3>
       <p className="lede">
         Fill in the ones you know and leave the rest. They hold from today, and for everything
         before it until you change them.{" "}
