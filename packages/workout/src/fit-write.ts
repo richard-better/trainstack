@@ -336,9 +336,7 @@ class FitWriter {
             quiet,
             maxUint32 - workoutPowerWattsOffset,
           );
-          return rounded === 0
-            ? ({ unit: "percentFtp", value: 0 } as const)
-            : ({ unit: "watts", value: rounded } as const);
+          return { unit: "watts", value: rounded } as const;
         };
         return { type: "power", averaging: "instant", low: watts(low), high: watts(high) };
       }
@@ -368,9 +366,7 @@ class FitWriter {
             quiet,
             maxUint32 - workoutHeartRateBpmOffset,
           );
-          return rounded === 0
-            ? ({ unit: "percentMaxHeartRate", value: 0 } as const)
-            : ({ unit: "bpm", value: rounded } as const);
+          return { unit: "bpm", value: rounded } as const;
         };
         return { type: "heartRate", averaging: "instant", low: bpm(low), high: bpm(high) };
       }

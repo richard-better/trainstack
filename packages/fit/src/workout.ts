@@ -318,16 +318,14 @@ function rounded(value: number, scale = 1): number {
 
 function powerValue(value: FitPower | undefined): number | undefined {
   if (value === undefined) return undefined;
-  return value.unit === "watts"
-    ? rounded(value.value) + workoutPowerWattsOffset
-    : rounded(value.value);
+  const raw = rounded(value.value);
+  return value.unit === "watts" && raw > 0 ? raw + workoutPowerWattsOffset : raw;
 }
 
 function heartRateValue(value: FitHeartRate | undefined): number | undefined {
   if (value === undefined) return undefined;
-  return value.unit === "bpm"
-    ? rounded(value.value) + workoutHeartRateBpmOffset
-    : rounded(value.value);
+  const raw = rounded(value.value);
+  return value.unit === "bpm" && raw > 0 ? raw + workoutHeartRateBpmOffset : raw;
 }
 
 function speedValue(value: number | undefined): number | undefined {

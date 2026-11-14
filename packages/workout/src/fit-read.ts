@@ -403,7 +403,7 @@ class FitReader {
         }
         const [low, high] = this.sameUnit(target.low, target.high, "percentMaxHeartRate", at);
         if (!low || !high) return undefined;
-        if (low.unit === "bpm" || high.value === 0) {
+        if (low.unit === "bpm" || (low.value === 0 && high.value === 0)) {
           return { type: "heartRate", unit: "bpm", level: level(low.value, high.value) };
         }
         const max = this.athlete.maxHeartRate;

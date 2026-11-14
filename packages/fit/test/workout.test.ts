@@ -127,6 +127,43 @@ describe("encodeFitWorkout", () => {
     );
   });
 
+  test("writes zero watts and zero bpm as zero, which FIT's offsets cannot say", () => {
+    const decoded = decodeFitWorkout(
+      encodeFitWorkout({
+        sport: "cycling",
+        steps: [
+          {
+            duration: { type: "time", seconds: 60 },
+            target: {
+              type: "power",
+              averaging: "instant",
+              low: { unit: "watts", value: 0 },
+              high: { unit: "watts", value: 200 },
+            },
+            secondaryTarget: {
+              type: "heartRate",
+              averaging: "instant",
+              low: { unit: "bpm", value: 0 },
+              high: { unit: "bpm", value: 120 },
+            },
+          },
+        ],
+      }),
+    );
+    assert.deepEqual(decoded.steps[0]?.target, {
+      type: "power",
+      averaging: "instant",
+      zone: undefined,
+      low: { unit: "percentFtp", value: 0 },
+      high: { unit: "watts", value: 200 },
+    });
+    assert.deepEqual(
+      decoded.steps[0]?.secondaryTarget?.type === "heartRate" &&
+        decoded.steps[0].secondaryTarget.low,
+      { unit: "percentMaxHeartRate", value: 0 },
+    );
+  });
+
   test("marks the file as a workout from a development manufacturer, created when asked", () => {
     const timeCreated = new Date("2026-11-14T10:00:00Z");
     const fileId = readFitFileId(encodeFitWorkout(everything, { timeCreated }));

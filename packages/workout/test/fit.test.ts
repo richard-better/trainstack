@@ -341,6 +341,27 @@ describe("parseFit on files written by other tools", () => {
 });
 
 describe("parseFit on files it cannot take", () => {
+  test("a heart rate percentage range ending at zero still needs a max heart rate", () => {
+    const bytes = encodeFitWorkout({
+      name: "Odd",
+      sport: "running",
+      steps: [
+        {
+          duration: { type: "time", seconds: 60 },
+          target: {
+            type: "heartRate",
+            averaging: "instant",
+            low: { unit: "percentMaxHeartRate", value: 80 },
+            high: { unit: "percentMaxHeartRate", value: 0 },
+          },
+        },
+      ],
+    });
+    assert.deepEqual(messages(failure(() => parseFit(bytes))), [
+      "unsupported step 1: The target is 80-0% of max heart rate; set a max heart rate to import it",
+    ]);
+  });
+
   test("a FIT activity is told apart from a workout", () => {
     const activity = new Uint8Array(
       readFileSync(
