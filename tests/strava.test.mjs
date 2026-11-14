@@ -640,6 +640,34 @@ test("a sign-in whose account is deleted while Strava exchanges the code gives t
   );
 });
 
+test("a sign-in cancelled by connecting again leaves the account's working connection alone", async () => {
+  reset();
+  const { token } = await signUp();
+  await connect(token);
+  const stale = await startConnecting(token);
+  strava.token = async () => {
+    await db.prepare("DELETE FROM strava_link").run();
+    return Response.json({
+      ...tokens(3),
+      athlete: { id: 42, firstname: "Ada", lastname: "Rider" },
+    });
+  };
+  strava.requests.length = 0;
+  const response = await callback(stale.state);
+  assert.equal(
+    new URL(response.headers.get("location")).searchParams.get("error"),
+    "exchange_failed",
+  );
+  assert.deepEqual(
+    strava.requests.filter((r) => r.path === "/oauth/deauthorize"),
+    [],
+  );
+  assert.deepEqual(await (await call(token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+});
+
 test("disconnecting forgets the tokens even when Strava cannot be told", async () => {
   for (const [stravaCannotBeTold, deauthorize] of [
     ["Strava is down", () => new Response("{}", { status: 503 })],
