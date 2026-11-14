@@ -123,7 +123,15 @@ export async function deauthorizeUnfinishedSignIns(
     if (!tokens || tokens === PENDING_EXCHANGE) continue;
     const plain = await deps.vault.decrypt(tokens);
     if (!plain) continue;
-    const { access_token: accessToken } = JSON.parse(plain) as strava.TokenResponse;
+    const { access_token: accessToken, athlete } = JSON.parse(plain) as strava.TokenResponse;
+    const heldByAnotherAccount =
+      athlete &&
+      (await deps.database
+        .select({ userId: stravaConnection.userId })
+        .from(stravaConnection)
+        .where(and(eq(stravaConnection.athleteId, athlete.id), ne(stravaConnection.userId, userId)))
+        .get());
+    if (heldByAnotherAccount) continue;
     const response = await strava
       .deauthorize(deps.fetcher, accessToken)
       .catch((error: unknown) => error);

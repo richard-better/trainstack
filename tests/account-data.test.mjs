@@ -527,6 +527,22 @@ test("deleting an account in the middle of connecting Strava tells Strava about 
   assert.match(strava.deauthorized[0], /^Bearer strava-access-/);
 });
 
+test("deleting an account in the middle of connecting a Strava athlete another account holds leaves that account's grant alone", async () => {
+  const holder = await athleteWithEverything();
+  const athlete = await signInOnTheWeb(runtime, apple);
+  const { token } = await apple.signIn(runtime, { subject: athlete.subject, email: athlete.email });
+  strava.nextAthleteId = holder.stravaAthleteId;
+  await startConnectingStrava(token);
+  strava.deauthorized.length = 0;
+  const deleted = await webRequest(athlete, "/api/auth/delete-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  assert.equal(deleted.status, 200, await deleted.clone().text());
+  assert.deepEqual(strava.deauthorized, []);
+});
+
 async function countMentions(table, trace) {
   const rows = (await db.prepare(`SELECT * FROM "${table}"`).all()).results;
   return rows.filter((row) => JSON.stringify(row).includes(trace)).length;
