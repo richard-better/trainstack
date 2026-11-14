@@ -56,19 +56,19 @@ struct AccountSettingsView: View {
         WebSignInWithAppleButton(isWorking: isWorking, action: signInThroughBrowser)
       }
     } header: {
-      Text("TrainStack account")
+      Text("Trainstack account")
     } footer: {
       Text(
         account.isSignedIn
-          ? "Your account holds your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Ride sends your rides to it, so you can see them on the TrainStack website, and keeps your settings the same on every device you sign in on."
-          : "Ride works without an account. Sign in to see your rides on the TrainStack website, keep your settings the same on all your devices, and send rides to Strava."
+          ? "Your account holds your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Ride sends your rides to it, so you can see them on the Trainstack website, and keeps your settings the same on every device you sign in on."
+          : "Ride works without an account. Sign in to see your rides on the Trainstack website, keep your settings the same on all your devices, and send rides to Strava."
       )
     }
   }
 
   private var deletionWarning: String {
     let warning =
-      "This permanently deletes your account and everything it holds: your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Every device is signed out. Rides and settings on your devices and in iCloud stay, and Ride adds them to any account you sign in to later. Rides on Strava stay too. To keep a copy, download Your data from Settings on the TrainStack website first."
+      "This permanently deletes your account and everything it holds: your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Every device is signed out. Rides and settings on your devices and in iCloud stay, and Ride adds them to any account you sign in to later. Rides on Strava stay too. To keep a copy, download Your data from Settings on the Trainstack website first."
     guard AppleSignIn.isNative else { return warning }
     return warning
       + "\n\nApple then asks you to confirm, so Ride's Sign in with Apple access ends too. If you cancel, the account is still deleted."

@@ -69,7 +69,7 @@ final class SettingsSync {
       case .refused(let index, let reason):
         guard batch.indices.contains(index) else { throw StravaError.unavailable }
         refusedThisLaunch.append(batch[index])
-        log.error("TrainStack refused a setting: \(reason, privacy: .public)")
+        log.error("Trainstack refused a setting: \(reason, privacy: .public)")
         passes.passAgain()
         return
       }

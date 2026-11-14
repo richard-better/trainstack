@@ -66,7 +66,7 @@ struct WorkoutDetailView: View {
             action: saveCopy
           )
           .disabled(isSaved)
-          .help("Save a copy to your TrainStack library, where you can change it on the web")
+          .help("Save a copy to your Trainstack library, where you can change it on the web")
         }
       }
     }

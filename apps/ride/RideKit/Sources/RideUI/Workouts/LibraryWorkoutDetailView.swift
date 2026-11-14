@@ -18,7 +18,7 @@ struct LibraryWorkoutDetailView: View {
     } else {
       ContentUnavailableView(
         "Workout Deleted", systemImage: "trash",
-        description: Text("This workout is no longer in your TrainStack library."))
+        description: Text("This workout is no longer in your Trainstack library."))
     }
   }
 
@@ -84,7 +84,7 @@ struct LibraryWorkoutDetailView: View {
         Button("Delete Workout", systemImage: "trash", role: .destructive) {
           isConfirmingDelete = true
         }
-        .help("Delete this workout from your TrainStack library")
+        .help("Delete this workout from your Trainstack library")
       }
     }
     .confirmationDialog(
@@ -95,7 +95,7 @@ struct LibraryWorkoutDetailView: View {
         dismiss()
       }
     } message: {
-      Text("It is deleted from your TrainStack library on every device, and cannot come back.")
+      Text("It is deleted from your Trainstack library on every device, and cannot come back.")
     }
     .safeAreaBar(edge: .bottom) {
       #if os(macOS)

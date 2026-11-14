@@ -99,7 +99,7 @@ final class AccountWorkouts {
         state.deleted.insert(copy.id)
       case .refused(let reason):
         state.workouts[copy.id] = nil
-        log.error("TrainStack refused a copy of \(copy.builtin, privacy: .public): \(reason)")
+        log.error("Trainstack refused a copy of \(copy.builtin, privacy: .public): \(reason)")
       }
     }
   }
