@@ -134,17 +134,51 @@ describe("bouldering numbers", () => {
     assert.deepEqual(summary.hardestTop?.grade, { scale: "circuit", colour: "Black" });
   });
 
-  test("an ungraded colour does not compare with a Font or V grade, so the graded one stands", () => {
+  test("an ungraded colour counts as hard as the graded colour below it, in any order", () => {
+    const problems = [
+      problem({ grade: { scale: "circuit", colour: "Black" } }),
+      problem({ grade: { scale: "circuit", colour: "Green" } }),
+      problem({ grade: { scale: "font", grade: "5" } }),
+    ];
+    for (const order of [
+      [0, 1, 2],
+      [0, 2, 1],
+      [1, 0, 2],
+      [1, 2, 0],
+      [2, 0, 1],
+      [2, 1, 0],
+    ]) {
+      const summary = boulderingSummary(
+        session(
+          order.map((index) => problems[index]!),
+          circuit,
+        ),
+      );
+      assert.deepEqual(
+        summary.hardestTop?.grade,
+        { scale: "circuit", colour: "Black" },
+        String(order),
+      );
+    }
+  });
+
+  test("a circuit with no grades at all ranks below every graded problem", () => {
     const summary = boulderingSummary(
       session(
         [
           problem({ grade: { scale: "circuit", colour: "Black" } }),
-          problem({ grade: { scale: "font", grade: "5" } }),
+          problem({ grade: { scale: "font", grade: "3" } }),
         ],
-        circuit,
+        {
+          name: "Ungraded",
+          colours: [
+            { name: "White", from: null, to: null },
+            { name: "Black", from: null, to: null },
+          ],
+        },
       ),
     );
-    assert.deepEqual(summary.hardestTop?.grade, { scale: "font", grade: "5" });
+    assert.deepEqual(summary.hardestTop?.grade, { scale: "font", grade: "3" });
   });
 
   test("the pyramid counts first ascents and projects by grade, hardest first, and leaves out repeats", () => {

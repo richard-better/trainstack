@@ -170,20 +170,23 @@ export function gradeLabel(grade: Grade) {
   return grade.scale === "circuit" ? grade.colour : grade.grade;
 }
 
+function orderKey(grade: Grade, circuit: Circuit | null) {
+  const rank = colourRank(grade, circuit);
+  const own = difficultyOf(grade, circuit);
+  if (own) return [own.from, own.to, rank];
+  const below = circuit?.colours
+    .slice(0, Math.max(0, rank))
+    .reverse()
+    .find(({ from, to }) => from !== null && to !== null);
+  if (below?.from && below.to) return [fontIndex(below.from), fontIndex(below.to), rank];
+  return [-1, -1, rank];
+}
+
 export function compareGrades(
   a: { grade: Grade; circuit: Circuit | null },
   b: { grade: Grade; circuit: Circuit | null },
 ) {
-  const sameCircuit =
-    a.grade.scale === "circuit" &&
-    b.grade.scale === "circuit" &&
-    a.circuit !== null &&
-    a.circuit.name === b.circuit?.name;
-  if (sameCircuit) return colourRank(a.grade, a.circuit) - colourRank(b.grade, b.circuit);
-  const da = difficultyOf(a.grade, a.circuit);
-  const db = difficultyOf(b.grade, b.circuit);
-  if (da && db) return da.from - db.from || da.to - db.to;
-  if (da) return 1;
-  if (db) return -1;
-  return 0;
+  const keyA = orderKey(a.grade, a.circuit);
+  const keyB = orderKey(b.grade, b.circuit);
+  return keyA[0]! - keyB[0]! || keyA[1]! - keyB[1]! || keyA[2]! - keyB[2]!;
 }
