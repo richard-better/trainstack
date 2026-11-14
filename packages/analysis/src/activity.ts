@@ -143,7 +143,7 @@ function chooseLoad(
   return null;
 }
 
-function lapSpans(activity: AnalysisActivity): Span[] {
+export function lapSpans(activity: AnalysisActivity): Span[] {
   const start = activity.summary.startTime.getTime();
   const laps = (activity.laps ?? []).flatMap((lap) =>
     lap.startTime === undefined || !Number.isFinite(lap.startTime.getTime())

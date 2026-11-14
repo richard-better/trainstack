@@ -1,4 +1,5 @@
 import type {
+  ActivityRoute,
   CalendarActivity,
   CalendarDay,
   CalendarTotals,
@@ -7,9 +8,17 @@ import type {
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
-import { activity, activityStatistic, plannedPairingChoice, plannedWorkout } from "../db/schema";
+import {
+  activity,
+  activityAnalysis,
+  activityStatistic,
+  plannedPairingChoice,
+  plannedWorkout,
+} from "../db/schema";
+import { analysisDueOf } from "../activities/analysis";
+import { complianceOf, contentHashOf, intervalsOf, lastsUntilLap } from "./compliance";
 import { type Pair, pairDay, type PairChoice } from "./pairing";
-import { plannedOf, type PlannedRow } from "./planned";
+import { plannedOf, type PlannedRow, type Presented } from "./planned";
 
 const millisecondsPerDay = 86_400_000;
 const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / millisecondsPerDay;
@@ -42,6 +51,8 @@ type ActivityRow = {
   elapsed: number | null;
   distance: number | null;
   load: number | null;
+  analysisDue: number;
+  route: string | null;
 };
 
 const calendarStatistics = ["timer_s", "elapsed_s", "distance_m", "load_tss"];
@@ -59,7 +70,9 @@ function activitiesOn(db: Database, userId: string, days: readonly string[]) {
       max(CASE s.name WHEN 'timer_s' THEN s.value END) AS timer,
       max(CASE s.name WHEN 'elapsed_s' THEN s.value END) AS elapsed,
       max(CASE s.name WHEN 'distance_m' THEN s.value END) AS distance,
-      max(CASE s.name WHEN 'load_tss' THEN s.value END) AS load
+      max(CASE s.name WHEN 'load_tss' THEN s.value END) AS load,
+      ${analysisDueOf(sql.raw("a"))} AS analysisDue,
+      (SELECT r.route FROM ${activityAnalysis} r WHERE r.user_id = a.user_id AND r.activity_id = a.id) AS route
     FROM ${activity} a
     LEFT JOIN ${activityStatistic} s ON s.user_id = a.user_id AND s.activity_id = a.id
       AND s.name IN (SELECT value FROM json_each(${JSON.stringify(calendarStatistics)}))
@@ -120,13 +133,23 @@ const sportOf = (row: PlannedRow) =>
     ? (JSON.parse(row.content!) as PlannedContent & { kind: "workout" }).workout.sport
     : null;
 
+const plannedWorkoutLastsUntilLap = (row: PlannedRow) => {
+  const content = JSON.parse(row.content!) as PlannedContent;
+  return content.kind === "workout" && lastsUntilLap(content.workout.steps);
+};
+
 export type LoadedDay = {
   planned: PlannedRow[];
   activities: CalendarActivity[];
-  pairs: Map<string, Pair>;
+  presented: Map<string, Presented>;
 };
 
-export async function loadDays(db: Database, userId: string, days: readonly string[]) {
+export async function loadDays(
+  db: Database,
+  userId: string,
+  days: readonly string[],
+  { withSteps = false } = {},
+) {
   const [plannedRows, activityRows] = await Promise.all([
     plannedOn(db, userId, days),
     activitiesOn(db, userId, days),
@@ -138,7 +161,7 @@ export async function loadDays(db: Database, userId: string, days: readonly stri
   );
   const plannedByDay = groupBy(plannedRows, (row) => row.day!);
   const activitiesByDay = groupBy(activityRows, (row) => row.day);
-  const loaded = new Map<string, LoadedDay>();
+  const paired = new Map<string, { pairs: Pair[]; planned: PlannedRow[]; rows: ActivityRow[] }>();
   for (const day of days) {
     const planned = plannedByDay.get(day) ?? [];
     const rows = activitiesByDay.get(day) ?? [];
@@ -162,23 +185,58 @@ export async function loadDays(db: Database, userId: string, days: readonly stri
       })),
       choices.filter((choice) => plannedIds.has(choice.plannedId)),
     );
-    const byPlanned = new Map(pairs.map((pair) => [pair.plannedId, pair]));
+    paired.set(day, { pairs, planned, rows });
+  }
+  const allPairs = [...paired.values()].flatMap(({ pairs }) => pairs);
+  const intervals = await intervalsOf(db, userId, allPairs);
+  const loaded = new Map<string, LoadedDay>();
+  for (const [day, { pairs, planned, rows }] of paired) {
+    const plannedById = new Map(planned.map((row) => [row.id, row]));
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    const presented = new Map<string, Presented>();
+    for (const pair of pairs) {
+      const plannedRow = plannedById.get(pair.plannedId)!;
+      const done = rowById.get(pair.activityId)!;
+      const stored = intervals.get(`${pair.plannedId} ${pair.activityId}`);
+      const isCurrent = stored?.contentHash === (await contentHashOf(plannedRow.content!));
+      presented.set(pair.plannedId, {
+        pairing: { activityId: pair.activityId, by: pair.by },
+        compliance: complianceOf({
+          planned: {
+            seconds: plannedRow.plannedSeconds,
+            meters: plannedRow.plannedMeters,
+            load: plannedRow.plannedLoad,
+          },
+          done: { seconds: done.timer ?? done.elapsed, meters: done.distance, load: done.load },
+          intervals: isCurrent ? (stored?.result ?? null) : null,
+          withSteps,
+          pending: done.analysisDue === 1,
+          lengthIsTheAthletes: plannedWorkoutLastsUntilLap(plannedRow),
+        }),
+      });
+    }
     const byActivity = new Map(pairs.map((pair) => [pair.activityId, pair.plannedId]));
     loaded.set(day, {
       planned,
       activities: rows.map((row) => toActivity(row, byActivity.get(row.id) ?? null)),
-      pairs: byPlanned,
+      presented,
     });
   }
   return loaded;
 }
 
-export async function pairingsOf(db: Database, userId: string, rows: readonly PlannedRow[]) {
+export async function presentationsOf(
+  db: Database,
+  userId: string,
+  rows: readonly PlannedRow[],
+  options: { withSteps?: boolean } = {},
+) {
   const days = [...new Set(rows.flatMap((row) => (row.day ? [row.day] : [])))];
-  const loaded = await loadDays(db, userId, days);
-  const pairs = new Map<string, Pair>();
-  for (const day of loaded.values()) for (const [id, pair] of day.pairs) pairs.set(id, pair);
-  return pairs;
+  const loaded = await loadDays(db, userId, days, options);
+  const presented = new Map<string, Presented>();
+  for (const day of loaded.values())
+    for (const [id, entry] of day.presented) presented.set(id, entry);
+  return presented;
 }
 
 const toActivity = (row: ActivityRow, plannedId: string | null): CalendarActivity => ({
@@ -190,6 +248,8 @@ const toActivity = (row: ActivityRow, plannedId: string | null): CalendarActivit
   seconds: row.timer ?? row.elapsed,
   meters: row.distance,
   load: row.load,
+  route: row.indoor === 1 || row.route === null ? null : (JSON.parse(row.route) as ActivityRoute),
+  analysisDue: row.analysisDue === 1,
   plannedId,
 });
 
@@ -236,14 +296,14 @@ export async function calendarRange(
   const end = sundayOf(through);
   const loaded = await loadDays(db, userId, daysFrom(start, end));
   const dayOfRange = (day: string) => {
-    const { planned, activities, pairs } = loaded.get(day)!;
-    return { planned, activities, pairs, totals: totalsOf(planned, activities) };
+    const { planned, activities, presented } = loaded.get(day)!;
+    return { planned, activities, presented, totals: totalsOf(planned, activities) };
   };
   const days: CalendarDay[] = daysFrom(from, through).map((day) => {
-    const { planned, activities, pairs, totals } = dayOfRange(day);
+    const { planned, activities, presented, totals } = dayOfRange(day);
     return {
       day,
-      planned: planned.map((row) => plannedOf(row, today, pairs.get(row.id) ?? null)),
+      planned: planned.map((row) => plannedOf(row, today, presented.get(row.id))),
       activities,
       totals,
     };
@@ -258,5 +318,9 @@ export async function calendarRange(
     }
     weeks.push({ start: monday, totals });
   }
-  return { today, days, weeks };
+  const analysesDue = [...loaded.values()].reduce(
+    (count, { activities }) => count + activities.filter((done) => done.analysisDue).length,
+    0,
+  );
+  return { today, days, weeks, analysesDue };
 }

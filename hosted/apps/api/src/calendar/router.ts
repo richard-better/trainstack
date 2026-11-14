@@ -16,7 +16,8 @@ import {
   skipPlanned,
 } from "./planned";
 import { activityOfDay, choosePairing, forgetChoices } from "./choices";
-import { calendarRange, pairingsOf } from "./range";
+import { checkComplianceOn } from "./compliance";
+import { calendarRange, presentationsOf } from "./range";
 
 async function athleteToday(db: Database, userId: string) {
   return dayIn((await timeZoneOf(db, userId)) ?? DEFAULT_TIME_ZONE, new Date());
@@ -35,11 +36,11 @@ async function current(db: Database, userId: string, id: string): Promise<Curren
 }
 
 async function present(db: Database, userId: string, row: PlannedRow) {
-  const [pairings, today] = await Promise.all([
-    pairingsOf(db, userId, [row]),
+  const [presented, today] = await Promise.all([
+    presentationsOf(db, userId, [row], { withSteps: true }),
     athleteToday(db, userId),
   ]);
-  return plannedOf(row, today, pairings.get(row.id) ?? null);
+  return plannedOf(row, today, presented.get(row.id));
 }
 
 export const plannedWorkoutsRouter = {
@@ -59,6 +60,7 @@ export const plannedWorkoutsRouter = {
     const userId = context.session.user.id;
     if (isEditedInTheFuture(input.updatedAt)) throw errors.EDITED_IN_THE_FUTURE();
     if (isContentTooLarge(input.content)) throw errors.WORKOUT_TOO_LARGE();
+    const before = await findPlanned(db, userId, input.id);
     const written = await putPlanned(db, userId, input);
     if (written.kind === "deleted") {
       throw errors.PLANNED_WORKOUT_DELETED({
@@ -66,6 +68,9 @@ export const plannedWorkoutsRouter = {
       });
     }
     if (written.kind !== "written") throw errors.DAY_FULL();
+    if (before?.revision !== written.row.revision) {
+      await checkComplianceOn(db, userId, [written.row.day!]);
+    }
     return present(db, userId, written.row);
   }),
 
@@ -73,6 +78,7 @@ export const plannedWorkoutsRouter = {
     const db = getDb();
     const userId = context.session.user.id;
     if (isEditedInTheFuture(input.updatedAt)) throw errors.EDITED_IN_THE_FUTURE();
+    const before = await findPlanned(db, userId, input.id);
     const written = await movePlanned(db, userId, input);
     if (written.kind === "deleted") {
       throw errors.PLANNED_WORKOUT_DELETED({
@@ -81,6 +87,9 @@ export const plannedWorkoutsRouter = {
     }
     if (written.kind === "missing") throw errors.NOT_FOUND();
     if (written.kind === "dayFull") throw errors.DAY_FULL();
+    if (before?.revision !== written.row.revision) {
+      await checkComplianceOn(db, userId, [written.row.day!, ...(before?.day ? [before.day] : [])]);
+    }
     return present(db, userId, written.row);
   }),
 
@@ -142,8 +151,10 @@ export const plannedWorkoutsRouter = {
   delete: signedIn.plannedWorkouts.delete.handler(async ({ context, input }) => {
     const db = getDb();
     const userId = context.session.user.id;
+    const before = await findPlanned(db, userId, input.id);
     const deletion = await deletePlanned(db, userId, input.id);
     await forgetChoices(db, userId, input.id);
+    if (before?.day) await checkComplianceOn(db, userId, [before.day]);
     return deletion;
   }),
 
@@ -151,12 +162,12 @@ export const plannedWorkoutsRouter = {
     const db = getDb();
     const userId = context.session.user.id;
     const { planned, deleted, cursor } = await plannedChanges(db, userId, input.since);
-    const [pairings, today] = await Promise.all([
-      pairingsOf(db, userId, planned),
+    const [presented, today] = await Promise.all([
+      presentationsOf(db, userId, planned),
       athleteToday(db, userId),
     ]);
     return {
-      planned: planned.map((row) => plannedOf(row, today, pairings.get(row.id) ?? null)),
+      planned: planned.map((row) => plannedOf(row, today, presented.get(row.id))),
       deleted,
       cursor,
     };

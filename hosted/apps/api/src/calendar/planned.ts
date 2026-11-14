@@ -1,6 +1,7 @@
 import {
   MAX_PLANNED_PER_DAY,
   MAX_WORKOUT_BYTES,
+  type PlannedCompliance,
   type PlannedContent,
   type PlannedWorkout,
 } from "@trainstack/contract";
@@ -56,10 +57,12 @@ function contentOf(stored: string): PlannedContent {
   };
 }
 
+export type Presented = { pairing: PlannedPairing | null; compliance: PlannedCompliance };
+
 export function plannedOf(
   row: PlannedRow,
   today: string,
-  pairing: PlannedPairing | null,
+  { pairing, compliance }: Presented = { pairing: null, compliance: null },
 ): PlannedWorkout {
   return {
     id: row.id,
@@ -74,6 +77,7 @@ export function plannedOf(
     skipped: row.skipped ? { reason: row.skipReason } : null,
     state: stateOf(row, today, pairing),
     pairing: pairing && { activityId: pairing.activityId, by: pairing.by },
+    compliance,
     createdAt: row.createdAt,
     updatedAt: latest(row.placedAt, row.contentAt, row.skippedAt),
   };

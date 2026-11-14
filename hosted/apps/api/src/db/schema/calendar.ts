@@ -1,3 +1,4 @@
+import type { IntervalCompliance } from "@trainstack/analysis";
 import { sql } from "drizzle-orm";
 import {
   foreignKey,
@@ -68,5 +69,25 @@ export const plannedPairingChoice = sqliteTable(
       foreignColumns: [activity.userId, activity.id],
     }).onDelete("cascade"),
     index("planned_pairing_choice_user_activity_idx").on(table.userId, table.activityId),
+  ],
+);
+
+export const plannedIntervalCompliance = sqliteTable(
+  "planned_interval_compliance",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    activityId: text("activity_id").notNull(),
+    plannedId: text("planned_id").notNull(),
+    contentHash: text("content_hash").notNull(),
+    result: text("result", { mode: "json" }).$type<IntervalCompliance | null>(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.activityId, table.plannedId] }),
+    foreignKey({
+      columns: [table.userId, table.activityId],
+      foreignColumns: [activity.userId, activity.id],
+    }).onDelete("cascade"),
   ],
 );

@@ -2,6 +2,7 @@ import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
 import { calendarContract, plannedWorkoutsContract } from "./calendar.ts";
+import { activityRouteSchema } from "./route.ts";
 import { settingDaySchema, settingsContract } from "./settings.ts";
 import {
   activityStatistics,
@@ -12,6 +13,7 @@ import { trainingContract } from "./training.ts";
 import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from "./workouts.ts";
 
 export * from "./calendar.ts";
+export * from "./route.ts";
 export * from "./settings.ts";
 export * from "./statistics.ts";
 export * from "./training.ts";
@@ -69,22 +71,6 @@ export const duplicateActivitySchema = z.object({
   file: z.object({ format: activityFileFormatSchema, size: z.number().int() }).nullable(),
   primary: z.boolean(),
 });
-
-export const activityRouteSchema = z
-  .object({
-    segments: z
-      .array(z.string())
-      .describe(
-        "Google encoded polylines, precision 5, of the track while the timer ran. A new segment starts after a pause, a GPS gap of more than 60 seconds, or a jump faster than 100 m/s, so nothing draws a line across the map. Simplified with Douglas-Peucker to about 1e-4 degrees, and to at most 300 points across all segments",
-      ),
-    bounds: z
-      .tuple([z.number(), z.number(), z.number(), z.number()])
-      .describe("[west, south, east, north] in degrees, over every position kept"),
-  })
-  .nullable()
-  .describe(
-    "A simplified route of where the activity went, for a thumbnail or a first map, from the analysis of this activity's own file. Null for an indoor activity, for a file without positions, and until the file is analysed. Each copy of a duplicated workout has the route of its own file",
-  );
 
 export const activitySchema = z.object({
   id: activityIdSchema,
@@ -291,7 +277,6 @@ export const appContract = {
 };
 
 export type AppContractClient = ContractRouterClient<typeof appContract>;
-export type ActivityRoute = z.infer<typeof activityRouteSchema>;
 export type Activity = z.infer<typeof activitySchema>;
 export type ActivityDetail = z.infer<typeof activityDetailSchema>;
 export type DuplicateActivity = z.infer<typeof duplicateActivitySchema>;

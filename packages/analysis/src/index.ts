@@ -29,6 +29,18 @@ export {
   trainingLoad,
 } from "./load.ts";
 export {
+  constantTolerance,
+  type IntervalCompliance,
+  intervalCompliance,
+  type IntervalMetric,
+  type IntervalStep,
+  lapToleranceSeconds,
+  lapToleranceShare,
+  maxReportedSteps,
+  rangeTolerance,
+  smoothingSeconds,
+} from "./intervals.ts";
+export {
   longestPlannedSeconds,
   maxEffortShare,
   type PlannedEstimate,
