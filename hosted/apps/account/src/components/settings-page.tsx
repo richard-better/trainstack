@@ -55,6 +55,7 @@ import {
   unitOf,
 } from "../lib/settings";
 import { AccountData } from "./account-data";
+import { CalendarFeedSettings } from "./calendar-feed";
 import { SaveStatus, SettingsWriter, useSettingsHistory, useWriter } from "./settings-data";
 import { TimeZoneSetting } from "./time-zone";
 import { ZoneScale, ZoneSwatch, zoneRange } from "./zones";
@@ -94,6 +95,7 @@ export function SettingsPage({
           <Settings entries={history.data.entries} sport={sport} metric={metric} />
         </SettingsWriter>
       )}
+      <CalendarFeedSettings />
       <AccountData confirmDeleting={confirmDeleting} />
     </main>
   );
