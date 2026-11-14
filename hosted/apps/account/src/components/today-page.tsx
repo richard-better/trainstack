@@ -19,6 +19,7 @@ import { todayIn } from "../lib/time-zone";
 import { calendarWrites, useCalendar } from "./calendar-data";
 import { Notices } from "./calendar-page";
 import { CheckInForm } from "./check-in-form";
+import { HelpLink } from "./help-link";
 import { useCheckInOn } from "./check-in-data";
 import { ReadinessSummary, useReadiness } from "./readiness";
 import { useAthleteSettings } from "./time-zone";
@@ -55,7 +56,12 @@ export function TodayPage() {
               </button>
             </div>
           ) : day ? (
-            <ReadinessSummary readiness={day} />
+            <>
+              <ReadinessSummary readiness={day} />
+              <p className="lede">
+                <HelpLink topic="today-and-readiness">How readiness is worked out</HelpLink>
+              </p>
+            </>
           ) : (
             <div className="skeleton" aria-busy="true" aria-label="Loading readiness">
               <span className="bar" style={{ width: "100%", height: 220 }} />

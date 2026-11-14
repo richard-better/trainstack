@@ -2,6 +2,7 @@ export const HELP_SITE = "https://trainstackhq.com/help";
 
 export const helpTopics = [
   "getting-started",
+  "today-and-readiness",
   "add-activities",
   "fix-activities",
   "thresholds-and-zones",

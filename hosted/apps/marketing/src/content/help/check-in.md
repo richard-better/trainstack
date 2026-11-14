@@ -10,7 +10,8 @@ whether you are ill or injured. Over weeks it shows how you feel next to how har
 
 ## Checking in
 
-Press **Check in** where **Activities** or **Training** asks "How do you feel today?".
+**Today** asks "How do you feel today?" under today's plan until you have checked in, with the
+form right there. **Activities** and **Training** ask too: press **Check in**.
 
 ![The check-in](/help-images/check-in.png)
 
@@ -48,8 +49,9 @@ that one causes the other.
 
 ## What TrainStack does with it
 
-Nothing, yet. TrainStack stores what you enter and draws no conclusions from it: it does not
-change your plan, your load or your form, and it gives no medical advice. Only you can see your
+It feeds your [readiness](/help/today-and-readiness) on **Today**, read against your own usual
+answers, and that is all. It does not change your plan by itself, your load or your form, and it
+gives no medical advice. Only you can see your
 check-ins. They are in your [account export](/help/your-data), and deleting your account deletes
 them.
 
@@ -57,4 +59,5 @@ them.
 
 - _No check-in in Ride._ Check in on the web, including from your phone's browser.
 - _No sleep, resting heart rate or HRV_ from Apple Health, Whoop, Oura or a watch.
-- _No readiness score._
+- _No measured readiness._ Readiness reads your check-in and training, not sleep or heart rate
+  from a device.
