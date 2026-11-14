@@ -1,4 +1,5 @@
 import { ORPCError } from "@orpc/client";
+import { activitySport } from "@trainstack/activity-file";
 import {
   type ActivityDetail,
   type ActivitySummaryError,
@@ -8,12 +9,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import { activitiesQueryKey, activityKey, api, queryClient } from "../api";
+import { activityKey, api, queryClient } from "../api";
 import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
 import { activityDateInFull } from "../lib/dates";
 import { localDay } from "../lib/settings";
 import { lapsOf, traceOf } from "../lib/series";
-import { activityTitle, sportFromFit, sportName } from "../lib/sports";
+import { activityTitle, sportName } from "../lib/sports";
 import {
   type Figure,
   formatDistance,
@@ -21,9 +22,11 @@ import {
   statisticsFromFit,
   summaryFigures,
 } from "../lib/statistics";
+import { deletingSource } from "../lib/workouts";
 import { SportIcon } from "./sport-icon";
 import { TimeInZones } from "./time-in-zones";
 import { Traces } from "./traces";
+import { OtherSource, Sources, refreshWorkouts, useWorkout } from "./workout-sources";
 
 const refused = (error: Error) => error instanceof ORPCError && error.status < 500;
 
@@ -118,11 +121,16 @@ function Activity({ activity }: { activity: ActivityDetail }) {
   const activityFile = useActivityFile(activity);
   const decoded =
     activityFile.data?.reading.kind === "decoded" ? activityFile.data.reading.activity : null;
-  const sport =
-    activity.sport ??
-    (decoded ? sportFromFit(decoded.summary.sport, decoded.summary.subSport) : null);
+  const fromFile = decoded ? activitySport(decoded.summary.sport, decoded.summary.subSport) : null;
+  const sport = activity.sport ?? fromFile?.sport ?? null;
+  const indoor = activity.indoor ?? fromFile?.indoor ?? null;
   const startedAt = activity.startedAt ?? decoded?.summary.startTime ?? null;
-  const title = activityTitle({ name: activity.name ?? decoded?.name ?? null, sport, startedAt });
+  const title = activityTitle({
+    name: activity.name ?? decoded?.name ?? null,
+    sport,
+    indoor,
+    startedAt,
+  });
   const statistics =
     Object.keys(activity.statistics).length > 0
       ? activity.statistics
@@ -130,7 +138,8 @@ function Activity({ activity }: { activity: ActivityDetail }) {
         ? statisticsFromFit(decoded.summary)
         : {};
   const figures = summaryFigures(statistics);
-  const { label, family } = sportName(sport);
+  const { label, family } = sportName(sport, indoor);
+  const workout = useWorkout(activity);
 
   useEffect(() => {
     document.title = `${title} - Trainstack`;
@@ -141,6 +150,7 @@ function Activity({ activity }: { activity: ActivityDetail }) {
 
   return (
     <Shell>
+      <OtherSource activity={activity} workout={workout} />
       <header className="detail-head">
         <p className="detail-meta">
           <span className="detail-sport">
@@ -150,6 +160,11 @@ function Activity({ activity }: { activity: ActivityDetail }) {
           <time dateTime={(startedAt ?? activity.createdAt).toISOString()}>
             {activityDateInFull(startedAt ?? activity.createdAt)}
           </time>
+          {activity.duplicates.length > 0 && (
+            <a href="#sources" className="text-link">
+              {activity.duplicates.length + 1} sources
+            </a>
+          )}
         </p>
         <h1 className="detail-title">{title}</h1>
         <Actions
@@ -180,6 +195,8 @@ function Activity({ activity }: { activity: ActivityDetail }) {
         sport={sport}
         day={localDay(startedAt ?? activity.createdAt)}
       />
+
+      <Sources activity={activity} title={title} />
     </Shell>
   );
 }
@@ -390,13 +407,25 @@ function Actions({
     },
   });
 
+  const others = activity.duplicates;
   const remove = useMutation({
-    mutationFn: () => api.activities.delete({ id: activity.id }),
-    onSuccess: async () => {
+    mutationFn: async () => {
+      await api.activities.delete({ id: activity.id });
+      const remaining = others[0];
+      if (!remaining) return null;
+      const next = await api.activities.get({ id: remaining.id }).catch(() => null);
+      if (!next) return remaining.id;
+      return next.primary
+        ? next.id
+        : (next.duplicates.find(({ primary }) => primary)?.id ?? next.id);
+    },
+    onSuccess: async (workoutId) => {
       dialog.current?.close();
       queryClient.removeQueries({ queryKey: activityKey(activity.id) });
-      await queryClient.invalidateQueries({ queryKey: activitiesQueryKey });
-      await navigate({ to: "/" });
+      await refreshWorkouts();
+      await (workoutId
+        ? navigate({ to: "/activities/$id", params: { id: workoutId } })
+        : navigate({ to: "/" }));
     },
   });
 
@@ -432,11 +461,21 @@ function Actions({
         aria-labelledby="confirm-title"
         onClose={() => remove.reset()}
       >
-        <h2 id="confirm-title">Delete this activity?</h2>
-        <p className="lede">
-          {title} is removed from your account, along with its file. It will not be added again,
-          from Ride or by uploading the same file.
-        </p>
+        {others.length === 0 ? (
+          <>
+            <h2 id="confirm-title">Delete this activity?</h2>
+            <p className="lede">
+              {title} is removed from your account, along with its file. It will not be added again,
+              from Ride or by uploading the same file.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 id="confirm-title">Delete this source?</h2>
+            <p className="lede">{deletingSource(activity).what}</p>
+            <p className="lede">{deletingSource(activity).stays}</p>
+          </>
+        )}
         {remove.isError && (
           <p role="alert" className="notice">
             The activity was not deleted. Try again.
@@ -457,7 +496,11 @@ function Actions({
             onClick={() => remove.mutate()}
             disabled={remove.isPending}
           >
-            {remove.isPending ? "Deleting…" : "Delete activity"}
+            {remove.isPending
+              ? "Deleting…"
+              : others.length === 0
+                ? "Delete activity"
+                : "Delete this source"}
           </button>
         </div>
       </dialog>

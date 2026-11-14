@@ -7,7 +7,7 @@ import { readActivityFile } from "../hosted/apps/account/src/lib/activity-file.t
 import { ACTIVITIES_PER_PAGE } from "../hosted/apps/account/src/lib/client.ts";
 import { byMonth } from "../hosted/apps/account/src/lib/dates.ts";
 import { lapsOf, traceOf } from "../hosted/apps/account/src/lib/series.ts";
-import { activityTitle } from "../hosted/apps/account/src/lib/sports.ts";
+import { activityTitle, sportName } from "../hosted/apps/account/src/lib/sports.ts";
 import {
   figureOf,
   headlineFigures,
@@ -258,18 +258,39 @@ test("a statistic the web app does not know yet is still shown, named from its k
 test("an unnamed activity is called by its sport and time of day", () => {
   const morning = new Date(2026, 10, 13, 7, 30);
   assert.equal(
-    activityTitle({ name: "Sweet spot", sport: "cycling", startedAt: morning }),
+    activityTitle({ name: "Sweet spot", sport: "cycling", indoor: true, startedAt: morning }),
     "Sweet spot",
   );
   assert.equal(
-    activityTitle({ name: null, sport: "indoor_cycling", startedAt: morning }),
+    activityTitle({ name: null, sport: "cycling", indoor: true, startedAt: morning }),
     "Morning indoor ride",
   );
   assert.equal(
-    activityTitle({ name: null, sport: "kayaking", startedAt: null }),
+    activityTitle({ name: null, sport: "running", indoor: true, startedAt: morning }),
+    "Morning treadmill run",
+  );
+  assert.equal(
+    activityTitle({ name: null, sport: "cycling", indoor: false, startedAt: morning }),
+    "Morning ride",
+  );
+  assert.equal(
+    activityTitle({ name: null, sport: "kayaking", indoor: null, startedAt: null }),
     "Untitled kayaking",
   );
-  assert.equal(activityTitle({ name: null, sport: null, startedAt: morning }), "Morning activity");
+  assert.equal(
+    activityTitle({ name: null, sport: null, indoor: null, startedAt: morning }),
+    "Morning activity",
+  );
+});
+
+test("a sport done indoors is labelled by where it took place", () => {
+  const label = (sport, indoor) => sportName(sport, indoor).label;
+  assert.equal(label("cycling", true), "Indoor cycling");
+  assert.equal(label("cycling", false), "Cycling");
+  assert.equal(label("running", true), "Treadmill running");
+  assert.equal(label("rowing", true), "Indoor rowing");
+  assert.equal(label("running", null), "Running");
+  assert.equal(sportName("cycling", true).family, "ride");
 });
 
 test("activities are grouped by month, each month with an id fit to label its list", () => {

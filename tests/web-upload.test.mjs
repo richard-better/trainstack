@@ -79,7 +79,7 @@ test("a FIT, GPX or TCX file is read in the browser for its sport and start", as
   };
   assert.deepEqual(await read(WORKOUT_RIDE), {
     format: "fit",
-    sport: "indoor_cycling",
+    sport: "cycling",
     startedAt: new Date("2027-01-15T08:00:00.000Z"),
   });
   assert.deepEqual(await read(`${FILES}/strava-ride.gpx`), {
@@ -299,6 +299,8 @@ const activity = (id, startedAt) => ({
   summarizedAt: null,
   statistics: {},
   createdAt: new Date("2026-11-01"),
+  primary: true,
+  duplicates: [],
 });
 
 const ids = (pages) => pages.map((page) => page.activities.map((a) => a.id[0]).join(""));

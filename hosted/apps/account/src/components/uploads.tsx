@@ -8,6 +8,7 @@ import { activityDate } from "../lib/dates";
 import { sportName } from "../lib/sports";
 import type { Refusal } from "../lib/upload";
 import { type Upload, isBusy, isFinished } from "../lib/uploads";
+import { arrivalText, primaryIdOf } from "../lib/workouts";
 import { SportIcon } from "./sport-icon";
 
 const sizeLimit = `${MAX_ACTIVITY_FILE_BYTES / (1024 * 1024)} MB`;
@@ -175,9 +176,9 @@ function statusOf({ state }: Upload): Status {
     case "done":
       switch (state.outcome.kind) {
         case "uploaded":
-          return { text: "Uploaded", tone: "done" };
+          return { text: arrivalText(state.outcome.activity, true), tone: "done" };
         case "alreadyThere":
-          return { text: "Already in your account", tone: "done" };
+          return { text: arrivalText(state.outcome.activity, false), tone: "done" };
         case "deletedBefore":
           return {
             text: `You deleted this activity on ${activityDate(state.outcome.deletedAt)}, so it was not added again. A deleted activity cannot be brought back.`,
@@ -215,10 +216,11 @@ function UploadRow({ upload }: { upload: Upload }) {
         {activity && (
           <Link
             to="/activities/$id"
-            params={{ id: activity.id }}
+            params={{ id: primaryIdOf(activity) }}
             className="secondary link-button compact"
           >
-            Open<span className="visually-hidden"> {upload.name}</span>
+            {activity.primary ? "Open" : "Open workout"}
+            <span className="visually-hidden"> {upload.name}</span>
           </Link>
         )}
         {state.phase === "failed" && (
