@@ -15,6 +15,7 @@ import { ENV } from "../env.server";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { promiseToSweepFilesAfterDeleting } from "../account/deletion";
+import { isAnalysisDue } from "./analysis";
 import { contentTypes, fileKey, formatOf, sha256Hex } from "./files";
 import { DEFAULT_TIME_ZONE } from "./local-day";
 import { summarizeActivity } from "./summary";
@@ -91,6 +92,7 @@ function toActivity(
     statistics,
     analyzedAt: analysis?.analyzedAt ?? null,
     analysisError: analysis?.error ?? null,
+    analysisDue: isAnalysisDue(row, analysis),
     missingThresholds: analysis?.missingThresholds ?? [],
     createdAt: row.createdAt,
     primary: row.isPrimary,
@@ -132,13 +134,18 @@ async function duplicatesOf(db: Database, userId: string, rows: ActivityRow[]) {
 
 async function toActivities(db: Database, userId: string, rows: ActivityRow[]) {
   const ids = rows.map((row) => row.id);
-  const [statistics, analyses, duplicates] = await Promise.all([
+  const analysesReadBeforeStatistics = await analysesOf(db, userId, ids);
+  const [statistics, duplicates] = await Promise.all([
     statisticsOf(db, userId, ids),
-    analysesOf(db, userId, ids),
     duplicatesOf(db, userId, rows),
   ]);
   return rows.map((row) =>
-    toActivity(row, statistics.get(row.id)!, analyses.get(row.id), duplicates.get(row.id)!),
+    toActivity(
+      row,
+      statistics.get(row.id)!,
+      analysesReadBeforeStatistics.get(row.id),
+      duplicates.get(row.id)!,
+    ),
   );
 }
 

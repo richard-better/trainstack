@@ -14,6 +14,7 @@ import {
 } from "@trainstack/analysis";
 import { sql } from "drizzle-orm";
 
+import { analysisDueOf } from "../activities/analysis";
 import { DEFAULT_TIME_ZONE, dayIn } from "../activities/local-day";
 import type { Database } from "../db";
 import { activity, activityStatistic } from "../db/schema";
@@ -75,6 +76,32 @@ function bests(
   `);
 }
 
+async function countAnalysesDue(
+  db: Database,
+  userId: string,
+  { from, through, sport }: { from?: string; through: string; sport?: string | undefined },
+) {
+  const row = await db.get<{ due: number }>(sql`
+    SELECT count(*) AS due FROM ${activity} a
+    WHERE a.user_id = ${userId} AND a.is_primary = 1
+      AND (a.local_day IS NULL OR (a.local_day <= ${through}
+        ${from === undefined ? sql`` : sql`AND a.local_day >= ${from}`}))
+      ${sport === undefined ? sql`` : sql`AND (coalesce(a.sport, a.file_sport) = ${sport} OR (a.sport IS NULL AND a.summarized_at IS NULL))`}
+      AND ${analysisDueOf(sql.raw("a"))}
+  `);
+  return row?.due ?? 0;
+}
+
+async function readAfterCountingDue<T>(
+  db: Database,
+  userId: string,
+  scope: { from?: string; through: string; sport?: string | undefined },
+  read: () => Promise<T>,
+) {
+  const analysesDue = await countAnalysesDue(db, userId, scope);
+  return { analysesDue, numbers: await read() };
+}
+
 export const trainingRouter = {
   load: signedIn.training.load.handler(async ({ context, input }) => {
     const db = getDb();
@@ -89,7 +116,9 @@ export const trainingRouter = {
         message: `from must be at most ${MAX_TRAINING_LOAD_DAYS} days before through`,
       });
     }
-    const rows = await loadedActivities(db, userId, through);
+    const { analysesDue, numbers: rows } = await readAfterCountingDue(db, userId, { through }, () =>
+      loadedActivities(db, userId, through),
+    );
     const firstDay = rows[0]?.day;
     const start = firstDay !== undefined && firstDay < input.from ? firstDay : input.from;
     const byDay = new Map<string, LoadRow[]>();
@@ -104,7 +133,7 @@ export const trainingRouter = {
           source,
         })),
       }));
-    return { today, days };
+    return { today, days, analysesDue };
   }),
 
   bests: signedIn.training.bests.handler(async ({ context, input }) => {
@@ -115,10 +144,15 @@ export const trainingRouter = {
       through: input.through ?? (await athleteToday(db, userId)),
       sport: input.sport,
     };
-    const [power, times] = await Promise.all([
-      bests(db, userId, "best_power_", "best_power_*s_w", "max", period),
-      bests(db, userId, "best_time_", "best_time_*_s", "min", period),
-    ]);
+    const {
+      analysesDue,
+      numbers: [power, times],
+    } = await readAfterCountingDue(db, userId, period, () =>
+      Promise.all([
+        bests(db, userId, "best_power_", "best_power_*s_w", "max", period),
+        bests(db, userId, "best_time_", "best_time_*_s", "min", period),
+      ]),
+    );
     const byName = (rows: BestRow[]) => new Map(rows.map((row) => [row.name, row]));
     const powerByName = byName(power);
     const timesByName = byName(times);
@@ -130,6 +164,6 @@ export const trainingRouter = {
       const row = timesByName.get(`best_time_${name}_s`);
       return row ? [{ name, seconds: row.value, activityId: row.id, day: row.day }] : [];
     });
-    return { powerCurve, bestEfforts };
+    return { powerCurve, bestEfforts, analysesDue };
   }),
 };

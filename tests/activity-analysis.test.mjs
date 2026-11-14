@@ -70,12 +70,14 @@ test("an uploaded ride is analysed by the scheduled pass, and says which thresho
   const { client } = await athlete();
   const uploaded = await client.activities.upload({ file: fitFile(), source: "trainstack" });
   assert.equal(uploaded.analyzedAt, null);
+  assert.equal(uploaded.analysisDue, true);
   assert.equal(uploaded.localDay, "2026-10-06");
   assert.equal(uploaded.localDaySource, "file");
 
   await runCronUntilAnalysed();
   const ride = await client.activities.get({ id: uploaded.id });
   assert.ok(ride.analyzedAt instanceof Date);
+  assert.equal(ride.analysisDue, false);
   assert.equal(ride.analysisError, null);
   assert.equal(ride.statistics.normalized_power_w, 139);
   assert.equal(ride.statistics.work_kj, 246);
@@ -117,6 +119,10 @@ test("a threshold correction re-analyses the activities of the days it covers, a
   assert.ok(!before.missingThresholds.includes("ftp"));
 
   await client.settings.write({ writes: [put("2026-09-01", threshold("ftp", 250))] });
+  const waiting = await client.activities.get({ id: october.id });
+  assert.equal(waiting.analysisDue, true);
+  assert.deepEqual(waiting.analyzedAt, before.analyzedAt);
+  assert.equal((await client.activities.get({ id: august.id })).analysisDue, true);
   await runCronUntilAnalysed();
   const after = await client.activities.get({ id: october.id });
   const augustAfter = await client.activities.get({ id: august.id });
@@ -125,6 +131,8 @@ test("a threshold correction re-analyses the activities of the days it covers, a
   assert.ok(after.analyzedAt > before.analyzedAt);
   assert.deepEqual(augustAfter.statistics, augustBefore.statistics);
   assert.deepEqual(augustAfter.analyzedAt, augustBefore.analyzedAt);
+  assert.equal(after.analysisDue, false);
+  assert.equal(augustAfter.analysisDue, false);
 
   await client.settings.write({ writes: [put("2026-02-01", { kind: "weight", kg: 70 })] });
   await runCronUntilAnalysed();
@@ -179,8 +187,10 @@ test("the analysis version re-analyses every activity", async () => {
       )
       .bind(user.id, id),
   ]);
+  assert.equal((await client.activities.get({ id })).analysisDue, true);
   await runCronUntilAnalysed();
   const again = await client.activities.get({ id });
+  assert.equal(again.analysisDue, false);
   assert.ok(again.analyzedAt > first.analyzedAt);
   assert.deepEqual(again.statistics, first.statistics);
 });
@@ -301,5 +311,6 @@ test("an activity whose file does not decode is not analysed", async () => {
   assert.equal(activity.summaryError, "corrupt");
   assert.equal(activity.analyzedAt, null);
   assert.equal(activity.analysisError, null);
+  assert.equal(activity.analysisDue, false);
   assert.deepEqual(activity.missingThresholds, []);
 });

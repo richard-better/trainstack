@@ -18,7 +18,7 @@ import {
   type ThresholdName,
   type ZoneMetric,
 } from "@trainstack/zones";
-import { and, asc, desc, eq, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt, or, type SQL, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
 import {
@@ -32,7 +32,7 @@ import { settingsHistoryOf } from "../settings/router";
 import { lapEventOrder } from "./activity-file";
 import { isAnalysisStatistic } from "./analysis-statistics";
 import { fileKey, sha256Hex } from "./files";
-import { MAX_EVENTS_PER_ACTIVITY } from "./summary";
+import { MAX_EVENTS_PER_ACTIVITY, SUMMARY_VERSION } from "./summary";
 
 export const ANALYSIS_VERSION = 2;
 export const MAX_ANALYSIS_ATTEMPTS = 3;
@@ -208,6 +208,21 @@ async function readFile(bucket: R2Bucket, { userId, id }: AnalysisTarget) {
   if (!object) throw new Error(`Activity ${id} has no file to analyse`);
   return new Uint8Array(await object.arrayBuffer());
 }
+
+type AnalysisState = { due: boolean; version: number };
+type ActivityState = { fileFormat: string | null; summaryVersion: number | null };
+
+export const isAnalysisDue = (row: ActivityState, analysis: AnalysisState | undefined) =>
+  row.fileFormat !== null &&
+  (row.summaryVersion === null ||
+    row.summaryVersion < SUMMARY_VERSION ||
+    (analysis !== undefined && (analysis.due || analysis.version < ANALYSIS_VERSION)));
+
+export const analysisDueOf = (alias: SQL) => sql`(${alias}.file_format IS NOT NULL AND (
+  ${alias}.summary_version IS NULL OR ${alias}.summary_version < ${SUMMARY_VERSION} OR EXISTS (
+    SELECT 1 FROM ${activityAnalysis} due_analysis
+    WHERE due_analysis.user_id = ${alias}.user_id AND due_analysis.activity_id = ${alias}.id
+      AND (due_analysis.due = 1 OR due_analysis.version < ${ANALYSIS_VERSION}))))`;
 
 export function needsFile(target: AnalysisTarget, fingerprint: string) {
   if (target.version < ANALYSIS_VERSION) return true;
