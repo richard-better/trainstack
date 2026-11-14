@@ -300,8 +300,12 @@ without its file. Take them while nobody is uploading or deleting, which on an i
 own is easy to arrange.
 
 The commands use Wrangler, Cloudflare's CLI, through `bunx`. It reads `CLOUDFLARE_ACCOUNT_ID` and
-`CLOUDFLARE_API_TOKEN` from the environment; the token above is enough. Set `DB` to the database
-name the deploy printed.
+`CLOUDFLARE_API_TOKEN` from the environment, not from `hosted/infra/.env`, so export them in the
+shell first; the token above is enough. Set `DB` to the database name the deploy printed.
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... DB=...
+```
 
 ### The database
 
