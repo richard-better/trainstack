@@ -160,8 +160,10 @@ and `tss` (stress scores, which all use the TSS scale, so an hour at threshold s
   each rode (`wkt_step_index`, as Ride writes), each step is placed on the laps that name it,
   however long they ran: a lap the athlete marked inside an interval and a step ridden again
   after going back both count toward that step, and laps that name no step, such as riding on
-  after the workout ended, toward none. Laps naming a step the workout does not have are ignored
-  for this. Otherwise steps are placed by laps when the activity
+  after the workout ended, toward none. Only a workout without repeats is placed this way, since a device
+  may number its laps by the repeat steps it encodes rather than by the steps they expand to, and
+  if any lap names a step the workout does not have, the laps are placed by the rule below
+  instead. Otherwise steps are placed by laps when the activity
   has exactly one lap per step, as a watch running a structured workout records, and each timed
   step's lap is within 10 % or 5 s of its planned time, so automatic laps do not count. Otherwise
   they are laid end to end over the activity's moving seconds from its start, a time step for

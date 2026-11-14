@@ -119,6 +119,14 @@ function movingSeconds(span: { from: number; to: number }, moving: Uint8Array) {
   return seconds;
 }
 
+function visitProgress(step: Step, count: number): number[] | undefined {
+  const length = plannedLength(step);
+  if (length?.kind !== "time") return undefined;
+  return Array.from({ length: count }, (_, position) =>
+    length.seconds > 1 ? Math.min(1, position / (length.seconds - 1)) : 0,
+  );
+}
+
 function placedByStepLaps(
   activity: AnalysisActivity,
   steps: readonly Step[],
@@ -130,26 +138,39 @@ function placedByStepLaps(
   if (!placedLaps.some((lap) => lap.workoutStepIndex !== undefined)) return undefined;
   const spans = lapSpans(activity);
   const placed: (Placed | null)[] = steps.map(() => null);
+  const visited: number[] = [];
   for (const [index, span] of spans.entries()) {
     const step = placedLaps[index]?.workoutStepIndex;
     if (step === undefined) continue;
     if (!Number.isInteger(step) || step < 0 || step >= steps.length) return undefined;
-    const earlier = placed[step];
-    const seconds = movingSeconds(span, moving);
+    const earlier = placed[step] ?? null;
     const last = earlier?.seconds.at(-1) ?? -1;
-    placed[step] = earlier
-      ? {
-          from: earlier.from,
-          to: span.to,
-          seconds: [...earlier.seconds, ...seconds.filter((second) => second > last)],
-        }
-      : { from: span.from, to: span.to, seconds };
+    const seconds = movingSeconds(span, moving).filter((second) => second > last);
+    const continuesTheVisit = placedLaps[index - 1]?.workoutStepIndex === step;
+    const ridden = (continuesTheVisit ? (visited[step] ?? 0) : 0) + seconds.length;
+    visited[step] = ridden;
+    const progress = visitProgress(steps[step]!, ridden)?.slice(ridden - seconds.length);
+    placed[step] = {
+      from: earlier?.from ?? span.from,
+      to: span.to,
+      seconds: [...(earlier?.seconds ?? []), ...seconds],
+      progress:
+        progress && (earlier === null || earlier.progress !== undefined)
+          ? [...(earlier?.progress ?? []), ...progress]
+          : undefined,
+    };
   }
   return placed;
 }
 
-function placedByLaps(activity: AnalysisActivity, steps: readonly Step[], moving: Uint8Array) {
-  const byStep = placedByStepLaps(activity, steps, moving);
+function placedByLaps(
+  activity: AnalysisActivity,
+  workout: Workout,
+  steps: readonly Step[],
+  moving: Uint8Array,
+) {
+  const lapsNameExpandedSteps = workout.steps.every((block) => block.type !== "repeat");
+  const byStep = lapsNameExpandedSteps ? placedByStepLaps(activity, steps, moving) : undefined;
   if (byStep) return byStep;
   const spans = lapSpans(activity);
   if (spans.length !== steps.length) return undefined;
@@ -252,7 +273,7 @@ export function intervalCompliance(
     speed: perSecondOrNaN(samples, samples.speed, length),
     heart_rate: perSecondOrNaN(samples, samples.heartRate, length),
   };
-  const byLaps = placedByLaps(activity, steps, timerRunning);
+  const byLaps = placedByLaps(activity, workout, steps, timerRunning);
   const placed =
     byLaps ?? placedByTime(steps, timerRunning, perSecondOrNaN(samples, samples.distance, length));
   let secondsWithData = 0;
