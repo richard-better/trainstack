@@ -25,6 +25,10 @@ final class SampleTransport: BluetoothTransport {
   static let strap = DiscoveredDevice(
     id: UUID(uuidString: "6A1C0D4E-2B57-4F0B-9E43-7C1A2B3C4D02")!, name: "Polar H10",
     services: [.heartRate])
+  static let powerMeter = DiscoveredDevice(
+    id: UUID(uuidString: "6A1C0D4E-2B57-4F0B-9E43-7C1A2B3C4D04")!, name: "Assioma DUO",
+    services: [.power])
+  static let powerMeterShareOfTrainer = 0.95
   static let otherStrap = DiscoveredDevice(
     id: UUID(uuidString: "6A1C0D4E-2B57-4F0B-9E43-7C1A2B3C4D03")!, name: "HRM-Pro",
     services: [.heartRate])
@@ -63,6 +67,17 @@ final class SampleTransport: BluetoothTransport {
               0x45, 0, UInt8(cadence & 0xFF), UInt8(cadence >> 8),
               UInt8(watts & 0xFF), UInt8(watts >> 8),
             ]))
+        } else if id == Self.powerMeter.id {
+          let trainerWatts = Double(self?.ergWatts ?? 180)
+          let watts = UInt16(trainerWatts * Self.powerMeterShareOfTrainer) + UInt16(beat % 3)
+          let revolutions = UInt16(truncatingIfNeeded: beat * 3 / 2)
+          let eventTime = UInt16(truncatingIfNeeded: Int(revolutions) * 1024 * 2 / 3)
+          self?.onCyclingMeasurement?(
+            id, .power,
+            Data([
+              0x20, 0, UInt8(watts & 0xFF), UInt8(watts >> 8), UInt8(revolutions & 0xFF),
+              UInt8(revolutions >> 8), UInt8(eventTime & 0xFF), UInt8(eventTime >> 8),
+            ]))
         } else {
           self?.onHeartRateMeasurement?(
             id, HeartRateMeasurement(beatsPerMinute: 124 + beat % 7, hasContact: true).data)
@@ -93,12 +108,15 @@ final class SampleTransport: BluetoothTransport {
 }
 
 extension BluetoothDevices {
-  public static func sample(pairStrap: Bool = false) -> BluetoothDevices {
+  public static func sample(pairStrap: Bool = false, pairPowerMeter: Bool = false)
+    -> BluetoothDevices
+  {
     let defaults = UserDefaults(suiteName: "RideBluetooth.sample")!
     defaults.removePersistentDomain(forName: "RideBluetooth.sample")
     let devices = BluetoothDevices(transport: SampleTransport(), defaults: defaults)
     devices.pair(SampleTransport.trainer)
     if pairStrap { devices.pair(SampleTransport.strap) }
+    if pairPowerMeter { devices.pair(SampleTransport.powerMeter) }
     return devices
   }
 }
