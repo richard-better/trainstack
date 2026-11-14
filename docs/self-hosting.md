@@ -362,7 +362,7 @@ rclone config create r2 s3 provider=Cloudflare \
 Set `BUCKET` to the bucket name the deploy printed. Back up with
 
 ```bash
-rclone sync "r2:$BUCKET" ./backup/activity-files --backup-dir "./backup/deleted/$(date +%F)"
+rclone sync "r2:$BUCKET" ./backup/activity-files --backup-dir "./backup/deleted/$(date -u +%F)"
 find ./backup/deleted -mindepth 1 -maxdepth 1 -mtime +30 -exec rm -rf {} +
 ```
 
@@ -372,9 +372,13 @@ those folders as long as D1 Time Travel can go back, 30 days, so a database rest
 deletion can have its files back too; the `find` line removes older ones. So a database export
 you keep for longer than 30 days cannot get back the files of activities deleted after it: keep a
 dated copy of `./backup/activity-files` with each such export, for as long as you keep the export.
+An activity uploaded and deleted between two runs is in no copy at all, so a database restored to
+a moment in between has its row without its file.
 
-To restore, set `RESTORE_DATE` to the day of the database's restore point, such as `2026-11-14`,
-and put back the files and those deleted since that day:
+To restore, set `RESTORE_DATE` to the day of the database's restore point in UTC, as the folders
+are named, such as `2026-11-14`, and put back the files and those deleted since that day. For an
+export older than 30 days, copy from the dated copy you kept with it instead of
+`./backup/activity-files`.
 
 ```bash
 rclone copy ./backup/activity-files "r2:$BUCKET"
