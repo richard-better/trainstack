@@ -23,8 +23,8 @@ import { loggedFigures } from "../lib/logbook";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
 
-export function ActivityList() {
-  const activities = useInfiniteQuery({
+export function useActivityPages() {
+  return useInfiniteQuery({
     queryKey: activitiesQueryKey,
     queryFn: ({ pageParam }) =>
       api.activities.list({ limit: ACTIVITIES_PER_PAGE, cursor: pageParam, onePerWorkout: true }),
@@ -35,6 +35,10 @@ export function ActivityList() {
         query.state.data?.pages.some((page) => anyAnalysisDue(page.activities)) ?? false,
       ),
   });
+}
+
+export function ActivityList() {
+  const activities = useActivityPages();
 
   return (
     <main className="content">
