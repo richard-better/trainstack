@@ -79,11 +79,69 @@ describe("workoutSchema", () => {
         steps: [{ type: "repeat", count: 2, steps: [{ type: "repeat", count: 2, steps: [] }] }],
       },
     ],
+    [
+      "a repeat cue after the repeat ends, even inside another repeat",
+      {
+        name: "Odd",
+        sport: "cycling",
+        steps: [
+          {
+            type: "repeat",
+            count: 2,
+            steps: [
+              {
+                type: "repeat",
+                count: 2,
+                cues: [{ at: { type: "time", seconds: 121 }, text: "Too late" }],
+                steps: [easy],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    [
+      "a repeat cue by time over steps measured in distance",
+      {
+        name: "Odd",
+        sport: "running",
+        steps: [
+          {
+            type: "repeat",
+            count: 2,
+            cues: [{ at: { type: "time", seconds: 10 }, text: "By time" }],
+            steps: [{ type: "step", duration: { type: "distance", meters: 400 } }],
+          },
+        ],
+      },
+    ],
   ] as [string, unknown][]) {
     test(`rejects ${String(label)}`, () => {
       assert.equal(workoutSchema.safeParse(workout).success, false);
     });
   }
+
+  test("says why a repeat cue cannot be placed, and accepts one at the repeat's very end", () => {
+    const repeatWithCueAt = (seconds: number): Workout => ({
+      name: "Cued",
+      sport: "cycling",
+      steps: [
+        {
+          type: "repeat",
+          count: 2,
+          cues: [{ at: { type: "time", seconds }, text: "Cue" }],
+          steps: [easy],
+        },
+      ],
+    });
+    const late = workoutSchema.safeParse(repeatWithCueAt(121));
+    assert.equal(late.success, false);
+    assert.deepEqual(
+      late.error?.issues.map((issue) => [issue.path, issue.message]),
+      [[["steps"], "A cue 121 seconds into a repeat comes after the repeat ends"]],
+    );
+    assert.equal(workoutSchema.safeParse(repeatWithCueAt(120)).success, true);
+  });
 });
 
 describe("flatten", () => {
