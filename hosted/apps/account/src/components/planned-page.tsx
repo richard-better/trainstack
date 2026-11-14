@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/client";
 import {
+  type CalendarDay,
   type PlannedContent,
   type PlannedWorkout,
   plannedWorkoutIdSchema,
@@ -9,7 +10,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { api } from "../api";
-import { dayInFull, pairsOf, plannedName } from "../lib/calendar";
+import { dayInFull, findPlanned, pairsOf, plannedName } from "../lib/calendar";
 import { savePlannedWorkout } from "../lib/calendar-writes";
 import { mondayOf } from "../lib/dates";
 import { activityTitle, sportName } from "../lib/sports";
@@ -136,7 +137,18 @@ function sourceLink(content: PlannedContent) {
   );
 }
 
-function PlannedView({ item, confirmed }: { item: PlannedWorkout; confirmed: PlannedContent }) {
+function PlannedView({
+  item: held,
+  confirmed,
+}: {
+  item: PlannedWorkout;
+  confirmed: PlannedContent;
+}) {
+  const day = useCalendar({ from: held.day, through: held.day });
+  const onDay = day.range ? findPlanned(day.range, held.id) : null;
+  const item = onDay
+    ? { ...held, pairing: onDay.pairing, state: onDay.state, compliance: onDay.compliance }
+    : held;
   const navigate = useNavigate();
   const [dialog, setDialog] = useState<"copy" | "move" | "skip" | "delete" | null>(null);
   const settings = useAthleteSettings();
@@ -215,7 +227,9 @@ function PlannedView({ item, confirmed }: { item: PlannedWorkout; confirmed: Pla
         </p>
       )}
 
-      {item.content.kind === "workout" && item.day <= today && <DoneAs item={item} />}
+      {item.content.kind === "workout" && item.day <= today && (
+        <DoneAs item={item} day={day.range?.days[0]} failed={day.query.isError} />
+      )}
 
       {item.content.kind === "workout" && (
         <PlannedWorkoutBody item={item} workout={item.content.workout} />
@@ -463,11 +477,17 @@ const distanceText = (meters: number) => {
   return `${distance.value} ${distance.unit}`;
 };
 
-function DoneAs({ item }: { item: PlannedWorkout }) {
-  const { query, range } = useCalendar({ from: item.day, through: item.day });
-  const day = range?.days[0];
+function DoneAs({
+  item,
+  day,
+  failed,
+}: {
+  item: PlannedWorkout;
+  day: CalendarDay | undefined;
+  failed: boolean;
+}) {
   if (!day) {
-    return query.isError ? null : (
+    return failed ? null : (
       <section aria-busy="true" className="workout-section done-as">
         <h2 className="section-title">Done as</h2>
         <div className="traces-loading short" />
