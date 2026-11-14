@@ -52,6 +52,7 @@ import { TimeZoneOffer, useAthleteSettings } from "./time-zone";
 import { suggestionsFor } from "../lib/thresholds";
 import { ThresholdSuggestions, useThresholdSuggestions } from "./threshold-suggestions";
 import type { ThresholdSuggestion } from "@trainstack/contract";
+import { HelpLink } from "./help-link";
 
 const HISTORY_DAYS = 3 * 365;
 const recentKey = ["activities", "recent-analysis"] as const;
@@ -197,7 +198,7 @@ function Load({
             {unscored.length === 1
               ? "One of your recent activities has no load, so it is left out of fitness and fatigue."
               : `${unscored.length} of your recent activities have no load, so they are left out of fitness and fatigue.`}{" "}
-            {prompt.text}
+            {prompt.text} <HelpLink topic="fitness-and-form">How load is worked out</HelpLink>
           </p>
           <Link to="/settings" search={prompt.search} className="secondary link-button compact">
             {prompt.action}

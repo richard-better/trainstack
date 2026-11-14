@@ -3,8 +3,10 @@ import { type ReactNode, useState } from "react";
 
 import { queryClient, uploads } from "../api";
 import { authClient } from "../auth";
+import { HELP_SITE } from "../lib/help";
 import { forgetLogDrafts } from "../lib/logbook";
 import { calendarWrites } from "./calendar-data";
+import { HelpLink } from "./help-link";
 
 import { TimeZoneFromBrowser } from "./time-zone";
 
@@ -77,6 +79,9 @@ function AppHeader({ user }: { user: SignedInUser }) {
         <Link to="/settings" className="nav-link">
           Settings
         </Link>
+        <a href={HELP_SITE} className="nav-link" target="_blank" rel="noreferrer">
+          Help
+        </a>
       </nav>
       <div className="account">
         <span className="account-name" title={user.email}>
@@ -140,7 +145,10 @@ function SignIn({
         </p>
       )}
       <h1>Sign in to Trainstack</h1>
-      <p className="lede">Use the Apple ID you sign in to Ride with to reach the same account.</p>
+      <p className="lede">
+        Use the Apple ID you sign in to Ride with to reach the same account.{" "}
+        <HelpLink topic="getting-started">Getting started</HelpLink>
+      </p>
       {(signInError || failed) && (
         <p role="alert" className="notice">
           {signInError === "user_cancelled_authorize"

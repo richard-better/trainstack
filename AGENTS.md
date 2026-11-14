@@ -24,3 +24,13 @@ gh pr comment 23 --attach ./recording.mov
 ```
 
 If the body references an attached file by its path, such as `![after](./after.png)`, `gh` rewrites the reference to the uploaded asset, so you can place images inline. Attachments the body does not reference are appended to it. Alt text follows the path after `#`.
+
+## Help pages
+
+Athlete help lives in `hosted/apps/marketing/src/content/help/`, one Markdown page per topic,
+served at trainstackhq.com/help. The web app links to a page by its slug through
+`hosted/apps/account/src/lib/help.ts`. In a help page, **bold** is only for a screen, button or
+setting named exactly as the web app shows it, and `tests/help.test.mjs` fails when the web app no
+longer contains it, when a slug and a page disagree, or when a link or image does not resolve. When
+you rename or remove something a help page quotes, change the page in the same change. Run the
+website locally with `bun run --cwd hosted/apps/marketing dev:bare`.

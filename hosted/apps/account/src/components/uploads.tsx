@@ -5,10 +5,12 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { uploads } from "../api";
 import { fileSize } from "../lib/activity-file";
 import { activityDate } from "../lib/dates";
+import type { HelpTopic } from "../lib/help";
 import { sportName } from "../lib/sports";
 import type { Refusal } from "../lib/upload";
 import { type Upload, isBusy, isFinished } from "../lib/uploads";
 import { arrivalText, primaryIdOf } from "../lib/workouts";
+import { HelpLink } from "./help-link";
 import { SportIcon } from "./sport-icon";
 
 const sizeLimit = `${MAX_ACTIVITY_FILE_BYTES / (1024 * 1024)} MB`;
@@ -161,7 +163,11 @@ interface Status {
   readonly text: string;
   readonly tone: Tone;
   readonly progress?: number | null;
+  readonly help?: HelpTopic;
 }
+
+const refusalHelp = (refusal: Refusal): HelpTopic =>
+  refusal.kind === "workoutFile" ? "workouts" : "add-activities";
 
 function refusalText(refusal: Refusal) {
   switch (refusal.kind) {
@@ -194,7 +200,11 @@ function statusOf({ state }: Upload): Status {
     case "failed":
       return { text: "Did not upload. Check your connection and try again.", tone: "refused" };
     case "refused":
-      return { text: refusalText(state.refusal), tone: "refused" };
+      return {
+        text: refusalText(state.refusal),
+        tone: "refused",
+        help: refusalHelp(state.refusal),
+      };
     case "done":
       switch (state.outcome.kind) {
         case "uploaded":
@@ -205,9 +215,14 @@ function statusOf({ state }: Upload): Status {
           return {
             text: `You deleted this activity on ${activityDate(state.outcome.deletedAt)}, so it was not added again. A deleted activity cannot be brought back.`,
             tone: "refused",
+            help: "fix-activities",
           };
         case "refused":
-          return { text: refusalText(state.outcome.refusal), tone: "refused" };
+          return {
+            text: refusalText(state.outcome.refusal),
+            tone: "refused",
+            help: refusalHelp(state.outcome.refusal),
+          };
       }
   }
 }
@@ -230,7 +245,15 @@ function UploadRow({ upload }: { upload: Upload }) {
       <span className="row-main">
         <span className="row-title">{upload.name}</span>
         <span className="row-meta">
-          <span className="upload-status">{status.text}</span>
+          <span className="upload-status">
+            {status.text}
+            {status.help && (
+              <>
+                {" "}
+                <HelpLink topic={status.help}>What to do</HelpLink>
+              </>
+            )}
+          </span>
           <span>{fileSize(upload.size)}</span>
         </span>
       </span>

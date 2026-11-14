@@ -22,6 +22,7 @@ import {
   writeOf,
 } from "../lib/check-in";
 import { useRemoveCheckIn, useSaveCheckIn } from "./check-in-data";
+import { HelpLink } from "./help-link";
 
 const toneOf = (value: number | null) =>
   value === null ? "unrated" : value < NORMAL ? "below" : value > NORMAL ? "above" : "normal";
@@ -124,7 +125,8 @@ export function CheckInForm({ day, held }: { day: string; held: CheckIn | null }
       <p className="check-in-privacy">
         Only you can see your check-ins. They are in your account export, and deleting your account
         deletes them. Trainstack keeps what you enter here and draws no conclusions from it.{" "}
-        <Link to="/settings">Export or delete your account in Settings</Link>
+        <Link to="/settings">Export or delete your account in Settings</Link>.{" "}
+        <HelpLink topic="check-in">About the check-in</HelpLink>
       </p>
     </form>
   );
