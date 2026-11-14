@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
+import ts from "typescript";
 
 import { helpTopics } from "../hosted/apps/account/src/lib/help.ts";
 
@@ -27,13 +28,50 @@ async function helpPages() {
   );
 }
 
-const asOneLine = (text) => text.replaceAll('{" "}', " ").replace(/\s+/g, " ");
+const asOneLine = (text) => text.replace(/\s+/g, " ").trim();
+
+const textOf = (child) =>
+  ts.isJsxText(child)
+    ? child.text
+    : ts.isJsxExpression(child) && child.expression && ts.isStringLiteral(child.expression)
+      ? child.expression.text
+      : null;
+
+function runsOfText(children) {
+  const runs = [""];
+  for (const child of children) {
+    const text = textOf(child);
+    if (text === null) runs.push("");
+    else runs[runs.length - 1] += text;
+  }
+  return runs;
+}
+
+function shownText(file, source) {
+  const pieces = [];
+  const visit = (node) => {
+    if (
+      ts.isStringLiteral(node) ||
+      ts.isNoSubstitutionTemplateLiteral(node) ||
+      ts.isTemplateHead(node) ||
+      ts.isTemplateMiddle(node) ||
+      ts.isTemplateTail(node)
+    ) {
+      pieces.push(node.text);
+    }
+    if (ts.isJsxElement(node) || ts.isJsxFragment(node)) pieces.push(...runsOfText(node.children));
+    ts.forEachChild(node, visit);
+  };
+  visit(ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX));
+  return pieces.map(asOneLine).filter(Boolean);
+}
 
 async function appText() {
   const files = (
     await Promise.all(WHERE_THE_LABELS_LIVE.map((dir) => filesUnder(dir, [".ts", ".tsx"])))
   ).flat();
-  return asOneLine((await Promise.all(files.map((file) => readFile(file, "utf8")))).join("\n"));
+  const sources = await Promise.all(files.map((file) => readFile(file, "utf8")));
+  return files.flatMap((file, index) => shownText(file, sources[index])).join("\n");
 }
 
 const bodyOf = (text) => text.replace(/^---\n[\s\S]*?\n---\n/, "");
