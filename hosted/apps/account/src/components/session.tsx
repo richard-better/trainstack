@@ -50,6 +50,9 @@ function AppHeader({ user }: { user: SignedInUser }) {
         <Link to="/" className="nav-link" activeOptions={{ exact: true }}>
           Activities
         </Link>
+        <Link to="/workouts" className="nav-link">
+          Workouts
+        </Link>
         <Link to="/settings" className="nav-link">
           Settings
         </Link>
