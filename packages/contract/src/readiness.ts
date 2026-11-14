@@ -6,9 +6,20 @@ import {
   fastRampPerWeek,
   hardDayShare,
   hardIntensityFrom,
+  hrvBaseline,
+  hrvDownBy,
+  hrvMuchDownBy,
   loadHistoryDays,
+  maxMeasuredWeight,
   maxTrainingWeight,
+  measures,
   recentIllnessDays,
+  restingHeartRateBaseline,
+  restingHeartRateMuchUpBy,
+  restingHeartRateUpBy,
+  sleepBaseline,
+  sleepMuchShortBySeconds,
+  sleepShortBySeconds,
 } from "@trainstack/readiness";
 import { z } from "zod";
 
@@ -96,6 +107,25 @@ export const readinessReasonSchema = z
       weight,
     }),
     z.object({
+      kind: z.literal("measured"),
+      item: z
+        .enum(measures)
+        .describe(
+          "What a device measured: sleep (seconds asleep last night), resting_heart_rate (beats per minute) or hrv (milliseconds)",
+        ),
+      value: z.number().describe("The day's value"),
+      usual: z
+        .number()
+        .describe(
+          `The athlete's own usual before the day: mean sleep and resting heart rate over ${sleepBaseline.days} days from at least ${sleepBaseline.minimum}, and the geometric mean of HRV over ${hrvBaseline.days} days from at least ${hrvBaseline.minimum}`,
+        ),
+      difference: z.number().describe("value - usual"),
+      effect: effectSchema,
+      weight: weight.describe(
+        `Sleep ${sleepShortBySeconds / 3600} h short of usual weighs 1 and ${sleepMuchShortBySeconds / 3600} h weighs 2; resting heart rate ${restingHeartRateUpBy} bpm above usual weighs 1 and ${restingHeartRateMuchUpBy} weighs 2; HRV ${hrvDownBy} standard deviations of its log below usual weighs 1 and ${hrvMuchDownBy} weighs 2. Measured together weigh at most ${maxMeasuredWeight}`,
+      ),
+    }),
+    z.object({
       kind: z.literal("hard_days"),
       days: z
         .number()
@@ -109,7 +139,7 @@ export const readinessReasonSchema = z
     }),
   ])
   .describe(
-    `One input that was read. Illness and injury come first and set the level no better than they allow: ill or cannot train, poor; trains less, low; ill in the ${recentIllnessDays} days before, fair. Training load together weighs at most ${maxTrainingWeight}`,
+    `One input that was read. Illness and injury come first and set the level no better than they allow: ill or cannot train, poor; trains less, low; ill in the ${recentIllnessDays} days before, fair. Training load together weighs at most ${maxTrainingWeight}, and measured sleep, resting heart rate and HRV together at most ${maxMeasuredWeight}`,
   );
 
 export const readinessGapSchema = z
@@ -129,6 +159,17 @@ export const readinessGapSchema = z
         .describe(`Days since the first loaded day, fewer than the ${loadHistoryDays} load needs`),
     }),
     z.object({ kind: z.literal("little_training"), fitness: z.number() }),
+    z.object({
+      kind: z.literal("short_measured_baseline"),
+      item: z.enum(measures),
+      days: z
+        .number()
+        .int()
+        .min(0)
+        .describe(
+          `Days with a value before this one in the measure's window, fewer than it needs (${restingHeartRateBaseline.minimum} for sleep and resting heart rate, ${hrvBaseline.minimum} for HRV)`,
+        ),
+    }),
   ])
   .describe("Something readiness could not read, and so did not count");
 
@@ -171,8 +212,8 @@ export const dayReadinessSchema = z.object({
     baselineCheckIns: z.number().int().min(0),
     trainingDays: z.number().int().min(0).describe("Days of training history before the day"),
     unmeasured: z
-      .array(z.enum(["sleep", "resting_heart_rate", "hrv"]))
-      .describe("What a device would measure and Trainstack does not have yet, so did not read"),
+      .array(z.enum(measures))
+      .describe("What no device measured for the day, so readiness did not read it"),
   }),
   suggestions: z.array(readinessSuggestionSchema).describe("By the day's planned order"),
 });
@@ -184,7 +225,7 @@ export const readinessContract = {
     .route({
       method: "GET",
       path: "/readiness",
-      description: `How ready the athlete is each day, from their check-in against their own recent usual and their training load going into the day, with the reasons, what was missing, and a suggestion for each workout still to do. It is worked out when read, so it follows a new check-in, a changed plan or a re-analysed activity at once. Days after the athlete's today are left out. It reads no sleep, resting heart rate or HRV, and diagnoses nothing. The model, its weights and sources are in packages/readiness/README.md`,
+      description: `How ready the athlete is each day, from their check-in against their own recent usual, their measured sleep, resting heart rate and HRV, and their training load going into the day, with the reasons, what was missing, and a suggestion for each workout still to do. It is worked out when read, so it follows a new check-in, a changed plan or a re-analysed activity at once. Days after the athlete's today are left out. Measured sleep, resting heart rate and HRV (healthDays) are read against the athlete's own usual when a device sent them. It diagnoses nothing. The model, its weights and sources are in packages/readiness/README.md`,
     })
     .errors(unauthorized)
     .input(

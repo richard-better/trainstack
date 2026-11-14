@@ -2,6 +2,7 @@ import { activitiesRouter } from "./activities/router";
 import { calendarRouter, plannedWorkoutsRouter } from "./calendar/router";
 import { calendarFeedRouter } from "./calendar-feed/router";
 import { checkInsRouter } from "./check-ins/router";
+import { healthDaysRouter } from "./health-days/router";
 import { logbookRouter } from "./logbook/router";
 import { api } from "./procedures";
 import { readinessRouter } from "./readiness/router";
@@ -23,6 +24,7 @@ export const appRouter = api.router({
   thresholds: thresholdsRouter,
   calendarFeed: calendarFeedRouter,
   checkIns: checkInsRouter,
+  healthDays: healthDaysRouter,
   logbook: logbookRouter,
   readiness: readinessRouter,
 });

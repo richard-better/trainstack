@@ -2,9 +2,13 @@ import type { CheckIn } from "@trainstack/contract";
 import { stressByDay } from "@trainstack/analysis";
 import {
   checkInBaseline,
+  hrvBaseline,
+  type MeasuredDay,
   type ReadinessPlanned,
   readinessRange,
   recentIllnessDays,
+  restingHeartRateBaseline,
+  sleepBaseline,
 } from "@trainstack/readiness";
 import { and, between, eq } from "drizzle-orm";
 
@@ -13,6 +17,7 @@ import { loadDays } from "../calendar/range";
 import { stateOf } from "../calendar/planned";
 import type { Database } from "../db";
 import { checkIn } from "../db/schema";
+import { healthDaysBetween, measuredOf } from "../health-days/router";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { timeZoneOf } from "../settings/router";
@@ -47,6 +52,19 @@ async function checkInsAround(db: Database, userId: string, from: string, throug
   }));
 }
 
+const measuredBaselineDays = Math.max(
+  sleepBaseline.days,
+  restingHeartRateBaseline.days,
+  hrvBaseline.days,
+);
+
+async function measuredAround(db: Database, userId: string, from: string, through: string) {
+  const rows = await healthDaysBetween(db, userId, shift(from, -measuredBaselineDays), through);
+  return rows
+    .filter((row) => row.source === "apple_health")
+    .map((row): MeasuredDay => ({ day: row.day, ...measuredOf(row) }));
+}
+
 async function plannedOn(db: Database, userId: string, days: readonly string[], today: string) {
   const loaded = await loadDays(db, userId, days);
   const planned = new Map<string, ReadinessPlanned[]>();
@@ -72,14 +90,19 @@ export const readinessRouter = {
     const today = await athleteToday(db, userId);
     if (input.from > today) return { today, days: [] };
     const through = input.through < today ? input.through : today;
-    const [checkIns, loaded, planned] = await Promise.all([
+    const [checkIns, measured, loaded, planned] = await Promise.all([
       checkInsAround(db, userId, input.from, through),
+      measuredAround(db, userId, input.from, through),
       loadedActivities(db, userId, shift(through, -1)),
       plannedOn(db, userId, through === today ? [today] : [], today),
     ]);
     return {
       today,
-      days: readinessRange({ checkIns, stress: stressByDay(loaded), planned }, input.from, through),
+      days: readinessRange(
+        { checkIns, stress: stressByDay(loaded), planned, measured },
+        input.from,
+        through,
+      ),
     };
   }),
 };

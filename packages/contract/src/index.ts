@@ -4,6 +4,7 @@ import { z } from "zod";
 import { calendarContract, plannedWorkoutsContract } from "./calendar.ts";
 import { calendarFeedContract } from "./calendar-feed.ts";
 import { checkInsContract } from "./check-ins.ts";
+import { healthDaysContract } from "./health-days.ts";
 import { activityLoggedSchema, logbookContract } from "./logbook.ts";
 import { activityRouteSchema } from "./route.ts";
 import { readinessContract } from "./readiness.ts";
@@ -21,6 +22,7 @@ import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from 
 export * from "./calendar.ts";
 export * from "./calendar-feed.ts";
 export * from "./check-ins.ts";
+export * from "./health-days.ts";
 export * from "./logbook.ts";
 export * from "./readiness.ts";
 export * from "./route.ts";
@@ -319,6 +321,7 @@ export const appContract = {
   thresholds: thresholdsContract,
   calendarFeed: calendarFeedContract,
   checkIns: checkInsContract,
+  healthDays: healthDaysContract,
   logbook: logbookContract,
   readiness: readinessContract,
 };

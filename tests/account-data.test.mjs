@@ -198,6 +198,18 @@ async function athleteWithEverything(identity) {
     note: "Scratchy throat",
     updatedAt: at(0),
   });
+  await webApp.healthDays.put({
+    days: [
+      {
+        day: "2026-03-01",
+        source: "apple_health",
+        sleepSeconds: 25_200,
+        restingHeartRateBpm: 52,
+        hrvMs: 58,
+        updatedAt: at(0),
+      },
+    ],
+  });
   const workoutId = randomUUID();
   await webApp.workouts.put({
     id: workoutId,

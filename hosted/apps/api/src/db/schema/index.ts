@@ -12,4 +12,5 @@ export * from "./calendar";
 export * from "./thresholds";
 export * from "./calendar-feed";
 export * from "./check-ins";
+export * from "./health-days";
 export * from "./logbook";
