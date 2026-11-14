@@ -196,6 +196,17 @@
         "typescript": "catalog:",
       },
     },
+    "packages/readiness": {
+      "name": "@trainstack/readiness",
+      "dependencies": {
+        "@trainstack/analysis": "workspace:*",
+      },
+      "devDependencies": {
+        "@trainstack/config": "workspace:*",
+        "@types/node": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/workout": {
       "name": "@trainstack/workout",
       "dependencies": {
@@ -912,6 +923,8 @@
     "@trainstack/logbook": ["@trainstack/logbook@workspace:packages/logbook"],
 
     "@trainstack/marketing": ["@trainstack/marketing@workspace:hosted/apps/marketing"],
+
+    "@trainstack/readiness": ["@trainstack/readiness@workspace:packages/readiness"],
 
     "@trainstack/workout": ["@trainstack/workout@workspace:packages/workout"],
 
