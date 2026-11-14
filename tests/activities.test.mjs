@@ -246,6 +246,15 @@ test("a delete that overtakes a restore after it is stored wins, and leaves no f
   assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
 });
 
+test("deleting an activity the account no longer has leaves the file a restore is storing", async () => {
+  const { client, user } = await rider();
+  const id = sha256(rideBytes);
+  const first = await client.activities.delete({ id });
+  await bucket.put(`activities/${user.id}/${id}`, rideBytes);
+  assert.deepEqual(await client.activities.delete({ id }), first);
+  assert.ok(await bucket.head(`activities/${user.id}/${id}`));
+});
+
 test("restore refuses what is not an activity file", async () => {
   const { client } = await rider();
   await assert.rejects(

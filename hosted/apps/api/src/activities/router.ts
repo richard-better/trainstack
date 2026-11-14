@@ -226,14 +226,23 @@ async function storeFile(key: string, bytes: Uint8Array, contentType: string) {
 }
 
 export async function deleteActivity(db: Database, userId: string, id: string) {
-  await db.batch([
+  const [, [deletion], removed] = await db.batch([
     electPrimary(db, userId, id, id),
-    db.insert(deletedActivity).values({ userId, id }).onConflictDoNothing(),
-    db.delete(activity).where(and(eq(activity.userId, userId), eq(activity.id, id))),
+    db
+      .insert(deletedActivity)
+      .values({ userId, id })
+      .onConflictDoUpdate({
+        target: [deletedActivity.userId, deletedActivity.id],
+        set: { deletedAt: sql`${deletedActivity.deletedAt}` },
+      })
+      .returning(),
+    db
+      .delete(activity)
+      .where(and(eq(activity.userId, userId), eq(activity.id, id)))
+      .returning({ id: activity.id }),
   ]);
-  await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
-  const deletion = (await findDeletion(db, userId, id))!;
-  return { id: deletion.id, deletedAt: deletion.deletedAt };
+  if (removed.length > 0) await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+  return { id: deletion!.id, deletedAt: deletion!.deletedAt };
 }
 
 interface FileRefusals {
