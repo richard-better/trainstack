@@ -110,6 +110,85 @@ export const plannedPairingSchema = z
   .nullable()
   .describe(`The activity this planned workout was done as, if any. ${pairingRule}`);
 
+const compliancePart = (what: string) =>
+  z
+    .object({
+      planned: z.number(),
+      done: z.number(),
+      ratio: z.number().describe("done ÷ planned"),
+      score: z
+        .number()
+        .describe(
+          "1 within 20 % of planned, falling evenly to 0 at 50 % over or under, after TrainingPeaks' compliance bands (green 80-120 %, yellow 50-79 % and 121-150 %, orange beyond)",
+        ),
+    })
+    .nullable()
+    .describe(`${what}; null when either side lacks it`);
+
+export const intervalStepSchema = z.object({
+  index: z.number().int().describe("The step's place in the workout with its repeats written out"),
+  name: z.string().nullable(),
+  metric: z
+    .enum(["power", "speed", "heart_rate"])
+    .describe("W, m/s or bpm, the unit of low, high and average"),
+  seconds: z.number().describe("Moving seconds the step took in the activity"),
+  secondsWithData: z.number(),
+  secondsInTarget: z.number(),
+  low: z.number().describe("The target band at the middle of the step, its tolerance included"),
+  high: z.number(),
+  average: z.number().nullable(),
+});
+
+export const plannedComplianceSchema = z
+  .object({
+    score: z
+      .number()
+      .nullable()
+      .describe("0-100: the mean of the parts' scores that are there, times 100"),
+    rating: z
+      .enum(["on_target", "partly", "off_target"])
+      .nullable()
+      .describe("on_target from 80, partly from 50, off_target below"),
+    parts: z.object({
+      duration: compliancePart("Moving time against planned time"),
+      distance: compliancePart(
+        "Distance against planned distance, for a workout with distance steps",
+      ),
+      load: compliancePart("load_tss against planned load"),
+      intervals: z
+        .object({
+          secondsWithData: z.number(),
+          secondsInTarget: z.number(),
+          share: z.number().describe("secondsInTarget ÷ secondsWithData"),
+          score: z.number().describe("The share itself"),
+          alignedBy: z
+            .enum(["laps", "time"])
+            .describe(
+              "laps: the activity has a lap per step, and each step is its lap. time: steps are laid end to end over the activity's moving time from its start, a distance step until its distance is covered",
+            ),
+          steps: z
+            .array(intervalStepSchema)
+            .nullable()
+            .describe(
+              "The first 200 targeted steps. Null in the calendar's range and the changes feed; read the planned workout for them",
+            ),
+        })
+        .nullable()
+        .describe(
+          "How closely the steps' targets were held, from the activity's records: each moving second of a step with a power, pace or heart rate target counts in target when the value is inside the target, widened by 5 % either side of a set value or ramp and 2.5 % outside a range, with power averaged over 3 s and speed over 10 s. A share of FTP, threshold pace or lactate threshold heart rate uses the thresholds of the day. Null when the workout has no such targets, the activity has no data for them, or the activity has no file",
+        ),
+    }),
+    pending: z
+      .boolean()
+      .describe(
+        "true while the activity's analysis is due, so the intervals part may still come or change",
+      ),
+  })
+  .nullable()
+  .describe(
+    "How well the paired activity did what was asked, explained by its parts so a page can say why. Null when nothing is paired",
+  );
+
 export const plannedWorkoutSchema = z.object({
   id: plannedWorkoutIdSchema,
   day: settingDaySchema,
@@ -123,6 +202,7 @@ export const plannedWorkoutSchema = z.object({
     .describe("Set when the athlete marked it skipped, with why"),
   state: plannedStateSchema,
   pairing: plannedPairingSchema,
+  compliance: plannedComplianceSchema,
   createdAt: z.date(),
   updatedAt: z
     .date()
@@ -393,3 +473,4 @@ export type PlannedWorkoutSource = z.infer<typeof plannedWorkoutSourceSchema>;
 export type CalendarDay = z.infer<typeof calendarDaySchema>;
 export type CalendarActivity = z.infer<typeof calendarActivitySchema>;
 export type CalendarTotals = z.infer<typeof calendarTotalsSchema>;
+export type PlannedCompliance = z.infer<typeof plannedComplianceSchema>;

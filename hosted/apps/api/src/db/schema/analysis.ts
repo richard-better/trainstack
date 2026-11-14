@@ -23,6 +23,7 @@ export const activityAnalysis = sqliteTable(
       .notNull()
       .default(sql`'[]'`),
     route: text("route", { mode: "json" }).$type<ActivityRoute>(),
+    plannedSignature: text("planned_signature"),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.activityId] }),

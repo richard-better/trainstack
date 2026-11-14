@@ -23,6 +23,14 @@ import {
 } from "@trainstack/zones";
 import { and, asc, desc, eq, lt, or, type SQL, sql } from "drizzle-orm";
 
+import {
+  compliancesOf,
+  plannedWorkoutsOn,
+  type PlannedForCompliance,
+  signatureOf,
+  type StoredCompliance,
+  storeCompliances,
+} from "../calendar/compliance";
 import type { Database } from "../db";
 import {
   activity,
@@ -53,6 +61,7 @@ export type AnalysisTarget = {
   error: ActivityAnalysisError | null;
   localDay: string | null;
   fileSize: number | null;
+  plannedSignature: string | null;
 };
 
 type Outcome =
@@ -62,6 +71,7 @@ type Outcome =
       laps: { sequence: number; data: Record<string, number | null> }[];
       missingThresholds: string[];
       route: Route | null;
+      compliances: StoredCompliance[];
     }
   | { error: ActivityAnalysisError };
 
@@ -128,7 +138,11 @@ function lapData(file: ActivityFileColumns, analysis: ActivityAnalysis) {
     });
 }
 
-export function analysisOfFile(bytes: Uint8Array, profile: Profile): Outcome {
+export function analysisOfFile(
+  bytes: Uint8Array,
+  profile: Profile,
+  planned: readonly PlannedForCompliance[] = [],
+): Outcome {
   let file: ActivityFileColumns;
   try {
     file = streamActivityFile(bytes, analysisColumnLimits);
@@ -144,6 +158,7 @@ export function analysisOfFile(bytes: Uint8Array, profile: Profile): Outcome {
     statistics: statisticsOf(analysis),
     laps: lapData(file, analysis),
     missingThresholds: missingFor(file, analysis, profile),
+    compliances: compliancesOf(file, planned, profile),
   };
 }
 
@@ -164,6 +179,7 @@ async function store(
   attempts: number,
   fingerprint: string,
   outcome: Outcome,
+  signature: string,
 ) {
   const { userId, id } = target;
   const stillOurs = sql`EXISTS (SELECT 1 FROM ${activityAnalysis} WHERE user_id = ${userId} AND activity_id = ${id} AND generation = ${target.generation} AND attempts = ${attempts})`;
@@ -185,6 +201,7 @@ async function store(
         AND ${activityEvent.type} = 'lap' AND ${activityEvent.sequence} = lap.value ->> 'sequence'
         AND ${stillOurs}
     `),
+    ...storeCompliances(db, userId, id, analysed?.compliances ?? [], stillOurs),
     db
       .update(activityAnalysis)
       .set({
@@ -196,6 +213,7 @@ async function store(
         profile: fingerprint,
         missingThresholds: analysed?.missingThresholds ?? [],
         route: analysed?.route ?? null,
+        plannedSignature: signature,
       })
       .where(ours(target, attempts)),
   ]);
@@ -245,17 +263,21 @@ export async function analyzeTarget(
 ) {
   const profile = profileOn(history, target.localDay);
   const fingerprint = await zonesOf(profile);
-  if (!needsFile(target, fingerprint)) {
+  const planned = await plannedWorkoutsOn(db, target.userId, target.localDay);
+  const signature = signatureOf(planned);
+  const complianceHolds =
+    target.error === "too_large" || (target.plannedSignature ?? "") === signature;
+  if (!needsFile(target, fingerprint) && complianceHolds) {
     await db.update(activityAnalysis).set({ due: false }).where(ours(target, target.attempts));
     return;
   }
   if (target.attempts >= MAX_ANALYSIS_ATTEMPTS) {
-    await store(db, target, target.attempts, fingerprint, { error: "failed" });
+    await store(db, target, target.attempts, fingerprint, { error: "failed" }, signature);
     return;
   }
   if (!mayReadFile() || !(await claim(db, target))) return;
-  const outcome = analysisOfFile(await readFile(bucket, target), profile);
-  await store(db, target, target.attempts + 1, fingerprint, outcome);
+  const outcome = analysisOfFile(await readFile(bucket, target), profile, planned);
+  await store(db, target, target.attempts + 1, fingerprint, outcome, signature);
 }
 
 export function dueForAnalysis(db: Database, limit = ANALYSIS_CHECKS_PER_SCHEDULED_RUN) {
@@ -270,6 +292,7 @@ export function dueForAnalysis(db: Database, limit = ANALYSIS_CHECKS_PER_SCHEDUL
       error: activityAnalysis.error,
       localDay: activity.localDay,
       fileSize: activity.fileSize,
+      plannedSignature: activityAnalysis.plannedSignature,
     })
     .from(activityAnalysis)
     .innerJoin(

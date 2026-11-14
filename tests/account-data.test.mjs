@@ -205,6 +205,12 @@ async function athleteWithEverything(identity) {
     },
     updatedAt: at(5),
   });
+  await db
+    .prepare(
+      "INSERT INTO planned_interval_compliance (user_id, activity_id, planned_id, content_hash, result) VALUES (?, ?, ?, 'seeded', NULL)",
+    )
+    .bind(athlete.userId, firstRide.id, plannedRide)
+    .run();
   await webApp.plannedWorkouts.unpair({
     id: plannedRide,
     activityId: firstRide.id,

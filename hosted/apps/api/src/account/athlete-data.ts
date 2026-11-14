@@ -154,6 +154,11 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
     owner: (table) => table.userId,
     readable: { content: parsedJson },
   },
+  plannedIntervalCompliance: {
+    about:
+      "How closely each activity held the targets of each workout planned on its day, step by step, worked out from its file when it was analysed.",
+    owner: (table) => table.userId,
+  },
   plannedPairingChoice: {
     about:
       "Pairings of a planned workout with an activity that the athlete made or took apart by hand, which hold over the automatic pairing.",
