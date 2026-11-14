@@ -75,6 +75,7 @@ export interface FitLap extends FitTotals {
   readonly startLatitude: number | undefined;
   readonly startLongitude: number | undefined;
   readonly trigger: LapTrigger | undefined;
+  readonly workoutStepIndex?: number;
 }
 
 export interface FitRecord {
@@ -264,7 +265,12 @@ function lap(message: FitMessage): FitLap {
     startLatitude: degrees(message, LapField.startPositionLat),
     startLongitude: degrees(message, LapField.startPositionLong),
     trigger: named(lapTriggers, integer(message, LapField.lapTrigger)),
+    ...optional("workoutStepIndex", integer(message, LapField.wktStepIndex)),
   };
+}
+
+function optional<Key extends string>(key: Key, value: number | undefined) {
+  return value === undefined ? {} : ({ [key]: value } as Record<Key, number>);
 }
 
 function event(message: FitMessage): FitEvent {

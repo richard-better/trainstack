@@ -133,6 +133,7 @@ export const LapField = {
   normalizedPower: 33,
   subSport: 39,
   totalWork: 41,
+  wktStepIndex: 71,
   enhancedAvgSpeed: 110,
   enhancedMaxSpeed: 111,
 } as const;
