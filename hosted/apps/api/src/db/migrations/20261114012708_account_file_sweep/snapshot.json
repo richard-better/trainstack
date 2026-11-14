@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "cc523f87-63c4-495f-bfff-fddb2490e779",
+  "id": "5cc14666-31ac-4061-beb1-0c15a13b73fc",
   "prevIds": ["213271aa-fea4-4f4b-b21d-c86f708dc3ae"],
   "ddl": [
     {
@@ -1744,6 +1744,16 @@
       "name": "user_id",
       "type": "text",
       "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "account_file_sweep",
+      "name": "promise",
+      "type": "text",
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,

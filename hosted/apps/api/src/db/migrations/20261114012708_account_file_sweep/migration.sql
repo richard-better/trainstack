@@ -1,5 +1,6 @@
 CREATE TABLE `account_file_sweep` (
 	`user_id` text PRIMARY KEY,
+	`promise` text NOT NULL,
 	`deleted_at` integer NOT NULL
 );
 --> statement-breakpoint

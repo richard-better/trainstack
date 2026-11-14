@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lte, notExists, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, notExists } from "drizzle-orm";
 
 import type { Database } from "../db";
 import { accountFileSweep, stravaBudget, user } from "../db/schema";
@@ -69,13 +69,11 @@ export async function forgetSpentStravaBudgets(database: Database) {
 const SWEEPS_PER_RUN = 20;
 
 export async function promiseToSweepFilesAfterDeleting(database: Database, userId: string) {
+  const promise = crypto.randomUUID();
   await database
     .insert(accountFileSweep)
-    .values({ userId, deletedAt: new Date() })
-    .onConflictDoUpdate({
-      target: accountFileSweep.userId,
-      set: { deletedAt: sql`max(${Date.now()}, ${accountFileSweep.deletedAt} + 1)` },
-    });
+    .values({ userId, promise, deletedAt: new Date() })
+    .onConflictDoUpdate({ target: accountFileSweep.userId, set: { promise } });
 }
 
 export async function sweepFilesOfDeletedAccount(
@@ -84,7 +82,7 @@ export async function sweepFilesOfDeletedAccount(
   userId: string,
 ) {
   const promised = await database
-    .select({ at: accountFileSweep.deletedAt })
+    .select({ promise: accountFileSweep.promise })
     .from(accountFileSweep)
     .where(eq(accountFileSweep.userId, userId))
     .get();
@@ -92,7 +90,9 @@ export async function sweepFilesOfDeletedAccount(
   if (!promised) return;
   await database
     .delete(accountFileSweep)
-    .where(and(eq(accountFileSweep.userId, userId), eq(accountFileSweep.deletedAt, promised.at)));
+    .where(
+      and(eq(accountFileSweep.userId, userId), eq(accountFileSweep.promise, promised.promise)),
+    );
 }
 
 export async function sweepFilesOfDeletedAccounts(buckets: AthleteBuckets, database: Database) {

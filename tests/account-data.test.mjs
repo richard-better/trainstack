@@ -609,10 +609,10 @@ test("a deleted account's files that the last sweep missed are swept by the sche
   await bucket.put(`activities/${liveId}/${"b".repeat(64)}`, "still wanted");
   await db.batch([
     db
-      .prepare("INSERT INTO account_file_sweep (user_id, deleted_at) VALUES (?, ?)")
+      .prepare("INSERT INTO account_file_sweep (user_id, promise, deleted_at) VALUES (?, 'p', ?)")
       .bind(gone, Date.now()),
     db
-      .prepare("INSERT INTO account_file_sweep (user_id, deleted_at) VALUES (?, ?)")
+      .prepare("INSERT INTO account_file_sweep (user_id, promise, deleted_at) VALUES (?, 'p', ?)")
       .bind(liveId, Date.now()),
   ]);
 
