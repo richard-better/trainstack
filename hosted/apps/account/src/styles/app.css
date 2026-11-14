@@ -1878,3 +1878,84 @@ input[aria-invalid="true"] {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.calendar-feed {
+  max-width: calc(100% - 320px - 56px);
+  margin-top: 32px;
+}
+
+.calendar-feed > .lede {
+  max-width: 640px;
+}
+
+.feed-address {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.feed-address-row {
+  display: flex;
+  gap: 8px;
+}
+
+.feed-address-row input {
+  min-width: 0;
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.feed-links,
+.feed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feed-actions {
+  margin-top: 20px;
+}
+
+.feed-contents {
+  margin: 24px 0 0;
+  border: none;
+  padding: 0;
+}
+
+.feed-contents .toggle-row {
+  margin-top: 8px;
+}
+
+.feed-privacy {
+  margin-top: 20px;
+  border-left: 2px solid var(--edge);
+  padding: 4px 0 4px 16px;
+}
+
+.feed-privacy p {
+  margin: 0;
+}
+
+.feed-privacy ul {
+  margin: 8px 0 12px;
+  padding-left: 20px;
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.calendar-feed-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 860px) {
+  .calendar-feed {
+    max-width: none;
+  }
+}

@@ -12,6 +12,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { appleGrantRoutes } from "./account/apple-grant";
+import { FEEDS_ROUTE } from "./calendar-feed/address";
+import { calendarFeedRoutes } from "./calendar-feed/feed";
 import { exportRoutes } from "./account/export";
 import { forgetSpentStravaBudgets, sweepFilesOfDeletedAccounts } from "./account/deletion";
 import { analyzeDueActivities } from "./activities/analysis";
@@ -29,8 +31,10 @@ initLogger({
   env: { service: "trainstack-api" },
 });
 
+const pathsHoldingSecrets = [`${FEEDS_ROUTE}/**`];
+
 const identifyUser = createAuthMiddleware((await createAuth()) as BetterAuthInstance, {
-  exclude: ["/api/auth/**"],
+  exclude: ["/api/auth/**", ...pathsHoldingSecrets],
   maskEmail: true,
 });
 
@@ -38,6 +42,8 @@ const app = new Hono<EvlogVariables>();
 
 app.use(
   evlog({
+    exclude: pathsHoldingSecrets,
+
     drain:
       ENV.AXIOM_API_KEY && ENV.AXIOM_DATASET
         ? createAxiomDrain({
@@ -86,6 +92,7 @@ app.route("/strava", stravaRoutes({ env: ENV, database: getDb, userId: riderOfBe
 app.route("/account", exportRoutes({ env: ENV, database: getDb }));
 app.route("/account", appleGrantRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
 app.route("/feedback", feedbackRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
+app.route(FEEDS_ROUTE, calendarFeedRoutes({ env: ENV, database: getDb }));
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
 

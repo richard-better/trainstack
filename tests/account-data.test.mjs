@@ -246,6 +246,7 @@ async function athleteWithEverything(identity) {
     activityId: firstRide.id,
     updatedAt: at(6),
   });
+  athlete.calendarFeed = await webApp.calendarFeed.newAddress({ withActivities: true });
   const session = await db
     .prepare("SELECT token FROM session WHERE user_id = ? LIMIT 1")
     .bind(athlete.userId)
@@ -393,6 +394,12 @@ test("an athlete's export holds every row of theirs, every original file, and no
   assert.equal(connection.expiresAt, "2100-01-01T00:00:00.000Z");
   const [feedback] = jsonLines(entries, `${folder}/data/feedback`);
   assert.match(feedback.createdAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/);
+  const [calendarFeed] = jsonLines(entries, `${folder}/data/calendar_feed`);
+  assert.deepEqual(calendarFeed, {
+    userId: athlete.userId,
+    withActivities: true,
+    createdAt: athlete.calendarFeed.createdAt.toISOString(),
+  });
   const [identity] = jsonLines(entries, `${folder}/data/account`);
   assert.equal(identity.providerId, "apple");
   assert.equal(identity.accountId, athlete.subject);
@@ -556,6 +563,8 @@ test("deleting an account leaves nothing of the athlete, revokes Strava and Appl
 
   const stale = await webRequest(athlete, "/account/export");
   assert.equal(stale.status, 401, "the deleted account's session is gone");
+  const feed = await runtime.dispatchFetch(`${api}${athlete.calendarFeed.path}`);
+  assert.equal(feed.status, 404, "the deleted account's calendar feed is gone");
 
   const again = await signInOnTheWeb(runtime, apple, `${origin}/`, {
     subject: athlete.subject,

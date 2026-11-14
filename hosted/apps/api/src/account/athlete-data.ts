@@ -179,6 +179,16 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
       "When thresholds were last detected for the athlete, and how many analysed activities and which settings revision that read.",
     owner: (table) => table.userId,
   },
+  calendarFeed: {
+    about:
+      "The athlete's calendar feed while it is on: whether it shows activities besides planned workouts, and when its address was made.",
+    owner: (table) => table.userId,
+    withheld: {
+      columns: ["feedId"],
+      why: "it is part of the feed's secret address, which lets anyone holding it read the athlete's training",
+    },
+    readable: { createdAt: fromUnixSeconds },
+  },
 };
 
 export type AthleteFiles = {
