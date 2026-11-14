@@ -27,7 +27,8 @@ export const SETTLING_MS = 3 * 60_000;
 
 export function useSettingsChangedRecently() {
   const history = useSettingsHistory();
-  const latest = Math.max(0, ...(history.data?.entries ?? []).map((e) => e.updatedAt.getTime()));
+  const changes = [...(history.data?.entries ?? []), ...(history.data?.removed ?? [])];
+  const latest = Math.max(0, ...changes.map((change) => change.updatedAt.getTime()));
   const [now, setNow] = useState(() => Date.now());
   const settling = now - latest < SETTLING_MS;
   useEffect(() => {
