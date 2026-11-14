@@ -10,12 +10,17 @@ import { refreshAnalysis } from "./settings-data";
 import { useAthleteSettings } from "./time-zone";
 import { HelpLink } from "./help-link";
 
-export function useThresholdSuggestions() {
+export function useThresholdSuggestions({
+  refetchInterval = false,
+}: {
+  refetchInterval?: number | false;
+} = {}) {
   return useQuery({
     queryKey: suggestionsQueryKey,
     queryFn: () => api.thresholds.suggestions({}),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
+    refetchInterval,
   });
 }
 

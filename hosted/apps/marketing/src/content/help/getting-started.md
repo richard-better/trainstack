@@ -34,12 +34,18 @@ If signing in stops at **Sign in was cancelled.** or **Sign in did not finish. T
 
 ## A good first hour
 
+A new account shows **Getting started** at the top of **Today**: three steps, each with what is
+done so far. Every step is optional, in any order, and you can leave and come back. It goes away
+once the steps are done, and it never appears for an account that has been training here for a
+while.
+
 1. [Get your activities in](/help/add-activities): upload files from your watch or bike computer,
-   or sign Ride in with the same Apple ID.
+   sign Ride in with the same Apple ID, or let Ride bring in your workouts from Apple Health.
 2. [Set your thresholds](/help/thresholds-and-zones). Without them, Trainstack cannot score the
    load of rides, runs and swims, so they are left out of your fitness chart. (Strength and
    bouldering sessions get their load from how hard you rate them.) Once you have a few hard efforts in,
-   Trainstack suggests thresholds from them.
+   Trainstack suggests thresholds from them, and **Getting started** offers each one to use. If you
+   know your numbers, type them under **Know your numbers?** instead.
 3. Look at an activity's [analysis](/help/activity-analysis), then your
    [fitness and form](/help/fitness-and-form).
 4. [Plan your week](/help/plan-your-week) on the calendar.

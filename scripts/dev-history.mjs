@@ -348,16 +348,18 @@ const withTrack = (activity) => ({
   track: activity.route ? tracks[activity.route]() : null,
 });
 
-export async function seedHistory(client, { today = new Date(), weeks } = {}) {
+export async function seedHistory(client, { today = new Date(), weeks, withSettings = true } = {}) {
   const { activities, settings, duplicate } = trainingHistory({ today, weeks });
   let clock = Date.now() - settings.length * 1000;
-  await client.settings.write({
-    writes: settings.map(({ day, change }) => ({
-      day,
-      change,
-      updatedAt: new Date((clock += 1000)),
-    })),
-  });
+  if (withSettings) {
+    await client.settings.write({
+      writes: settings.map(({ day, change }) => ({
+        day,
+        change,
+        updatedAt: new Date((clock += 1000)),
+      })),
+    });
+  }
   for (const activity of activities) {
     const bytes = activityFile(withTrack(activity));
     await client.activities.upload({

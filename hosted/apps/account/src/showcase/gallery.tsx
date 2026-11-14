@@ -15,12 +15,18 @@ import { type Recording, recordingUrl } from "./recording.ts";
 
 type Shown = ShowcaseWidth | "both";
 
-const worlds: readonly ShowcaseWorld[] = ["athlete", "rough-day", "newcomer"];
+const worlds: readonly ShowcaseWorld[] = ["athlete", "rough-day", "newcomer", "imported"];
 
 const screens = [...new Set(showcaseEntries.map((entry) => entry.screen))];
 
 const stepText = (step: ShowcaseStep) =>
-  "click" in step ? `clicking “${step.click}”` : `uploading ${step.upload.join(", ")}`;
+  "click" in step
+    ? `clicking “${step.click}”`
+    : "fill" in step
+      ? `typing ${Object.entries(step.fill)
+          .map(([label, text]) => `${text} in ${label}`)
+          .join(", ")}`
+      : `uploading ${step.upload.join(", ")}`;
 
 function Gallery() {
   const [recordings, setRecordings] = useState<Map<ShowcaseWorld, Recording> | null>(null);
