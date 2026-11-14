@@ -476,6 +476,12 @@ test("two sessions logged by hand are never linked by themselves, however they o
     source: "apple_health",
   });
   assert.equal(watch.primary, false);
+  const after = await client.activities.list({ onePerWorkout: true });
+  assert.deepEqual(
+    after.activities.map(({ id }) => id).sort(),
+    [first.activityId, second.activityId].sort(),
+  );
+  assert.equal(watch.duplicates.length, 1);
 });
 
 test("a session in another sport's time is not linked to it", async () => {

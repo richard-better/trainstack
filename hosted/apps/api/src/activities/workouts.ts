@@ -180,6 +180,12 @@ const stillAsMatched = (userId: string, recording: Candidate) => sql`EXISTS (
     AND coalesce(g.sport, g.file_sport) IS ${recording.sport}
 )`;
 
+const loggedIn = (userId: string, id: string) => sql`EXISTS (
+  SELECT 1 FROM ${activity} g
+  JOIN ${loggedSession} l ON l.user_id = g.user_id AND l.activity_id = g.id
+  WHERE g.user_id = ${userId} AND g.workout_id = ${workoutOf(userId, id)}
+)`;
+
 export async function matchActivity(db: Database, userId: string, id: string) {
   const current = await db
     .select({ summarizedAt: activity.summarizedAt })
@@ -195,7 +201,8 @@ export async function matchActivity(db: Database, userId: string, id: string) {
       .sort((a, b) => sharedMilliseconds(self, b) - sharedMilliseconds(self, a));
     for (const match of matches) {
       await mergeWorkouts(db, userId, id, match.id, {
-        when: sql`${stillAsMatched(userId, self)} AND ${stillAsMatched(userId, match)}`,
+        when: sql`${stillAsMatched(userId, self)} AND ${stillAsMatched(userId, match)}
+          AND NOT (${loggedIn(userId, id)} AND ${loggedIn(userId, match.id)})`,
       });
     }
   }
