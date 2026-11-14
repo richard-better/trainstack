@@ -732,6 +732,18 @@ a.row:hover {
   .account-name {
     display: none;
   }
+
+  .app-header .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .main-nav {
+    margin-left: 0;
+  }
 }
 
 .visually-hidden {
