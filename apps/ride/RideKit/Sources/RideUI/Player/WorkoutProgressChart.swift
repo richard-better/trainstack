@@ -101,8 +101,7 @@ struct WorkoutProgressChart: View {
     }
     .frame(minHeight: 140, idealHeight: 140, maxHeight: 320)
     .accessibilityLabel("Workout progress")
-    .accessibilityValue(
-      "\(session.position.spokenString) of \(session.duration.spokenString) done")
+    .accessibilityValue(session.spokenProgress)
   }
 
   private var trace: [WorkoutTracePoint] { WorkoutTracePoint.trace(of: session.samples) }
