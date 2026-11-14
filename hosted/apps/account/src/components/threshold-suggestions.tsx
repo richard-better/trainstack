@@ -74,7 +74,7 @@ function SuggestionCard({ suggestion }: { suggestion: ThresholdSuggestion }) {
       <div className="suggestion-actions">
         <button
           type="button"
-          className="compact"
+          className="primary compact"
           disabled={busy}
           onClick={() => accept.mutate("today")}
         >
