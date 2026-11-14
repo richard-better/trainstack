@@ -11,8 +11,10 @@ const daysApart = (from: string, through: string) =>
   (Date.parse(`${through}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
 
 export const loadSourceSchema = z
-  .enum(["power", "pace", "heart_rate"])
-  .describe("The stress score the load came from");
+  .enum(["power", "pace", "heart_rate", "rpe"])
+  .describe(
+    "The stress score the load came from; rpe for a logged session, from how hard the athlete rated it",
+  );
 
 export const loadedActivitySchema = z.object({
   id: activityId,

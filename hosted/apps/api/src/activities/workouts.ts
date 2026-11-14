@@ -2,7 +2,7 @@ import { and, asc, eq, gt, isNotNull, isNull, lt, ne, or, sql, type SQL } from "
 import { alias } from "drizzle-orm/sqlite-core";
 
 import type { Database } from "../db";
-import { activity, activityStatistic, distinctActivities } from "../db/schema";
+import { activity, activityStatistic, distinctActivities, loggedSession } from "../db/schema";
 import { isSameWorkout, sharedMilliseconds, type Recording } from "./workout-match";
 
 export const MATCH_VERSION = 1;
@@ -20,7 +20,13 @@ const richnessChannels = [
 const workoutOf = (userId: string, id: string) =>
   sql`(SELECT workout_id FROM ${activity} WHERE user_id = ${userId} AND id = ${id})`;
 
-export function electPrimary(db: Database, userId: string, memberId: string, leavingId = "") {
+export function electPrimary(
+  db: Database,
+  userId: string,
+  memberId: string,
+  leavingId = "",
+  when: SQL = sql`1`,
+) {
   const workout = workoutOf(userId, memberId);
   const richness = sql`(
     SELECT coalesce(sum(CASE s.name WHEN 'average_power_w' THEN 2 ELSE 1 END), 0)
@@ -28,15 +34,18 @@ export function electPrimary(db: Database, userId: string, memberId: string, lea
     WHERE s.user_id = p.user_id AND s.activity_id = p.id AND s.value > 0
       AND s.name IN (SELECT value FROM json_each(${JSON.stringify(richnessChannels)}))
   )`;
+  const logged = sql`EXISTS (
+    SELECT 1 FROM ${loggedSession} l WHERE l.user_id = p.user_id AND l.activity_id = p.id
+  )`;
   return db.run(sql`
     UPDATE ${activity} SET is_primary = (id = (
       SELECT p.id FROM ${activity} p
       WHERE p.user_id = ${userId} AND p.workout_id = ${workout} AND p.id != ${leavingId}
-      ORDER BY p.chosen_as_primary_at IS NULL, p.chosen_as_primary_at DESC, ${richness} DESC,
+      ORDER BY p.chosen_as_primary_at IS NULL, p.chosen_as_primary_at DESC, ${logged} DESC, ${richness} DESC,
         p.file_size DESC, p.created_at, p.id
       LIMIT 1
     ))
-    WHERE user_id = ${userId} AND workout_id = ${workout} AND id != ${leavingId}
+    WHERE user_id = ${userId} AND workout_id = ${workout} AND id != ${leavingId} AND ${when}
   `);
 }
 
@@ -45,7 +54,7 @@ export function mergeWorkouts(
   userId: string,
   a: string,
   b: string,
-  { evenIfDistinct = false } = {},
+  { evenIfDistinct = false, when = sql`1` }: { evenIfDistinct?: boolean; when?: SQL } = {},
 ) {
   const workoutA = workoutOf(userId, a);
   const workoutB = workoutOf(userId, b);
@@ -62,7 +71,7 @@ export function mergeWorkouts(
     SET workout_id = (SELECT min(workout_id) FROM ${activity} WHERE user_id = ${userId} AND id IN (${a}, ${b}))
     WHERE user_id = ${userId}
       AND workout_id IN (SELECT workout_id FROM ${activity} WHERE user_id = ${userId} AND id IN (${a}, ${b}))
-      AND NOT ${keptApart}
+      AND NOT ${keptApart} AND ${when}
   `);
 }
 
@@ -94,7 +103,7 @@ export function keepApart(db: Database, userId: string, id: string) {
 const elapsed = alias(activityStatistic, "elapsed");
 const distance = alias(activityStatistic, "distance");
 
-type Candidate = Recording & { id: string; workoutId: string | null };
+type Candidate = Recording & { id: string; workoutId: string | null; logged: boolean };
 
 function recordings(db: Database, userId: string, condition: SQL | undefined) {
   return db
@@ -106,6 +115,9 @@ function recordings(db: Database, userId: string, condition: SQL | undefined) {
       startedAt: activity.startedAt,
       elapsedSeconds: elapsed.value,
       distanceMetres: distance.value,
+      logged: sql<number>`EXISTS (
+        SELECT 1 FROM ${loggedSession} l WHERE l.user_id = ${activity.userId} AND l.activity_id = ${activity.id}
+      )`,
     })
     .from(activity)
     .innerJoin(
@@ -135,8 +147,10 @@ const asCandidate = (row: {
   startedAt: Date | null;
   elapsedSeconds: number;
   distanceMetres: number | null;
+  logged: number;
 }): Candidate => ({
   ...row,
+  logged: row.logged === 1,
   indoor: row.indoor === null ? null : row.indoor === 1,
   startedAt: row.startedAt!,
   distanceMetres: row.distanceMetres ?? undefined,
@@ -158,6 +172,20 @@ async function candidatesFor(db: Database, userId: string, self: Candidate) {
   return rows.map(asCandidate).filter((candidate) => candidate.workoutId !== self.workoutId);
 }
 
+const stillAsMatched = (userId: string, recording: Candidate) => sql`EXISTS (
+  SELECT 1 FROM ${activity} g
+  JOIN ${activityStatistic} ge ON ge.user_id = g.user_id AND ge.activity_id = g.id AND ge.name = 'elapsed_s'
+  WHERE g.user_id = ${userId} AND g.id = ${recording.id}
+    AND g.started_at = ${recording.startedAt.getTime()} AND ge.value = ${recording.elapsedSeconds}
+    AND coalesce(g.sport, g.file_sport) IS ${recording.sport}
+)`;
+
+const loggedIn = (userId: string, id: string) => sql`EXISTS (
+  SELECT 1 FROM ${activity} g
+  JOIN ${loggedSession} l ON l.user_id = g.user_id AND l.activity_id = g.id
+  WHERE g.user_id = ${userId} AND g.workout_id = ${workoutOf(userId, id)}
+)`;
+
 export async function matchActivity(db: Database, userId: string, id: string) {
   const current = await db
     .select({ summarizedAt: activity.summarizedAt })
@@ -169,9 +197,14 @@ export async function matchActivity(db: Database, userId: string, id: string) {
   if (selfRow) {
     const self = asCandidate(selfRow);
     const matches = (await candidatesFor(db, userId, self))
-      .filter((candidate) => isSameWorkout(self, candidate))
+      .filter((candidate) => !(self.logged && candidate.logged) && isSameWorkout(self, candidate))
       .sort((a, b) => sharedMilliseconds(self, b) - sharedMilliseconds(self, a));
-    for (const match of matches) await mergeWorkouts(db, userId, id, match.id);
+    for (const match of matches) {
+      await mergeWorkouts(db, userId, id, match.id, {
+        when: sql`${stillAsMatched(userId, self)} AND ${stillAsMatched(userId, match)}
+          AND NOT (${loggedIn(userId, id)} AND ${loggedIn(userId, match.id)})`,
+      });
+    }
   }
   await db.batch([
     electPrimary(db, userId, id),

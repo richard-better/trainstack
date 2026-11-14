@@ -15,6 +15,7 @@ import { ENV } from "../env.server";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { promiseToSweepFilesAfterDeleting } from "../account/deletion";
+import { loggedOf } from "../logbook/sessions";
 import { isAnalysisDue } from "./analysis";
 import { contentTypes, fileKey, formatOf, sha256Hex } from "./files";
 import { DEFAULT_TIME_ZONE } from "./local-day";
@@ -75,6 +76,7 @@ function toActivity(
   statistics: Record<string, number>,
   analysis: AnalysisRow | undefined,
   duplicates: DuplicateActivity[],
+  logged: Activity["logged"],
 ): Activity {
   return {
     id: row.id,
@@ -98,6 +100,7 @@ function toActivity(
     createdAt: row.createdAt,
     primary: row.isPrimary,
     duplicates,
+    logged,
   };
 }
 
@@ -136,9 +139,10 @@ async function duplicatesOf(db: Database, userId: string, rows: ActivityRow[]) {
 async function toActivities(db: Database, userId: string, rows: ActivityRow[]) {
   const ids = rows.map((row) => row.id);
   const analysesReadBeforeStatistics = await analysesOf(db, userId, ids);
-  const [statistics, duplicates] = await Promise.all([
+  const [statistics, duplicates, logged] = await Promise.all([
     statisticsOf(db, userId, ids),
     duplicatesOf(db, userId, rows),
+    loggedOf(db, userId, ids),
   ]);
   return rows.map((row) =>
     toActivity(
@@ -146,6 +150,7 @@ async function toActivities(db: Database, userId: string, rows: ActivityRow[]) {
       statistics.get(row.id)!,
       analysesReadBeforeStatistics.get(row.id),
       duplicates.get(row.id)!,
+      logged.get(row.id) ?? null,
     ),
   );
 }
@@ -157,7 +162,7 @@ const findActivity = (db: Database, userId: string, id: string) =>
     .where(and(eq(activity.userId, userId), eq(activity.id, id)))
     .get();
 
-const findDeletion = (db: Database, userId: string, id: string) =>
+export const findDeletion = (db: Database, userId: string, id: string) =>
   db
     .select()
     .from(deletedActivity)
@@ -213,6 +218,17 @@ async function storeFile(key: string, bytes: Uint8Array, contentType: string) {
       await scheduler.wait(R2_SAME_KEY_WRITE_INTERVAL_MS);
     }
   }
+}
+
+export async function deleteActivity(db: Database, userId: string, id: string) {
+  await db.batch([
+    electPrimary(db, userId, id, id),
+    db.insert(deletedActivity).values({ userId, id }).onConflictDoNothing(),
+    db.delete(activity).where(and(eq(activity.userId, userId), eq(activity.id, id))),
+  ]);
+  await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+  const deletion = (await findDeletion(db, userId, id))!;
+  return { id: deletion.id, deletedAt: deletion.deletedAt };
 }
 
 export const activitiesRouter = {
@@ -384,16 +400,7 @@ export const activitiesRouter = {
     return currentActivity(db, userId, input.id);
   }),
 
-  delete: signedIn.activities.delete.handler(async ({ context, input }) => {
-    const db = getDb();
-    const userId = context.session.user.id;
-    await db.batch([
-      electPrimary(db, userId, input.id, input.id),
-      db.insert(deletedActivity).values({ userId, id: input.id }).onConflictDoNothing(),
-      db.delete(activity).where(and(eq(activity.userId, userId), eq(activity.id, input.id))),
-    ]);
-    await ENV.ACTIVITY_FILES.delete(fileKey(userId, input.id));
-    const deletion = (await findDeletion(db, userId, input.id))!;
-    return { id: deletion.id, deletedAt: deletion.deletedAt };
-  }),
+  delete: signedIn.activities.delete.handler(async ({ context, input }) =>
+    deleteActivity(getDb(), context.session.user.id, input.id),
+  ),
 };

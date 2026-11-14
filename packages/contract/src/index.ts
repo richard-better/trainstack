@@ -4,11 +4,13 @@ import { z } from "zod";
 import { calendarContract, plannedWorkoutsContract } from "./calendar.ts";
 import { calendarFeedContract } from "./calendar-feed.ts";
 import { checkInsContract } from "./check-ins.ts";
+import { activityLoggedSchema, logbookContract } from "./logbook.ts";
 import { activityRouteSchema } from "./route.ts";
 import { settingDaySchema, settingsContract } from "./settings.ts";
 import {
   activityStatistics,
   analysisStatistics,
+  loggedStatistics,
   zoneTimeStatisticDescription,
 } from "./statistics.ts";
 import { thresholdsContract } from "./thresholds.ts";
@@ -18,6 +20,7 @@ import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from 
 export * from "./calendar.ts";
 export * from "./calendar-feed.ts";
 export * from "./check-ins.ts";
+export * from "./logbook.ts";
 export * from "./route.ts";
 export * from "./settings.ts";
 export * from "./statistics.ts";
@@ -35,7 +38,10 @@ const slug = z
 
 export const activityIdSchema = z
   .string()
-  .regex(/^[0-9a-f]{64}$/, "the SHA-256 of the activity's file, in lowercase hex");
+  .regex(
+    /^[0-9a-f]{64}$/,
+    "the SHA-256 of the activity's file, in lowercase hex; for a logged session, of logbook: and the session's id",
+  );
 
 export const activitySportSchema = slug.describe(
   "The sport, such as cycling, running, swimming, strength or bouldering. Where it took place is `indoor`, not part of the sport; an upload's indoor_<sport> is read as <sport> done indoors",
@@ -101,7 +107,7 @@ export const activitySchema = z.object({
   statistics: z
     .record(z.string(), z.number())
     .describe(
-      `Numbers that sum up the activity, named <what>_<unit>. From the file's summary: ${activityStatistics.map(({ name }) => name).join(", ")}. From the analysis: ${analysisStatistics.map(({ name }) => name).join(", ")}, and ${zoneTimeStatisticDescription}. More may come over time`,
+      `Numbers that sum up the activity, named <what>_<unit>. From the file's summary: ${activityStatistics.map(({ name }) => name).join(", ")}. From the analysis: ${analysisStatistics.map(({ name }) => name).join(", ")}, and ${zoneTimeStatisticDescription}. A logged session has elapsed_s, its duration, and with an RPE ${loggedStatistics.map(({ name }) => name).join(", ")} and load_tss. More may come over time`,
     ),
   analyzedAt: z
     .date()
@@ -132,6 +138,7 @@ export const activitySchema = z.object({
     .describe(
       "The other activities that recorded the same workout, each with its own file; empty when this is the only one",
     ),
+  logged: activityLoggedSchema,
 });
 
 export const activityEventSchema = z.object({
@@ -283,6 +290,7 @@ export const appContract = {
   thresholds: thresholdsContract,
   calendarFeed: calendarFeedContract,
   checkIns: checkInsContract,
+  logbook: logbookContract,
 };
 
 export type AppContractClient = ContractRouterClient<typeof appContract>;

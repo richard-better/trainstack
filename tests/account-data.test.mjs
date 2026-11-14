@@ -255,6 +255,52 @@ async function athleteWithEverything(identity) {
     updatedAt: at(6),
   });
   athlete.calendarFeed = await webApp.calendarFeed.newAddress({ withActivities: true });
+  const landmine = crypto.randomUUID();
+  await webApp.logbook.putExercise({
+    id: landmine,
+    exercise: {
+      name: "Landmine press",
+      equipment: "barbell",
+      primaryMuscles: ["front_delts"],
+      secondaryMuscles: ["triceps"],
+      measure: "reps",
+      bodyweight: false,
+    },
+    editedAt: at(7),
+  });
+  await webApp.logbook.put({
+    id: crypto.randomUUID(),
+    session: {
+      startedAt: at(8),
+      durationSeconds: 3600,
+      name: null,
+      notes: null,
+      rpe: 7,
+      detail: {
+        sport: "strength",
+        exercises: [
+          {
+            exerciseId: landmine,
+            group: null,
+            notes: null,
+            sets: [
+              {
+                kind: "working",
+                reps: 8,
+                seconds: null,
+                load: { kind: "weight", weight: { value: 25, unit: "kg" } },
+                rpe: null,
+                repsInReserve: null,
+                tempo: null,
+                restSeconds: null,
+              },
+            ],
+          },
+        ],
+      },
+    },
+    editedAt: at(8),
+  });
   const session = await db
     .prepare("SELECT token FROM session WHERE user_id = ? LIMIT 1")
     .bind(athlete.userId)

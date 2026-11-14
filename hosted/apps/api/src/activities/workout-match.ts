@@ -15,6 +15,7 @@ const COMPARABLE_DURATION_RATIO = 0.8;
 
 const sportFamilies: Record<string, string> = {
   e_biking: "cycling",
+  bouldering: "climbing",
   hiking: "walking",
 };
 

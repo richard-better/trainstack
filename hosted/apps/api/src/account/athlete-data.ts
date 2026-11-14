@@ -179,6 +179,16 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
       "When thresholds were last detected for the athlete, and how many analysed activities and which settings revision that read.",
     owner: (table) => table.userId,
   },
+  loggedSession: {
+    about:
+      "Strength and bouldering sessions the athlete logged by hand, each a whole session in body: exercises and sets, or problems and how they went. Each is also an activity, by activity_id.",
+    owner: (table) => table.userId,
+    readable: { body: parsedJson },
+  },
+  customExercise: {
+    about: "The athlete's own exercises, with their equipment and the muscles they train.",
+    owner: (table) => table.userId,
+  },
   calendarFeed: {
     about:
       "The athlete's calendar feed while it is on: whether it shows activities besides planned workouts, and when its address was made.",

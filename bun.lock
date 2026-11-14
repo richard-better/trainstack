@@ -66,6 +66,7 @@
         "@trainstack/analysis": "workspace:*",
         "@trainstack/contract": "workspace:*",
         "@trainstack/fit": "workspace:*",
+        "@trainstack/logbook": "workspace:*",
         "@trainstack/workout": "workspace:*",
         "@trainstack/zones": "workspace:*",
         "better-auth": "catalog:",
@@ -162,6 +163,7 @@
       "name": "@trainstack/contract",
       "dependencies": {
         "@orpc/contract": "catalog:",
+        "@trainstack/logbook": "workspace:*",
         "@trainstack/workout": "workspace:*",
         "zod": "catalog:",
       },

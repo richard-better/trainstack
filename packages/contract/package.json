@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@orpc/contract": "catalog:",
+    "@trainstack/logbook": "workspace:*",
     "@trainstack/workout": "workspace:*",
     "zod": "catalog:"
   },
