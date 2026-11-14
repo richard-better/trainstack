@@ -35,14 +35,21 @@ and a Polar H10, so please tell us what breaks.
   syncs. Ride skips a ride Health already has a cycling workout for.
 - Rides synced between your devices through iCloud, when they are signed in to the same Apple
   Account.
+- Signed in to a TrainStack account, Ride sends your rides to the account, where
+  account.trainstackhq.com shows them, and keeps your settings the same on every device signed in
+  to it. Rides reach your other devices through iCloud, not the account. Deleting the account
+  deletes everything it holds from TrainStack's server for good: your rides and their files, your
+  settings and their history, your workouts and your Strava connection. Rides and settings on your
+  devices stay.
 
 ## What does not work yet
 
 - You cannot build your own workouts or import `.zwo` and `.mrc` files.
-- Strava is the only place Ride can send a ride. Anywhere else, export the `.fit` file and upload it yourself.
-- Settings stay on the device, and so do rides without iCloud: deleting the app then deletes
-  them. Deleting a ride on one device deletes it on the others too. A TrainStack account exists
-  only to hold your Strava connection, and Ride works without one.
+- Besides your TrainStack account, Strava is the only service Ride can send a ride to. Anywhere
+  else, export the `.fit` file and upload it yourself.
+- Without a TrainStack account, settings stay on the device, and so do rides without iCloud:
+  deleting the app then deletes them. Deleting a ride on one device deletes it on the others too.
+  Ride works without an account.
 - No training plans.
 
 ## Try this first
