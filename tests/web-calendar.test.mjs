@@ -656,3 +656,68 @@ test("pairing by hand shows at once, displaces the automatic pair, and unpairing
   assert.notEqual(apart.pairing?.activityId, evening.id, "the rule never pairs these two again");
   assert.deepEqual(writes.notices(), []);
 });
+
+test("the latest pairing choice holds the activity on screen, whichever workout comes first in the day", async () => {
+  const { client } = await athlete();
+  const day = "2026-06-08";
+  const file = new File(
+    [denseRide(Math.round(60 * 60 * 25 + 200), `${day}T06:00:00Z`)],
+    "ride.fit",
+  );
+  const done = await client.activities.upload({ file, source: "upload", sport: "cycling" });
+  const [first, second] = await planDay(client, day, ["First", "Second"]);
+  await client.plannedWorkouts.pair({ id: first.id, activityId: done.id, updatedAt: new Date() });
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const writes = createCalendarWrites({
+    queryClient,
+    api: {
+      ...client,
+      plannedWorkouts: {
+        get: (input) => client.plannedWorkouts.get(input),
+        pair: async (input) => {
+          await held;
+          return client.plannedWorkouts.pair(input);
+        },
+      },
+    },
+    retryDelays: [5],
+    whenOnline: () => () => {},
+  });
+  const key = rangeKey(day, day);
+  const range = await queryClient.fetchQuery({
+    queryKey: key,
+    queryFn: () => client.calendar.range({ from: day, through: day }),
+  });
+  const shown = () => writes.view(queryClient.getQueryData(key)).days[0];
+  const holder = () =>
+    pairsOf(shown())
+      .planned.filter(({ done: activity }) => activity)
+      .map(({ item }) => item.content.workout.name);
+  const states = () => shown().planned.map((item) => [item.content.workout.name, item.state]);
+  const [firstHeld, secondHeld] = range.days[0].planned;
+
+  const toSecond = writes.pair(secondHeld, done.id);
+  assert.deepEqual(holder(), ["Second"]);
+  assert.deepEqual(states(), [
+    ["First", "missed"],
+    ["Second", "completed"],
+  ]);
+
+  const backToFirst = writes.pair(firstHeld, done.id);
+  assert.deepEqual(holder(), ["First"]);
+  assert.deepEqual(states(), [
+    ["First", "completed"],
+    ["Second", "missed"],
+  ]);
+
+  release();
+  await Promise.all([toSecond, backToFirst]);
+  const stored = await client.calendar.range({ from: day, through: day });
+  assert.equal(
+    stored.days[0].planned.find((item) => item.id === first.id).pairing.activityId,
+    done.id,
+  );
+  assert.equal(stored.days[0].planned.find((item) => item.id === second.id).pairing, null);
+});

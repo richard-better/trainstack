@@ -28,6 +28,12 @@ interface Pending {
   readonly id: string;
   readonly base: PlannedWorkout;
   readonly apply: Apply;
+  readonly choice?: PairingChoice;
+}
+
+interface PairingChoice {
+  readonly activityId: string;
+  readonly paired: boolean;
 }
 
 export type WriteKind = "plan" | "change" | "move" | "skip" | "pair" | "unpair" | "delete";
@@ -65,6 +71,7 @@ interface Write {
   readonly won?: (result: PlannedWorkout) => boolean;
   readonly retry?: () => void;
   readonly intended?: Placement;
+  readonly choice?: PairingChoice;
 }
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 5_000, 10_000, 30_000];
@@ -213,7 +220,13 @@ export function createCalendarWrites({
 
   function run(write: Write): Promise<void> {
     seq += 1;
-    const entry: Pending = { seq, id: write.base.id, base: write.base, apply: write.apply };
+    const entry: Pending = {
+      seq,
+      id: write.base.id,
+      base: write.base,
+      apply: write.apply,
+      ...(write.choice ? { choice: write.choice } : {}),
+    };
     pending = [...pending, entry];
     changed();
     const updatedAt = stamp();
@@ -277,10 +290,28 @@ export function createCalendarWrites({
 
     view(range: CalendarRange): CalendarRange {
       const ids = [...new Set(pending.map((entry) => entry.id))];
-      return ids.reduce((current, id) => {
+      const folded = ids.reduce((current, id) => {
         const next = writes.viewItem(findPlanned(current, id), id, current.today);
         return next ? withPlanned(current, next) : withoutPlanned(current, id);
       }, range);
+      return pending.reduce((current, { id, base, choice }) => {
+        const chooser = choice && findPlanned(current, id);
+        if (!choice || !chooser || chooser.day !== base.day) return current;
+        const { activityId, paired } = choice;
+        if (!paired) {
+          return chooser.pairing?.activityId === activityId
+            ? withPlanned(current, pairedAs(chooser, null, current.today))
+            : current;
+        }
+        const day = current.days.find((held) => held.day === chooser.day);
+        const displaced = (day?.planned ?? []).filter(
+          (other) => other.id !== id && other.pairing?.activityId === activityId,
+        );
+        return displaced.reduce(
+          (next, other) => withPlanned(next, pairedAs(other, null, next.today)),
+          withPlanned(current, pairedAs(chooser, activityId, current.today)),
+        );
+      }, folded);
     },
 
     viewItem(item: PlannedWorkout | null, id: string, today: string): PlannedWorkout | null {
@@ -368,6 +399,7 @@ export function createCalendarWrites({
         send: (updatedAt) => api.plannedWorkouts.pair({ id: item.id, activityId, updatedAt }),
         won: (result) => result.pairing?.activityId === activityId,
         retry: () => void writes.pair(item, activityId),
+        choice: { activityId, paired: true },
       });
     },
 
@@ -380,6 +412,7 @@ export function createCalendarWrites({
         send: (updatedAt) => api.plannedWorkouts.unpair({ id: item.id, activityId, updatedAt }),
         won: (result) => result.pairing?.activityId !== activityId,
         retry: () => void writes.unpair(item, activityId),
+        choice: { activityId, paired: false },
       });
     },
 
