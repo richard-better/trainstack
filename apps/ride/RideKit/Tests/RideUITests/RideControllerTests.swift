@@ -224,6 +224,22 @@ struct RideControllerTests {
     #expect(controller.totals.averagePower == paused.averagePower)
   }
 
+  @Test func lappingALapButtonStepStartsTheNextIntervalsAverageAtOnce() {
+    let workout = PlannedWorkout(
+      name: "Lap", category: nil,
+      steps: [
+        PlannedStep(duration: 0, target: .watts(.constant(200)), untilLap: UntilLap()),
+        PlannedStep(duration: 60, target: .watts(.constant(100))),
+      ])
+    let controller = RideController(workout: workout, ftp: 200, simulated: true)
+    for _ in 0..<30 { controller.tick(seconds: 1) }
+    #expect(controller.totals.intervalAveragePower != nil)
+    controller.togglePause()
+    controller.markLap()
+    #expect(controller.session.currentInterval?.index == 1)
+    #expect(controller.totals.intervalAveragePower == nil)
+  }
+
   @Test func aResumedRideStartsWithTheTotalsItHadAddedUpTo() {
     let controller = RideController(
       workout: template.planned, ftp: 200, simulated: true)

@@ -66,8 +66,8 @@ final class RideController {
 
   private static func changesTotalsWithoutASample(_ input: RideInput) -> Bool {
     switch input {
-    case .begin, .resumeAfterCrash, .skipInterval: true
-    case .tick, .togglePause, .markLap, .adjust, .changeMode: false
+    case .begin, .resumeAfterCrash, .skipInterval, .markLap: true
+    case .tick, .togglePause, .adjust, .changeMode: false
     }
   }
 
