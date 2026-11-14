@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { withActivity } from "../hosted/apps/account/src/lib/upload.ts";
+import { QueryClient } from "@tanstack/react-query";
+import { refreshWorkoutOf, withActivity } from "../hosted/apps/account/src/lib/upload.ts";
 import {
   applyChange,
   arrivalText,
@@ -112,6 +113,19 @@ test("an uploaded file of a workout already in the account says so and leads to 
     [[ride.id, [watch.id]]],
     "the workout's row gains a source instead of the list gaining a row",
   );
+
+  const queryClient = new QueryClient();
+  const detailKey = (id) => ["activity", id];
+  queryClient.setQueryData(detailKey(ride.id), { ...ride, duplicates: [] });
+  queryClient.setQueryData([...detailKey(ride.id), "file"], new File([], "ride.fit"));
+  refreshWorkoutOf(queryClient, watch, detailKey);
+  assert.equal(
+    queryClient.getQueryState(detailKey(ride.id)).isInvalidated,
+    true,
+    "the workout's page shows the new source when opened next",
+  );
+  assert.equal(queryClient.getQueryState([...detailKey(ride.id), "file"]).isInvalidated, false);
+  queryClient.clear();
 });
 
 test("a richer file arriving later takes the workout's row in the list", async () => {

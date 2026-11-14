@@ -186,6 +186,16 @@ export function placeActivity(
   });
 }
 
+export function refreshWorkoutOf(
+  queryClient: QueryClient,
+  activity: Activity,
+  detailKey: (id: string) => readonly unknown[],
+) {
+  for (const id of [activity.id, ...activity.duplicates.map((duplicate) => duplicate.id)]) {
+    void queryClient.invalidateQueries({ queryKey: detailKey(id), exact: true });
+  }
+}
+
 const emptyBodyStatuses = new Set([101, 204, 205, 304]);
 
 function headersOf(raw: string) {

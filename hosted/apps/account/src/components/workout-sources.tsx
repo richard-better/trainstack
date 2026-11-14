@@ -398,7 +398,7 @@ function LinkDialog({
             </p>
           ) : (
             <ol className="candidate-list">
-              {shown.slice(0, 30).map((other) => (
+              {shown.map((other) => (
                 <li key={other.id}>
                   <Candidate
                     activity={other}
