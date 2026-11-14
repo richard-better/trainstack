@@ -10,11 +10,14 @@ import "varlock/auto-load";
 import { Observability } from "./observability";
 
 const production = Alchemy.Stack.pipe(Effect.map(({ stage }) => stage === "production"));
-const webDomain = "trainstackhq.com";
-const accountDomain = `account.${webDomain}`;
-const serverDomain = `api.${webDomain}`;
+const webDomain = Config.String("TRAINSTACK_DOMAIN");
+const accountDomain = webDomain.pipe(Effect.map((domain) => `account.${domain}`));
+const serverDomain = webDomain.pipe(Effect.map((domain) => `api.${domain}`));
 const serverDomainForStage = Output.fromEffect(
-  production.pipe(Effect.map((prod) => (prod ? serverDomain : undefined))),
+  production.pipe(
+    Effect.flatMap((prod) => (prod ? serverDomain : Effect.succeed(undefined))),
+    Effect.orDie,
+  ),
 );
 const serverWorkersDevForStage = Output.fromEffect(production.pipe(Effect.map((prod) => !prod)));
 const compatibility = { date: "2026-07-30", flags: ["nodejs_compat"] };
@@ -65,7 +68,9 @@ export const server = Cloudflare.Worker("server", {
     NODE_ENV: production.pipe(Effect.map((prod) => (prod ? "production" : "development"))),
     WEB_APP_ORIGIN: production.pipe(
       Effect.flatMap((prod) =>
-        prod ? Effect.succeed(`https://${accountDomain}`) : Config.String("WEB_APP_ORIGIN"),
+        prod
+          ? accountDomain.pipe(Effect.map((domain) => `https://${domain}`))
+          : Config.String("WEB_APP_ORIGIN"),
       ),
     ),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
@@ -102,12 +107,13 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const prod = yield* production;
+    const domain = yield* webDomain;
     const observabilityResources = yield* observability;
     const serverWorker = yield* server;
     const accountWorker = yield* Cloudflare.Website.Vite("account", {
       rootDir: "../apps/account",
       compatibility,
-      domain: prod ? accountDomain : undefined,
+      domain: prod ? yield* accountDomain : undefined,
       workersDev: !prod,
       env: {
         VITE_SERVER_URL: serverWorker.url.as<string>(),
@@ -119,7 +125,7 @@ export default Alchemy.Stack(
     const webWorker = yield* Cloudflare.Website.Astro("web", {
       rootDir: "../apps/marketing",
       compatibility,
-      routes: prod ? [{ pattern: `${webDomain}/*`, zoneName: webDomain }] : undefined,
+      routes: prod ? [{ pattern: `${domain}/*`, zoneName: domain }] : undefined,
       workersDev: !prod,
       env: {
         NODE_ENV: prod ? "production" : "development",
@@ -133,7 +139,7 @@ export default Alchemy.Stack(
     });
 
     return {
-      web: prod ? `https://${webDomain}` : webWorker.url,
+      web: prod ? `https://${domain}` : webWorker.url,
       account: accountWorker.url,
       server: serverWorker.url,
       database: (yield* db).databaseId,
