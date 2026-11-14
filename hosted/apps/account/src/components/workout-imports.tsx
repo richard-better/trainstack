@@ -183,7 +183,7 @@ function ImportItem({ item, imports }: { item: Item; imports: WorkoutImports }) 
           </Link>{" "}
           is in your workouts.
         </p>
-        <FormatIssues issues={item.warnings} title="Left out of the file:" />
+        <FormatIssues issues={item.warnings} title="Trainstack left out:" />
         <div className="import-actions">{dismiss}</div>
       </div>
     );
