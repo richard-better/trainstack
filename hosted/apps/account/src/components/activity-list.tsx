@@ -135,6 +135,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
   const figures = headlineFigures(activity.statistics);
   const load = activity.statistics.load_tss;
   const analysing = analysisState(activity).kind === "pending";
+  const updating = analysisUpdating(activity);
   return (
     <Link to="/activities/$id" params={{ id: activity.id }} className="row">
       <span className="row-icon" title={sport.label}>
@@ -155,7 +156,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
           )}
         </span>
       </span>
-      {(figures.length > 0 || load !== undefined || analysing) && (
+      {(figures.length > 0 || load !== undefined || analysing || updating) && (
         <dl className="row-figures">
           {figures.map((figure) => (
             <div key={figure.name}>
@@ -171,14 +172,14 @@ function ActivityRow({ activity }: { activity: Activity }) {
               <dt>Load</dt>
               <dd>
                 {formatLoad(load)}
-                {analysisUpdating(activity) && <span className="unit"> updating</span>}
+                {updating && <span className="unit"> updating</span>}
               </dd>
             </div>
           ) : (
-            analysing && (
+            (analysing || updating) && (
               <div>
                 <dt>Load</dt>
-                <dd className="analysing">Analysing</dd>
+                <dd className="analysing">{analysing ? "Analysing" : "Updating"}</dd>
               </div>
             )
           )}
