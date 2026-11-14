@@ -66,17 +66,17 @@ public enum FITDecoder {
       averageHeartRate: session?.integer(Session.averageHeartRate) ?? mean(heartRates),
       maxHeartRate: session?.integer(Session.maxHeartRate) ?? heartRates.max())
 
-    return RideRecording(
+    var recording = RideRecording(
       startDate: Date(
         timeIntervalSince1970: TimeInterval(startTimestamp + FITProfile.epochInUnixTime)),
       workoutName: workoutName,
       sport: session?.integer(Session.sport).flatMap {
         Sport(fitSport: $0, subSport: session?.integer(Session.subSport))
       },
-      samples: samples,
-      pauses: pauses(
-        from: events, startTimestamp: startTimestamp, during: samples.map(\.elapsed)),
-      summary: summary)
+      samples: samples, summary: summary)
+    recording.pauses = pauses(
+      from: events, startTimestamp: startTimestamp, during: samples.map(\.elapsed))
+    return recording
   }
 
   private static func pauses(
