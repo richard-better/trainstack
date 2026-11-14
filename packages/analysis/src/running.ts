@@ -23,17 +23,25 @@ function interpolator(distances: Float64Array, values: Float64Array) {
   };
 }
 
-function profileOf(samples: Samples) {
-  const indices: number[] = [];
-  for (let index = 0; index < samples.count; index++) {
-    if (!Number.isNaN(samples.distance[index]!) && !Number.isNaN(samples.altitude[index]!)) {
-      indices.push(index);
-    }
+function whereBothAreKnown(keys: Float64Array, values: Float64Array, count: number) {
+  let known = 0;
+  for (let index = 0; index < count; index++) {
+    if (!Number.isNaN(keys[index]!) && !Number.isNaN(values[index]!)) known++;
   }
-  return {
-    distances: Float64Array.from(indices, (index) => samples.distance[index]!),
-    altitudes: Float64Array.from(indices, (index) => samples.altitude[index]!),
-  };
+  const knownKeys = new Float64Array(known);
+  const knownValues = new Float64Array(known);
+  for (let index = 0, next = 0; index < count; index++) {
+    if (Number.isNaN(keys[index]!) || Number.isNaN(values[index]!)) continue;
+    knownKeys[next] = keys[index]!;
+    knownValues[next] = values[index]!;
+    next++;
+  }
+  return { keys: knownKeys, values: knownValues };
+}
+
+function profileOf(samples: Samples) {
+  const { keys, values } = whereBothAreKnown(samples.distance, samples.altitude, samples.count);
+  return { distances: keys, altitudes: values };
 }
 
 export function grades(samples: Samples): Float64Array {
@@ -62,8 +70,11 @@ export function grades(samples: Samples): Float64Array {
 }
 
 export function gradeAdjustedSpeeds(samples: Samples): Float64Array {
-  const grade = grades(samples);
-  return samples.speed.map((speed, index) => speed * gradeAdjustment(grade[index]!));
+  const adjusted = grades(samples);
+  for (let index = 0; index < samples.count; index++) {
+    adjusted[index] = samples.speed[index]! * gradeAdjustment(adjusted[index]!);
+  }
+  return adjusted;
 }
 
 export const bestEffortDistances = [
@@ -87,14 +98,11 @@ export interface BestEffort {
 }
 
 export function bestEfforts(samples: Samples): BestEffort[] {
-  const times: number[] = [];
-  const distances: number[] = [];
-  for (let index = 0; index < samples.count; index++) {
-    const distance = samples.distance[index]!;
-    if (Number.isNaN(distance)) continue;
-    times.push(samples.elapsed[index]!);
-    distances.push(distance);
-  }
+  const { keys: distances, values: times } = whereBothAreKnown(
+    samples.distance,
+    samples.elapsed,
+    samples.count,
+  );
   const efforts: BestEffort[] = [];
   for (const { name, metres } of bestEffortDistances) {
     let best: BestEffort | null = null;

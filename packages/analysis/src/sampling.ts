@@ -70,14 +70,33 @@ export function overlapsPause(pauses: readonly Span[], from: number, to: number)
   return low < pauses.length && pauses[low]!.from < to;
 }
 
+function grown<Values extends Float64Array | Int32Array>(values: Values, into: Values): Values {
+  into.set(values);
+  return into;
+}
+
 export function heldSegments(
   elapsed: Float64Array,
   pauses: readonly Span[],
   rule: SamplingRule = samplingRule,
 ): HeldSegments {
-  const start: number[] = [];
-  const end: number[] = [];
-  const record: number[] = [];
+  let capacity = Math.max(elapsed.length - 1, 0) + pauses.length;
+  let start = new Float64Array(capacity);
+  let end = new Float64Array(capacity);
+  let record = new Int32Array(capacity);
+  let count = 0;
+  const hold = (index: number, from: number, to: number) => {
+    if (count === capacity) {
+      capacity = 2 * capacity + 1;
+      start = grown(start, new Float64Array(capacity));
+      end = grown(end, new Float64Array(capacity));
+      record = grown(record, new Int32Array(capacity));
+    }
+    start[count] = from;
+    end[count] = to;
+    record[count] = index;
+    count++;
+  };
   const paused = pausedRecords(elapsed, pauses);
   let pause = 0;
   for (let index = 0; index + 1 < elapsed.length; index++) {
@@ -89,23 +108,15 @@ export function heldSegments(
     while (pause < pauses.length && pauses[pause]!.to <= from) pause++;
     for (let next = pause; next < pauses.length && pauses[next]!.from < to; next++) {
       const { from: stopped, to: started } = pauses[next]!;
-      if (stopped > from) {
-        start.push(from);
-        end.push(stopped);
-        record.push(index);
-      }
+      if (stopped > from) hold(index, from, stopped);
       from = Math.max(from, started);
     }
-    if (to > from) {
-      start.push(from);
-      end.push(to);
-      record.push(index);
-    }
+    if (to > from) hold(index, from, to);
   }
   return {
-    count: start.length,
-    start: Float64Array.from(start),
-    end: Float64Array.from(end),
-    record: Int32Array.from(record),
+    count,
+    start: start.subarray(0, count),
+    end: end.subarray(0, count),
+    record: record.subarray(0, count),
   };
 }

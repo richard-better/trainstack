@@ -1,5 +1,7 @@
 export {
   decodeFit,
+  maxTimerEvents,
+  streamFit,
   summarizeFit,
   type ActivitySummary,
   type EventName,
@@ -14,7 +16,10 @@ export {
   type FitRecord,
   type FitSession,
   type FitTotals,
+  type FitActivityColumns,
   type LapTrigger,
+  type RecordColumns,
+  type StreamLimits,
   type Sport,
   type SubSport,
 } from "./activity.ts";

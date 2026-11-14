@@ -42,7 +42,10 @@ export {
   minettiCost,
 } from "./running.ts";
 export {
+  type AnalysisColumns,
+  analysisColumnLimits,
   type AnalysisRecord,
+  columnsOf,
   maxActivitySeconds,
   perSecond,
   plausibleRanges,

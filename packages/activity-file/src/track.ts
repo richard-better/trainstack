@@ -1,5 +1,14 @@
-import type { ActivitySummary, FitEvent, FitLap, FitRecord } from "@trainstack/fit";
+import {
+  maxTimerEvents,
+  type ActivitySummary,
+  type FitEvent,
+  type FitLap,
+  type FitRecord,
+  type RecordColumns,
+  type StreamLimits,
+} from "@trainstack/fit";
 
+import { ActivityFileError, type ActivityFileFormat } from "./error.ts";
 import type { SportAndSubSport } from "./sports.ts";
 
 export interface TrackPoint {
@@ -118,6 +127,73 @@ class Climbs {
   }
 }
 
+export interface ColumnsFrom {
+  readonly start: number;
+  readonly points: number;
+  readonly limits: StreamLimits;
+}
+
+const columnNames = [
+  "elapsed",
+  "power",
+  "heartRate",
+  "speed",
+  "fileDistance",
+  "travelled",
+  "altitude",
+] as const;
+
+type ColumnName = (typeof columnNames)[number];
+
+class PointColumns {
+  private count = 0;
+  private readonly values: Record<ColumnName, Float64Array>;
+  private readonly from: ColumnsFrom;
+  private readonly format: ActivityFileFormat;
+
+  constructor(from: ColumnsFrom, format: ActivityFileFormat) {
+    this.from = from;
+    this.format = format;
+    const capacity = Math.min(from.points, from.limits.maxRecords);
+    this.values = Object.fromEntries(
+      columnNames.map((name) => [name, new Float64Array(capacity)]),
+    ) as Record<ColumnName, Float64Array>;
+  }
+
+  add(point: TimedPoint, travelled: number | undefined): void {
+    const elapsed = (point.time - this.from.start) / 1000;
+    if (!(elapsed <= this.from.limits.untilSeconds)) return;
+    if (this.count >= this.values.elapsed.length) {
+      throw new ActivityFileError("tooLarge", this.format);
+    }
+    const at = this.count++;
+    const { values } = this;
+    values.elapsed[at] = elapsed;
+    values.power[at] = point.power ?? NaN;
+    values.heartRate[at] = point.heartRate ?? NaN;
+    values.speed[at] = point.speedMetresPerSecond ?? NaN;
+    values.fileDistance[at] = point.distanceMetres ?? NaN;
+    values.travelled[at] = travelled ?? NaN;
+    values.altitude[at] = point.altitudeMetres ?? NaN;
+  }
+
+  columns(distanceFromFile: boolean): RecordColumns {
+    const used = (values: Float64Array) => values.subarray(0, this.count);
+    const { values } = this;
+    return {
+      count: this.count,
+      elapsedSeconds: used(values.elapsed),
+      power: used(values.power),
+      heartRate: used(values.heartRate),
+      speedMetresPerSecond: used(values.speed),
+      distanceMetres: used(distanceFromFile ? values.fileDistance : values.travelled),
+      altitudeMetres: used(values.altitude),
+    };
+  }
+}
+
+export type TrackKeeps = "summary" | "records" | ColumnsFrom;
+
 export class Track {
   start: number | undefined;
   end: number | undefined;
@@ -128,6 +204,9 @@ export class Track {
   readonly power = new Series();
   readonly climbs = new Climbs();
   private readonly keptPoints: TimedPoint[] | undefined;
+  private readonly keptColumns: PointColumns | undefined;
+  private readonly keepsPauses: boolean;
+  private readonly format: ActivityFileFormat;
   private readonly pauses: Pause[] = [];
   private readonly travelledAtPoints: (number | undefined)[] = [];
   private readonly fileDistance = new Series();
@@ -135,9 +214,13 @@ export class Track {
   private previousPosition: TimedPoint | undefined;
   private lastTime: number | undefined;
   private segmentStarting = false;
+  points = 0;
 
-  constructor(keepPoints: boolean) {
-    this.keptPoints = keepPoints ? [] : undefined;
+  constructor(keeps: TrackKeeps, format: ActivityFileFormat) {
+    this.keptPoints = keeps === "records" ? [] : undefined;
+    this.keptColumns = typeof keeps === "object" ? new PointColumns(keeps, format) : undefined;
+    this.keepsPauses = keeps !== "summary";
+    this.format = format;
   }
 
   segment(): void {
@@ -148,9 +231,10 @@ export class Track {
   add(point: TimedPoint): void {
     if (this.segmentStarting && this.lastTime !== undefined) {
       this.pausedSeconds += Math.max(0, point.time - this.lastTime) / 1000;
-      if (this.keptPoints) this.pauses.push({ stoppedAt: this.lastTime, startedAt: point.time });
+      if (this.keepsPauses) this.pause({ stoppedAt: this.lastTime, startedAt: point.time });
     }
     this.segmentStarting = false;
+    this.points++;
     this.lastTime = point.time;
     if (this.start === undefined || point.time < this.start) this.start = point.time;
     if (this.end === undefined || point.time > this.end) this.end = point.time;
@@ -177,6 +261,14 @@ export class Track {
       this.keptPoints.push(point);
       this.travelledAtPoints.push(this.travelled);
     }
+    this.keptColumns?.add(point, this.travelled);
+  }
+
+  private pause(pause: Pause): void {
+    if (this.keptColumns && 2 * (this.pauses.length + 1) > maxTimerEvents) {
+      throw new ActivityFileError("tooLarge", this.format);
+    }
+    this.pauses.push(pause);
   }
 
   get distanceMetres(): number | undefined {
@@ -199,6 +291,10 @@ export class Track {
       temperatureCelsius: point.temperatureCelsius,
       developerFields: {},
     }));
+  }
+
+  get columns(): RecordColumns | undefined {
+    return this.keptColumns?.columns(!this.fileDistance.isEmpty);
   }
 
   get events(): FitEvent[] {

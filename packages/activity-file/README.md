@@ -21,6 +21,13 @@ the full decode's. It folds each record into running totals as it reads, and kee
 records nor FIT's raw messages nor an XML tree, so a 25 MB file of any format summarizes inside a
 Worker. The server uses it; the browser uses the full decode.
 
+`streamActivityFile(bytes, { untilSeconds, maxRecords })` adds the timer events and the records as
+columns (see `streamFit` in `@trainstack/fit`), equal to the full decode's records and timer
+events. A GPX or TCX file is read twice too, first for its start and number of points, then into typed arrays of exactly the points it keeps. A file
+with more records than `maxRecords` within `untilSeconds` of its start, or more than 20,000 timer
+events, fails with `tooLarge`. The server analyses activities this way, with the limits
+`@trainstack/analysis` gives as `analysisColumnLimits`.
+
 `decodeGpx` and `decodeTcx` decode one format,
 and `detectActivityFileFormat` returns `"fit"`, `"gpx"`, `"tcx"` or `undefined` without
 decoding.
@@ -64,6 +71,8 @@ element. Time grows linearly with size, and the tests check that on input crafte
 
 `test/summary.test.ts` writes a dense 25 MB file of each format and summarizes it in a Node
 process capped at a 16 MB heap, in which the full decode of the same file runs out of memory.
+
+`test/streams.test.ts` streams the same dense files with a week's limit, in the same 16 MB heap.
 
 `test/files` holds GPX and TCX files written the way Strava, Garmin Connect, Wahoo, Apple
 Health and GPSBabel write them. The FIT tests use `@trainstack/fit`'s golden files. Run them
