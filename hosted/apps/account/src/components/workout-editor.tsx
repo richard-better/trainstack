@@ -265,6 +265,7 @@ export function WorkoutEditor<Saved extends EditorSaved>({
   });
 
   const canSave = !invalid && !save.isPending && dirty;
+  const settled = !dirty && saved.base !== null && !save.isPending && !invalid;
   const firstSave = save.isPending && saved.base === null;
   const travel = useCallback((step: (history: History) => History) => {
     setChecked(new Set());
@@ -417,11 +418,7 @@ export function WorkoutEditor<Saved extends EditorSaved>({
               Redo
             </button>
           </div>
-          <p
-            className="editor-status"
-            role="status"
-            hidden={!dirty && saved.base !== null && !save.isPending && !invalid}
-          >
+          <p className={settled ? "editor-status visually-hidden" : "editor-status"} role="status">
             {save.isPending
               ? "Saving…"
               : invalid
@@ -439,7 +436,7 @@ export function WorkoutEditor<Saved extends EditorSaved>({
             disabled={!canSave}
             title="Save (⌘S)"
           >
-            {saved.base ? (!dirty && !save.isPending ? "Saved" : "Save") : target.firstSave}
+            {saved.base ? (settled ? "Saved" : "Save") : target.firstSave}
           </button>
         </div>
 
