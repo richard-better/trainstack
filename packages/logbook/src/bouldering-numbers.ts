@@ -83,13 +83,13 @@ function rankIn(scale: PyramidScale, bucket: string, circuit: Circuit | null) {
 }
 
 export function gradePyramid(
-  sessions: readonly Pick<BoulderingDetail, "problems" | "circuit">[],
+  sessionsOldestFirst: readonly Pick<BoulderingDetail, "problems" | "circuit">[],
   scale: PyramidScale,
 ): GradePyramid {
   const steps = new Map<string, PyramidStep>();
   let latestCircuit: Circuit | null = null;
   let ungraded = 0;
-  for (const { problems, circuit } of sessions) {
+  for (const { problems, circuit } of sessionsOldestFirst) {
     if (typeof scale !== "string" && circuit?.name === scale.circuit) latestCircuit = circuit;
     for (const { grade, outcome, attempts } of problems) {
       if (outcome === "repeat") continue;
