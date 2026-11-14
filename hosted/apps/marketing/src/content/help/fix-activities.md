@@ -37,10 +37,17 @@ Open the activity and press **Delete**. For an activity with one source, this de
 file. For a workout with more than one source, it deletes only the source you are looking at,
 and the workout stays with the others.
 
-A deleted activity stays deleted. If Ride, another device or you send the same file again,
-Trainstack refuses it and says when you deleted it. This is so a phone that was offline cannot
-bring back something you removed. There is no way to undo a delete, so download the file first from
-the activity's page if you might want it.
+A deleted activity stays deleted. If Ride or another device sends the same file again, Trainstack
+does not add it back, so a phone that was offline cannot bring back something you removed.
+
+## Bringing back a deleted activity
+
+Deleting removes the activity's file too, so you need the file to bring it back. Upload it from
+**Activities** as in [Getting activities in](/help/add-activities). Trainstack says when you deleted
+it; press **Restore** and the activity comes back, with its numbers worked out from the file again.
+If the workout had other sources, Trainstack links the restored one to them again, but a choice
+you made about which source is primary, or that two activities are not the same workout, is not
+brought back.
 
 ## Wrong numbers
 
