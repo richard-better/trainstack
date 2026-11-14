@@ -15,6 +15,13 @@ struct PlayerControls: View {
       .buttonStyle(.glass)
       .keyboardShortcut(pause)
       .help(session.isPaused ? "Resume the ride" : "Pause the ride", shortcut: pause)
+      Button(
+        "Previous interval", systemImage: "backward.end.fill", action: controller.previousInterval
+      )
+      .labelStyle(.iconOnly)
+      .buttonStyle(.glass)
+      .keyboardShortcut(previous)
+      .help("Go back to the start of the interval before this one", shortcut: previous)
       Button("Skip interval", systemImage: "forward.end.fill", action: controller.skipInterval)
         .labelStyle(.iconOnly)
         .buttonStyle(.glass)
@@ -23,6 +30,12 @@ struct PlayerControls: View {
         .help(
           session.awaitsLap ? "End this step and start the next" : "Skip to the next interval",
           shortcut: skip)
+      Button("Add a minute", systemImage: "goforward.plus", action: controller.extendInterval)
+        .labelStyle(.iconOnly)
+        .buttonStyle(.glass)
+        .disabled(!session.canExtendInterval)
+        .keyboardShortcut(extend)
+        .help("Add a minute to this interval", shortcut: extend)
       Button("Lap", systemImage: "flag.fill", action: controller.markLap)
         .labelStyle(.iconOnly)
         .buttonStyle(.glass)
@@ -82,6 +95,14 @@ struct PlayerControls: View {
   private var pause: KeyboardShortcut? { RideCommand.togglePause.shortcut(playerPresented: true) }
 
   private var skip: KeyboardShortcut? { RideCommand.skipInterval.shortcut(playerPresented: true) }
+
+  private var previous: KeyboardShortcut? {
+    RideCommand.previousInterval.shortcut(playerPresented: true)
+  }
+
+  private var extend: KeyboardShortcut? {
+    RideCommand.extendInterval.shortcut(playerPresented: true)
+  }
 
   private var lap: KeyboardShortcut? { RideCommand.lap.shortcut(playerPresented: true) }
 

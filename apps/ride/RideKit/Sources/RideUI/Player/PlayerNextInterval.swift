@@ -33,6 +33,20 @@ struct PlayerNextInterval: View {
       .padding(.vertical, 10)
       .accessibilityElement(children: .combine)
       .animation(reduceMotion ? nil : .default, value: isNear)
+    } else if let free = session.freeRideElapsed {
+      HStack(alignment: .firstTextBaseline, spacing: 10) {
+        Label("Workout complete", systemImage: "flag.checkered")
+          .font(Design.statValueFont)
+        Text(
+          "Free ride \(free.clockString) · \(session.mode.rawValue) · end the ride when you are done"
+        )
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+      }
+      .lineLimit(2)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.vertical, 10)
+      .accessibilityElement(children: .combine)
     }
   }
 

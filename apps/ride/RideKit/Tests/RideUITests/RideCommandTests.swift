@@ -50,6 +50,20 @@ struct RideCommandTests {
     #expect(RideCommand.togglePause.isEnabled(in: launcher))
     #expect(RideCommand.end.isEnabled(in: launcher))
     #expect(RideCommand.lap.isEnabled(in: launcher))
+    #expect(RideCommand.previousInterval.isEnabled(in: launcher))
+    #expect(!RideCommand.extendInterval.isEnabled(in: launcher))
+  }
+
+  @Test func addingAMinuteAndGoingBackAreJournalledRideInputs() throws {
+    let launcher = riding()
+    let ride = try #require(launcher.ride)
+    for _ in 0..<5 { ride.tick(seconds: 1) }
+    RideCommand.extendInterval.perform(in: launcher)
+    #expect(ride.session.currentInterval?.end == 75)
+    for _ in 0..<75 { ride.tick(seconds: 1) }
+    RideCommand.previousInterval.perform(in: launcher)
+    #expect(ride.session.currentInterval?.stepIndex == 0)
+    #expect(ride.session.lapMarks.map(\.stepIndex) == [0, 1, 0])
   }
 
   @Test func theLapKeyMarksALapInTheJournalledRide() throws {
@@ -130,6 +144,7 @@ struct RideCommandTests {
     let symbols = RideCommand.allCases.compactMap { $0.shortcut(playerPresented: true)?.symbols }
     #expect(symbols.count == RideCommand.allCases.count)
     #expect(Set(symbols).count == symbols.count)
-    #expect(symbols == ["Space", "⌘→", "⌘L", "⌘1", "⌘2", "⌘3", "⌘-", "⌘+", "⇧⌘P", "⇧⌘E"])
+    #expect(
+      symbols == ["Space", "⌘←", "⌘→", "⌘T", "⌘L", "⌘1", "⌘2", "⌘3", "⌘-", "⌘+", "⇧⌘P", "⇧⌘E"])
   }
 }

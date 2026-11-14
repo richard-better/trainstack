@@ -226,6 +226,16 @@ Each ride's file also carries its local time (`local_timestamp` on the activity 
 device's UTC offset when the ride started, kept in the trace header so a replay writes the same
 file.
 
+The rider can change the workout as it plays, each change a journalled input: add a minute to the
+current timed interval (`extendInterval`, also how the cool-down is lengthened), skip it
+(`skipInterval`), or go back (`previousInterval`), which ends the current interval where it is and
+rides the step before it again, then this one, from their starts. `RideSession` keeps these as a
+timeline of planned steps, each `Interval` naming its `stepIndex` in the workout, so the
+`PlannedWorkout` in the trace stays as planned and the laps say which step each stretch rode.
+Once the workout ends the ride carries on recording as a free ride, in whichever mode the rider
+picks (ERG holds a flat road, as for any step without a target), until they end it; that stretch
+is a lap with no step.
+
 Speed and distance come from power through `VirtualBike`, as in Zwift and TrainerRoad: many
 trainers report no speed, and in ERG mode what they report follows the gear, not the effort.
 Workouts are labelled with the fixed `PowerZone` bands, since their steps are shares of FTP

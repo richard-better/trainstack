@@ -9,7 +9,9 @@ public struct RideCommands: Commands {
   public var body: some Commands {
     CommandMenu("Controls") {
       item(.togglePause)
+      item(.previousInterval)
       item(.skipInterval)
+      item(.extendInterval)
       item(.lap)
       Section("Trainer Mode") {
         ForEach(TrainerMode.allCases, id: \.self) { mode in
