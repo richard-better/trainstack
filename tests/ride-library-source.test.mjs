@@ -21,6 +21,10 @@ function swiftLibrary() {
     const category = /category: \.(\w+)/.exec(entry)?.[1];
     const about = /about:\s*"([^"]*)"/.exec(entry)?.[1];
     const steps = /steps: (minutes\([\s\S]*?\)),\s*about:/.exec(entry)?.[1];
+    const cueList = /cues: \[([\s\S]*?)\n {6}\]/.exec(entry)?.[1] ?? "";
+    const cues = [...cueList.matchAll(/\.cue\((\d+), (?:at: ([\d.]+), )?"([^"]*)"\)/g)].map(
+      ([, step, at, text]) => ({ step: Number(step), at: Number(at ?? 0), text }),
+    );
     assert.ok(name && category && about && steps, `every template reads: ${entry}`);
     const expression = steps
       .replace(/\(([^()[\]]+?),\s*([\d.]+)\)/g, "[$1, $2]")
@@ -36,7 +40,7 @@ function swiftLibrary() {
       repeated: (count, pairs) => Array.from({ length: count }, () => pairs).flat(),
       sum: (...parts) => parts.flat(),
     });
-    return { name, category: powerZones.indexOf(category), about, steps: evaluated };
+    return { name, category: powerZones.indexOf(category), about, steps: evaluated, cues };
   });
 }
 
@@ -46,16 +50,21 @@ const rounded = (library) =>
   );
 
 const normalised = (library) =>
-  library.map(({ name, category, about, steps }) => ({
+  library.map(({ name, category, about, steps, cues }) => ({
     name,
     category,
     about,
     steps: steps.map(({ duration, intensity }) => ({ duration, intensity })),
+    cues: (cues ?? []).map(({ step, at, text }) => ({ step, at, text })),
   }));
 
 test("the server's built-in library is Ride's WorkoutTemplate.library, read from the Swift source", () => {
   const fromSwift = swiftLibrary();
   assert.equal(fromSwift.length, 11);
+  assert.ok(
+    fromSwift.every((template) => template.cues.length > 0),
+    "every bundled workout's text is read from the Swift source",
+  );
   const server = JSON.parse(readFileSync(serverCopy, "utf8"));
   assert.deepEqual(
     rounded(normalised(server)),
