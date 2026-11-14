@@ -14,7 +14,7 @@ import { and, asc, between, eq, sql } from "drizzle-orm";
 
 import { deleteActivity, findDeletion } from "../activities/router";
 import { DEFAULT_TIME_ZONE, dayIn } from "../activities/local-day";
-import { matchActivity } from "../activities/workouts";
+import { electPrimary, matchActivity } from "../activities/workouts";
 import type { Database } from "../db";
 import {
   activity,
@@ -51,6 +51,44 @@ async function dayOfSession(db: Database, userId: string, activityId: string, st
     .get();
   const zone = existing?.zone ?? (await timeZoneOf(db, userId)) ?? DEFAULT_TIME_ZONE;
   return { day: dayIn(zone, startedAt), zone };
+}
+
+type WhenAndWhat = { startedAt: Date | null; sport: string | null; seconds: number | null };
+
+async function whenAndWhat(db: Database, userId: string, activityId: string) {
+  const row = await db
+    .select({
+      startedAt: activity.startedAt,
+      sport: activity.sport,
+      seconds: activityStatistic.value,
+    })
+    .from(activity)
+    .leftJoin(
+      activityStatistic,
+      and(
+        eq(activityStatistic.userId, activity.userId),
+        eq(activityStatistic.activityId, activity.id),
+        eq(activityStatistic.name, "elapsed_s"),
+      ),
+    )
+    .where(and(eq(activity.userId, userId), eq(activity.id, activityId)))
+    .get();
+  return row satisfies WhenAndWhat | undefined;
+}
+
+const movedFrom = (before: WhenAndWhat, session: LoggedSession) =>
+  before.startedAt?.getTime() !== session.startedAt.getTime() ||
+  before.sport !== session.detail.sport ||
+  before.seconds !== session.durationSeconds;
+
+function leaveWorkout(db: Database, userId: string, activityId: string) {
+  return db.batch([
+    electPrimary(db, userId, activityId, activityId),
+    db
+      .update(activity)
+      .set({ workoutId: crypto.randomUUID(), isPrimary: true })
+      .where(and(eq(activity.userId, userId), eq(activity.id, activityId))),
+  ]);
 }
 
 async function unknownExercise(db: Database, userId: string, session: LoggedSession) {
@@ -162,12 +200,18 @@ export const logbookRouter = {
     const unknown = await unknownExercise(db, userId, input.session);
     if (unknown) throw errors.UNKNOWN_EXERCISE({ data: { exerciseId: unknown } });
     const day = await dayOfSession(db, userId, activityId, input.session.startedAt);
+    const before = await whenAndWhat(db, userId, activityId);
     await writeSession(db, userId, input, activityId, day);
     const row = await findSessionRow(db, userId, input.id);
     if (!row) {
       throw (
         (await deletedRefusal()) ?? new Error(`Session ${input.id} was neither stored nor deleted`)
       );
+    }
+    const won =
+      row.editedAt.getTime() === input.editedAt.getTime() && row.body === bodyOf(input.session);
+    if (won && before && movedFrom(before, input.session)) {
+      await leaveWorkout(db, userId, activityId);
     }
     await matchActivity(db, userId, activityId);
     return storedOf(db, userId, row);

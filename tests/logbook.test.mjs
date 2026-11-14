@@ -363,6 +363,50 @@ test("a session logged before its watch file arrives links the same way", async 
   );
 });
 
+test("moving a linked session to another day leaves its watch file behind, whichever write arrives last", async () => {
+  const client = await athlete();
+  const watch = await client.activities.upload({
+    file: fit({
+      start: "2026-11-10T17:02:00Z",
+      elapsedSeconds: 70 * 60,
+      sport: "training",
+      subSport: "strengthTraining",
+      heartRate: 118,
+    }),
+    source: "apple_health",
+  });
+  const tuesday = strength([squats()]);
+  const wednesday = strength([squats()], { startedAt: at("2026-11-11T17:00:00Z") });
+  const workouts = async () =>
+    (await client.activities.list({ onePerWorkout: true })).activities
+      .map(({ id, duplicates }) => `${id === watch.id ? "watch" : "logged"} ${duplicates.length}`)
+      .sort();
+
+  const moved = crypto.randomUUID();
+  await client.logbook.put({ id: moved, session: tuesday, editedAt: at("2026-11-10T19:00:00Z") });
+  assert.deepEqual(await workouts(), ["logged 1"]);
+  const after = await client.logbook.put({
+    id: moved,
+    session: wednesday,
+    editedAt: at("2026-11-10T19:05:00Z"),
+  });
+  assert.equal(after.localDay, "2026-11-11");
+  assert.deepEqual(await workouts(), ["logged 0", "watch 0"]);
+  const load = await client.training.load({ from: "2026-11-10", through: "2026-11-10" });
+  assert.ok(!load.days[0].activities.some(({ id }) => id === after.activityId));
+  await client.logbook.delete({ id: moved });
+
+  const late = crypto.randomUUID();
+  await client.logbook.put({ id: late, session: wednesday, editedAt: at("2026-11-10T19:05:00Z") });
+  const stale = await client.logbook.put({
+    id: late,
+    session: tuesday,
+    editedAt: at("2026-11-10T19:00:00Z"),
+  });
+  assert.equal(stale.localDay, "2026-11-11");
+  assert.deepEqual(await workouts(), ["logged 0", "watch 0"]);
+});
+
 test("two sessions logged by hand are never linked by themselves, however they overlap", async () => {
   const client = await athlete();
   const first = await client.logbook.put({
