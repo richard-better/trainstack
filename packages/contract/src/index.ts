@@ -1,7 +1,7 @@
 import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
-import { settingsContract } from "./settings.ts";
+import { settingDaySchema, settingsContract } from "./settings.ts";
 import { activityStatistics } from "./statistics.ts";
 import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from "./workouts.ts";
 
@@ -41,6 +41,12 @@ export const activitySummaryErrorSchema = z
     "Why the server could not derive the summary from the file: truncated (the file ends early), corrupt (it does not read as its format), no_activity (it reads, but holds no activity), too_large (more laps or sessions than an activity can have) or failed (summarising it kept failing)",
   );
 
+export const activityLocalDaySourceSchema = z
+  .enum(["file", "time_zone", "athlete"])
+  .describe(
+    "What decided the activity's day: file (the local time the file records), time_zone (the athlete's time zone when the activity arrived) or athlete (the athlete set it)",
+  );
+
 export const duplicateActivitySchema = z.object({
   id: activityIdSchema,
   source: activitySourceSchema,
@@ -64,6 +70,12 @@ export const activitySchema = z.object({
     .nullable()
     .describe("When the server derived the summary from the file; null while it has not yet"),
   summaryError: activitySummaryErrorSchema.nullable(),
+  localDay: settingDaySchema
+    .nullable()
+    .describe(
+      "The calendar day the activity belongs to, where it was done. It is fixed when the activity arrives: from the local time the file records, else from the athlete's time zone at that moment. Changing the time zone later moves no activity. Thresholds, daily load and bests all use this day",
+    ),
+  localDaySource: activityLocalDaySourceSchema.nullable(),
   statistics: z
     .record(z.string(), z.number())
     .describe(
@@ -229,3 +241,4 @@ export type ActivityDetail = z.infer<typeof activityDetailSchema>;
 export type DuplicateActivity = z.infer<typeof duplicateActivitySchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
 export type ActivitySummaryError = z.infer<typeof activitySummaryErrorSchema>;
+export type ActivityLocalDaySource = z.infer<typeof activityLocalDaySourceSchema>;

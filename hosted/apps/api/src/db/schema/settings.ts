@@ -22,3 +22,10 @@ export const athleteSetting = sqliteTable(
     index("athlete_setting_user_revision_idx").on(table.userId, table.revision),
   ],
 );
+
+export const athleteTimeZone = sqliteTable("athlete_time_zone", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  timeZone: text("time_zone").notNull(),
+});

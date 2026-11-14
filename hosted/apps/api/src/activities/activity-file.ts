@@ -83,6 +83,7 @@ export function summaryOfFile(bytes: Uint8Array): FileSummary {
     const { sport, indoor } = activitySport(summary.sport, summary.subSport);
     return {
       startedAt: knownTime(summary.startTime),
+      utcOffsetSeconds: summary.utcOffsetSeconds,
       sport,
       indoor,
       name: activity.name?.trim() || undefined,

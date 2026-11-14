@@ -17,6 +17,7 @@ export type SummaryEvent = {
 
 export type FileSummary = {
   startedAt: Date | undefined;
+  utcOffsetSeconds: number | undefined;
   sport: string | undefined;
   indoor: boolean | undefined;
   name: string | undefined;

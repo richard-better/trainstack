@@ -55,6 +55,7 @@ test("a new athlete has the default zone models and no thresholds", async () => 
   const { client } = await athlete();
   assert.deepEqual(await client.settings.get({}), {
     day: null,
+    timeZone: null,
     weightKg: null,
     defaults: {
       heart_rate: {

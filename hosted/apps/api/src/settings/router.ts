@@ -13,8 +13,9 @@ import {
 } from "@trainstack/zones";
 import { eq, sql } from "drizzle-orm";
 
+import { isTimeZone } from "../activities/local-day";
 import type { Database } from "../db";
-import { athleteSetting } from "../db/schema";
+import { athleteSetting, athleteTimeZone } from "../db/schema";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { ALLOWED_CLOCK_AHEAD_MS, canonical, keyOf, storedKey, validated } from "./changes";
@@ -25,6 +26,15 @@ const rowsOf = (db: Database, userId: string) =>
   db.select().from(athleteSetting).where(eq(athleteSetting.userId, userId));
 
 const isLive = (row: SettingRow) => !row.removed;
+
+export async function timeZoneOf(db: Database, userId: string) {
+  const row = await db
+    .select({ timeZone: athleteTimeZone.timeZone })
+    .from(athleteTimeZone)
+    .where(eq(athleteTimeZone.userId, userId))
+    .get();
+  return row?.timeZone ?? null;
+}
 
 const changeOf = (row: SettingRow) => JSON.parse(row.value) as SettingChange;
 
@@ -66,11 +76,14 @@ const metricOutput = (settings: MetricZones) => ({
 
 export const settingsRouter = {
   get: signedIn.settings.get.handler(async ({ context, input }) => {
-    const rows = await rowsOf(getDb(), context.session.user.id);
+    const db = getDb();
+    const userId = context.session.user.id;
+    const [rows, zone] = await Promise.all([rowsOf(db, userId), timeZoneOf(db, userId)]);
     const day = input.day ?? null;
     const profile = profileOn(datedChanges(rows), day);
     const settings: AthleteSettings = {
       day,
+      timeZone: zone,
       weightKg: profile.weightKg,
       defaults: {},
       sports: {},
@@ -105,6 +118,15 @@ export const settingsRouter = {
       if (set) zones[metric] = set;
     }
     return { day: input.day, sport, zones };
+  }),
+
+  setTimeZone: signedIn.settings.setTimeZone.handler(async ({ context, input, errors }) => {
+    if (!isTimeZone(input.timeZone)) throw errors.INVALID_TIME_ZONE();
+    await getDb()
+      .insert(athleteTimeZone)
+      .values({ userId: context.session.user.id, timeZone: input.timeZone })
+      .onConflictDoUpdate({ target: athleteTimeZone.userId, set: { timeZone: input.timeZone } });
+    return { timeZone: input.timeZone };
   }),
 
   history: signedIn.settings.history.handler(async ({ context, input }) => {

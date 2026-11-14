@@ -77,6 +77,8 @@ test("a rider uploads a ride's FIT file and reads it back by its SHA-256", async
       file: { format: "fit", size: rideBytes.byteLength },
       summarizedAt: undefined,
       summaryError: null,
+      localDay: "2026-10-06",
+      localDaySource: "file",
       statistics: undefined,
       createdAt: undefined,
       primary: true,

@@ -8,7 +8,7 @@ import { denseRide, manyLaps, pausedRun } from "./helpers/fit-files.mjs";
 
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const TRACES = "apps/ride/RideKit/Tests/RideCoreTests/Traces";
-const SUMMARY_VERSION = 3;
+const SUMMARY_VERSION = 4;
 const MAX_ACTIVITY_FILE_BYTES = 25 * 1024 * 1024;
 
 let worker;

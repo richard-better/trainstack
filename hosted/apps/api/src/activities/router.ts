@@ -3,11 +3,18 @@ import type { Activity, ActivityDetail, DuplicateActivity } from "@trainstack/co
 import { and, asc, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
-import { activity, activityEvent, activityStatistic, deletedActivity } from "../db/schema";
+import {
+  activity,
+  activityEvent,
+  activityStatistic,
+  athleteTimeZone,
+  deletedActivity,
+} from "../db/schema";
 import { ENV } from "../env.server";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { contentTypes, fileKey, formatOf, sha256Hex } from "./files";
+import { DEFAULT_TIME_ZONE } from "./local-day";
 import { summarizeActivity } from "./summary";
 import {
   electPrimary,
@@ -57,6 +64,8 @@ function toActivity(
     file: fileOf(row),
     summarizedAt: row.summarizedAt,
     summaryError: row.summaryError,
+    localDay: row.localDay,
+    localDaySource: row.localDaySource,
     statistics,
     createdAt: row.createdAt,
     primary: row.isPrimary,
@@ -194,9 +203,12 @@ export const activitiesRouter = {
     await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
     try {
       await db.run(sql`
-        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size)
+        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size, local_day_source, local_day_zone)
         SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${sport}, ${indoor},
-          ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength}
+          ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength},
+          'time_zone', coalesce(
+            (SELECT time_zone FROM ${athleteTimeZone} WHERE user_id = ${userId}), ${DEFAULT_TIME_ZONE}
+          )
         WHERE NOT EXISTS (
           SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
         )
