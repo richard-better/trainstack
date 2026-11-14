@@ -61,6 +61,36 @@ private final class HeldSessionStore: SessionStore {
   func release(_ session: AccountSession?) { releaser.yield(session) }
 }
 
+private actor RoutedTransport: HTTPTransport {
+  private(set) var requests: [URLRequest] = []
+  private let answers: [String: (status: Int, body: String)]
+
+  init(_ answers: [String: (status: Int, body: String)]) {
+    self.answers = answers
+  }
+
+  var paths: [String] { requests.compactMap { $0.url?.path } }
+
+  func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+    requests.append(request)
+    let answer = answers[request.url?.path ?? ""] ?? (status: 500, body: "{}")
+    let headers = answer.body.contains(#""token""#) ? ["set-auth-token": "fresh"] : [:]
+    let response = HTTPURLResponse(
+      url: request.url!, statusCode: answer.status, httpVersion: nil, headerFields: headers)!
+    return (Data(answer.body.utf8), response)
+  }
+}
+
+private let signInPath = "/api/auth/sign-in/social"
+private let appleAuthorizationPath = "/account/apple-authorization"
+private let deletePath = "/api/auth/delete-user"
+
+private func signedInAccount(_ transport: RoutedTransport) -> TrainStackAccount {
+  TrainStackAccount(
+    store: InMemorySessionStore(AccountSession(token: "t", name: "Ada", userID: "ada")),
+    transport: transport)
+}
+
 struct TrainStackAccountTests {
   @Test func tellsWhoListensWhichAccountWasDeletedAndThatSignInChanged() async throws {
     let account = TrainStackAccount(
@@ -75,6 +105,130 @@ struct TrainStackAccountTests {
     #expect(deleted == ["ada"])
     #expect(signInChanges == 2)
     #expect(!account.isSignedIn)
+  }
+
+  @Test func sendsApplesAuthorizationCodeWithTheNewSessionAfterSigningIn() async throws {
+    let transport = RoutedTransport([
+      signInPath: (200, #"{"token":"fresh","user":{"name":"Ada"}}"#),
+      appleAuthorizationPath: (204, ""),
+      "/strava": (200, #"{"connected":false}"#),
+    ])
+    let account = TrainStackAccount(store: InMemorySessionStore(), transport: transport)
+    try await account.signIn(
+      identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: "apple-code")
+    await account.keepingAppleAuthorization?.value
+
+    let requests = await transport.requests
+    let sent = try #require(requests.first { $0.url?.path == appleAuthorizationPath })
+    #expect(sent.value(forHTTPHeaderField: "Authorization") == "Bearer fresh")
+    let body = try JSONSerialization.jsonObject(with: try #require(sent.httpBody))
+    #expect(body as? [String: String] == ["authorization_code": "apple-code"])
+    #expect(requests.first?.url?.path == signInPath)
+  }
+
+  @Test(arguments: [
+    (400, #"{"error":"invalid_request"}"#), (400, #"{"error":"invalid_code"}"#),
+    (401, #"{"error":"unauthorized"}"#), (403, #"{"error":"apple_account_required"}"#),
+    (409, #"{"error":"another_apple_id"}"#), (502, #"{"error":"apple_unavailable"}"#),
+    (503, #"{"error":"apple_not_configured"}"#), (500, "{}"),
+  ])
+  func staysSignedInWhenTheServerDoesNotKeepTheCode(status: Int, answer: String) async throws {
+    let transport = RoutedTransport([
+      signInPath: (200, #"{"token":"fresh","user":{"name":"Ada"}}"#),
+      appleAuthorizationPath: (status, answer),
+      "/strava": (200, #"{"connected":false}"#),
+    ])
+    let store = InMemorySessionStore()
+    let account = TrainStackAccount(store: store, transport: transport)
+    try await account.signIn(
+      identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: "apple-code")
+    await account.keepingAppleAuthorization?.value
+
+    #expect(account.isSignedIn)
+    #expect(await store.load()?.token == "fresh")
+    #expect(await transport.paths.contains(appleAuthorizationPath))
+  }
+
+  @Test func sendsNoCodeWhenAppleGaveNone() async throws {
+    let transport = RoutedTransport([
+      signInPath: (200, #"{"token":"fresh","user":{"name":"Ada"}}"#),
+      "/strava": (200, #"{"connected":false}"#),
+    ])
+    let account = TrainStackAccount(store: InMemorySessionStore(), transport: transport)
+    try await account.signIn(
+      identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: nil)
+    #expect(account.keepingAppleAuthorization == nil)
+    #expect(await !transport.paths.contains(appleAuthorizationPath))
+  }
+
+  @Test func sendsAFreshAppleCodeBeforeDeletingTheAccount() async throws {
+    let transport = RoutedTransport([appleAuthorizationPath: (204, ""), deletePath: (200, "{}")])
+    let account = signedInAccount(transport)
+    try await account.deleteAccount(askingAppleForAnAuthorizationCode: { "fresh-code" })
+
+    #expect(await transport.paths == [appleAuthorizationPath, deletePath])
+    let sent = try #require(await transport.requests.first)
+    #expect(sent.value(forHTTPHeaderField: "Authorization") == "Bearer t")
+    let body = try JSONSerialization.jsonObject(with: try #require(sent.httpBody))
+    #expect(body as? [String: String] == ["authorization_code": "fresh-code"])
+    #expect(!account.isSignedIn)
+  }
+
+  @Test func deletesTheAccountWhenTheAthleteCancelsApplesSheet() async throws {
+    let transport = RoutedTransport([deletePath: (200, "{}")])
+    let account = signedInAccount(transport)
+    try await account.deleteAccount(askingAppleForAnAuthorizationCode: {
+      throw ASAuthorizationError(.canceled)
+    })
+    #expect(await transport.paths == [deletePath])
+    #expect(!account.isSignedIn)
+  }
+
+  @Test(arguments: [
+    (400, #"{"error":"invalid_code"}"#), (403, #"{"error":"apple_account_required"}"#),
+    (409, #"{"error":"another_apple_id"}"#), (502, #"{"error":"apple_unavailable"}"#),
+    (503, #"{"error":"apple_not_configured"}"#),
+  ])
+  func deletesTheAccountWhenTheServerDoesNotKeepTheCode(status: Int, answer: String) async throws {
+    let transport = RoutedTransport([
+      appleAuthorizationPath: (status, answer), deletePath: (200, "{}"),
+    ])
+    let account = signedInAccount(transport)
+    try await account.deleteAccount(askingAppleForAnAuthorizationCode: { "fresh-code" })
+    #expect(await transport.paths == [appleAuthorizationPath, deletePath])
+    #expect(!account.isSignedIn)
+  }
+
+  @Test func deletesNothingWhenAnotherAccountSignsInWhileApplesSheetIsOpen() async throws {
+    let transport = RoutedTransport([
+      signInPath: (200, #"{"token":"fresh","user":{"id":"bea","name":"Bea"}}"#),
+      "/strava": (200, #"{"connected":false}"#),
+      appleAuthorizationPath: (204, ""), deletePath: (200, "{}"),
+    ])
+    let account = signedInAccount(transport)
+    await #expect(throws: StravaError.signedOut) {
+      try await account.deleteAccount(askingAppleForAnAuthorizationCode: {
+        try await account.signIn(
+          identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: nil)
+        return "ada-code"
+      })
+    }
+    #expect(await !transport.paths.contains(deletePath))
+    #expect(await !transport.paths.contains(appleAuthorizationPath))
+    #expect(account.isSignedIn)
+    #expect(account.name == "Bea")
+  }
+
+  @Test func keepsTheAccountWhenItsSessionIsTooOldToDelete() async {
+    let transport = RoutedTransport([
+      appleAuthorizationPath: (204, ""), deletePath: (400, #"{"code":"SESSION_EXPIRED"}"#),
+    ])
+    let account = signedInAccount(transport)
+    await account.restore()
+    await #expect(throws: StravaError.rejected(reason: "Sign in again, then delete the account.")) {
+      try await account.deleteAccount(askingAppleForAnAuthorizationCode: { "fresh-code" })
+    }
+    #expect(account.isSignedIn)
   }
 
   @Test func picksUpASessionKeptFromAnEarlierLaunch() async {
@@ -122,7 +276,8 @@ struct TrainStackAccountTests {
         reply(#"{"user":{"name":"Ada Rider"}}"#, headers: ["set-auth-token": "t"]),
         reply(#"{"connected":true,"athleteName":"Ada R"}"#),
       ]))
-    try await account.signIn(identityToken: "jwt", nonce: "n", fullName: nil)
+    try await account.signIn(
+      identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: nil)
     #expect(account.isSignedIn)
     #expect(account.name == "Ada Rider")
     #expect(account.isStravaConnected)

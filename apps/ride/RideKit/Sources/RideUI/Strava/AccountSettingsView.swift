@@ -5,6 +5,7 @@ import SwiftUI
 struct AccountSettingsView: View {
   @Environment(TrainStackAccount.self) private var account
   @Environment(\.webAuthenticationSession) private var webAuthenticationSession
+  @Environment(\.authorizationController) private var authorizationController
   @State private var nonce = AppleSignInNonce()
   @State private var isWorking = false
   @State private var isConfirmingDelete = false
@@ -33,9 +34,7 @@ struct AccountSettingsView: View {
     .confirmationDialog("Delete your account?", isPresented: $isConfirmingDelete) {
       Button("Delete Account", role: .destructive, action: deleteAccount)
     } message: {
-      Text(
-        "This permanently deletes your TrainStack account and everything it holds: your rides and their files, your settings and their history, your workouts and your Strava connection. Rides and settings on this device stay, and so do rides you sent to Strava."
-      )
+      Text(deletionWarning)
     }
   }
 
@@ -61,10 +60,18 @@ struct AccountSettingsView: View {
     } footer: {
       Text(
         account.isSignedIn
-          ? "Your account holds your rides and their files, your settings and their history, your workouts and your Strava connection. Ride sends your rides to it, so you can see them on the TrainStack website, and keeps your settings the same on every device you sign in on."
+          ? "Your account holds your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Ride sends your rides to it, so you can see them on the TrainStack website, and keeps your settings the same on every device you sign in on."
           : "Ride works without an account. Sign in to see your rides on the TrainStack website, keep your settings the same on all your devices, and send rides to Strava."
       )
     }
+  }
+
+  private var deletionWarning: String {
+    let warning =
+      "This permanently deletes your account and everything it holds: your rides with their files and analysis, your settings and their history, your workouts and lists, your feedback and your Strava connection. Every device is signed out. Rides and settings on your devices and in iCloud stay, and Ride adds them to any account you sign in to later. Rides on Strava stay too. To keep a copy, download Your data from Settings on the TrainStack website first."
+    guard AppleSignIn.isNative else { return warning }
+    return warning
+      + "\n\nApple then asks you to confirm, so Ride's Sign in with Apple access ends too. If you cancel, the account is still deleted."
   }
 
   @ViewBuilder private var stravaSection: some View {
@@ -108,7 +115,11 @@ struct AccountSettingsView: View {
         return
       }
       let name = credential.fullName.map { $0.formatted() }
-      run { try await account.signIn(identityToken: token, nonce: nonce.raw, fullName: name) }
+      let code = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+      run {
+        try await account.signIn(
+          identityToken: token, nonce: nonce.raw, fullName: name, authorizationCode: code)
+      }
     }
   }
 
@@ -124,7 +135,17 @@ struct AccountSettingsView: View {
 
   private func signOut() { run { await account.signOut() } }
 
-  private func deleteAccount() { run { try await account.deleteAccount() } }
+  private func deleteAccount() {
+    run { try await account.deleteAccount(askingAppleForAnAuthorizationCode: askAppleForACode) }
+  }
+
+  private func askAppleForACode() async throws -> String? {
+    guard AppleSignIn.isNative else { return nil }
+    let result = try await authorizationController.performRequest(
+      ASAuthorizationAppleIDProvider().createRequest())
+    guard case .appleID(let credential) = result else { return nil }
+    return credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+  }
 
   private func disconnect() { run { try await account.disconnectStrava() } }
 

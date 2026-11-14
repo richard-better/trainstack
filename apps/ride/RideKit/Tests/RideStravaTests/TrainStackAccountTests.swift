@@ -119,7 +119,7 @@ struct TrainStackAccountTests {
 
   @Test func deletesTheAccountAndForgetsTheSession() async throws {
     let (client, transport, store) = client([json("{}")])
-    try await client.deleteAccount()
+    try await client.deleteAccount(ActivityAccount(id: "ada", token: "session-token"))
     #expect(await store.load() == nil)
     #expect(await transport.requests.first?.url?.path == "/api/auth/delete-user")
   }
@@ -127,8 +127,19 @@ struct TrainStackAccountTests {
   @Test func keepsTheSessionWhenTheAccountCannotBeDeleted() async {
     let (client, _, store) = client([json(#"{"code":"SESSION_EXPIRED"}"#, status: 400)])
     await #expect(throws: StravaError.rejected(reason: "Sign in again, then delete the account.")) {
-      try await client.deleteAccount()
+      try await client.deleteAccount(ActivityAccount(id: "ada", token: "session-token"))
     }
     #expect(await store.load() == signedInSession)
+  }
+
+  @Test func deletesNoAccountButTheOneItWasAskedTo() async throws {
+    let (client, transport, store) = client(
+      [Reply(body: #"{"user":{"id":"b"}}"#, headers: ["set-auth-token": "b-token"])])
+    try await client.signInWithApple(identityToken: "jwt", nonce: "n", fullName: nil)
+    await #expect(throws: StravaError.signedOut) {
+      try await client.deleteAccount(ActivityAccount(id: "ada", token: "session-token"))
+    }
+    #expect(await transport.requests.count == 1)
+    #expect(await store.load()?.token == "b-token")
   }
 }
