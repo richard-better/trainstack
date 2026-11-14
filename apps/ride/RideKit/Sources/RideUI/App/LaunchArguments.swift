@@ -104,3 +104,7 @@ extension TrainStackAccount {
 extension AccountWorkouts {
   static let launched = AccountWorkouts()
 }
+
+extension AccountCalendar {
+  static let launched = AccountCalendar()
+}

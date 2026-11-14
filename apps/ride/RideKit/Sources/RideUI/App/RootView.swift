@@ -10,6 +10,7 @@ public struct RootView: View {
   @State private var launcher = RideLauncher.launchLauncher()
   @State private var account = TrainStackAccount.launched
   @State private var accountWorkouts = AccountWorkouts.launched
+  @State private var accountCalendar = AccountCalendar.launched
   @State private var destinationBeforeSettings = AppDestination.today
   @State private var settingsPage = SettingsPage.zones(.all)
   @State private var settingsPath: [SettingsPage] = []
@@ -48,7 +49,9 @@ public struct RootView: View {
     .environment(launcher.devices)
     .environment(account)
     .environment(accountWorkouts)
+    .environment(accountCalendar)
     .environment(\.syncWorkouts, SyncWorkoutsAction { AppWorkoutSync.shared.syncSoon() })
+    .environment(\.syncCalendar, SyncCalendarAction { AppCalendarSync.shared.syncSoon() })
     .focusedSceneValue(\.rideLauncher, launcher)
     .focusedSceneValue(\.sendFeedback, sendFeedback)
     .task {
