@@ -305,7 +305,7 @@ Keep `BETTER_AUTH_SECRET` too, somewhere safe outside the machine, such as a pas
 database's Strava and Apple tokens are encrypted with a key derived from it. A database restored
 under a different secret still works, but everyone is signed out, Strava connections stop working
 until you clear them with `DELETE FROM strava_connection` and athletes connect again, and deleting
-an account can no longer revoke what Apple granted.
+an account can no longer revoke the Sign in with Apple grant that Ride gave.
 
 The commands use Wrangler, Cloudflare's CLI, through `bunx`. It reads `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN` from the environment, not from `hosted/infra/.env`, so export them in the
