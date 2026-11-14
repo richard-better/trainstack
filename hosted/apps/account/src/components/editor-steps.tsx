@@ -667,8 +667,8 @@ function CueList({
           <TextField<number | undefined>
             label="Shown for"
             value={cue.shownForSeconds}
-            format={(seconds) => (seconds === undefined ? "" : formatNumber(0)(seconds))}
-            parse={(text) => (text.trim() === "" ? undefined : parseNumber(1, 3600)(text))}
+            format={(seconds) => (seconds === undefined ? "" : String(seconds))}
+            parse={parseShownFor}
             hint="Seconds, or leave empty"
             unit="s"
             inputMode="numeric"
@@ -724,6 +724,14 @@ function CueList({
       </button>
     </fieldset>
   );
+}
+
+function parseShownFor(text: string): number | undefined | null {
+  const trimmed = text.trim().replace(",", ".");
+  if (trimmed === "") return undefined;
+  if (!/^\d*\.?\d+$/.test(trimmed)) return null;
+  const seconds = Number(trimmed);
+  return seconds > 0 && Number.isFinite(seconds) ? seconds : null;
 }
 
 function RepeatEditor({

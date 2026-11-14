@@ -180,6 +180,7 @@ function WorkoutEditor({
   });
 
   const canSave = !invalid && !save.isPending && dirty;
+  const firstSave = save.isPending && saved.base === null;
   const travel = useCallback((step: (history: History) => History) => {
     setChecked(new Set());
     setHistory(step);
@@ -190,8 +191,11 @@ function WorkoutEditor({
 
   useEditorShortcuts(
     useMemo(
-      () => ({ undo: () => travel(undo), redo: () => travel(redo), save: trySave }),
-      [trySave],
+      () =>
+        firstSave
+          ? { undo: () => {}, redo: () => {}, save: () => {} }
+          : { undo: () => travel(undo), redo: () => travel(redo), save: trySave },
+      [firstSave, travel, trySave],
     ),
   );
 
@@ -303,7 +307,7 @@ function WorkoutEditor({
 
   return (
     <FieldErrorsProvider errors={fieldErrors.errors}>
-      <main className="content detail editor" inert={save.isPending && saved.base === null}>
+      <main className="content detail editor" inert={firstSave}>
         <Link
           to={saved.base ? "/workouts/$id" : "/workouts"}
           params={{ id }}
