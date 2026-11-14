@@ -14,7 +14,7 @@ export function ActivityList() {
   const activities = useInfiniteQuery({
     queryKey: activitiesQueryKey,
     queryFn: ({ pageParam }) =>
-      api.activities.list({ limit: ACTIVITIES_PER_PAGE, cursor: pageParam }),
+      api.activities.list({ limit: ACTIVITIES_PER_PAGE, cursor: pageParam, onePerWorkout: true }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
@@ -99,6 +99,12 @@ function ActivityRow({ activity }: { activity: Activity }) {
           <time dateTime={(activity.startedAt ?? activity.createdAt).toISOString()}>
             {activityDate(activity.startedAt ?? activity.createdAt)}
           </time>
+          {activity.duplicates.length > 0 && (
+            <span className="row-sources">
+              <SourcesIcon />
+              {activity.duplicates.length + 1} sources
+            </span>
+          )}
         </span>
       </span>
       {figures.length > 0 && (
@@ -115,6 +121,24 @@ function ActivityRow({ activity }: { activity: Activity }) {
         </dl>
       )}
     </Link>
+  );
+}
+
+function SourcesIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="13"
+      height="13"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M3.5 5.5h7v7h-7Z M6 3.5h6.5V10" />
+    </svg>
   );
 }
 

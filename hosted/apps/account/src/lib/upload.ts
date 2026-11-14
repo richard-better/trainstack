@@ -1,6 +1,10 @@
 import { isDefinedError, safe } from "@orpc/client";
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
-import { type Activity, MAX_ACTIVITY_FILE_BYTES } from "@trainstack/contract";
+import {
+  type Activity,
+  type DuplicateActivity,
+  MAX_ACTIVITY_FILE_BYTES,
+} from "@trainstack/contract";
 import {
   type ActivityFileFormat,
   type DecodedActivity,
@@ -103,14 +107,48 @@ const occurredAt = (activity: Activity) => (activity.startedAt ?? activity.creat
 const comesBefore = (a: Activity, b: Activity) =>
   occurredAt(a) > occurredAt(b) || (occurredAt(a) === occurredAt(b) && a.id > b.id);
 
+const asDuplicate = (activity: Activity): DuplicateActivity => ({
+  id: activity.id,
+  source: activity.source,
+  sourceId: activity.sourceId,
+  startedAt: activity.startedAt,
+  file: activity.file,
+  primary: activity.primary,
+});
+
+function withSource<Page extends ActivityPage>(pages: Page[], activity: Activity): Page[] {
+  const primary = activity.duplicates.find((duplicate) => duplicate.primary);
+  if (!primary) return pages;
+  return pages.map((page) => ({
+    ...page,
+    activities: page.activities.map((other) =>
+      other.id === primary.id
+        ? {
+            ...other,
+            duplicates: [
+              ...other.duplicates.filter((duplicate) => duplicate.id !== activity.id),
+              asDuplicate(activity),
+            ],
+          }
+        : other,
+    ),
+  }));
+}
+
 export function withActivity<Page extends ActivityPage>(
   pages: readonly Page[],
   activity: Activity,
 ): Page[] {
-  const without = pages.map((page) => ({
+  const replaced = new Set(activity.primary ? activity.duplicates.map(({ id }) => id) : []);
+  const unreplaced = pages.map((page) => ({
+    ...page,
+    activities: page.activities.filter((other) => !replaced.has(other.id)),
+  }));
+  const without = unreplaced.map((page) => ({
     ...page,
     activities: page.activities.filter((other) => other.id !== activity.id),
   }));
+  if (!activity.primary) return withSource(without, activity);
   for (const [index, page] of without.entries()) {
     const at = page.activities.findIndex((other) => comesBefore(activity, other));
     const last = index === without.length - 1;
@@ -122,7 +160,7 @@ export function withActivity<Page extends ActivityPage>(
     };
     return without;
   }
-  return [...pages];
+  return unreplaced;
 }
 
 type ActivityPages = InfiniteData<ActivityPage, string | undefined>;

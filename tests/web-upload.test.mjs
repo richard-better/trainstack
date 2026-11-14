@@ -299,6 +299,8 @@ const activity = (id, startedAt) => ({
   summarizedAt: null,
   statistics: {},
   createdAt: new Date("2026-11-01"),
+  primary: true,
+  duplicates: [],
 });
 
 const ids = (pages) => pages.map((page) => page.activities.map((a) => a.id[0]).join(""));
