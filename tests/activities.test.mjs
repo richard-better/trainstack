@@ -818,3 +818,25 @@ test("two files for the same Health workout uploaded at once make one activity",
     "the losing file is not kept",
   );
 });
+
+test("a Health workout restored by hand on the web keeps its Health identity, so no device adds it twice", async () => {
+  const { client } = await rider();
+  const { id } = await client.activities.upload({
+    file: healthFile(0),
+    source: "apple_health",
+    sourceId: healthWorkout,
+  });
+  await client.activities.delete({ id });
+
+  const restored = await client.activities.restore({ file: healthFile(0), source: "upload" });
+  assert.equal(restored.id, id);
+  assert.equal(restored.source, "apple_health");
+  assert.equal(restored.sourceId, healthWorkout);
+  const fromAnotherDevice = await client.activities.upload({
+    file: healthFile(1),
+    source: "apple_health",
+    sourceId: healthWorkout,
+  });
+  assert.deepEqual(fromAnotherDevice, restored);
+  assert.equal((await client.activities.list({})).activities.length, 1);
+});

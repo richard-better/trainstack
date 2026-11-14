@@ -212,7 +212,7 @@ export const activitiesContract = {
       path: "/activities/restore",
       successStatus: 200,
       description:
-        "Bring back an activity the athlete deleted, from its file, as an upload would add it: deleting removed the file, its summary and its analysis, so they come from this file again. Call it only when the athlete asks for it by hand, never from background sync. Restoring clears the deletion of its file and of its source and sourceId. A file the account has, or never deleted, is added as upload adds it. A deletion that arrives while the restore is stored still wins, and answers ACTIVITY_DELETED",
+        "Bring back an activity the athlete deleted, from its file, as an upload would add it: deleting removed the file, its summary and its analysis, so they come from this file again. Call it only when the athlete asks for it by hand, never from background sync. Restoring clears the deletion of its file and of its source and sourceId, and the restored activity keeps the source and sourceId of the activity deleted with that file, whatever the restore sends, so the source's next file for it still finds it. A file the account has, or never deleted, is added as upload adds it. A deletion that arrives while the restore is stored still wins, and answers ACTIVITY_DELETED",
     })
     .errors(activityFileErrors)
     .input(activityFileInput)

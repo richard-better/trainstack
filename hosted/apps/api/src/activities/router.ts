@@ -302,7 +302,13 @@ async function addFromFile(
   const format = formatOf(bytes);
   if (!format) throw refuse.unsupported();
   const id = await sha256Hex(bytes);
-  const key = sourceKeyOf(input);
+  const deletedAsItself = restoring ? await findDeletion(db, userId, id) : undefined;
+  const deletedKey =
+    deletedAsItself?.source && deletedAsItself.sourceId
+      ? { source: deletedAsItself.source, sourceId: deletedAsItself.sourceId }
+      : null;
+  const key = deletedKey ?? sourceKeyOf(input);
+  const source = deletedKey?.source ?? input.source;
   const { sport, indoor } = athleteSport(input.sport, input.indoor);
 
   const deletedRefusal = async () => {
@@ -335,7 +341,7 @@ async function addFromFile(
   await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
   const insert = db.run(sql`
     INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size, local_day_source, local_day_zone)
-    SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${sport}, ${indoor},
+    SELECT ${userId}, ${id}, ${id}, ${source}, ${key?.sourceId ?? null}, ${sport}, ${indoor},
       ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength},
       'time_zone', coalesce(
         (SELECT time_zone FROM ${athleteTimeZone} WHERE user_id = ${userId}), ${DEFAULT_TIME_ZONE}
