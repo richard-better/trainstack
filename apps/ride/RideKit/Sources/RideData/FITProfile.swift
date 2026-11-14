@@ -6,6 +6,7 @@ enum FITProfile {
   static let protocolVersion: UInt8 = 0x20
   static let headerSize: UInt8 = 14
   static let longestStringFieldBytes = 255
+  static let longestUTCOffsetSeconds = 14 * 60 * 60
 
   enum MessageNumber {
     static let fileID = 0
@@ -77,6 +78,20 @@ enum FITProfile {
     static let startTime = 2
     static let totalElapsedTime = 7
     static let totalTimerTime = 8
+    static let totalDistance = 9
+    static let averageHeartRate = 15
+    static let maxHeartRate = 16
+    static let averageCadence = 17
+    static let averagePower = 19
+    static let maxPower = 20
+    static let lapTrigger = 24
+    static let workoutStepIndex = 71
+  }
+
+  enum LapTriggerValue {
+    static let manual = 0
+    static let time = 1
+    static let sessionEnd = 7
   }
 
   enum SessionField {
@@ -96,6 +111,7 @@ enum FITProfile {
 
   enum ActivityField {
     static let totalTimerTime = 0
+    static let localTimestamp = 5
     static let sessionCount = 1
     static let type = 2
     static let event = 3

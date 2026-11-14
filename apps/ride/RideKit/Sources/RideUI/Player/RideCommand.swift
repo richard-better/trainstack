@@ -4,6 +4,7 @@ import SwiftUI
 enum RideCommand: Hashable {
   case togglePause
   case skipInterval
+  case lap
   case mode(TrainerMode)
   case decrease
   case increase
@@ -11,13 +12,14 @@ enum RideCommand: Hashable {
   case end
 
   static let allCases: [RideCommand] =
-    [.togglePause, .skipInterval] + TrainerMode.allCases.map(mode)
+    [.togglePause, .skipInterval, .lap] + TrainerMode.allCases.map(mode)
     + [.decrease, .increase, .togglePlayer, .end]
 
   func title(in launcher: RideLauncher?) -> String {
     switch self {
     case .togglePause: launcher?.ride?.session.isPaused == true ? "Resume" : "Pause"
-    case .skipInterval: "Skip Interval or Lap"
+    case .skipInterval: "Skip Interval"
+    case .lap: "Lap"
     case .mode(let mode): mode.rawValue
     case .decrease: "Easier"
     case .increase: "Harder"
@@ -30,6 +32,7 @@ enum RideCommand: Hashable {
     switch self {
     case .togglePause: playerPresented ? KeyboardShortcut(.space, modifiers: []) : nil
     case .skipInterval: KeyboardShortcut(.rightArrow, modifiers: .command)
+    case .lap: KeyboardShortcut("l", modifiers: .command)
     case .mode(.erg): KeyboardShortcut("1", modifiers: .command)
     case .mode(.slope): KeyboardShortcut("2", modifiers: .command)
     case .mode(.level): KeyboardShortcut("3", modifiers: .command)
@@ -57,6 +60,7 @@ enum RideCommand: Hashable {
     switch self {
     case .togglePause: ride.togglePause()
     case .skipInterval: ride.skipInterval()
+    case .lap: ride.markLap()
     case .mode(let mode): ride.mode = mode
     case .decrease: ride.adjust(by: -1)
     case .increase: ride.adjust(by: 1)

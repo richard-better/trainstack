@@ -45,11 +45,15 @@ final class RideLauncher {
   ) {
     guard ride == nil, interrupted == nil else { return }
     self.planned = planned
-    let session = RideSession(workout: workout.workout(ftp: ftp), riderWeight: riderWeight)
+    let startDate = Date.now
+    let session = RideSession(
+      workout: workout.workout(ftp: ftp), startDate: startDate,
+      utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: startDate), riderWeight: riderWeight)
     let journal = RideJournal(
       directory: journalDirectory,
       header: .init(
-        workout: workout, ftp: ftp, startDate: session.startDate, riderWeight: riderWeight))
+        workout: workout, ftp: ftp, startDate: startDate,
+        utcOffsetSeconds: session.utcOffsetSeconds, riderWeight: riderWeight))
     recordBluetooth(resuming: false)
     begin(
       RideController(

@@ -149,12 +149,19 @@ test("the detail page charts the activity's own FIT file when the server has no 
   assert.equal(Math.round(laps.at(-1).startSecond + laps.at(-1).seconds), 1800);
 });
 
-test("a workout ride charts its target power and needs no laps table for its one lap", async () => {
+test("a workout ride charts its target power and lists a lap for each of its intervals", async () => {
   const reading = readActivityFile(new Uint8Array(await readFile(WORKOUT_RIDE)));
   assert.equal(reading.kind, "decoded");
   const power = traceOf(reading.activity).channels.find((channel) => channel.key === "power");
   assert.ok(power.target.some((value) => value > 0));
-  assert.deepEqual(lapsOf(reading.activity), []);
+  assert.deepEqual(
+    lapsOf(reading.activity).map((lap) => [lap.startSecond, lap.seconds]),
+    [
+      [0, 15],
+      [15, 15],
+      [30, 15],
+    ],
+  );
 });
 
 test("a GPX run gets charts too, with its speed worked out from its distances", async () => {

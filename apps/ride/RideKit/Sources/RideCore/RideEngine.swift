@@ -34,6 +34,8 @@ public struct RideEngine: Sendable {
       session.togglePause()
     case .skipInterval:
       session.skipInterval()
+    case .markLap:
+      session.markLap()
     case .adjust(let steps):
       session.adjust(by: steps)
     case .changeMode(let mode):

@@ -27,6 +27,7 @@ struct RideBreakdownSection: View {
           }
         }
         switch shown {
+        case .laps: LapTable(laps: recording.laps)
         case .powerZones: ZoneBreakdown(recording: recording, metric: .power)
         case .heartRateZones: ZoneBreakdown(recording: recording, metric: .heartRate)
         case .paceZones: ZoneBreakdown(recording: recording, metric: .pace)

@@ -16,6 +16,8 @@ export function sampleRide(): Uint8Array {
   return read("Sources/RideData/Resources/SampleRide.fit");
 }
 
-export function trace(name: (typeof traceNames)[number]): Uint8Array {
+export function trace(
+  name: (typeof traceNames)[number] | "laps-marked-paused-and-skipped",
+): Uint8Array {
   return read(`Tests/RideCoreTests/Traces/${name}.fit`);
 }
