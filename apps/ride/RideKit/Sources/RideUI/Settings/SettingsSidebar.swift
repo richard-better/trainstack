@@ -35,6 +35,8 @@ struct SettingsSidebar: View {
           .tag(SettingsPage.rider)
         Label("Player", systemImage: "gauge.with.needle")
           .tag(SettingsPage.player)
+        Label("Ramp Test", systemImage: "chart.line.uptrend.xyaxis")
+          .tag(SettingsPage.rampTest)
         Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           .tag(SettingsPage.devices)
         Label("Account", systemImage: "person.crop.circle")

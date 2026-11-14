@@ -17,9 +17,11 @@ struct PlayerSecondaryStats: View {
       label: "Elapsed", value: session.elapsed.clockString,
       unit: session.isComplete
         ? "/ \(session.duration.clockString)"
-        : session.hasLapStepsAhead
-          ? "· \(session.remaining.clockString) left + lap-button steps"
-          : "· \(session.remaining.clockString) left")
+        : session.isRamping
+          ? "· open-ended ramp"
+          : session.hasLapStepsAhead
+            ? "· \(session.remaining.clockString) left + lap-button steps"
+            : "· \(session.remaining.clockString) left")
     let speed = SmallStat(
       label: "Speed",
       value: (session.speedMetresPerSecond * 3.6).formatted(.oneDecimal),

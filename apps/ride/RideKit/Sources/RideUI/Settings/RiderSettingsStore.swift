@@ -137,6 +137,26 @@ final class RiderSettingsStore {
     edited()
   }
 
+  var cyclingFTPScope: ZoneScope {
+    self[usesDefault: .power, in: .cycling] ? .all : .sport(.cycling)
+  }
+
+  var cyclingHeartRateScope: ZoneScope {
+    self[usesDefault: .heartRate, in: .cycling] ? .all : .sport(.cycling)
+  }
+
+  func keepRampTestFTP(_ ftp: Int) {
+    add(FTPTest(date: now(), kind: .ramp, ftp: ftp, scope: cyclingFTPScope), updatesFTP: true)
+  }
+
+  func offersMaxHeartRate(_ highest: Int) -> Bool {
+    self[.maxHeartRate, cyclingHeartRateScope].map { highest > $0 } ?? true
+  }
+
+  func keepMaxHeartRate(_ beatsPerMinute: Int) {
+    self[.maxHeartRate, cyclingHeartRateScope] = beatsPerMinute
+  }
+
   func removeFTPTest(_ id: FTPTest.ID) {
     settings.removeFTPTest(id, at: now())
     edited()

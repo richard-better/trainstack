@@ -130,6 +130,11 @@ public struct RideSession: Sendable {
 
   public var isComplete: Bool { currentInterval == nil }
 
+  public var isRamping: Bool {
+    guard let ramp = workout.rampSteps, let interval = currentInterval else { return false }
+    return ramp.contains(interval.stepIndex)
+  }
+
   public var intervalRemaining: TimeInterval? {
     guard !awaitsLap else { return nil }
     return currentInterval.map { $0.end - position }
