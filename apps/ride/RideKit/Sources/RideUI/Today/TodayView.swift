@@ -24,9 +24,12 @@ struct TodayView: View {
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
             if let planned = plan?.firstToStart {
-              StartButton(workout: planned.playable, title: "Start \(planned.title)")
-                .labelStyle(.titleAndIcon)
-                .buttonStyle(.borderedProminent)
+              StartButton(
+                workout: planned.playable, title: "Start \(planned.title)",
+                planned: calendar.ride(of: planned)
+              )
+              .labelStyle(.titleAndIcon)
+              .buttonStyle(.borderedProminent)
             } else {
               let selected =
                 suggestions.indices.contains(state.selectedIndex)
@@ -49,6 +52,7 @@ struct TodayView: View {
           openSettings: openSettings)
       }
     }
+    .plannedItemActions()
     .task { syncCalendar() }
     .navigationTitle("Today")
     .devicesToolbar()

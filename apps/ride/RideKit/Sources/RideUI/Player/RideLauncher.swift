@@ -15,6 +15,9 @@ final class RideLauncher {
     didSet { ride?.powerDisplay = powerDisplay }
   }
   @ObservationIgnored private let simulated: Bool
+  @ObservationIgnored private var planned: PlannedRide?
+  @ObservationIgnored var onPlannedRideSaved:
+    ((_ planned: PlannedRide, _ rideID: Ride.ID, _ startedAt: Date, _ endedAt: Date) -> Void)?
   @ObservationIgnored private let journalDirectory: URL
   @ObservationIgnored private let heartRate = HeartRateFeed()
   @ObservationIgnored private let keepAwake = KeepAwake()
@@ -37,9 +40,11 @@ final class RideLauncher {
   }
 
   func start(
-    _ workout: PlannedWorkout, ftp: Int, heartRateZones: ZoneSet?, riderWeight: Double
+    _ workout: PlannedWorkout, ftp: Int, heartRateZones: ZoneSet?, riderWeight: Double,
+    planned: PlannedRide? = nil
   ) {
     guard ride == nil, interrupted == nil else { return }
+    self.planned = planned
     let session = RideSession(workout: workout.workout(ftp: ftp), riderWeight: riderWeight)
     let journal = RideJournal(
       directory: journalDirectory,
@@ -76,7 +81,11 @@ final class RideLauncher {
     var rideID: Ride.ID?
     if let recording = ride?.session.recording(), !recording.samples.isEmpty, let library {
       rideID = keep(recording, in: library)
+      if let rideID, let planned, let startedAt = ride?.session.startDate {
+        onPlannedRideSaved?(planned, rideID, startedAt, .now)
+      }
     }
+    planned = nil
     ride?.stop()
     devices.stopRecording()
     ride?.journal?.finish(keepingFor: rideID)

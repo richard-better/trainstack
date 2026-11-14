@@ -6,6 +6,7 @@ import os
 final class CalendarSync {
   static let rangeKeptFresh: TimeInterval = 15 * 60
   static let analysisChecked: TimeInterval = 30
+  static let ridesPairedWithin: TimeInterval = 30 * 24 * 3600
 
   private let calendar: AccountCalendar
   private let server: any CalendarServer
@@ -30,6 +31,7 @@ final class CalendarSync {
   }
 
   func start(checkingEvery interval: Duration = .seconds(60)) {
+    calendar.onEdit = { [weak self] in self?.syncSoon() }
     syncSoon()
     heartbeat = Task { [weak self] in
       while !Task.isCancelled {
@@ -78,6 +80,8 @@ final class CalendarSync {
   }
 
   private func sync(for account: ActivityAccount) async throws {
+    try await sendWrites(for: account)
+    try await pairRides(for: account)
     let changes = try await server.plannedChanges(
       since: calendar.state?.plannedCursor, for: account)
     try checkStillSyncing(account)
@@ -92,6 +96,72 @@ final class CalendarSync {
       }
     }
     calendar.receive(plannedCursor: changes.cursor)
+  }
+
+  private func sendWrites(for account: ActivityAccount) async throws {
+    while let write = calendar.state?.writes.first {
+      let result = try await server.send(write, for: account)
+      try checkStillSyncing(account)
+      rangeWanted = true
+      switch result {
+      case .stored(let item):
+        calendar.sent(write, storedAs: item)
+      case .deletedOnTheServer, .refused(code: "NOT_FOUND"):
+        calendar.forgetWrites(to: write.plannedID)
+      case .refused(code: "EDITED_IN_THE_FUTURE"):
+        log.error("TrainStack says this device's clock is ahead; the calendar edit waits")
+        return
+      case .refused(let code):
+        log.error("TrainStack refused a calendar edit: \(code, privacy: .public)")
+        calendar.sent(write)
+      }
+    }
+  }
+
+  private func pairRides(for account: ActivityAccount) async throws {
+    for ride in calendar.state?.ridesToPair ?? [] {
+      if now().timeIntervalSince(ride.endedAt) > Self.ridesPairedWithin {
+        calendar.sent(ride)
+        continue
+      }
+      let outcome = try await pair(ride, for: account)
+      try checkStillSyncing(account)
+      if case .done(let stored) = outcome { calendar.sent(ride, storedAs: stored) }
+    }
+  }
+
+  private enum RidePairingOutcome {
+    case waiting
+    case done(PlannedItem?)
+  }
+
+  private func pair(_ ride: PendingRidePairing, for account: ActivityAccount) async throws
+    -> RidePairingOutcome
+  {
+    let pair = PlannedWrite.pair(
+      id: ride.plannedID, activityId: ride.rideID, updatedAt: ride.endedAt)
+    switch try await server.send(pair, for: account) {
+    case .stored(let paired):
+      rangeWanted = true
+      return .done(paired)
+    case .refused(code: "NOT_PAIRABLE"):
+      try checkStillSyncing(account)
+      let back = PlannedWrite.move(
+        id: ride.plannedID, day: ride.rideDay, position: 0, updatedAt: ride.endedAt)
+      let moveResult = try await server.send(back, for: account)
+      try checkStillSyncing(account)
+      rangeWanted = true
+      guard case .stored(let moved) = moveResult else { return .done(nil) }
+      guard moved.day == ride.rideDay else { return .done(moved) }
+      if case .stored(let paired) = try await server.send(pair, for: account) {
+        return .done(paired)
+      }
+      return .done(moved)
+    case .refused(code: "ACTIVITY_NOT_FOUND"), .refused(code: "EDITED_IN_THE_FUTURE"):
+      return .waiting
+    case .deletedOnTheServer, .refused:
+      return .done(nil)
+    }
   }
 
   private func readRange(for account: ActivityAccount) async throws {

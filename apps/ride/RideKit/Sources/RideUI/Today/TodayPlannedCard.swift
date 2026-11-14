@@ -6,6 +6,7 @@ struct TodayPlannedCard: View {
   let isFirstToStart: Bool
   @Environment(\.openWorkout) private var openWorkout
   @Environment(RiderSettingsStore.self) private var settings
+  @Environment(AccountCalendar.self) private var calendar
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -45,6 +46,7 @@ struct TodayPlannedCard: View {
         .accessibilityElement(children: .combine)
       }
       .buttonStyle(.plain)
+      .contextMenu { PlannedItemMenu(item: item) }
       if item.canStart {
         start
           .controlSize(.extraLarge)
@@ -64,7 +66,8 @@ struct TodayPlannedCard: View {
 
   @ViewBuilder private var start: some View {
     let button = StartButton(
-      workout: item.playable, title: "Start ride", isDefaultAction: false)
+      workout: item.playable, title: "Start ride", isDefaultAction: false,
+      planned: calendar.ride(of: item))
     if isFirstToStart {
       button.buttonStyle(.glassProminent)
     } else {

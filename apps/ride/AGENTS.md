@@ -135,6 +135,28 @@ paired, and its compliance score and why), skipped (dotted, struck through, with
 (amber), and an activity no planned workout claims reads unplanned. `ComplianceWords` says why in the
 web's words (`hosted/apps/account/src/lib/compliance.ts`), so the two read the same.
 
+From the app the athlete can skip a planned workout (with a reason) or take the skip back, move it to
+another day, and unpair a wrong match; creating and editing planned workouts stays on the web. Each
+edit is a `PlannedWrite` stamped when the athlete makes it, after every earlier edit on the device
+(the latest stamp is kept in the file), kept in the account's file, shown at once
+over the range read from the server, and sent in order at the start of the next pass; the server's answer to each replaces the stored copy, so
+an accepted edit stays even if the next read fails. The server
+keeps each part's last edit by that stamp, so an edit made offline still loses to a later one from the
+web, and the next range read shows who won. An edit to a planned workout deleted since is dropped,
+since a delete is final, and one the server's clock says comes from the future waits.
+
+A ride started from a planned workout pairs with it, because the athlete's intent is certain there.
+`RideLauncher` remembers the planned workout and the account it was planned in (`PlannedRide`), and
+when the ride is saved `AccountCalendar.rode` queues a pairing of that planned workout with the ride's
+activity (its file's SHA-256) in that account's file, signed in or not, stamped when the ride ended. `CalendarSync` sends it with `plannedWorkouts.pair` once
+`ActivitySync` has uploaded the ride; until then the server answers `ACTIVITY_NOT_FOUND` and it waits.
+If the planned workout was moved to another day meanwhile (`NOT_PAIRABLE`), the app moves it back to
+the ride's day (in the athlete's time zone: Ride's FIT files carry no local time, so the server dates
+them by it) with the same stamp and pairs again: a move made on the web during the ride is older
+than the ride's end and loses, and one made after the ride stands, leaving the ride unplanned. A
+pairing still waiting after 30 days is dropped. A ride recovered after a crash does not know its
+planned workout, and pairs by the server's own rule.
+
 Apple asks apps with Sign in with Apple to revoke the user's tokens when the account is deleted,
 so the server needs a refresh token Ride's own sign-in got. After every native sign-in Ride sends
 the credential's authorization code to `account/apple-authorization` (it lasts five minutes and

@@ -24,6 +24,7 @@ struct CalendarView: View {
         }
       }
     }
+    .plannedItemActions()
     .navigationTitle("Calendar")
     .task { syncCalendar() }
   }
