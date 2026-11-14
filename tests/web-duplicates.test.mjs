@@ -104,9 +104,9 @@ test("an uploaded file of a workout already in the account says so and leads to 
   const watch = await client.activities.upload({ file: fit(watchRecording), source: "upload" });
 
   assert.equal(watch.primary, false);
-  assert.equal(arrivalText(watch, true), "Uploaded, linked to the same workout from Ride");
+  assert.equal(arrivalText(watch, "uploaded"), "Uploaded, linked to the same workout from Ride");
   assert.equal(primaryIdOf(watch), ride.id);
-  assert.equal(arrivalText({ duplicates: [] }, false), "Already in your account");
+  assert.equal(arrivalText({ duplicates: [] }, "alreadyThere"), "Already in your account");
 
   const pages = [{ activities: [{ ...ride, duplicates: [] }], nextCursor: null }];
   const [page] = withActivity(pages, watch);
@@ -267,7 +267,7 @@ test("deleting the primary source says what goes and what stays, and the workout
   const primary = await client.activities.get({ id: ride.id });
 
   assert.deepEqual(deletingSource(primary), {
-    what: "Only this file from Ride is deleted. It will not be added again, from Ride or by uploading the same file.",
+    what: "Only this file from Ride is deleted. Ride and your other devices will not add it again. To bring it back, upload the same file and choose Restore.",
     stays: "The workout stays, with Uploaded FIT file as its only source.",
   });
   assert.equal(

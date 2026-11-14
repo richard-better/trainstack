@@ -1,5 +1,10 @@
 import { ORPCError } from "@orpc/server";
-import type { Activity, ActivityDetail, DuplicateActivity } from "@trainstack/contract";
+import type {
+  Activity,
+  ActivityDetail,
+  ActivityFileInput,
+  DuplicateActivity,
+} from "@trainstack/contract";
 import { and, asc, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
@@ -221,74 +226,137 @@ async function storeFile(key: string, bytes: Uint8Array, contentType: string) {
 }
 
 export async function deleteActivity(db: Database, userId: string, id: string) {
-  await db.batch([
+  const [, [deletion]] = await db.batch([
     electPrimary(db, userId, id, id),
-    db.insert(deletedActivity).values({ userId, id }).onConflictDoNothing(),
+    db
+      .insert(deletedActivity)
+      .values({ userId, id })
+      .onConflictDoUpdate({
+        target: [deletedActivity.userId, deletedActivity.id],
+        set: { deletedAt: sql`${deletedActivity.deletedAt}` },
+      })
+      .returning(),
     db.delete(activity).where(and(eq(activity.userId, userId), eq(activity.id, id))),
   ]);
   await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
-  const deletion = (await findDeletion(db, userId, id))!;
-  return { id: deletion.id, deletedAt: deletion.deletedAt };
+  return { id: deletion!.id, deletedAt: deletion!.deletedAt };
+}
+
+interface FileRefusals {
+  unsupported: () => Error;
+  deleted: (data: { id: string; deletedAt: Date }) => Error;
+}
+
+async function addFromFile(
+  userId: string,
+  input: ActivityFileInput,
+  refuse: FileRefusals,
+  { restoring }: { restoring: boolean },
+) {
+  const db = getDb();
+  if (!(input.file instanceof Blob)) throw refuse.unsupported();
+  const bytes = new Uint8Array(await input.file.arrayBuffer());
+  const format = formatOf(bytes);
+  if (!format) throw refuse.unsupported();
+  const id = await sha256Hex(bytes);
+  const { sport, indoor } = athleteSport(input.sport, input.indoor);
+
+  const deletedRefusal = async () => {
+    const deletion = await findDeletion(db, userId, id);
+    return deletion && refuse.deleted({ id, deletedAt: deletion.deletedAt });
+  };
+
+  if (!restoring) {
+    const deletedBeforeUpload = await deletedRefusal();
+    if (deletedBeforeUpload) throw deletedBeforeUpload;
+  }
+  const keepFile = async () => {
+    if (restoring && !(await ENV.ACTIVITY_FILES.head(fileKey(userId, id)))) {
+      await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
+    }
+  };
+
+  const existing = await findActivity(db, userId, id);
+  if (existing) {
+    await keepFile();
+    return withStatistics(db, existing);
+  }
+
+  await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
+  const insert = db.run(sql`
+    INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size, local_day_source, local_day_zone)
+    SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${sport}, ${indoor},
+      ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength},
+      'time_zone', coalesce(
+        (SELECT time_zone FROM ${athleteTimeZone} WHERE user_id = ${userId}), ${DEFAULT_TIME_ZONE}
+      )
+    WHERE NOT EXISTS (
+      SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
+    )
+    ON CONFLICT DO NOTHING
+  `);
+  try {
+    if (restoring) {
+      await db.batch([
+        db
+          .delete(deletedActivity)
+          .where(and(eq(deletedActivity.userId, userId), eq(deletedActivity.id, id))),
+        insert,
+      ]);
+    } else {
+      await insert;
+    }
+  } catch (error) {
+    if (!(await findActivity(db, userId, id))) {
+      await ENV.ACTIVITY_FILES.delete(fileKey(userId, id)).catch(() =>
+        promiseToSweepFilesAfterDeleting(db, userId),
+      );
+    }
+    throw error;
+  }
+  const inserted = await findActivity(db, userId, id);
+  if (inserted) {
+    try {
+      await summarizeActivity(db, ENV.ACTIVITY_FILES, inserted, bytes);
+      await matchActivity(db, userId, id);
+    } catch (error) {
+      console.error(error);
+    }
+    const current = await findActivity(db, userId, id);
+    if (current) {
+      await keepFile();
+      return withStatistics(db, current);
+    }
+  }
+  const deletedDuringUpload = await deletedRefusal();
+  await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+  throw deletedDuringUpload ?? new Error(`Activity ${id} was neither stored nor deleted`);
 }
 
 export const activitiesRouter = {
-  upload: signedIn.activities.upload.handler(async ({ context, input, errors }) => {
-    const db = getDb();
-    const userId = context.session.user.id;
-    if (!(input.file instanceof Blob)) throw errors.UNSUPPORTED_FILE();
-    const bytes = new Uint8Array(await input.file.arrayBuffer());
-    const format = formatOf(bytes);
-    if (!format) throw errors.UNSUPPORTED_FILE();
-    const id = await sha256Hex(bytes);
-    const { sport, indoor } = athleteSport(input.sport, input.indoor);
+  upload: signedIn.activities.upload.handler(({ context, input, errors }) =>
+    addFromFile(
+      context.session.user.id,
+      input,
+      {
+        unsupported: () => errors.UNSUPPORTED_FILE(),
+        deleted: (data) => errors.ACTIVITY_DELETED({ data }),
+      },
+      { restoring: false },
+    ),
+  ),
 
-    const deletedRefusal = async () => {
-      const deletion = await findDeletion(db, userId, id);
-      return deletion && errors.ACTIVITY_DELETED({ data: { id, deletedAt: deletion.deletedAt } });
-    };
-
-    const deletedBeforeUpload = await deletedRefusal();
-    if (deletedBeforeUpload) throw deletedBeforeUpload;
-    const existing = await findActivity(db, userId, id);
-    if (existing) return withStatistics(db, existing);
-
-    await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
-    try {
-      await db.run(sql`
-        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size, local_day_source, local_day_zone)
-        SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${sport}, ${indoor},
-          ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength},
-          'time_zone', coalesce(
-            (SELECT time_zone FROM ${athleteTimeZone} WHERE user_id = ${userId}), ${DEFAULT_TIME_ZONE}
-          )
-        WHERE NOT EXISTS (
-          SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
-        )
-        ON CONFLICT DO NOTHING
-      `);
-    } catch (error) {
-      if (!(await findActivity(db, userId, id))) {
-        await ENV.ACTIVITY_FILES.delete(fileKey(userId, id)).catch(() =>
-          promiseToSweepFilesAfterDeleting(db, userId),
-        );
-      }
-      throw error;
-    }
-    const inserted = await findActivity(db, userId, id);
-    if (inserted) {
-      try {
-        await summarizeActivity(db, ENV.ACTIVITY_FILES, inserted, bytes);
-        await matchActivity(db, userId, id);
-      } catch (error) {
-        console.error(error);
-      }
-      const current = await findActivity(db, userId, id);
-      if (current) return withStatistics(db, current);
-    }
-    const deletedDuringUpload = await deletedRefusal();
-    await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
-    throw deletedDuringUpload ?? new Error(`Activity ${id} was neither stored nor deleted`);
-  }),
+  restore: signedIn.activities.restore.handler(({ context, input, errors }) =>
+    addFromFile(
+      context.session.user.id,
+      input,
+      {
+        unsupported: () => errors.UNSUPPORTED_FILE(),
+        deleted: (data) => errors.ACTIVITY_DELETED({ data }),
+      },
+      { restoring: true },
+    ),
+  ),
 
   list: signedIn.activities.list.handler(async ({ context, input }) => {
     const db = getDb();

@@ -163,32 +163,52 @@ const activityNotFound = { NOT_FOUND: { status: 404, message: "No such activity"
 const activityDeleted = {
   ACTIVITY_DELETED: {
     status: 410,
-    message: "The activity was deleted, so it is not accepted again",
+    message:
+      "The activity was deleted, so an upload does not bring it back. Only activities.restore, which an athlete asks for by hand, does",
     data: z.object({ id: activityIdSchema, deletedAt: z.date() }),
   },
 };
 
 const unauthorized = { UNAUTHORIZED: {} };
 
+const activityFileErrors = {
+  ...unauthorized,
+  ...activityDeleted,
+  UNSUPPORTED_FILE: { status: 415, message: "The file is not a FIT, GPX or TCX file" },
+};
+
+const activityFileInput = z.object({
+  file: z.file().min(1).max(MAX_ACTIVITY_FILE_BYTES),
+  source: activitySourceSchema,
+  sourceId: z.string().min(1).max(128).optional(),
+  sport: activitySportSchema.optional(),
+  indoor: activityIndoorSchema.optional(),
+  name: z.string().trim().min(1).max(200).optional(),
+  startedAt: z.date().optional(),
+});
+
 export const activitiesContract = {
   upload: oc
-    .route({ method: "POST", path: "/activities", successStatus: 200 })
-    .errors({
-      ...unauthorized,
-      ...activityDeleted,
-      UNSUPPORTED_FILE: { status: 415, message: "The file is not a FIT, GPX or TCX file" },
+    .route({
+      method: "POST",
+      path: "/activities",
+      successStatus: 200,
+      description:
+        "Add an activity from its file. Uploading a file the account has returns that activity. A file whose activity was deleted answers ACTIVITY_DELETED, so a device syncing in the background never brings it back",
     })
-    .input(
-      z.object({
-        file: z.file().min(1).max(MAX_ACTIVITY_FILE_BYTES),
-        source: activitySourceSchema,
-        sourceId: z.string().min(1).max(128).optional(),
-        sport: activitySportSchema.optional(),
-        indoor: activityIndoorSchema.optional(),
-        name: z.string().trim().min(1).max(200).optional(),
-        startedAt: z.date().optional(),
-      }),
-    )
+    .errors(activityFileErrors)
+    .input(activityFileInput)
+    .output(activitySchema),
+  restore: oc
+    .route({
+      method: "POST",
+      path: "/activities/restore",
+      successStatus: 200,
+      description:
+        "Bring back an activity the athlete deleted, from its file, as an upload would add it: deleting removed the file, its summary and its analysis, so they come from this file again. Call it only when the athlete asks for it by hand, never from background sync. A file the account has, or never deleted, is added as upload adds it. A deletion that arrives while the restore is stored still wins, and answers ACTIVITY_DELETED",
+    })
+    .errors(activityFileErrors)
+    .input(activityFileInput)
     .output(activitySchema),
   list: oc
     .route({ method: "GET", path: "/activities" })
@@ -298,6 +318,7 @@ export const appContract = {
 
 export type AppContractClient = ContractRouterClient<typeof appContract>;
 export type Activity = z.infer<typeof activitySchema>;
+export type ActivityFileInput = z.infer<typeof activityFileInput>;
 export type ActivityDetail = z.infer<typeof activityDetailSchema>;
 export type DuplicateActivity = z.infer<typeof duplicateActivitySchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;

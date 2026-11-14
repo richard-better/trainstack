@@ -38,6 +38,7 @@ export type Check = { readonly kind: "ready"; readonly file: CheckedFile } | Ref
 export type Outcome =
   | { readonly kind: "uploaded"; readonly activity: Activity }
   | { readonly kind: "alreadyThere"; readonly activity: Activity }
+  | { readonly kind: "restored"; readonly activity: Activity }
   | { readonly kind: "deletedBefore"; readonly deletedAt: Date }
   | { readonly kind: "refused"; readonly refusal: Refusal };
 
@@ -86,23 +87,18 @@ export async function checkActivityFile(file: File): Promise<Check> {
   };
 }
 
-export async function sendActivityFile(
-  api: ApiClient,
-  file: CheckedFile,
-  upload: ApiClient = api,
-): Promise<Outcome> {
-  const found = await safe(api.activities.get({ id: file.id }));
-  if (!found.error) return { kind: "alreadyThere", activity: found.data };
-  if (!(isDefinedError(found.error) && found.error.code === "NOT_FOUND")) throw found.error;
+const fieldsOf = (file: CheckedFile) => ({
+  file: new File([file.bytes], file.name),
+  source: UPLOAD_SOURCE,
+  ...(file.startedAt ? { startedAt: file.startedAt } : {}),
+});
 
-  const sent = await safe(
-    upload.activities.upload({
-      file: new File([file.bytes], file.name),
-      source: UPLOAD_SOURCE,
-      ...(file.startedAt ? { startedAt: file.startedAt } : {}),
-    }),
-  );
-  if (!sent.error) return { kind: "uploaded", activity: sent.data };
+async function outcomeOf(
+  sending: ReturnType<ApiClient["activities"]["upload"]>,
+  kind: "uploaded" | "restored",
+): Promise<Outcome> {
+  const sent = await safe(sending);
+  if (!sent.error) return { kind, activity: sent.data };
   if (isDefinedError(sent.error) && sent.error.code === "ACTIVITY_DELETED") {
     return { kind: "deletedBefore", deletedAt: sent.error.data.deletedAt };
   }
@@ -111,6 +107,20 @@ export async function sendActivityFile(
   }
   throw sent.error;
 }
+
+export async function sendActivityFile(
+  api: ApiClient,
+  file: CheckedFile,
+  upload: ApiClient = api,
+): Promise<Outcome> {
+  const found = await safe(api.activities.get({ id: file.id }));
+  if (!found.error) return { kind: "alreadyThere", activity: found.data };
+  if (!(isDefinedError(found.error) && found.error.code === "NOT_FOUND")) throw found.error;
+  return outcomeOf(upload.activities.upload(fieldsOf(file)), "uploaded");
+}
+
+export const restoreActivityFile = (upload: ApiClient, file: CheckedFile) =>
+  outcomeOf(upload.activities.restore(fieldsOf(file)), "restored");
 
 export interface ActivityPage {
   readonly activities: readonly Activity[];
