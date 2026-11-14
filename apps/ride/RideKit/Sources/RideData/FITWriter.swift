@@ -6,13 +6,15 @@ struct FITWriter {
     case uint8(Int, UInt8)
     case uint16(Int, UInt16)
     case uint32(Int, UInt32)
+    case sint32(Int, Int32)
     case string(Int, String)
     case bytes(Int, [UInt8])
 
     var number: UInt8 {
       switch self {
       case .enumeration(let number, _), .uint8(let number, _), .uint16(let number, _),
-        .uint32(let number, _), .string(let number, _), .bytes(let number, _):
+        .uint32(let number, _), .sint32(let number, _), .string(let number, _),
+        .bytes(let number, _):
         UInt8(number)
       }
     }
@@ -23,6 +25,7 @@ struct FITWriter {
       case .uint8: FITProfile.BaseType.uint8
       case .uint16: FITProfile.BaseType.uint16
       case .uint32: FITProfile.BaseType.uint32
+      case .sint32: FITProfile.BaseType.sint32
       case .string: FITProfile.BaseType.string
       case .bytes: FITProfile.BaseType.byteArray
       }
@@ -33,6 +36,7 @@ struct FITWriter {
       case .enumeration(_, let value), .uint8(_, let value): [value]
       case .uint16(_, let value): withUnsafeBytes(of: value.littleEndian, Array.init)
       case .uint32(_, let value): withUnsafeBytes(of: value.littleEndian, Array.init)
+      case .sint32(_, let value): withUnsafeBytes(of: value.littleEndian, Array.init)
       case .string(_, let value): Self.nullTerminated(value)
       case .bytes(_, let value): value
       }

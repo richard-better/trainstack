@@ -146,7 +146,7 @@ public enum FITEncoder {
     return writer.file()
   }
 
-  private static func localTimestamp(at timestamp: UInt32, offsetSeconds: Int?) -> [FITWriter.Field]
+  static func localTimestamp(at timestamp: UInt32, offsetSeconds: Int?) -> [FITWriter.Field]
   {
     let longest = FITProfile.longestUTCOffsetSeconds
     guard let offsetSeconds, (-longest...longest).contains(offsetSeconds) else {
@@ -181,7 +181,7 @@ public enum FITEncoder {
     ]
   }
 
-  private static func scaledDistance(_ metres: Double?) -> UInt32 {
+  static func scaledDistance(_ metres: Double?) -> UInt32 {
     metres.map { UInt32(clamping: Int(($0 * FITProfile.Scale.distance).rounded())) } ?? invalid32
   }
 
@@ -197,13 +197,13 @@ public enum FITEncoder {
     return result
   }
 
-  private static func fitTimestamp(_ date: Date) -> UInt32 {
+  static func fitTimestamp(_ date: Date) -> UInt32 {
     UInt32(clamping: Int(date.timeIntervalSince1970.rounded()) - FITProfile.epochInUnixTime)
   }
 
   static let applicationID = Array("trainstack-ride!".utf8)
 
-  private static let invalid8 = UInt8.max
-  private static let invalid16 = UInt16.max
-  private static let invalid32 = UInt32.max
+  static let invalid8 = UInt8.max
+  static let invalid16 = UInt16.max
+  static let invalid32 = UInt32.max
 }
