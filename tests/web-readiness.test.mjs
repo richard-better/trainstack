@@ -131,7 +131,10 @@ test("a poor night reads as fair, says why first, and what it did not read", asy
     "0 of 7 check-ins in the last four weeks rated what you rated today: until there are 7, those answers are read against normal rather than your own usual.",
     "No training yet, so this comes from your check-in alone.",
   ]);
-  assert.match(unmeasuredLine, /sleep, resting heart rate and HRV/);
+  assert.match(
+    unmeasuredLine(readiness),
+    /Not measured today: sleep, resting heart rate and HRV\./,
+  );
 });
 
 test("illness says rest in the athlete's own terms, and nothing at all says so plainly", async () => {

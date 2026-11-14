@@ -6,7 +6,7 @@ import type {
   ReadinessReason,
   ReadinessSuggestion,
 } from "@trainstack/contract";
-import { loadHistoryDays } from "@trainstack/readiness";
+import { hrvBaseline, loadHistoryDays, sleepBaseline } from "@trainstack/readiness";
 import type { Workout } from "@trainstack/workout";
 
 import { anchorOf, bodyAreaLabel, illnessLabel, itemTitles } from "./check-in.ts";
@@ -54,6 +54,27 @@ const percentOf = (share: number) => `${Math.round(Math.abs(share) * 100)} %`;
 
 const nearestRating = (usual: number) => Math.min(5, Math.max(1, Math.round(usual)));
 
+export function sleepDuration(seconds: number) {
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  return hours === 0 ? `${minutes} min` : `${hours} h ${String(minutes % 60).padStart(2, "0")} min`;
+}
+
+const measuredLine = {
+  sleep: (value: number, usual: number) =>
+    `Slept ${sleepDuration(value)}, usually ${sleepDuration(usual)}`,
+  resting_heart_rate: (value: number, usual: number) =>
+    `Resting heart rate ${Math.round(value)} bpm, usually ${Math.round(usual)}`,
+  hrv: (value: number, usual: number) =>
+    `HRV ${Math.round(value)} ms, usually ${Math.round(usual)}`,
+} as const;
+
+export const measureNames = {
+  sleep: "sleep",
+  resting_heart_rate: "resting heart rate",
+  hrv: "HRV",
+} as const;
+
 export type ReasonLine = { readonly effect: "lowers" | "steady" | "raises"; readonly text: string };
 
 export function reasonLine(reason: ReadinessReason): ReasonLine {
@@ -100,6 +121,8 @@ export function reasonLine(reason: ReadinessReason): ReasonLine {
       };
     case "hard_days":
       return { effect: reason.effect, text: `${reason.days} hard days in a row` };
+    case "measured":
+      return { effect: reason.effect, text: measuredLine[reason.item](reason.value, reason.usual) };
   }
 }
 
@@ -144,6 +167,11 @@ export function gapLines(readiness: DayReadiness): string[] {
         return `${gap.days} days of training so far: training load counts once there are ${loadHistoryDays}.`;
       case "little_training":
         return "Too little recent training to read form.";
+      case "short_measured_baseline": {
+        const needs = gap.item === "hrv" ? hrvBaseline : sleepBaseline;
+        const name = measureNames[gap.item];
+        return `${gap.days} of ${needs.minimum} days of measured ${name} so far: ${name} counts once there are ${needs.minimum}.`;
+      }
     }
   });
 }
@@ -154,8 +182,13 @@ export const confidenceWords = {
   low: "Low confidence",
 } as const;
 
-export const unmeasuredLine =
-  "Not read: measured sleep, resting heart rate and HRV, which Trainstack does not have yet.";
+export function unmeasuredLine(readiness: DayReadiness) {
+  const missing = readiness.basis.unmeasured.map((item) => measureNames[item]);
+  if (missing.length === 0) return null;
+  const named =
+    missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing.at(-1)}`;
+  return `Not measured today: ${named}. Ride reads sleep, resting heart rate and HRV from Apple Health once you turn on Import from Health.`;
+}
 
 export const intensityWords = {
   easy: "Easy",
