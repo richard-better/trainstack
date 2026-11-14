@@ -1,4 +1,4 @@
-.calendar {
+:root {
   --cal-line: var(--line);
   --cal-meter-track: #1c2a3c;
   --cal-missed: #c9a26b;
@@ -1018,4 +1018,100 @@
   justify-content: space-between;
   gap: 12px;
   font-size: 14px;
+}
+
+.compliance-badge {
+  display: grid;
+  gap: 2px;
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.compliance-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.compliance-score strong {
+  color: var(--mist);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.compliance-badge[data-rating="on_target"] svg,
+.compliance-detail[data-rating="on_target"] .compliance-big svg {
+  color: var(--cadence);
+}
+
+.compliance-badge[data-rating="partly"] svg,
+.compliance-detail[data-rating="partly"] .compliance-big svg {
+  color: var(--speed);
+}
+
+.compliance-badge[data-rating="off_target"] svg,
+.compliance-detail[data-rating="off_target"] .compliance-big svg {
+  color: var(--cal-missed);
+}
+
+.compliance-why {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.compliance-section {
+  margin-top: 24px;
+}
+
+.compliance-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.compliance-big {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.compliance-big strong {
+  font-size: 28px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.compliance-big svg {
+  width: 16px;
+  height: 16px;
+}
+
+.compliance-unscored {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.compliance-steps summary {
+  color: var(--soft);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.compliance-steps .table-scroll {
+  margin-top: 8px;
+}
+
+.planned-as {
+  max-width: 640px;
+  margin-bottom: 40px;
+}
+
+.planned-as .lede {
+  margin-bottom: 12px;
 }

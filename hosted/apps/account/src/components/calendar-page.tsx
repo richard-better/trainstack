@@ -42,6 +42,7 @@ import { formatDistance, formatHours, formatLoad } from "../lib/statistics";
 import { todayIn } from "../lib/time-zone";
 import { overviewOf, type Reference } from "../lib/workout-profile";
 import { CalendarIcon } from "./calendar-icons";
+import { ComplianceBadge } from "./compliance";
 import { calendarWrites, useCalendar, useReferenceOn, useWritesVersion } from "./calendar-data";
 import { CalendarDialog, type DialogRequest } from "./calendar-dialogs";
 import { PeriodPicker } from "./period-picker";
@@ -487,7 +488,7 @@ function CalendarGrid({
                 referenceOn={referenceOn}
                 movingId={movingId}
                 actions={actions}
-                thumbHeight={period.view === "month" ? 22 : 40}
+                detailed={period.view === "week"}
               />
             ))}
           </ol>
@@ -531,7 +532,7 @@ function DayCell({
   referenceOn,
   movingId,
   actions,
-  thumbHeight,
+  detailed,
 }: {
   day: CalendarDay;
   today: string;
@@ -539,7 +540,7 @@ function DayCell({
   referenceOn: ReferenceOn;
   movingId: string | null;
   actions: Actions;
-  thumbHeight: number;
+  detailed: boolean;
 }) {
   const isToday = day.day === today;
   const drag = actions.drag.state;
@@ -559,7 +560,7 @@ function DayCell({
         moving={item.id === movingId}
         dragging={item.id === drag?.id}
         actions={actions}
-        thumbHeight={thumbHeight}
+        detailed={detailed}
       />
     );
     if (!done) return card;
@@ -654,7 +655,7 @@ function PlannedCard({
   moving,
   dragging,
   actions,
-  thumbHeight,
+  detailed,
 }: {
   item: PlannedWorkout;
   done: CalendarActivity | null;
@@ -663,7 +664,7 @@ function PlannedCard({
   moving: boolean;
   dragging: boolean;
   actions: Actions;
-  thumbHeight: number;
+  detailed: boolean;
 }) {
   const { content } = item;
   const overview =
@@ -706,7 +707,7 @@ function PlannedCard({
         draggable={false}
       >
         {overview && overview.segments.length > 0 && (
-          <WorkoutThumb overview={overview} height={thumbHeight} />
+          <WorkoutThumb overview={overview} height={detailed ? 40 : 22} />
         )}
         <span className="plan-title">
           {content.kind === "workout" && (
@@ -745,6 +746,7 @@ function PlannedCard({
             {words}
           </span>
         )}
+        <ComplianceBadge item={item} withWhy={detailed} />
         <span className="visually-hidden">
           {item.state === "planned" && content.kind === "workout" ? ", planned" : ""}
         </span>
