@@ -136,6 +136,10 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
     about: "The athlete's lists of workouts.",
     owner: (table) => table.userId,
   },
+  appleAppGrant: {
+    notExported:
+      "The refresh token Sign in with Apple gave Ride, kept only to revoke it when the account is deleted. It is a credential.",
+  },
   accountFileSweep: {
     notExported:
       "A note that a deleted account's files still need a last sweep, which the scheduled run finishes. It is written as the account is deleted and goes once the sweep is done.",

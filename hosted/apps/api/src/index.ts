@@ -11,6 +11,7 @@ import { evlog, type EvlogVariables } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+import { appleGrantRoutes } from "./account/apple-grant";
 import { exportRoutes } from "./account/export";
 import { forgetSpentStravaBudgets, sweepFilesOfDeletedAccounts } from "./account/deletion";
 import { analyzeDueActivities } from "./activities/analysis";
@@ -82,6 +83,7 @@ const riderOfBearerToken = async (token: string) => {
 
 app.route("/strava", stravaRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
 app.route("/account", exportRoutes({ env: ENV, database: getDb }));
+app.route("/account", appleGrantRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
 app.route("/feedback", feedbackRoutes({ env: ENV, database: getDb, userId: riderOfBearerToken }));
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
