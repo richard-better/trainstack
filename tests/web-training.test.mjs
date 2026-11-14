@@ -112,7 +112,7 @@ test("an athlete with activities but no thresholds sees no load, and what to set
   const { days } = await client.training.load({ from: "2026-10-01", through: "2026-11-01" });
   assert.equal(loadHistory(days).firstLoaded, null, "nothing to draw a flat line from");
   const { activities } = await client.activities.list({ onePerWorkout: true });
-  const prompt = thresholdPrompt(activities[0]);
+  const prompt = thresholdPrompt(activities[0], { listed: false, own: [] });
   assert.deepEqual(prompt.search, { metric: "power" });
   assert.equal(prompt.action, "Set FTP");
 });

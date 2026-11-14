@@ -1,17 +1,19 @@
 import type { Activity, BestEffort, BestPower } from "@trainstack/contract";
+import { profileOn } from "@trainstack/zones";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { activityKey, api } from "../api";
+import { activityKey, api, queryClient } from "../api";
 import {
   ANALYSIS_POLL_MS,
   analysisState,
   durationLabel,
   sourceWords,
+  settingsScopeOf,
   thresholdPrompt,
 } from "../lib/analysis";
-import { formatDay } from "../lib/settings";
+import { datedChanges, formatDay, localDay } from "../lib/settings";
 import { activityTitle } from "../lib/sports";
 import {
   effortLabel,
@@ -42,45 +44,43 @@ import { useBests } from "./activity-bests";
 import { LoadChart } from "./load-chart";
 import { PeriodPicker } from "./period-picker";
 import { PowerCurve } from "./power-curve";
-import { useSettingsHistory } from "./settings-data";
+import { useSettingsChangedRecently, useSettingsHistory } from "./settings-data";
 import { TimeZoneOffer, useAthleteSettings } from "./time-zone";
 
 const HISTORY_DAYS = 3 * 365;
-const SETTLING_MS = 3 * 60_000;
 const recentKey = ["activities", "recent-analysis"] as const;
 
-function useRecentActivities() {
+function useRecentActivities(settling: boolean) {
   return useQuery({
     queryKey: recentKey,
     queryFn: () => api.activities.list({ limit: 50, onePerWorkout: true }),
     refetchInterval: (query) =>
-      query.state.data?.activities.some((a) => analysisState(a).kind === "pending")
+      settling || query.state.data?.activities.some((a) => analysisState(a).kind === "pending")
         ? ANALYSIS_POLL_MS
         : false,
   });
 }
 
-function useSettingsChangedRecently() {
-  const history = useSettingsHistory();
-  const latest = Math.max(0, ...(history.data?.entries ?? []).map((e) => e.updatedAt.getTime()));
-  const [now, setNow] = useState(() => Date.now());
-  const settling = now - latest < SETTLING_MS;
+function useRefreshWhenSettled(updating: boolean) {
+  const [wasUpdating, setWasUpdating] = useState(updating);
   useEffect(() => {
-    if (!settling) return;
-    const timer = setTimeout(() => setNow(Date.now()), ANALYSIS_POLL_MS);
-    return () => clearTimeout(timer);
-  }, [settling, now]);
-  return settling;
+    if (wasUpdating && !updating) {
+      void queryClient.invalidateQueries({ queryKey: ["training"] });
+      void queryClient.invalidateQueries({ queryKey: recentKey });
+    }
+    setWasUpdating(updating);
+  }, [updating, wasUpdating]);
 }
 
 export function TrainingPage({ range, period }: { range: LoadRangeKey; period: BestsPeriodKey }) {
   const navigate = useNavigate({ from: "/training" });
   const settings = useAthleteSettings();
   const today = todayIn(settings.data?.timeZone ?? null);
-  const recent = useRecentActivities();
-  const pending = recent.data?.activities.filter((a) => analysisState(a).kind === "pending") ?? [];
   const settling = useSettingsChangedRecently();
+  const recent = useRecentActivities(settling);
+  const pending = recent.data?.activities.filter((a) => analysisState(a).kind === "pending") ?? [];
   const updating = pending.length > 0 || settling;
+  useRefreshWhenSettled(updating);
   const from = shiftDay(today, -(HISTORY_DAYS - 1));
   const load = useQuery({
     queryKey: loadQueryKey(from, today),
@@ -154,7 +154,15 @@ function Load({
   const unscored = (recent ?? []).filter(
     (a) => analysisState(a).kind === "analysed" && a.statistics.load_tss === undefined,
   );
-  const prompt = unscored.map((a) => thresholdPrompt(a)).find((p) => p !== null) ?? null;
+  const settingsHistory = useSettingsHistory();
+  const profile =
+    settingsHistory.data &&
+    profileOn(datedChanges(settingsHistory.data.entries), localDay(new Date()));
+  const prompt = profile
+    ? (unscored
+        .map((a) => thresholdPrompt(a, settingsScopeOf(profile, a.sport)))
+        .find((p) => p !== null) ?? null)
+    : null;
 
   if (history.firstLoaded === null) {
     return <NoLoad recent={recent} prompt={prompt} />;
