@@ -104,10 +104,6 @@ test("an athlete's own zone limits are accepted and refused as Ride accepts and 
   assert.deepEqual(mismatches, [], rerecord);
 });
 
-const waitingForProfileOnToIgnoreWeight = new Set([
-  "a weight before the first zones does not decide which zones hold",
-]);
-
 const metricsOf = (metrics) =>
   Object.fromEntries(
     Object.entries(metrics).map(([metric, { model, customLimits, thresholds: values }]) => [
@@ -130,16 +126,5 @@ function profileMismatches(cases) {
 }
 
 test("a history holds the zones on each day that Ride's ZoneHistory holds", () => {
-  const settled = ride.profiles.filter(({ name }) => !waitingForProfileOnToIgnoreWeight.has(name));
-  assert.deepEqual(profileMismatches(settled), [], rerecord);
+  assert.deepEqual(profileMismatches(ride.profiles), [], rerecord);
 });
-
-test(
-  "a weight does not decide which zones an old activity gets",
-  { todo: "packages/zones profileOn still counts a weight as taking effect" },
-  () => {
-    const waiting = ride.profiles.filter(({ name }) => waitingForProfileOnToIgnoreWeight.has(name));
-    assert.equal(waiting.length, waitingForProfileOnToIgnoreWeight.size);
-    assert.deepEqual(profileMismatches(waiting), [], rerecord);
-  },
-);
