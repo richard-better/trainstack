@@ -22,7 +22,7 @@ export function useSettingsHistory() {
   });
 }
 
-async function refreshAnalysis() {
+export async function refreshAnalysis() {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ["activity"] }),
     queryClient.invalidateQueries({ queryKey: activitiesQueryKey }),

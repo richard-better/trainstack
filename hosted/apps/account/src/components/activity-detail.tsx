@@ -51,6 +51,8 @@ import { Traces } from "./traces";
 import { OtherSource, Sources, refreshWorkouts, useWorkout } from "./workout-sources";
 import { PeriodPicker } from "./period-picker";
 import { RouteSection } from "./route-map";
+import { suggestionsFor } from "../lib/thresholds";
+import { ThresholdSuggestions, useThresholdSuggestions } from "./threshold-suggestions";
 
 const refused = (error: Error) => error instanceof ORPCError && error.status < 500;
 
@@ -282,6 +284,10 @@ function Effort({ activity, sport }: { activity: ActivityDetail; sport: string |
     state.kind === "analysed" && profile
       ? thresholdPrompt(scored, settingsScopeOf(profile, sport))
       : null;
+  const suggestions = useThresholdSuggestions();
+  const covering = prompt
+    ? suggestionsFor(suggestions.data?.suggestions ?? [], activity.missingThresholds, sport)
+    : [];
   const noun = sportName(sport).noun;
   if (state.kind === "no_file" && figures.length === 0) return null;
   return (
@@ -311,7 +317,8 @@ function Effort({ activity, sport }: { activity: ActivityDetail; sport: string |
           details={load?.source ? { load_tss: `from ${sourceWords[load.source]}` } : {}}
         />
       )}
-      {prompt && (
+      <ThresholdSuggestions suggestions={covering} />
+      {prompt && covering.length === 0 && (
         <div className="zone-prompt effort-prompt">
           <p className="lede">{prompt.text}</p>
           <Link to="/settings" search={prompt.search} className="secondary link-button compact">

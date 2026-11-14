@@ -58,6 +58,7 @@ import { AccountData } from "./account-data";
 import { SaveStatus, SettingsWriter, useSettingsHistory, useWriter } from "./settings-data";
 import { TimeZoneSetting } from "./time-zone";
 import { ZoneScale, ZoneSwatch, zoneRange } from "./zones";
+import { ThresholdSuggestions, useThresholdSuggestions } from "./threshold-suggestions";
 
 export function SettingsPage({
   sport,
@@ -124,6 +125,7 @@ function Settings({
             <h2 id="zones-title" className="section-title">
               Thresholds and zones
             </h2>
+            <DetectedThresholds />
             <ScopeTabs listed={listed} scope={scope} today={today} />
             <ScopePanel
               key={`${scope}`}
@@ -140,6 +142,11 @@ function Settings({
       </div>
     </>
   );
+}
+
+function DetectedThresholds() {
+  const suggestions = useThresholdSuggestions();
+  return <ThresholdSuggestions suggestions={suggestions.data?.suggestions ?? []} />;
 }
 
 function Weight({

@@ -47,6 +47,9 @@ import { PeriodPicker } from "./period-picker";
 import { PowerCurve } from "./power-curve";
 import { useSettingsHistory } from "./settings-data";
 import { TimeZoneOffer, useAthleteSettings } from "./time-zone";
+import { suggestionsFor } from "../lib/thresholds";
+import { ThresholdSuggestions, useThresholdSuggestions } from "./threshold-suggestions";
+import type { ThresholdSuggestion } from "@trainstack/contract";
 
 const HISTORY_DAYS = 3 * 365;
 const recentKey = ["activities", "recent-analysis"] as const;
@@ -149,9 +152,15 @@ function Load({
         .map((a) => thresholdPrompt(a, settingsScopeOf(profile, a.sport)))
         .find((p) => p !== null) ?? null)
     : null;
+  const suggestions = useThresholdSuggestions();
+  const covering = prompt
+    ? (suggestions.data?.suggestions ?? []).filter((suggestion) =>
+        unscored.some((a) => suggestionsFor([suggestion], a.missingThresholds, a.sport).length > 0),
+      )
+    : [];
 
   if (history.firstLoaded === null) {
-    return <NoLoad recent={recent} prompt={prompt} />;
+    return <NoLoad recent={recent} prompt={prompt} suggestions={covering} />;
   }
 
   const shown = loadRange(range, today);
@@ -168,7 +177,8 @@ function Load({
           {formatDay(history.firstLoaded)}, so fitness reads low until there is more behind it.
         </p>
       )}
-      {prompt && (
+      <ThresholdSuggestions suggestions={covering} />
+      {prompt && covering.length === 0 && (
         <div className="zone-prompt training-prompt">
           <p className="lede">
             {unscored.length === 1
@@ -307,9 +317,11 @@ function DayReadout({ day }: { day: LoadDay }) {
 function NoLoad({
   recent,
   prompt,
+  suggestions,
 }: {
   recent: Activity[] | undefined;
   prompt: ReturnType<typeof thresholdPrompt>;
+  suggestions: readonly ThresholdSuggestion[];
 }) {
   if (recent === undefined) return null;
   if (recent.length === 0) {
@@ -323,6 +335,18 @@ function NoLoad({
         <Link to="/" className="secondary link-button">
           Go to activities
         </Link>
+      </div>
+    );
+  }
+  if (suggestions.length > 0) {
+    return (
+      <div className="state empty">
+        <p className="state-title">None of your activities has a load yet</p>
+        <p className="lede">
+          Load comes from power, pace or heart rate against your thresholds. Trainstack found these
+          in your activities:
+        </p>
+        <ThresholdSuggestions suggestions={suggestions} />
       </div>
     );
   }

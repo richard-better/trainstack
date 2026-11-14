@@ -1863,3 +1863,18 @@ input[aria-invalid="true"] {
     max-width: none;
   }
 }
+
+.threshold-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
