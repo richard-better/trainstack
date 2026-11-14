@@ -242,8 +242,10 @@ public struct RideSession: Sendable {
   }
 
   public var freeRideElapsed: TimeInterval? {
-    guard isComplete, let lap = lapMarks.last, lap.stepIndex == nil else { return nil }
-    return elapsed - lap.start
+    guard isComplete,
+      let start = lapMarks.reversed().prefix(while: { $0.stepIndex == nil }).last?.start
+    else { return nil }
+    return elapsed - start
   }
 
   public mutating func markLap() {

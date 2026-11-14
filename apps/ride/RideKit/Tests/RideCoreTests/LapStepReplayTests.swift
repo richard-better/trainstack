@@ -40,4 +40,11 @@ struct LapStepReplayTests {
     #expect(engine.session.recording().laps == outcome.engine.session.recording().laps)
     #expect(engine.session.lapMarks.filter { $0.endedBy == .manual }.count == 2)
   }
+
+  @Test func aHeadlessRideRidesOnForAllTheTimeItWasGiven() {
+    let outcome = HeadlessRide(.named("Quick test 45s")!, ftp: 250, ridingOnFor: 120)
+      .run(with: SimulatedRider(.typical(ftp: 250)))
+    #expect(outcome.engine.session.elapsed == 165)
+    #expect(outcome.engine.session.freeRideElapsed == 120)
+  }
 }

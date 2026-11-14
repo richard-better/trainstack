@@ -54,7 +54,8 @@ public struct HeadlessRide: Sendable {
     }
     var trainerBackAt: Int?
     apply(.begin(trainerConnected: true))
-    let lastSecond = Int(engine.session.duration * Self.longestRideShareOfWorkout)
+    let lastSecond =
+      Int(engine.session.duration * Self.longestRideShareOfWorkout) + rideOnSeconds
     var rideOnLeft = rideOnSeconds
     for second in 0..<lastSecond {
       if engine.session.isComplete {

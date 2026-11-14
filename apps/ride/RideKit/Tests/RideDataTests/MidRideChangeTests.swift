@@ -135,6 +135,15 @@ struct MidRideChangeTests {
     #expect(laps(session).last?.duration == 300)
   }
 
+  @Test func aLapMarkedDuringTheFreeRideKeepsCountingTheFreeRide() {
+    var session = RideSession(workout: workout.workout(ftp: 250))
+    ride(&session, seconds: 300)
+    session.markLap()
+    ride(&session, seconds: 30)
+    #expect(session.freeRideElapsed == 90)
+    #expect(laps(session).suffix(2).map(\.duration) == [60, 30])
+  }
+
   @Test func ridingNeverChangesThePlannedWorkout() {
     var session = RideSession(workout: workout.workout(ftp: 250))
     ride(&session, seconds: 70)
