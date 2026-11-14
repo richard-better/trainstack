@@ -143,6 +143,11 @@ export const writeList = (
   send: () => Promise<WorkoutList>,
 ) => queueListWrite(queryClient, listsKey, id, optimistic, send);
 
+export const latestList = (id: string) =>
+  queryClient
+    .getQueryData<{ lists: WorkoutList[] }>(listsKey)
+    ?.lists.find((list) => list.id === id);
+
 export function forgetList(id: string) {
   queryClient.setQueryData<{ lists: WorkoutList[] }>(listsKey, (data) =>
     data ? { lists: data.lists.filter((list) => list.id !== id) } : data,

@@ -13,7 +13,14 @@ import {
 
 import { api } from "../api";
 import { appendedTo, placementFor } from "../lib/library";
-import { forgetList, rememberList, useLibrary, useLists, writeList } from "./workout-data";
+import {
+  forgetList,
+  latestList,
+  rememberList,
+  useLibrary,
+  useLists,
+  writeList,
+} from "./workout-data";
 import { LibraryShell, OwnRow, RowsSkeleton } from "./workout-library";
 
 export function ListsNav({ current }: { current: string }) {
@@ -315,40 +322,40 @@ function ListEntries({
   workouts: Readonly<Record<string, StoredWorkout>>;
 }) {
   const { failed, write } = useListWrite(list);
-  const [dragging, setDragging] = useState<number | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<number | null>(null);
-  const rows = useRef<(HTMLLIElement | null)[]>([]);
+  const order = () => latestList(list.id)?.workoutIds ?? list.workoutIds;
 
-  function move(from: number, to: number) {
-    const placement = placementFor(list.workoutIds, from, to);
+  function moveTo(workoutId: string, to: number) {
+    const ids = order();
+    const from = ids.indexOf(workoutId);
+    const placement = placementFor(ids, from, to);
     if (!placement) return;
-    const order = list.workoutIds.filter((_, index) => index !== from);
-    order.splice(to, 0, placement.workoutId);
-    write(order, () =>
-      api.workoutLists.place({ id: list.id, ...placement, updatedAt: new Date() }),
-    );
-    requestAnimationFrame(() =>
-      rows.current[to]?.querySelector<HTMLElement>(".entry-handle")?.focus(),
-    );
+    const next = ids.filter((id) => id !== workoutId);
+    next.splice(to, 0, workoutId);
+    write(next, () => api.workoutLists.place({ id: list.id, ...placement, updatedAt: new Date() }));
   }
+
+  const moveBy = (workoutId: string, offset: number) =>
+    moveTo(workoutId, order().indexOf(workoutId) + offset);
 
   function remove(workoutId: string) {
     write(
-      list.workoutIds.filter((id) => id !== workoutId),
+      order().filter((id) => id !== workoutId),
       () => api.workoutLists.remove({ id: list.id, workoutId, updatedAt: new Date() }),
     );
   }
 
-  function onHandleKey(event: KeyboardEvent, index: number) {
-    const to = event.key === "ArrowUp" ? index - 1 : event.key === "ArrowDown" ? index + 1 : null;
-    if (to === null) return;
+  function onHandleKey(event: KeyboardEvent, workoutId: string) {
+    const offset = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : null;
+    if (offset === null) return;
     event.preventDefault();
-    move(index, to);
+    moveBy(workoutId, offset);
   }
 
   const onDrop = (event: DragEvent, index: number) => {
     event.preventDefault();
-    if (dragging !== null) move(dragging, index);
+    if (dragging !== null) moveTo(dragging, index);
     setDragging(null);
     setOver(null);
   };
@@ -370,12 +377,9 @@ function ListEntries({
           return (
             <li
               key={workoutId}
-              ref={(element) => {
-                rows.current[index] = element;
-              }}
               className="list-entry"
-              data-dragging={dragging === index || undefined}
-              data-over={over === index && dragging !== index ? true : undefined}
+              data-dragging={dragging === workoutId || undefined}
+              data-over={over === index && dragging !== workoutId ? true : undefined}
               onDragOver={(event) => {
                 if (dragging === null) return;
                 event.preventDefault();
@@ -391,13 +395,13 @@ function ListEntries({
                 onDragStart={(event) => {
                   event.dataTransfer.effectAllowed = "move";
                   event.dataTransfer.setData("text/plain", workoutId);
-                  setDragging(index);
+                  setDragging(workoutId);
                 }}
                 onDragEnd={() => {
                   setDragging(null);
                   setOver(null);
                 }}
-                onKeyDown={(event) => onHandleKey(event, index)}
+                onKeyDown={(event) => onHandleKey(event, workoutId)}
               >
                 <HandleIcon />
               </button>
@@ -416,7 +420,7 @@ function ListEntries({
                   type="button"
                   className="quiet compact"
                   disabled={index === 0}
-                  onClick={() => move(index, index - 1)}
+                  onClick={() => moveBy(workoutId, -1)}
                   aria-label={`Move ${stored?.name ?? "workout"} up`}
                 >
                   ↑
@@ -425,7 +429,7 @@ function ListEntries({
                   type="button"
                   className="quiet compact"
                   disabled={index === list.workoutIds.length - 1}
-                  onClick={() => move(index, index + 1)}
+                  onClick={() => moveBy(workoutId, 1)}
                   aria-label={`Move ${stored?.name ?? "workout"} down`}
                 >
                   ↓
