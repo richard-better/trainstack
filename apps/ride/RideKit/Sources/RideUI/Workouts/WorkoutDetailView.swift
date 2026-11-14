@@ -1,5 +1,6 @@
 import RideBluetooth
 import RideData
+import RideStrava
 import SwiftUI
 
 struct WorkoutDetailView: View {
@@ -7,6 +8,8 @@ struct WorkoutDetailView: View {
   @Environment(RiderSettingsStore.self) private var settings
   @State private var isShowingDevices = false
   @Environment(RideLauncher.self) private var launcher
+  @Environment(AccountWorkouts.self) private var accountWorkouts
+  @State private var savedCopy: (account: String, id: LibraryWorkout.ID)?
 
   var body: some View {
     let ftp = settings.ftp
@@ -54,6 +57,19 @@ struct WorkoutDetailView: View {
       .frame(maxWidth: .infinity)
     #endif
     .navigationTitle(template.name)
+    .toolbar {
+      if accountWorkouts.account != nil {
+        ToolbarItem(placement: .secondaryAction) {
+          Button(
+            isSaved ? "Saved to My Workouts" : "Save to My Workouts",
+            systemImage: isSaved ? "checkmark" : "square.and.arrow.down",
+            action: saveCopy
+          )
+          .disabled(isSaved)
+          .help("Save a copy to your TrainStack library, where you can change it on the web")
+        }
+      }
+    }
     .safeAreaBar(edge: .bottom) {
       #if os(macOS)
         if launcher.ride == nil { startBar }
@@ -87,6 +103,18 @@ struct WorkoutDetailView: View {
   }
 
   private func showDevices() { isShowingDevices = true }
+
+  private var isSaved: Bool {
+    guard let savedCopy, savedCopy.account == accountWorkouts.account else { return false }
+    return accountWorkouts[savedCopy.id] != nil
+  }
+
+  private func saveCopy() {
+    guard let account = accountWorkouts.account,
+      let id = accountWorkouts.saveCopy(of: template)
+    else { return }
+    savedCopy = (account, id)
+  }
 }
 
 #Preview {
@@ -95,5 +123,6 @@ struct WorkoutDetailView: View {
   }
   .environment(RideLauncher(simulated: true))
   .environment(RiderSettingsStore.sample)
+  .environment(AccountWorkouts())
   .environment(BluetoothDevices.sample(pairStrap: true))
 }

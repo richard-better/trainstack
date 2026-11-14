@@ -2,7 +2,7 @@ import RideData
 import SwiftUI
 
 struct StartButton: View {
-  let template: WorkoutTemplate?
+  let workout: PlannedWorkout?
   var title: String = "Start"
   var fillsWidth = false
   var isDefaultAction = true
@@ -22,14 +22,14 @@ struct StartButton: View {
       }
     }
     .keyboardShortcut(isDefaultAction ? .defaultAction : nil)
-    .disabled(template == nil || settings.ftp == nil || launcher.ride != nil)
+    .disabled(workout == nil || settings.ftp == nil || launcher.ride != nil)
     .help(help)
   }
 
   private func start() {
-    if let template, let ftp = settings.ftp {
+    if let workout, let ftp = settings.ftp {
       launcher.start(
-        template.planned, ftp: ftp, heartRateZones: settings.heartRateZones,
+        workout, ftp: ftp, heartRateZones: settings.heartRateZones,
         riderWeight: settings.weight)
     }
   }
@@ -37,5 +37,16 @@ struct StartButton: View {
   private var help: String {
     if settings.ftp == nil { return "Add your FTP in Settings to ride a workout." }
     return launcher.ride == nil ? "" : "End the ride in progress to start another."
+  }
+}
+
+extension StartButton {
+  init(
+    template: WorkoutTemplate?, title: String = "Start", fillsWidth: Bool = false,
+    isDefaultAction: Bool = true
+  ) {
+    self.init(
+      workout: template?.planned, title: title, fillsWidth: fillsWidth,
+      isDefaultAction: isDefaultAction)
   }
 }
