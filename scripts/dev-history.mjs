@@ -273,7 +273,8 @@ export function trainingHistory({ today = new Date(), weeks = 30 } = {}) {
           ],
         ];
     for (const [offset, sport, kind, name, indoor = false] of plan) {
-      const time = monday + offset * DAY_MS + (sport === "running" ? 6.5 : offset >= 5 ? 8 : 17.5) * 3600_000;
+      const time =
+        monday + offset * DAY_MS + (sport === "running" ? 6.5 : offset >= 5 ? 8 : 17.5) * 3600_000;
       if (time > today.getTime() - 3600_000 * 3) continue;
       activities.push({
         sport,
@@ -533,16 +534,6 @@ const lift = (exerciseId, warmUp, working, reps, sets = 3) => ({
 
 const roundTo = (step, value) => Math.round(value / step) * step;
 
-const CIRCUIT = {
-  name: "Boulderbar Wien",
-  colours: [
-    { name: "Yellow", from: "4", to: "5" },
-    { name: "Green", from: "5+", to: "6A" },
-    { name: "Blue", from: "6A+", to: "6B+" },
-    { name: "Red", from: "6C", to: "7A" },
-  ],
-};
-
 const problem = (grade, outcome, attempts, extra = {}) => ({
   grade,
   name: null,
@@ -556,7 +547,6 @@ const problem = (grade, outcome, attempts, extra = {}) => ({
 });
 
 const font = (grade) => ({ scale: "font", grade });
-const colour = (name) => ({ scale: "circuit", colour: name });
 
 export async function seedLogbook(client, { today = new Date(), weeks = 10 } = {}) {
   const todayStart = Date.parse(`${dayIso(today.getTime())}T00:00:00Z`);
@@ -609,26 +599,24 @@ export async function seedLogbook(client, { today = new Date(), weeks = 10 } = {
         startedAt: wallDay,
         durationSeconds: 100 * 60,
         name: "Evening at the wall",
-        notes: hard ? "Finally stuck the drop-knee on the red overhang" : null,
+        notes: hard ? "Finally stuck the drop-knee on the prow" : null,
         rpe: 6,
         detail: {
           sport: "bouldering",
           venue: { kind: "gym", name: "Boulderbar Wien" },
-          circuit: CIRCUIT,
+          circuit: null,
           problems: [
-            problem(colour("Yellow"), "flash", 1, { styles: ["jugs"] }),
-            problem(colour("Green"), "flash", 1),
-            problem(colour("Green"), "send", 2, { angle: "vertical" }),
+            problem(font("5"), "flash", 1, { styles: ["jugs"] }),
+            problem(font("5+"), "flash", 1),
+            problem(font("6A"), "flash", 1, { angle: "vertical" }),
+            problem(font("6A"), "send", 2, { styles: ["technical"], angle: "slab" }),
             problem(font("6A+"), "flash", 1, { styles: ["crimpy"], angle: "slab" }),
             problem(font("6B"), "send", 3, { styles: ["slopey"] }),
-            problem(font(hard ? "6C" : "6B+"), "send", hard ? 6 : 4, {
-              styles: ["powerful", "dynamic"],
-              angle: "overhang",
-            }),
-            problem(colour("Red"), hard ? "send" : "project", hard ? 7 : 5, {
+            problem(font("6B+"), "send", 4, { styles: ["powerful", "dynamic"], angle: "overhang" }),
+            problem(font("6C"), hard ? "send" : "project", hard ? 7 : 5, {
               styles: ["pinchy", "compression"],
               angle: "overhang",
-              name: "The red prow",
+              name: "The prow",
             }),
           ],
         },
