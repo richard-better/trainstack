@@ -9,6 +9,12 @@ actor FakeCalendarServer: CalendarServer {
     case timeZone(account: String)
     case range(from: String, through: String, account: String)
     case changes(since: String?, account: String)
+    case write(PlannedWrite, account: String)
+  }
+
+  private struct Stamps {
+    var placed: Date
+    var skipped: Date
   }
 
   private struct Row {
@@ -17,6 +23,8 @@ actor FakeCalendarServer: CalendarServer {
   }
 
   private(set) var calls: [Call] = []
+  private var stamps: [String: Stamps] = [:]
+  private var choices: [String: [String: [String: (paired: Bool, at: Date)]]] = [:]
   private var rows: [String: [String: Row]] = [:]
   private var activities: [String: [SettingDay: [CalendarActivity]]] = [:]
   private var revisions: [String: Int] = [:]
@@ -37,6 +45,23 @@ actor FakeCalendarServer: CalendarServer {
 
   func goOffline(_ offline: Bool = true) { self.offline = offline }
 
+  private var holdingWrites = false
+  private var heldWrites: [CheckedContinuation<Void, Never>] = []
+
+  func holdWrites() { holdingWrites = true }
+
+  var isHoldingAWrite: Bool { !heldWrites.isEmpty }
+
+  func releaseWrites() {
+    holdingWrites = false
+    for continuation in heldWrites { continuation.resume() }
+    heldWrites = []
+  }
+
+  private var failingNextRange = false
+
+  func failNextRange() { failingNextRange = true }
+
   func setClock(_ now: Date) { clock = now }
 
   func setTimeZone(_ zone: TimeZone, for account: String = "ada") { timeZones[account] = zone }
@@ -56,10 +81,18 @@ actor FakeCalendarServer: CalendarServer {
     rows[account, default: [:]][item.id] = Row(item: item, revision: nextRevision(account))
   }
 
-  func moveOnTheWeb(_ id: String, to day: SettingDay, for account: String = "ada") {
-    guard var item = rows[account]?[id]?.item else { return }
-    item.day = day
-    plan(item, for: account)
+  func moveOnTheWeb(
+    _ id: String, to day: SettingDay, at date: Date? = nil, for account: String = "ada"
+  ) {
+    _ = apply(.move(id: id, day: day, position: 0, updatedAt: date ?? clock), for: account)
+  }
+
+  func item(_ id: String, of account: String = "ada") -> PlannedItem? {
+    rows[account]?[id]?.item
+  }
+
+  var writes: [PlannedWrite] {
+    calls.compactMap { if case .write(let write, _) = $0 { write } else { nil } }
   }
 
   func deleteOnTheWeb(_ id: String, for account: String = "ada") {
@@ -91,9 +124,14 @@ actor FakeCalendarServer: CalendarServer {
     -> CalendarRange
   {
     try check(account)
+    if failingNextRange {
+      failingNextRange = false
+      throw StravaError.unavailable
+    }
     calls.append(.range(from: from.text, through: through.text, account: account.id))
     let today = SettingDay(clock, in: zone(of: account.id))
     let live = (rows[account.id] ?? [:]).values.compactMap(\.item)
+    let chosen = choices[account.id] ?? [:]
     var days: [CalendarRange.Day] = []
     var day = from
     while day <= through {
@@ -103,8 +141,15 @@ actor FakeCalendarServer: CalendarServer {
       }
       .map { item in
         var item = item
-        let paired = done.first { $0.plannedId == item.id }
-        item.pairing = paired.map { .init(activityId: $0.id, by: .auto) }
+        let mine = chosen[item.id]?.first { $0.value.paired }?.key
+        let refused = Set((chosen[item.id] ?? [:]).filter { !$0.value.paired }.keys)
+        let auto = done.first { $0.plannedId == item.id && !refused.contains($0.id) }
+        if let mine, done.contains(where: { $0.id == mine }) {
+          item.pairing = .init(activityId: mine, by: .athlete)
+        } else {
+          item.pairing = auto.map { .init(activityId: $0.id, by: .auto) }
+        }
+        let paired = item.pairing
         item.state =
           paired != nil
           ? .completed
@@ -121,6 +166,79 @@ actor FakeCalendarServer: CalendarServer {
       monday = monday.adding(days: 7)
     }
     return CalendarRange(today: today, days: days, weeks: weeks, analysesDue: analysesDue)
+  }
+
+  func send(_ write: PlannedWrite, for account: ActivityAccount) async throws
+    -> PlannedWriteResult
+  {
+    try check(account)
+    calls.append(.write(write, account: account.id))
+    let result = apply(write, for: account.id)
+    if holdingWrites { await withCheckedContinuation { heldWrites.append($0) } }
+    return result
+  }
+
+  private func apply(_ write: PlannedWrite, for account: String) -> PlannedWriteResult {
+    let id = write.plannedID
+    guard let row = rows[account]?[id] else { return .refused(code: "NOT_FOUND") }
+    guard var item = row.item else { return .deletedOnTheServer }
+    let at: Date
+    switch write {
+    case .skip(_, _, let date), .unskip(_, let date), .move(_, _, _, let date),
+      .pair(_, _, let date), .unpair(_, _, let date):
+      at = date
+    }
+    if at > clock { return .refused(code: "EDITED_IN_THE_FUTURE") }
+    let planned = item.updatedAt - 0.001
+    var stamp = stamps[id] ?? Stamps(placed: planned, skipped: planned)
+    switch write {
+    case .skip(_, let reason, _):
+      if at > stamp.skipped {
+        item.skipped = .init(reason: reason)
+        stamp.skipped = at
+      }
+    case .unskip:
+      if at > stamp.skipped {
+        item.skipped = nil
+        stamp.skipped = at
+      }
+    case .move(_, let day, let position, _):
+      if at > stamp.placed {
+        item.day = day
+        item.position = position
+        stamp.placed = at
+      }
+    case .pair(_, let activityID, _):
+      guard let activityDay = dayOf(activityID, for: account) else {
+        return .refused(code: "ACTIVITY_NOT_FOUND")
+      }
+      guard item.isWorkout, activityDay == item.day else { return .refused(code: "NOT_PAIRABLE") }
+      if choose(true, id, activityID, at, for: account) {
+        item.pairing = .init(activityId: activityID, by: .athlete)
+      }
+    case .unpair(_, let activityID, _):
+      guard dayOf(activityID, for: account) != nil else {
+        return .refused(code: "ACTIVITY_NOT_FOUND")
+      }
+      if choose(false, id, activityID, at, for: account), item.pairing?.activityId == activityID {
+        item.pairing = nil
+      }
+    }
+    stamps[id] = stamp
+    rows[account, default: [:]][id] = Row(item: item, revision: nextRevision(account))
+    return .stored(item)
+  }
+
+  private func choose(
+    _ paired: Bool, _ id: String, _ activityID: String, _ at: Date, for account: String
+  ) -> Bool {
+    if let earlier = choices[account]?[id]?[activityID], earlier.at >= at { return false }
+    choices[account, default: [:]][id, default: [:]][activityID] = (paired, at)
+    return true
+  }
+
+  private func dayOf(_ activityID: String, for account: String) -> SettingDay? {
+    activities[account]?.first { $0.value.contains { $0.id == activityID } }?.key
   }
 
   func plannedChanges(since cursor: String?, for account: ActivityAccount) async throws

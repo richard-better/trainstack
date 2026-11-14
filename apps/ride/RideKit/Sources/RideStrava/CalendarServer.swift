@@ -8,4 +8,6 @@ public protocol CalendarServer: Sendable {
     -> CalendarRange
   func plannedChanges(since cursor: String?, for account: ActivityAccount) async throws
     -> PlannedChanges
+  func send(_ write: PlannedWrite, for account: ActivityAccount) async throws
+    -> PlannedWriteResult
 }

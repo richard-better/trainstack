@@ -47,6 +47,7 @@ struct CalendarPlannedCard: View {
       .contentShape(.rect)
     }
     .buttonStyle(.plain)
+    .contextMenu { PlannedItemMenu(item: entry.item) }
   }
 
   @ViewBuilder private func border(_ state: PlannedItem.State) -> some View {

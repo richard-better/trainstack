@@ -83,6 +83,13 @@ struct PlannedItemDetailView: View {
       .frame(maxWidth: .infinity)
     #endif
     .navigationTitle(item.title)
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        Menu("Change", systemImage: "ellipsis.circle") { PlannedItemMenu(item: item) }
+          .disabled(item.state == .completed && item.pairing == nil)
+      }
+    }
+    .plannedItemActions()
     .safeAreaBar(edge: .bottom) {
       if item.canStart {
         #if os(macOS)
@@ -115,10 +122,13 @@ struct PlannedItemDetailView: View {
           .padding(.horizontal, 18)
           .frame(minHeight: 54)
           .glassEffect(.regular.interactive(), in: .capsule)
-        StartButton(workout: item.playable, title: "Start ride", fillsWidth: true)
-          .buttonStyle(.glassProminent)
-          .controlSize(.extraLarge)
-          .font(.headline)
+        StartButton(
+          workout: item.playable, title: "Start ride", fillsWidth: true,
+          planned: calendar.ride(of: item)
+        )
+        .buttonStyle(.glassProminent)
+        .controlSize(.extraLarge)
+        .font(.headline)
       }
     }
     #if os(macOS)

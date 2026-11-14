@@ -55,6 +55,9 @@ public struct RootView: View {
     .focusedSceneValue(\.rideLauncher, launcher)
     .focusedSceneValue(\.sendFeedback, sendFeedback)
     .task {
+      launcher.onPlannedRideSaved = { [accountCalendar] planned, rideID, startedAt, endedAt in
+        accountCalendar.rode(planned, as: rideID, startedAt: startedAt, endedAt: endedAt)
+      }
       launcher.checkForInterruptedRide()
       launcher.devices.connectPaired()
       await account.restore()

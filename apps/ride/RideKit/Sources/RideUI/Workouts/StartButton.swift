@@ -6,6 +6,7 @@ struct StartButton: View {
   var title: String = "Start"
   var fillsWidth = false
   var isDefaultAction = true
+  var planned: PlannedRide?
   @Environment(RideLauncher.self) private var launcher
   @Environment(RiderSettingsStore.self) private var settings
 
@@ -30,7 +31,7 @@ struct StartButton: View {
     if let workout, let ftp = settings.ftp {
       launcher.start(
         workout, ftp: ftp, heartRateZones: settings.heartRateZones,
-        riderWeight: settings.weight)
+        riderWeight: settings.weight, planned: planned)
     }
   }
 

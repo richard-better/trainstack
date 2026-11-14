@@ -4,6 +4,7 @@ import SwiftUI
 struct TodayPlanSection: View {
   let plan: TodayPlan
   @Environment(RiderSettingsStore.self) private var settings
+  @Environment(AccountCalendar.self) private var calendar
 
   var body: some View {
     Section {
@@ -15,6 +16,7 @@ struct TodayPlanSection: View {
         NavigationLink(value: PlannedItemRoute(id: item.id)) {
           PlannedItemRow(item: item, ftp: settings.ftp)
         }
+        .contextMenu { PlannedItemMenu(item: item) }
         if item.canStart {
           start(item)
             .buttonBorderShape(.capsule)
@@ -41,7 +43,7 @@ struct TodayPlanSection: View {
   @ViewBuilder private func start(_ item: PlannedItem) -> some View {
     let button = StartButton(
       workout: item.playable, title: "Start \(item.title)", fillsWidth: true,
-      isDefaultAction: item.id == plan.firstToStart?.id)
+      isDefaultAction: item.id == plan.firstToStart?.id, planned: calendar.ride(of: item))
     if item.id == plan.firstToStart?.id {
       button.buttonStyle(.borderedProminent)
     } else {

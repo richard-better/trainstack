@@ -65,6 +65,48 @@ extension TrainStackClient: CalendarServer {
       changed: changes.planned.count + changes.deleted.count, cursor: changes.cursor)
   }
 
+  public func send(_ write: PlannedWrite, for account: ActivityAccount) async throws
+    -> PlannedWriteResult
+  {
+    let stamp = { (date: Date) in Self.iso8601(date) }
+    let (action, body): (String, [String: Any]) =
+      switch write {
+      case .skip(_, let reason, let updatedAt):
+        (
+          "skip",
+          [
+            "skipped": ["reason": reason.map { $0 as Any } ?? NSNull()],
+            "updatedAt": stamp(updatedAt),
+          ]
+        )
+      case .unskip(_, let updatedAt):
+        ("skip", ["skipped": NSNull(), "updatedAt": stamp(updatedAt)])
+      case .move(_, let day, let position, let updatedAt):
+        ("move", ["day": day.text, "position": position, "updatedAt": stamp(updatedAt)])
+      case .pair(_, let activityId, let updatedAt):
+        ("pair", ["activityId": activityId, "updatedAt": stamp(updatedAt)])
+      case .unpair(_, let activityId, let updatedAt):
+        ("unpair", ["activityId": activityId, "updatedAt": stamp(updatedAt)])
+      }
+    let (data, response) = try await send(
+      "POST", "\(Self.plannedPath)/\(write.plannedID)/\(action)", json: body, as: account)
+    switch response.statusCode {
+    case 410: return .deletedOnTheServer
+    case 404, 413, 422:
+      struct Refusal: Decodable { let code: String }
+      guard let refusal = try? JSONDecoder().decode(Refusal.self, from: data) else {
+        throw StravaError.unavailable
+      }
+      return .refused(code: refusal.code)
+    default: try checkCalendarResponse(response, for: account)
+    }
+    do {
+      return .stored(try Self.calendarDecoder.decode(PlannedItem.self, from: data))
+    } catch {
+      throw StravaError.unavailable
+    }
+  }
+
   func checkCalendarResponse(_ response: HTTPURLResponse, for account: ActivityAccount) throws {
     switch response.statusCode {
     case 200..<300: return
