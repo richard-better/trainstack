@@ -129,6 +129,7 @@ export function calendarFeedRoutes(deps: CalendarFeedDeps) {
       },
     });
   });
+  app.get("*", () => notFound());
 
   return app;
 }

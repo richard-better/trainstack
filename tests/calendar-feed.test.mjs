@@ -387,6 +387,7 @@ test("a wrong address says nothing about whether an account or a feed exists", a
       `/feeds/calendar/${"x".repeat(65)}.ics`,
       `/feeds/calendar/${token}`,
       "/feeds/calendar/nothing.ics",
+      `/feeds/calendar/${token}/${token}.ics`,
       live.path,
       turnedOff,
     ].map((path) => refusal(path)),
