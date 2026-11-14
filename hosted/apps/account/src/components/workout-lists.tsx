@@ -1,4 +1,4 @@
-import { ORPCError, safe } from "@orpc/client";
+import { ORPCError } from "@orpc/client";
 import type { StoredWorkout, WorkoutList } from "@trainstack/contract";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -13,7 +13,7 @@ import {
 
 import { api } from "../api";
 import { appendedTo, placementFor } from "../lib/library";
-import { forgetList, rememberList, useLibrary, useLists } from "./workout-data";
+import { forgetList, rememberList, useLibrary, useLists, writeList } from "./workout-data";
 import { LibraryShell, OwnRow, RowsSkeleton } from "./workout-library";
 
 export function ListsNav({ current }: { current: string }) {
@@ -225,7 +225,11 @@ function ListHead({ list }: { list: WorkoutList }) {
           initial={list.name}
           onCancel={() => setRenaming(false)}
           onSave={async (name) => {
-            rememberList(await api.workoutLists.put({ id: list.id, name, updatedAt: new Date() }));
+            await writeList(
+              list.id,
+              (held) => ({ ...held, name }),
+              () => api.workoutLists.put({ id: list.id, name, updatedAt: new Date() }),
+            );
             setRenaming(false);
           }}
         />
@@ -282,30 +286,25 @@ function ListHead({ list }: { list: WorkoutList }) {
   );
 }
 
+function listProblem(error: unknown) {
+  if (error instanceof ORPCError && error.code === "LIST_DELETED") {
+    return "This list was deleted on another device.";
+  }
+  if (error instanceof ORPCError && error.code === "WORKOUT_DELETED") {
+    return "That workout was deleted on another device.";
+  }
+  return "The list was not changed. Try again.";
+}
+
 function useListWrite(list: WorkoutList) {
   const [failed, setFailed] = useState<string | null>(null);
-  const writing = useRef(false);
-  async function write(optimistic: string[], send: () => Promise<WorkoutList>) {
-    if (writing.current) return;
-    writing.current = true;
+  function write(order: string[], send: () => Promise<WorkoutList>) {
     setFailed(null);
-    rememberList({ ...list, workoutIds: optimistic });
-    const [error, answer] = await safe(send());
-    writing.current = false;
-    if (!error) {
-      rememberList(answer);
-      return;
-    }
-    rememberList(list);
-    if (error instanceof ORPCError && error.code === "LIST_DELETED") {
-      setFailed("This list was deleted on another device.");
-    } else if (error instanceof ORPCError && error.code === "WORKOUT_DELETED") {
-      setFailed("That workout was deleted on another device.");
-    } else {
-      setFailed("The list was not changed. Try again.");
-    }
+    writeList(list.id, (held) => ({ ...held, workoutIds: order }), send).catch((error: unknown) =>
+      setFailed(listProblem(error)),
+    );
   }
-  return { failed, write, busy: () => writing.current };
+  return { failed, write };
 }
 
 function ListEntries({
@@ -315,17 +314,17 @@ function ListEntries({
   list: WorkoutList;
   workouts: Readonly<Record<string, StoredWorkout>>;
 }) {
-  const { failed, write, busy } = useListWrite(list);
+  const { failed, write } = useListWrite(list);
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const rows = useRef<(HTMLLIElement | null)[]>([]);
 
   function move(from: number, to: number) {
     const placement = placementFor(list.workoutIds, from, to);
-    if (!placement || busy()) return;
+    if (!placement) return;
     const order = list.workoutIds.filter((_, index) => index !== from);
     order.splice(to, 0, placement.workoutId);
-    void write(order, () =>
+    write(order, () =>
       api.workoutLists.place({ id: list.id, ...placement, updatedAt: new Date() }),
     );
     requestAnimationFrame(() =>
@@ -334,7 +333,7 @@ function ListEntries({
   }
 
   function remove(workoutId: string) {
-    void write(
+    write(
       list.workoutIds.filter((id) => id !== workoutId),
       () => api.workoutLists.remove({ id: list.id, workoutId, updatedAt: new Date() }),
     );
@@ -452,30 +451,22 @@ export function AddToList({ workoutId }: { workoutId: string }) {
   const lists = useLists();
   const [failed, setFailed] = useState(false);
   const [naming, setNaming] = useState(false);
-  const toggle = useMutation({
-    mutationFn: async ({ list, add }: { list: WorkoutList; add: boolean }) =>
-      add
-        ? api.workoutLists.place({
-            id: list.id,
-            ...appendedTo(list, workoutId),
-            updatedAt: new Date(),
-          })
-        : api.workoutLists.remove({ id: list.id, workoutId, updatedAt: new Date() }),
-    onMutate: ({ list, add }) => {
-      setFailed(false);
-      rememberList({
-        ...list,
-        workoutIds: add
-          ? [...list.workoutIds.filter((id) => id !== workoutId), workoutId]
-          : list.workoutIds.filter((id) => id !== workoutId),
-      });
-    },
-    onSuccess: (answer) => rememberList(answer),
-    onError: (_, { list }) => {
-      rememberList(list);
-      setFailed(true);
-    },
-  });
+  function toggle(list: WorkoutList, add: boolean) {
+    setFailed(false);
+    const without = list.workoutIds.filter((id) => id !== workoutId);
+    writeList(
+      list.id,
+      (held) => ({ ...held, workoutIds: add ? [...without, workoutId] : without }),
+      () =>
+        add
+          ? api.workoutLists.place({
+              id: list.id,
+              ...appendedTo(list, workoutId),
+              updatedAt: new Date(),
+            })
+          : api.workoutLists.remove({ id: list.id, workoutId, updatedAt: new Date() }),
+    ).catch(() => setFailed(true));
+  }
   return (
     <details className="menu">
       <summary className="secondary link-button">Add to list</summary>
@@ -487,9 +478,8 @@ export function AddToList({ workoutId }: { workoutId: string }) {
           <label key={list.id} className="menu-check">
             <input
               type="checkbox"
-              disabled={toggle.isPending}
               checked={list.workoutIds.includes(workoutId)}
-              onChange={(event) => toggle.mutate({ list, add: event.currentTarget.checked })}
+              onChange={(event) => toggle(list, event.currentTarget.checked)}
             />
             {list.name}
           </label>
@@ -506,13 +496,16 @@ export function AddToList({ workoutId }: { workoutId: string }) {
                 updatedAt: new Date(),
               });
               rememberList(created);
-              rememberList(
-                await api.workoutLists.place({
-                  id: created.id,
-                  workoutId,
-                  after: null,
-                  updatedAt: new Date(),
-                }),
+              await writeList(
+                created.id,
+                (held) => ({ ...held, workoutIds: [workoutId] }),
+                () =>
+                  api.workoutLists.place({
+                    id: created.id,
+                    workoutId,
+                    after: null,
+                    updatedAt: new Date(),
+                  }),
               );
               setNaming(false);
             }}

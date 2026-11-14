@@ -12,6 +12,7 @@ import {
   isBehind,
   type Library,
   forgetIn,
+  queueListWrite,
   refreshLibrary,
   rememberIn,
 } from "../lib/library";
@@ -135,6 +136,12 @@ export function rememberList(list: WorkoutList) {
     };
   });
 }
+
+export const writeList = (
+  id: string,
+  optimistic: (list: WorkoutList) => WorkoutList,
+  send: () => Promise<WorkoutList>,
+) => queueListWrite(queryClient, listsKey, id, optimistic, send);
 
 export function forgetList(id: string) {
   queryClient.setQueryData<{ lists: WorkoutList[] }>(listsKey, (data) =>

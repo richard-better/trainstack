@@ -15,6 +15,7 @@ import {
   importWorkoutFile,
   isBehind,
   placementFor,
+  queueListWrite,
   readWorkoutFile,
   refreshLibrary,
   rememberIn,
@@ -442,4 +443,75 @@ test("trying an import again after a lost answer saves the same workout, not a s
     (await webApp.workouts.list({})).workouts.map((summary) => summary.id),
     [id],
   );
+});
+
+test("list writes made in quick succession reach the server in order, and the page ends as the server", async () => {
+  const { webApp } = await signInOnTheWeb();
+  const ids = [];
+  for (const name of ["A", "B", "C"]) {
+    const id = randomUUID();
+    ids.push(id);
+    await webApp.workouts.put({
+      id,
+      workout: workout(name, [power(600, constant(0.6))]),
+      updatedAt: new Date(),
+    });
+  }
+  let list = await webApp.workoutLists.put({
+    id: randomUUID(),
+    name: "Week",
+    updatedAt: new Date(),
+  });
+  for (const id of ids) {
+    list = await webApp.workoutLists.place({
+      id: list.id,
+      ...appendedTo(list, id),
+      updatedAt: new Date(),
+    });
+  }
+  const queryClient = new QueryClient();
+  const queryKey = ["lists"];
+  queryClient.setQueryData(queryKey, { lists: [list] });
+  const current = () => queryClient.getQueryData(queryKey).lists[0];
+  const sent = [];
+  const send = (label, call) => () => {
+    sent.push(label);
+    return call();
+  };
+  const move = (from, to, label) => {
+    const order = current().workoutIds;
+    const placement = placementFor(order, from, to);
+    const next = order.filter((_, index) => index !== from);
+    next.splice(to, 0, placement.workoutId);
+    return queueListWrite(
+      queryClient,
+      queryKey,
+      list.id,
+      (held) => ({ ...held, workoutIds: next }),
+      send(label, () =>
+        webApp.workoutLists.place({ id: list.id, ...placement, updatedAt: new Date() }),
+      ),
+    );
+  };
+  const writes = [
+    move(0, 1, "first"),
+    move(1, 2, "second"),
+    queueListWrite(
+      queryClient,
+      queryKey,
+      list.id,
+      (held) => ({ ...held, name: "Next week" }),
+      send("rename", () =>
+        webApp.workoutLists.put({ id: list.id, name: "Next week", updatedAt: new Date() }),
+      ),
+    ),
+    move(2, 1, "third"),
+  ];
+  assert.deepEqual(current().workoutIds, [ids[1], ids[0], ids[2]], "the page moves at once");
+  await Promise.all(writes);
+  assert.deepEqual(sent, ["first", "second", "rename", "third"]);
+  const server = await webApp.workoutLists.get({ id: list.id });
+  assert.deepEqual(server.workoutIds, [ids[1], ids[0], ids[2]]);
+  assert.deepEqual(current(), server);
+  queryClient.clear();
 });

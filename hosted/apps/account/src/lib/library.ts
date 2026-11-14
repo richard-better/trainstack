@@ -107,6 +107,52 @@ export function placementFor(ids: readonly string[], from: number, to: number) {
   return { workoutId, after };
 }
 
+type Lists = { lists: WorkoutList[] };
+
+type ListQueue = { tail: Promise<unknown>; pending: number };
+
+const queues = new WeakMap<QueryClient, Map<string, ListQueue>>();
+
+function setList(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  id: string,
+  change: (list: WorkoutList) => WorkoutList,
+) {
+  queryClient.setQueryData<Lists>(queryKey, (data) =>
+    data ? { lists: data.lists.map((list) => (list.id === id ? change(list) : list)) } : data,
+  );
+}
+
+export function queueListWrite(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  id: string,
+  optimistic: (list: WorkoutList) => WorkoutList,
+  send: () => Promise<WorkoutList>,
+): Promise<WorkoutList> {
+  const byList = queues.get(queryClient) ?? new Map<string, ListQueue>();
+  queues.set(queryClient, byList);
+  const queue: ListQueue = byList.get(id) ?? { tail: Promise.resolve(), pending: 0 };
+  byList.set(id, queue);
+  setList(queryClient, queryKey, id, optimistic);
+  queue.pending += 1;
+  const written = queue.tail.then(send).then(
+    (answer: WorkoutList) => {
+      queue.pending -= 1;
+      if (queue.pending === 0) setList(queryClient, queryKey, id, () => answer);
+      return answer;
+    },
+    (error: unknown) => {
+      queue.pending -= 1;
+      void queryClient.invalidateQueries({ queryKey, exact: true });
+      throw error;
+    },
+  );
+  queue.tail = written.catch(() => undefined);
+  return written;
+}
+
 export const appendedTo = (list: WorkoutList, workoutId: string) => ({
   workoutId,
   after: list.workoutIds.filter((id) => id !== workoutId).at(-1) ?? null,
