@@ -85,7 +85,7 @@ export function StrengthEditor({
               unit,
               exercises: draft.exercises.map((entry) => ({
                 ...entry,
-                sets: entry.sets.map((set) => (set.mass.trim() === "" ? { ...set, unit } : set)),
+                sets: entry.sets.map((set) => ({ ...set, unit })),
               })),
             })
           }
@@ -394,6 +394,8 @@ function ExercisePicker({
   const choices = exerciseChoices(query, custom, used).slice(0, query ? 12 : 8);
   const exact = choices.some(({ name }) => name.toLowerCase() === query.trim().toLowerCase());
 
+  const [failed, setFailed] = useState(false);
+
   async function pick(exerciseId: string) {
     setBusy(true);
     await onPick(exerciseId);
@@ -406,18 +408,25 @@ function ExercisePicker({
     const name = query.trim();
     const id = newKey();
     setBusy(true);
-    await api.logbook.putExercise({
-      id,
-      exercise: {
-        name,
-        equipment: "other",
-        primaryMuscles: [],
-        secondaryMuscles: [],
-        measure: "reps",
-        bodyweight: false,
-      },
-      editedAt: new Date(),
-    });
+    setFailed(false);
+    try {
+      await api.logbook.putExercise({
+        id,
+        exercise: {
+          name,
+          equipment: "other",
+          primaryMuscles: [],
+          secondaryMuscles: [],
+          measure: "reps",
+          bodyweight: false,
+        },
+        editedAt: new Date(),
+      });
+    } catch {
+      setFailed(true);
+      setBusy(false);
+      return;
+    }
     await queryClient.invalidateQueries({ queryKey: exercisesKey });
     await pick(id);
   }
@@ -438,6 +447,11 @@ function ExercisePicker({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
+      {failed && (
+        <p role="alert" className="notice">
+          Your exercise was not added. Check your connection and try again.
+        </p>
+      )}
       <ul className="exercise-choices">
         {choices.map((exercise) => (
           <li key={exercise.id}>

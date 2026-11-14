@@ -146,13 +146,24 @@ export function BoulderingEditor({
           <CircuitEditor
             circuit={draft.circuit}
             venueName={draft.venueName}
-            onDone={(circuit) => {
-              const kept = new Set(circuit.colours.map(({ name }) => name));
+            used={
+              new Set(
+                draft.problems.flatMap(({ grade }) =>
+                  grade.scale === "circuit" ? [grade.colour] : [],
+                ),
+              )
+            }
+            onDone={(circuit, renamed) => {
               onChange({
                 ...draft,
                 circuit,
-                problems: draft.problems.filter(
-                  (problem) => problem.grade.scale !== "circuit" || kept.has(problem.grade.colour),
+                problems: draft.problems.map((problem) =>
+                  problem.grade.scale === "circuit" && renamed.has(problem.grade.colour)
+                    ? {
+                        ...problem,
+                        grade: { scale: "circuit", colour: renamed.get(problem.grade.colour)! },
+                      }
+                    : problem,
                 ),
               });
               setEditingCircuit(false);
@@ -408,16 +419,24 @@ function ProblemRow({
   );
 }
 
-type ColourRow = { key: string; name: string; from: FontGrade | ""; to: FontGrade | "" };
+type ColourRow = {
+  key: string;
+  was: string | null;
+  name: string;
+  from: FontGrade | "";
+  to: FontGrade | "";
+};
 
 function CircuitEditor({
   circuit,
   venueName,
+  used,
   onDone,
 }: {
   circuit: Circuit | null;
   venueName: string;
-  onDone: (circuit: Circuit) => void;
+  used: ReadonlySet<string>;
+  onDone: (circuit: Circuit, renamed: ReadonlyMap<string, string>) => void;
 }) {
   const [name, setName] = useState(circuit?.name ?? venueName);
   const [rows, setRows] = useState<ColourRow[]>(() =>
@@ -426,6 +445,7 @@ function CircuitEditor({
       presetColours.slice(1, 7).map((colour) => ({ name: colour, from: null, to: null }))
     ).map((colour) => ({
       key: newKey(),
+      was: circuit ? colour.name : null,
       name: colour.name,
       from: colour.from ?? "",
       to: colour.to ?? "",
@@ -435,6 +455,7 @@ function CircuitEditor({
   const valid =
     name.trim() !== "" &&
     names.length > 0 &&
+    rows.every((row) => row.was === null || !used.has(row.was) || row.name.trim() !== "") &&
     new Set(names).size === names.length &&
     rows.every(
       (row) =>
@@ -488,14 +509,20 @@ function CircuitEditor({
                 <option key={grade}>{grade}</option>
               ))}
             </select>
-            <button
-              type="button"
-              className="quiet danger"
-              aria-label={`Remove ${row.name}`}
-              onClick={() => setRows(rows.filter(({ key }) => key !== row.key))}
-            >
-              ✕
-            </button>
+            {row.was !== null && used.has(row.was) ? (
+              <span className="muted colour-used" title="Problems in this session use this colour">
+                in use
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="quiet danger"
+                aria-label={`Remove ${row.name}`}
+                onClick={() => setRows(rows.filter(({ key }) => key !== row.key))}
+              >
+                ✕
+              </button>
+            )}
           </li>
         ))}
       </ol>
@@ -503,7 +530,9 @@ function CircuitEditor({
         <button
           type="button"
           className="secondary"
-          onClick={() => setRows([...rows, { key: newKey(), name: "", from: "", to: "" }])}
+          onClick={() =>
+            setRows([...rows, { key: newKey(), was: null, name: "", from: "", to: "" }])
+          }
         >
           + Colour
         </button>
@@ -512,16 +541,25 @@ function CircuitEditor({
           className="primary"
           disabled={!valid}
           onClick={() =>
-            onDone({
-              name: name.trim(),
-              colours: rows
-                .filter((row) => row.name.trim() !== "")
-                .map((row) => ({
-                  name: row.name.trim(),
-                  from: row.from === "" ? null : row.from,
-                  to: row.to === "" ? null : row.to,
-                })),
-            })
+            onDone(
+              {
+                name: name.trim(),
+                colours: rows
+                  .filter((row) => row.name.trim() !== "")
+                  .map((row) => ({
+                    name: row.name.trim(),
+                    from: row.from === "" ? null : row.from,
+                    to: row.to === "" ? null : row.to,
+                  })),
+              },
+              new Map(
+                rows.flatMap((row) =>
+                  row.was !== null && row.was !== row.name.trim()
+                    ? [[row.was, row.name.trim()] as const]
+                    : [],
+                ),
+              ),
+            )
           }
         >
           Use these colours
