@@ -182,6 +182,21 @@ struct BluetoothDevicesTests {
     #expect(devices.source(of: .power) == meter)
   }
 
+  @Test func aPowerMeterIsTheSourceOverATrainerThatAlsoBroadcastsPowerWhicheverWasPairedFirst() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(
+      id: UUID(), name: "KICKR CORE", services: [.trainer, .power, .speedAndCadence])
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    let cadence = DiscoveredDevice(id: UUID(), name: "Wahoo RPM", services: [.speedAndCadence])
+    devices.pair(trainer)
+    devices.pair(meter)
+    devices.pair(cadence)
+    for device in [trainer, meter, cadence] { transport.onConnect?(device.id) }
+    #expect(devices.sensors(of: .power) == [meter, trainer])
+    #expect(devices.source(of: .power) == meter)
+    #expect(devices.source(of: .cadence) == cadence)
+  }
+
   @Test func listsEverySensorForAMetricWhetherOrNotConnected() {
     let (devices, transport) = scanningDevices()
     let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])

@@ -193,12 +193,12 @@ struct BluetoothRecordingTests {
         bench.transport.onCyclingMeasurement?(
           trainer.id, .indoorBike, Data([0x45, 0, 0, 0, 200, 0]))
         bench.transport.onCyclingMeasurement?(meter.id, .power, Data([0, 0, 100, 0]))
-        if second == 2 { bench.devices.select(meter, for: .power) }
+        if second == 2 { bench.devices.select(trainer, for: .power) }
         bench.tick(target: .power(watts: 150))
       }
       bench.devices.stopRecording()
 
-      #expect(bench.liveTicks.map(\.power) == [200, 200, 100, 100])
+      #expect(bench.liveTicks.map(\.power) == [100, 100, 200, 200])
       #expect(BluetoothReplay(jsonLines: try log(in: directory)).ticks == bench.liveTicks)
     }
   }

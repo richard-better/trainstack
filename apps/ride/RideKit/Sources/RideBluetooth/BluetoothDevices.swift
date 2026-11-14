@@ -124,7 +124,8 @@ public final class BluetoothDevices {
   public func sensors(of metric: RideMetric) -> [DiscoveredDevice] {
     var seen: Set<UUID> = []
     return metric.servicesBestFirst.flatMap { service in
-      paired.filter { $0.services.contains(service) }
+      let offering = paired.filter { $0.services.contains(service) }
+      return offering.filter { $0.kind == service } + offering.filter { $0.kind != service }
     }
     .filter { seen.insert($0.id).inserted }
   }
