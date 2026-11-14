@@ -1,6 +1,9 @@
 import type { IssueLog } from "./issues.ts";
 import type { Block, Cue, Step } from "./model.ts";
 import { describeLength } from "./numbers.ts";
+import { flatten } from "./timeline.ts";
+
+const isOpen = (step: Step) => step.duration.type === "open";
 
 export function withOpenStepsTimed(
   log: IssueLog,
@@ -8,15 +11,22 @@ export function withOpenStepsTimed(
   approximate: boolean | undefined,
   at = "steps",
 ): Block[] {
-  return blocks.map((block, index) => {
+  return blocks.flatMap((block, index): Block[] => {
     const where = `${at}.${index}`;
-    if (block.type === "repeat") {
-      return {
-        ...block,
-        steps: withOpenStepsTimed(log, block.steps, approximate, `${where}.steps`),
-      };
+    if (block.type === "step") return [timedStep(log, block, approximate, where)];
+    if (approximate && block.cues && flatten(block.steps).some(isOpen)) {
+      log.warn(
+        "expanded",
+        "The repeat is written out step by step, so its cues stay in the lap-button steps they fall in",
+        where,
+      );
+      return flatten([block]).map((step, round) =>
+        timedStep(log, step, approximate, `${where}.steps[${round}]`),
+      );
     }
-    return timedStep(log, block, approximate, where);
+    return [
+      { ...block, steps: withOpenStepsTimed(log, block.steps, approximate, `${where}.steps`) },
+    ];
   });
 }
 

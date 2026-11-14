@@ -379,6 +379,35 @@ describe("lap-button steps in course files", () => {
     );
   });
 
+  test("approximate keeps a repeat's cue out of the step after the lap-button step it falls in", () => {
+    const repeated: Workout = {
+      ...lapped,
+      steps: [
+        {
+          type: "repeat",
+          count: 2,
+          steps: [
+            { type: "step", duration: { type: "open", expected: seconds(600) }, target: ftp(0.5) },
+            { type: "step", duration: seconds(600), target: ftp(1) },
+          ],
+          cues: [{ at: seconds(900), text: "Press lap" }],
+        },
+      ],
+    };
+    const { value, warnings } = writeMrc(repeated, { approximate: true });
+    assert.ok(
+      warnings.some(
+        (warning) => warning.message === 'Cue "Press lap" comes after the step\'s expected length',
+      ),
+    );
+    assert.deepEqual(
+      parseMrc(value).value.steps.flatMap((step) =>
+        step.type === "step" ? (step.cues ?? []) : [],
+      ),
+      [],
+    );
+  });
+
   test("approximate still fails for a lap-button step with no expected length", () => {
     const unknown: Workout = {
       ...lapped,

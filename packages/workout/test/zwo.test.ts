@@ -477,6 +477,36 @@ describe("lap-button steps in .zwo files", () => {
     assert.match(value, /<IntervalsT Repeat="2" OnDuration="60" OffDuration="120"/);
   });
 
+  test("approximate keeps a repeat's cue out of the step after the lap-button step it falls in", () => {
+    const repeated: Workout = {
+      ...lapped,
+      steps: [
+        {
+          type: "repeat",
+          count: 2,
+          steps: [
+            {
+              type: "step",
+              duration: { type: "open", expected: { type: "time", seconds: 600 } },
+              target: ftp(0.5),
+            },
+            { type: "step", duration: { type: "time", seconds: 600 }, target: ftp(1) },
+          ],
+          cues: [
+            { at: { type: "time", seconds: 60 }, text: "Settle" },
+            { at: { type: "time", seconds: 900 }, text: "Press lap" },
+          ],
+        },
+      ],
+    };
+    const { value, warnings } = writeZwo(repeated, { approximate: true });
+    assert.ok(warnings.some((warning) => warning.message.includes('"Press lap" comes after')));
+    assert.deepEqual(
+      flatten(parseZwo(value).value.steps).map((step) => step.cues?.map((cue) => cue.text)),
+      [["Settle"], undefined, undefined, undefined],
+    );
+  });
+
   test("a lap-button step expected to cover a distance makes a timed workout fail, as mixed steps do", () => {
     const mixed: Workout = {
       ...lapped,
