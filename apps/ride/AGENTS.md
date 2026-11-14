@@ -100,7 +100,9 @@ the time asleep from noon the day before to noon, every source's samples merged 
 twice; resting heart rate the mean of the day's samples; HRV the mean of the readings taken asleep
 that night, or from noon to noon without sleep. A day is sent only when it differs from what this
 device last sent the account (`HealthImportState.sentDays`), stamped after every earlier send, so the
-server keeps the latest read; a day Health no longer has is sent empty.
+server keeps the latest read; a day Health no longer has is sent empty. While the switch is on, Ride
+asks Health again each time it becomes active: Health prompts only for types not yet decided, so a
+device that turned the import on before Ride read a type is asked for it once, and nobody else is.
 
 Rider settings (thresholds, zone models, a sport's own zones, weight and FTP tests) are kept
 as a `SettingsLedger`, the same registers the settings API keeps (`docs/deployment.md`): one

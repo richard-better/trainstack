@@ -13,7 +13,12 @@
       health.onSignedOut = { Task { await account.refreshSignIn() } }
       NotificationCenter.default.addObserver(
         forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-      ) { _ in MainActor.assumeIsolated { health.syncSoon() } }
+      ) { _ in
+        Task { @MainActor in
+          if health.isOn { try? await workouts.requestAccess() }
+          health.syncSoon()
+        }
+      }
       workouts.observeWorkouts { Task { @MainActor in health.syncSoon() } }
       health.syncSoon()
       return health
