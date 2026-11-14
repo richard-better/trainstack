@@ -276,6 +276,39 @@ test("a restore that does not reach the server can be tried again", async () => 
   assert.equal(uploads.list()[0].state.outcome.kind, "restored");
 });
 
+test("a restore still waiting its turn when the athlete signs out is never sent", async () => {
+  const { webApp } = await signInOnTheWeb(runtime, apple);
+  const run = await fileAt(`${FILES}/strava-run.tcx`);
+  const first = await sendActivityFile(webApp, (await checkActivityFile(run)).file);
+  await webApp.activities.delete({ id: first.activity.id });
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  const restores = [];
+  const api = {
+    activities: {
+      get: (input) => webApp.activities.get(input),
+      upload: async (input) =>
+        input.file.name === "garmin-connect-run.gpx"
+          ? held.then(() => webApp.activities.upload(input))
+          : webApp.activities.upload(input),
+      restore: (input) => {
+        restores.push(input);
+        return webApp.activities.restore(input);
+      },
+    },
+  };
+  const uploads = createUploads({ api, concurrency: 1 });
+  await uploads.add([run]);
+  const [deleted] = uploads.list();
+  const busy = uploads.add([await fileAt(`${FILES}/garmin-connect-run.gpx`)]);
+  const restoring = uploads.restore(deleted.key);
+  uploads.clear();
+  release();
+  await Promise.all([busy, restoring]);
+  assert.deepEqual(restores, []);
+  assert.deepEqual(uploads.list(), []);
+});
+
 test("an upload that fails on the way can be tried again without choosing the file again", async () => {
   const { webApp } = await signInOnTheWeb(runtime, apple);
   let online = false;

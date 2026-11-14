@@ -123,6 +123,7 @@ export function createUploads({
 
   async function restore(key: number, file: CheckedFile, started: number) {
     const current = () => started === generation;
+    if (!current() || !uploads.some((upload) => upload.key === key)) return;
     update(key, { state: { phase: "sending", progress: null } });
     try {
       finish(
