@@ -1,9 +1,14 @@
 import Foundation
 
 extension TrainStackClient {
-  public func keepAppleAuthorization(code: String) async throws {
+  public func keepAppleAuthorization(code: String, for session: AccountSession) async throws {
+    try await keepAppleAuthorization(
+      code: code, for: ActivityAccount(id: session.userID ?? "", token: session.token))
+  }
+
+  public func keepAppleAuthorization(code: String, for account: ActivityAccount) async throws {
     let (data, response) = try await send(
-      "POST", "account/apple-authorization", json: ["authorization_code": code], signedIn: true)
+      "POST", "account/apple-authorization", json: ["authorization_code": code], as: account)
     let error = (try? JSONDecoder().decode([String: String].self, from: data))?["error"]
     switch (response.statusCode, error) {
     case (204, _): return

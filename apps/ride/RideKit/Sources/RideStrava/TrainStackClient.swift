@@ -52,9 +52,10 @@ public actor TrainStackClient {
     keptSessionRead = nil
   }
 
+  @discardableResult
   public func signInWithApple(
     identityToken: String, nonce: String, fullName: String?
-  ) async throws {
+  ) async throws -> AccountSession {
     let body: [String: Any] = [
       "provider": "apple", "idToken": ["token": identityToken, "nonce": nonce],
     ]
@@ -80,6 +81,7 @@ public actor TrainStackClient {
     if name == nil, let fullName, !fullName.isEmpty {
       await giveTheAccountTheNameAppleSharesOnce(fullName, session: session)
     }
+    return session
   }
 
   private func giveTheAccountTheNameAppleSharesOnce(
@@ -149,10 +151,10 @@ public actor TrainStackClient {
     forget()
   }
 
-  public func deleteAccount() async throws {
-    let (_, response) = try await send("POST", "api/auth/delete-user", json: [:], signedIn: true)
+  public func deleteAccount(_ account: ActivityAccount) async throws {
+    let (_, response) = try await send("POST", "api/auth/delete-user", json: [:], as: account)
     switch response.statusCode {
-    case 200: forget()
+    case 200: if session?.token == account.token { forget() }
     case 400: throw StravaError.rejected(reason: "Sign in again, then delete the account.")
     default: throw StravaError.unavailable
     }

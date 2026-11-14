@@ -199,6 +199,26 @@ struct TrainStackAccountTests {
     #expect(!account.isSignedIn)
   }
 
+  @Test func deletesNothingWhenAnotherAccountSignsInWhileApplesSheetIsOpen() async throws {
+    let transport = RoutedTransport([
+      signInPath: (200, #"{"token":"fresh","user":{"id":"bea","name":"Bea"}}"#),
+      "/strava": (200, #"{"connected":false}"#),
+      appleAuthorizationPath: (204, ""), deletePath: (200, "{}"),
+    ])
+    let account = signedInAccount(transport)
+    await #expect(throws: StravaError.signedOut) {
+      try await account.deleteAccount(askingAppleForAnAuthorizationCode: {
+        try await account.signIn(
+          identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: nil)
+        return "ada-code"
+      })
+    }
+    #expect(await !transport.paths.contains(deletePath))
+    #expect(await !transport.paths.contains(appleAuthorizationPath))
+    #expect(account.isSignedIn)
+    #expect(account.name == "Bea")
+  }
+
   @Test func keepsTheAccountWhenItsSessionIsTooOldToDelete() async {
     let transport = RoutedTransport([
       appleAuthorizationPath: (204, ""), deletePath: (400, #"{"code":"SESSION_EXPIRED"}"#),

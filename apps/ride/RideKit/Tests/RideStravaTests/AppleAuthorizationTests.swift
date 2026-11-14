@@ -6,7 +6,7 @@ import Testing
 struct AppleAuthorizationTests {
   @Test func sendsTheCodeWithTheSessionToken() async throws {
     let (client, transport, _) = client([Reply(status: 204, body: "")])
-    try await client.keepAppleAuthorization(code: "c0de.apple-1")
+    try await client.keepAppleAuthorization(code: "c0de.apple-1", for: signedInSession)
 
     let request = try #require(await transport.requests.first)
     #expect(request.httpMethod == "POST")
@@ -28,14 +28,16 @@ struct AppleAuthorizationTests {
     status: Int, answer: String, error: AppleAuthorizationError
   ) async {
     let (client, _, store) = client([json(answer, status: status)])
-    await #expect(throws: error) { try await client.keepAppleAuthorization(code: "c") }
+    await #expect(throws: error) {
+      try await client.keepAppleAuthorization(code: "c", for: signedInSession)
+    }
     #expect(await store.load() == signedInSession)
   }
 
   @Test func reportsARefusedSessionWithoutSigningOut() async {
     let (client, _, store) = client([json(#"{"error":"unauthorized"}"#, status: 401)])
     await #expect(throws: StravaError.signedOut) {
-      try await client.keepAppleAuthorization(code: "c")
+      try await client.keepAppleAuthorization(code: "c", for: signedInSession)
     }
     #expect(await store.load() == signedInSession)
   }
@@ -43,15 +45,25 @@ struct AppleAuthorizationTests {
   @Test func reportsAnAnswerItDoesNotKnowAsUnavailable() async {
     let (client, _, _) = client([json("{}", status: 500)])
     await #expect(throws: StravaError.unavailable) {
-      try await client.keepAppleAuthorization(code: "c")
+      try await client.keepAppleAuthorization(code: "c", for: signedInSession)
     }
   }
 
   @Test func sendsNothingWhenSignedOut() async {
     let (client, transport, _) = client([], signedIn: false)
     await #expect(throws: StravaError.signedOut) {
-      try await client.keepAppleAuthorization(code: "c")
+      try await client.keepAppleAuthorization(code: "c", for: signedInSession)
     }
     #expect(await transport.requests.isEmpty)
+  }
+
+  @Test func sendsTheCodeOnlyForTheSessionItCameWith() async throws {
+    let (client, transport, _) = client(
+      [Reply(body: #"{"user":{"id":"b"}}"#, headers: ["set-auth-token": "b-token"])])
+    try await client.signInWithApple(identityToken: "jwt", nonce: "n", fullName: nil)
+    await #expect(throws: StravaError.signedOut) {
+      try await client.keepAppleAuthorization(code: "a-code", for: signedInSession)
+    }
+    #expect(await transport.requests.count == 1)
   }
 }
