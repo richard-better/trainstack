@@ -97,7 +97,7 @@ export function keepApart(db: Database, userId: string, id: string) {
 const elapsed = alias(activityStatistic, "elapsed");
 const distance = alias(activityStatistic, "distance");
 
-type Candidate = Recording & { id: string; workoutId: string | null };
+type Candidate = Recording & { id: string; workoutId: string | null; logged: boolean };
 
 function recordings(db: Database, userId: string, condition: SQL | undefined) {
   return db
@@ -109,6 +109,9 @@ function recordings(db: Database, userId: string, condition: SQL | undefined) {
       startedAt: activity.startedAt,
       elapsedSeconds: elapsed.value,
       distanceMetres: distance.value,
+      logged: sql<number>`EXISTS (
+        SELECT 1 FROM ${loggedSession} l WHERE l.user_id = ${activity.userId} AND l.activity_id = ${activity.id}
+      )`,
     })
     .from(activity)
     .innerJoin(
@@ -138,8 +141,10 @@ const asCandidate = (row: {
   startedAt: Date | null;
   elapsedSeconds: number;
   distanceMetres: number | null;
+  logged: number;
 }): Candidate => ({
   ...row,
+  logged: row.logged === 1,
   indoor: row.indoor === null ? null : row.indoor === 1,
   startedAt: row.startedAt!,
   distanceMetres: row.distanceMetres ?? undefined,
@@ -172,7 +177,7 @@ export async function matchActivity(db: Database, userId: string, id: string) {
   if (selfRow) {
     const self = asCandidate(selfRow);
     const matches = (await candidatesFor(db, userId, self))
-      .filter((candidate) => isSameWorkout(self, candidate))
+      .filter((candidate) => !(self.logged && candidate.logged) && isSameWorkout(self, candidate))
       .sort((a, b) => sharedMilliseconds(self, b) - sharedMilliseconds(self, a));
     for (const match of matches) await mergeWorkouts(db, userId, id, match.id);
   }

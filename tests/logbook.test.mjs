@@ -363,6 +363,39 @@ test("a session logged before its watch file arrives links the same way", async 
   );
 });
 
+test("two sessions logged by hand are never linked by themselves, however they overlap", async () => {
+  const client = await athlete();
+  const first = await client.logbook.put({
+    id: crypto.randomUUID(),
+    session: strength([squats()]),
+    editedAt: at("2026-11-10T19:00:00Z"),
+  });
+  const second = await client.logbook.put({
+    id: crypto.randomUUID(),
+    session: strength([squats(110)], { startedAt: at("2026-11-10T17:02:00Z") }),
+    editedAt: at("2026-11-10T19:00:00Z"),
+  });
+  const { activities } = await client.activities.list({ onePerWorkout: true });
+  assert.deepEqual(
+    activities.map(({ id, duplicates }) => [id, duplicates.length]).sort(),
+    [
+      [first.activityId, 0],
+      [second.activityId, 0],
+    ].sort(),
+  );
+  const watch = await client.activities.upload({
+    file: fit({
+      start: "2026-11-10T17:01:00Z",
+      elapsedSeconds: 70 * 60,
+      sport: "training",
+      subSport: "strengthTraining",
+      heartRate: 118,
+    }),
+    source: "apple_health",
+  });
+  assert.equal(watch.primary, false);
+});
+
 test("a session in another sport's time is not linked to it", async () => {
   const client = await athlete();
   await client.logbook.put({
