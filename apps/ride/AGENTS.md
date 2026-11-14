@@ -217,9 +217,10 @@ Lap button, ⌘L), which splits the interval or, on a lap-button step, ends it. 
 the laps as marks in ride time, so a pause adds nothing to one and a recovered ride rebuilds them
 by replaying its journal. Each is written as a FIT lap message with its totals over the records
 inside it, `lap_trigger` (manual, time, or session end for the last) and `wkt_step_index`, the
-step of the workout it rode (none once the workout is over). The server places a workout's steps
-by laps only when there is one lap per step, so a lap the rider marks inside an interval makes it
-place them by time, which matches the laps for a workout ridden as planned. The ride's page in
+step of the workout it rode (none once the workout is over). The server places each planned
+step on the laps that name it (`packages/analysis`, `intervalCompliance`), so a lap the rider
+marks inside an interval, an added minute, a step ridden again after going back and riding on
+after the end all keep compliance comparing the plan with what was ridden. The ride's page in
 History lists the laps.
 
 Each ride's file also carries its local time (`local_timestamp` on the activity message), from the
