@@ -10,7 +10,7 @@ import {
 } from "@trainstack/workout";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, queryClient } from "../api";
 import {
@@ -38,7 +38,7 @@ import {
   updateBlock,
 } from "../lib/workout-editor";
 import { focusNames, overviewOf, sportNames } from "../lib/workout-profile";
-import { type SaveOutcome, sameWorkout, saveWorkout } from "../lib/workout-save";
+import { sameWorkout, saveWorkout } from "../lib/workout-save";
 import { FieldErrorsProvider, Select, TextField, useFieldErrors } from "./editor-fields";
 import { type StepActions, StepTree } from "./editor-steps";
 import { useWidth, WorkoutChart } from "./workout-chart";
@@ -47,10 +47,19 @@ import { Shell, useStoredWorkout, workoutKey } from "./workout-page";
 
 export function EditWorkoutPage({ id }: { id: string }) {
   const { valid, workout, query } = useStoredWorkout(id);
+  const target = useLibraryTarget();
   const [opened, setOpened] = useState<StoredWorkout | null>(null);
   if (workout?.id === id && opened?.id !== id) setOpened(workout);
   if (opened?.id === id) {
-    return <WorkoutEditor key={opened.id} id={opened.id} initial={opened.workout} base={opened} />;
+    return (
+      <WorkoutEditor
+        key={opened.id}
+        id={opened.id}
+        initial={opened.workout}
+        base={opened}
+        target={target}
+      />
+    );
   }
   if (!valid || query.isError) {
     return (
@@ -75,10 +84,92 @@ export function EditWorkoutPage({ id }: { id: string }) {
 export function NewWorkoutPage({ sport }: { sport: Sport }) {
   const [id] = useState(() => crypto.randomUUID());
   const [initial] = useState(() => blankWorkout(sport));
-  return <WorkoutEditor id={id} initial={initial} base={null} />;
+  const target = useLibraryTarget();
+  return <WorkoutEditor id={id} initial={initial} base={null} target={target} />;
 }
 
-type Conflict = Extract<SaveOutcome, { kind: "changed" | "overruled" | "deleted" }>;
+export type EditorSaved = { readonly workout: Workout; readonly updatedAt: Date };
+
+export type EditorOutcome<Saved extends EditorSaved> =
+  | { readonly kind: "saved"; readonly stored: Saved }
+  | { readonly kind: "changed"; readonly stored: Saved }
+  | { readonly kind: "overruled"; readonly stored: Saved }
+  | { readonly kind: "deleted" }
+  | { readonly kind: "refused"; readonly reason: string };
+
+export interface EditorTarget<Saved extends EditorSaved> {
+  readonly save: (request: {
+    id: string;
+    workout: Workout;
+    base: Saved | null;
+    overwrite: boolean;
+  }) => Promise<EditorOutcome<Saved>>;
+  readonly remember: (stored: Saved, first: boolean) => Promise<void> | void;
+  readonly forget: (id: string) => Promise<void> | void;
+  readonly back: (id: string, saved: boolean) => ReactNode;
+  readonly discard: () => void;
+  readonly firstSave: string;
+  readonly deleted: { readonly title: string; readonly lede: string; readonly keep: string };
+}
+
+export function BackArrow() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path
+        d="M10 3 5 8l5 5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+type Navigate = ReturnType<typeof useNavigate>;
+
+const libraryTarget = (navigate: Navigate): EditorTarget<StoredWorkout> => ({
+  save: ({ id, workout, base, overwrite }) =>
+    saveWorkout(api, { id, workout, base: base?.updatedAt ?? null, overwrite }),
+  remember: async (stored, first) => {
+    await rememberWorkout(stored);
+    queryClient.setQueryData(workoutKey(stored.id), stored);
+    if (first) {
+      void navigate({ to: "/workouts/$id/edit", params: { id: stored.id }, replace: true });
+    }
+  },
+  forget: (id) => forgetWorkout(id),
+  back: (id, saved) =>
+    saved ? (
+      <Link to="/workouts/$id" params={{ id }} search={{}} className="back">
+        <BackArrow />
+        Back to workout
+      </Link>
+    ) : (
+      <Link to="/workouts" search={{}} className="back">
+        <BackArrow />
+        Workouts
+      </Link>
+    ),
+  discard: () => void navigate({ to: "/workouts", search: {} }),
+  firstSave: "Save workout",
+  deleted: {
+    title: "This workout was deleted on another device.",
+    lede: "A deleted workout stays deleted. Your changes are still here: save them as a new workout, or leave them.",
+    keep: "Keep as a new workout",
+  },
+});
+
+function useLibraryTarget() {
+  const navigate = useNavigate();
+  return useMemo(() => libraryTarget(navigate), [navigate]);
+}
+
+type Conflict<Saved extends EditorSaved> = Extract<
+  EditorOutcome<Saved>,
+  { kind: "changed" | "overruled" | "deleted" }
+>;
 
 function useEditorShortcuts(handlers: { undo: () => void; redo: () => void; save: () => void }) {
   useEffect(() => {
@@ -101,19 +192,20 @@ function useEditorShortcuts(handlers: { undo: () => void; redo: () => void; save
   }, [handlers]);
 }
 
-function WorkoutEditor({
+export function WorkoutEditor<Saved extends EditorSaved>({
   id: initialId,
   initial,
   base: initialBase,
+  target,
 }: {
   id: string;
   initial: Workout;
-  base: StoredWorkout | null;
+  base: Saved | null;
+  target: EditorTarget<Saved>;
 }) {
-  const navigate = useNavigate();
   const [id, setId] = useState(initialId);
   const [history, setHistory] = useState<History>(() => startHistory(initial));
-  const [saved, setSaved] = useState<{ workout: Workout; base: StoredWorkout | null }>({
+  const [saved, setSaved] = useState<{ workout: Workout; base: Saved | null }>({
     workout: initial,
     base: initialBase,
   });
@@ -124,7 +216,7 @@ function WorkoutEditor({
     setRevealed(pathKey(path));
   };
   const [checked, setChecked] = useState<ReadonlySet<string>>(new Set());
-  const [conflict, setConflict] = useState<Conflict | null>(null);
+  const [conflict, setConflict] = useState<Conflict<Saved> | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const fieldErrors = useFieldErrors();
   const leaving = useRef(false);
@@ -147,12 +239,7 @@ function WorkoutEditor({
 
   const save = useMutation({
     mutationFn: (overwrite: boolean) =>
-      saveWorkout(api, {
-        id,
-        workout: history.draft,
-        base: saved.base?.updatedAt ?? null,
-        overwrite,
-      }),
+      target.save({ id, workout: history.draft, base: saved.base, overwrite }),
     onMutate: () => {
       setRefusal(null);
       setConflict(null);
@@ -160,23 +247,15 @@ function WorkoutEditor({
     onSuccess: async (outcome) => {
       switch (outcome.kind) {
         case "saved":
-          await rememberWorkout(outcome.stored);
-          queryClient.setQueryData(workoutKey(outcome.stored.id), outcome.stored);
+          if (!saved.base) leaving.current = true;
+          await target.remember(outcome.stored, !saved.base);
           setSaved({ workout: outcome.stored.workout, base: outcome.stored });
-          if (!saved.base) {
-            leaving.current = true;
-            void navigate({
-              to: "/workouts/$id/edit",
-              params: { id: outcome.stored.id },
-              replace: true,
-            });
-          }
           return;
         case "refused":
           setRefusal(outcome.reason);
           return;
         case "deleted":
-          await forgetWorkout(id);
+          await target.forget(id);
           setConflict(outcome);
           return;
         default:
@@ -295,10 +374,9 @@ function WorkoutEditor({
     setSelected(null);
   }
 
-  function keepTheirs(stored: StoredWorkout) {
+  function keepTheirs(stored: Saved) {
     setChecked(new Set());
-    void rememberWorkout(stored);
-    queryClient.setQueryData(workoutKey(stored.id), stored);
+    void target.remember(stored, false);
     setHistory((current) => edit(current, stored.workout));
     setSaved({ workout: stored.workout, base: stored });
     setConflict(null);
@@ -316,24 +394,7 @@ function WorkoutEditor({
   return (
     <FieldErrorsProvider errors={fieldErrors.errors}>
       <main className="content detail editor" inert={firstSave}>
-        <Link
-          to={saved.base ? "/workouts/$id" : "/workouts"}
-          params={{ id }}
-          search={{}}
-          className="back"
-        >
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
-            <path
-              d="M10 3 5 8l5 5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {saved.base ? "Back to workout" : "Workouts"}
-        </Link>
+        {target.back(id, saved.base !== null)}
 
         <div className="editor-bar">
           <div className="editor-history">
@@ -372,7 +433,7 @@ function WorkoutEditor({
             disabled={!canSave}
             title="Save (⌘S)"
           >
-            {saved.base ? "Save" : "Save workout"}
+            {saved.base ? "Save" : target.firstSave}
           </button>
         </div>
 
@@ -395,9 +456,10 @@ function WorkoutEditor({
             canKeepMine={!invalid && !save.isPending}
             onKeepTheirs={keepTheirs}
             onSaveAsNew={saveAsNew}
+            deleted={target.deleted}
             onDiscard={() => {
               leaving.current = true;
-              void navigate({ to: "/workouts", search: {} });
+              target.discard();
             }}
           />
         )}
@@ -634,32 +696,31 @@ function focusBlock(path: Path, control: number | null) {
   target?.focus();
 }
 
-function ConflictPanel({
+function ConflictPanel<Saved extends EditorSaved>({
   conflict,
   onKeepMine,
   canKeepMine,
   onKeepTheirs,
   onSaveAsNew,
   onDiscard,
+  deleted,
 }: {
-  conflict: Conflict;
+  conflict: Conflict<Saved>;
   onKeepMine: () => void;
   canKeepMine: boolean;
-  onKeepTheirs: (stored: StoredWorkout) => void;
+  onKeepTheirs: (stored: Saved) => void;
   onSaveAsNew: () => void;
   onDiscard: () => void;
+  deleted: EditorTarget<Saved>["deleted"];
 }) {
   if (conflict.kind === "deleted") {
     return (
       <div className="conflict" role="alert">
-        <p className="state-title">This workout was deleted on another device.</p>
-        <p className="lede">
-          A deleted workout stays deleted. Your changes are still here: save them as a new workout,
-          or leave them.
-        </p>
+        <p className="state-title">{deleted.title}</p>
+        <p className="lede">{deleted.lede}</p>
         <div className="form-actions">
           <button type="button" className="primary compact" onClick={onSaveAsNew}>
-            Keep as a new workout
+            {deleted.keep}
           </button>
           <button type="button" className="quiet compact" onClick={onDiscard}>
             Discard my changes
