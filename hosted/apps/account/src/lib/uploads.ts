@@ -6,6 +6,7 @@ import {
   type Outcome,
   type Refusal,
   checkActivityFile,
+  restoreActivityFile,
   sendActivityFile,
 } from "./upload.ts";
 
@@ -45,6 +46,7 @@ export interface Uploads {
   readonly subscribe: (listener: () => void) => () => void;
   readonly add: (files: Iterable<File>) => Promise<void>;
   readonly retry: (key: number) => Promise<void>;
+  readonly restore: (key: number) => Promise<void>;
   readonly dismiss: (key: number) => void;
   readonly clearFinished: () => void;
   readonly clear: () => void;
@@ -101,18 +103,40 @@ export function createUploads({
       );
     if (!shared) inFlight.set(file.id, sending);
     try {
-      const outcome = await sending;
-      if (!current()) return;
-      picked.delete(key);
-      checked.delete(key);
-      update(key, { state: { phase: "done", outcome } });
-      if (outcome.kind === "uploaded" || outcome.kind === "alreadyThere") {
-        onActivity(outcome.activity);
-      }
+      finish(key, await sending, current);
     } catch {
       if (current()) update(key, { state: { phase: "failed" } });
     } finally {
       if (!shared) inFlight.delete(file.id);
+    }
+  }
+
+  function finish(key: number, outcome: Outcome, current: () => boolean) {
+    if (!current()) return;
+    picked.delete(key);
+    if (outcome.kind !== "deletedBefore") checked.delete(key);
+    update(key, { state: { phase: "done", outcome } });
+    if (outcome.kind !== "deletedBefore" && outcome.kind !== "refused") {
+      onActivity(outcome.activity);
+    }
+  }
+
+  async function restore(key: number, file: CheckedFile, started: number) {
+    const current = () => started === generation;
+    update(key, { state: { phase: "sending", progress: null } });
+    try {
+      finish(
+        key,
+        await restoreActivityFile(
+          uploadClient((progress) => {
+            if (current()) update(key, { state: { phase: "sending", progress } });
+          }),
+          file,
+        ),
+        current,
+      );
+    } catch {
+      if (current()) update(key, { state: { phase: "failed" } });
     }
   }
 
@@ -168,6 +192,20 @@ export function createUploads({
       if (!original) return;
       update(key, { state: { phase: "waiting" } });
       await run(key, original, started);
+    },
+    async restore(key) {
+      const started = generation;
+      const file = checked.get(key);
+      const upload = uploads.find((upload) => upload.key === key);
+      if (
+        !file ||
+        upload?.state.phase !== "done" ||
+        upload.state.outcome.kind !== "deletedBefore"
+      ) {
+        return;
+      }
+      update(key, { state: { phase: "waiting" } });
+      await turn(() => restore(key, file, started));
     },
     dismiss(key) {
       picked.delete(key);

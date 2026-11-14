@@ -221,6 +221,61 @@ test("a file the athlete deleted is not added again, and says when it was delete
   assert.deepEqual((await webApp.activities.list({ limit: 10 })).activities, []);
 });
 
+test("the athlete restores a file they deleted from its upload, and it is in their account again", async () => {
+  const { webApp } = await signInOnTheWeb(runtime, apple);
+  const run = await fileAt(`${FILES}/strava-run.tcx`);
+  const check = await checkActivityFile(run);
+  const first = await sendActivityFile(webApp, check.file);
+  await webApp.activities.delete({ id: first.activity.id });
+
+  const { uploads, added, outcomes } = uploadsFor(webApp);
+  await uploads.add([run]);
+  assert.deepEqual(outcomes(), { "strava-run.tcx": "deletedBefore" });
+
+  await uploads.restore(uploads.list()[0].key);
+  assert.deepEqual(outcomes(), { "strava-run.tcx": "restored" });
+  assert.equal(uploads.list()[0].state.outcome.activity.id, first.activity.id);
+  assert.deepEqual(
+    added.map(({ id }) => id),
+    [first.activity.id],
+  );
+  assert.deepEqual(
+    (await webApp.activities.list({ limit: 10 })).activities.map(({ id }) => id),
+    [first.activity.id],
+  );
+
+  await uploads.restore(uploads.list()[0].key);
+  assert.deepEqual(outcomes(), { "strava-run.tcx": "restored" }, "only a deleted upload restores");
+});
+
+test("a restore that does not reach the server can be tried again", async () => {
+  const { webApp } = await signInOnTheWeb(runtime, apple);
+  const run = await fileAt(`${FILES}/strava-run.tcx`);
+  const first = await sendActivityFile(webApp, (await checkActivityFile(run)).file);
+  await webApp.activities.delete({ id: first.activity.id });
+  let online = false;
+  const flaky = {
+    activities: {
+      get: (input) => webApp.activities.get(input),
+      upload: (input) => webApp.activities.upload(input),
+      restore: (input) =>
+        online ? webApp.activities.restore(input) : Promise.reject(new TypeError("offline")),
+    },
+  };
+  const uploads = createUploads({ api: flaky });
+
+  await uploads.add([run]);
+  const [deleted] = uploads.list();
+  await uploads.restore(deleted.key);
+  assert.equal(uploads.list()[0].state.phase, "failed");
+
+  online = true;
+  await uploads.retry(deleted.key);
+  assert.equal(uploads.list()[0].state.outcome.kind, "deletedBefore");
+  await uploads.restore(deleted.key);
+  assert.equal(uploads.list()[0].state.outcome.kind, "restored");
+});
+
 test("an upload that fails on the way can be tried again without choosing the file again", async () => {
   const { webApp } = await signInOnTheWeb(runtime, apple);
   let online = false;

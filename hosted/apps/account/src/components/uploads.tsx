@@ -208,12 +208,12 @@ function statusOf({ state }: Upload): Status {
     case "done":
       switch (state.outcome.kind) {
         case "uploaded":
-          return { text: arrivalText(state.outcome.activity, true), tone: "done" };
         case "alreadyThere":
-          return { text: arrivalText(state.outcome.activity, false), tone: "done" };
+        case "restored":
+          return { text: arrivalText(state.outcome.activity, state.outcome.kind), tone: "done" };
         case "deletedBefore":
           return {
-            text: `You deleted this activity on ${activityDate(state.outcome.deletedAt)}, so it was not added again. A deleted activity cannot be brought back.`,
+            text: `You deleted this activity on ${activityDate(state.outcome.deletedAt)}, so it was not added again. Restore it to bring it back.`,
             tone: "refused",
             help: "fix-activities",
           };
@@ -231,10 +231,8 @@ function UploadRow({ upload }: { upload: Upload }) {
   const status = statusOf(upload);
   const { state } = upload;
   const activity =
-    state.phase === "done" &&
-    (state.outcome.kind === "uploaded" || state.outcome.kind === "alreadyThere")
-      ? state.outcome.activity
-      : null;
+    state.phase === "done" && "activity" in state.outcome ? state.outcome.activity : null;
+  const deleted = state.phase === "done" && state.outcome.kind === "deletedBefore";
   const sport = sportName(upload.sport);
 
   return (
@@ -267,6 +265,16 @@ function UploadRow({ upload }: { upload: Upload }) {
             {activity.primary ? "Open" : "Open workout"}
             <span className="visually-hidden"> {upload.name}</span>
           </Link>
+        )}
+        {deleted && (
+          <button
+            type="button"
+            className="secondary compact"
+            onClick={() => void uploads.restore(upload.key)}
+          >
+            Restore
+            <span className="visually-hidden"> {upload.name}</span>
+          </button>
         )}
         {state.phase === "failed" && (
           <button

@@ -58,8 +58,17 @@ export function sourceLabel(source: Pick<DuplicateActivity, "source" | "file">) 
 const listed = (names: readonly string[]) =>
   names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 
-export function arrivalText(activity: Pick<Activity, "duplicates">, uploaded: boolean) {
-  const done = uploaded ? "Uploaded" : "Already in your account";
+const arrivals = {
+  uploaded: "Uploaded",
+  alreadyThere: "Already in your account",
+  restored: "Restored",
+};
+
+export function arrivalText(
+  activity: Pick<Activity, "duplicates">,
+  arrival: keyof typeof arrivals,
+) {
+  const done = arrivals[arrival];
   if (activity.duplicates.length === 0) return done;
   const others = listed([...new Set(activity.duplicates.map(sourceLabel))]);
   return `${done}, linked to the same workout from ${others}`;
@@ -76,7 +85,7 @@ export function fileOf(source: Pick<DuplicateActivity, "source" | "file">) {
 export function deletingSource(activity: Sourced) {
   const others = activity.duplicates;
   const names = listed(others.map(sourceLabel));
-  const what = `Only this ${fileOf(activity)} is deleted. It will not be added again, from Ride or by uploading the same file.`;
+  const what = `Only this ${fileOf(activity)} is deleted. Ride and your other devices will not add it again. To bring it back, upload the same file and choose Restore.`;
   if (!activity.primary) {
     const primary = others.find((other) => other.primary);
     return {

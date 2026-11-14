@@ -708,8 +708,8 @@ function Actions({
           <>
             <h2 id="confirm-title">Delete this activity?</h2>
             <p className="lede">
-              {title} is removed from your account, along with its file. It will not be added again,
-              from Ride or by uploading the same file.
+              {title} is removed from your account, along with its file. Ride and your other devices
+              will not add it again. To bring it back, upload the same file and choose Restore.
             </p>
           </>
         ) : (
