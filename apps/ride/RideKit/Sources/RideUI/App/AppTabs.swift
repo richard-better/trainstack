@@ -11,7 +11,7 @@ struct AppTabs: View {
   let player: Namespace.ID
   @Environment(RideLauncher.self) private var launcher
   @State private var todayPath: [WorkoutTemplate] = []
-  @State private var workoutsPath: [WorkoutTemplate] = []
+  @State private var workoutsPath = NavigationPath()
 
   var body: some View {
     TabView(selection: $destination) {
@@ -26,8 +26,13 @@ struct AppTabs: View {
         NavigationStack(path: $workoutsPath) {
           WorkoutsView(state: $workouts)
             .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
+            .navigationDestination(for: LibraryWorkoutRoute.self) {
+              LibraryWorkoutDetailView(id: $0.id)
+            }
         }
-        .environment(\.openWorkout, OpenWorkoutAction { workoutsPath.append($0) })
+        .environment(
+          \.openWorkout,
+          OpenWorkoutAction({ workoutsPath.append($0) }, library: { workoutsPath.append($0) }))
       }
       Tab("History", systemImage: "clock", value: .history) {
         HistoryView(library: library, selection: $historySelection)

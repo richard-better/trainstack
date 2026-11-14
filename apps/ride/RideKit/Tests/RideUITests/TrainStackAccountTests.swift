@@ -430,4 +430,35 @@ struct TrainStackAccountTests {
     for await _ in signedOut.stream { break }
     #expect(!account.isSignedIn)
   }
+
+  @Test func tellsWhoListensWhenASessionAnotherSyncLostIsNoticed() async throws {
+    let account = TrainStackAccount(
+      server: URL(string: "https://api.example.com")!,
+      store: InMemorySessionStore(AccountSession(token: "t", name: "Ada Rider", userID: "u")),
+      transport: FakeTransport([reply(status: 401)]))
+    await account.restore()
+    var signInChanges = 0
+    account.observeSignInChanges { signInChanges += 1 }
+    await #expect(throws: StravaError.signedOut) {
+      try await account.client.deleteWorkout("w", for: ActivityAccount(id: "u", token: "t"))
+    }
+    await account.refreshSignIn()
+    #expect(!account.isSignedIn)
+    #expect(signInChanges == 1)
+    await account.refreshSignIn()
+    #expect(signInChanges == 1)
+  }
+
+  @Test func tellsWhoListensWhenAnyCallFindsTheSessionGone() async throws {
+    let account = TrainStackAccount(
+      server: URL(string: "https://api.example.com")!,
+      store: InMemorySessionStore(AccountSession(token: "t", name: "Ada Rider", userID: "u")),
+      transport: FakeTransport([reply(status: 401)]))
+    await account.restore()
+    var signInChanges = 0
+    account.observeSignInChanges { signInChanges += 1 }
+    await #expect(throws: StravaError.signedOut) { try await account.disconnectStrava() }
+    #expect(!account.isSignedIn)
+    #expect(signInChanges == 1)
+  }
 }

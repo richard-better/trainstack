@@ -3,5 +3,6 @@ public enum SyncSupport {
     _ = AppSync.shared
     _ = AppActivitySync.shared
     _ = AppSettingsSync.shared
+    _ = AppWorkoutSync.shared
   }
 }

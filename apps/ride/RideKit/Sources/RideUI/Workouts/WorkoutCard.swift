@@ -2,19 +2,23 @@ import RideData
 import RideStyle
 import SwiftUI
 
-struct WorkoutCard: View {
-  let template: WorkoutTemplate
+struct WorkoutCard<Profile: View>: View {
+  let name: String
+  let summary: String
+  let color: Color
+  var warning: String?
   var tag: String?
   var profileHeight = 96.0
   let isSelected: Bool
   let select: () -> Void
   let open: () -> Void
   let start: (() -> Void)?
+  @ViewBuilder let profile: Profile
 
   var body: some View {
     Button(action: select) {
       VStack(alignment: .leading, spacing: 0) {
-        WorkoutProfile(template: template)
+        profile
           .padding(.horizontal, 12)
           .padding(.top, 14)
           .frame(height: profileHeight)
@@ -23,15 +27,21 @@ struct WorkoutCard: View {
           if let tag {
             Text(tag).font(.caption).foregroundStyle(.secondary)
           }
-          Text(template.name)
+          Text(name)
             .font(.headline)
             .lineLimit(1)
           HStack(spacing: 6) {
-            Circle().fill(template.category.color).frame(width: 7, height: 7)
-            Text(template.summary)
+            Circle().fill(color).frame(width: 7, height: 7)
+            Text(summary)
           }
           .font(.caption.monospacedDigit())
           .foregroundStyle(.secondary)
+          if let warning {
+            Label(warning, systemImage: "exclamationmark.circle")
+              .font(.caption)
+              .foregroundStyle(.orange)
+              .lineLimit(2)
+          }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -42,7 +52,7 @@ struct WorkoutCard: View {
         RoundedRectangle(cornerRadius: 14)
           .strokeBorder(
             isSelected
-              ? AnyShapeStyle(template.category.color) : AnyShapeStyle(.primary.opacity(0.06)),
+              ? AnyShapeStyle(color) : AnyShapeStyle(.primary.opacity(0.06)),
             lineWidth: isSelected ? 2 : 1)
       }
       .contentShape(.rect(cornerRadius: 14))
@@ -61,6 +71,22 @@ struct WorkoutCard: View {
     .accessibilityAddTraits(isSelected ? .isSelected : [])
     .accessibilityAction(named: "Show details", open)
     .accessibilityAction(named: "Start") { start?() }
+  }
+}
+
+extension WorkoutCard where Profile == WorkoutProfile {
+  init(
+    template: WorkoutTemplate, tag: String? = nil, profileHeight: Double = 96,
+    isSelected: Bool, select: @escaping () -> Void, open: @escaping () -> Void,
+    start: (() -> Void)?
+  ) {
+    self.init(
+      name: template.name, summary: template.summary, color: template.category.color, tag: tag,
+      profileHeight: profileHeight, isSelected: isSelected, select: select, open: open,
+      start: start
+    ) {
+      WorkoutProfile(template: template)
+    }
   }
 }
 

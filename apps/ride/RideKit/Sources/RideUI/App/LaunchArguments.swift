@@ -100,3 +100,7 @@ extension TrainStackAccount {
     return TrainStackAccount()
   }
 }
+
+extension AccountWorkouts {
+  static let launched = AccountWorkouts()
+}
