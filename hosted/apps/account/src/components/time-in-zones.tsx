@@ -35,6 +35,7 @@ import { analysisOf, recordedMetrics, storedShares } from "../lib/activity-zones
 import type { Trace } from "../lib/series";
 import { useSettingsHistory } from "./settings-data";
 import { ZoneTimeRows } from "./zones";
+import { HelpLink } from "./help-link";
 
 export interface StoredZones {
   readonly statistics: Readonly<Record<string, number>>;
@@ -170,7 +171,9 @@ function MetricZones({
       <div className="zone-metric">
         <h3 className="group-title">{metricTitles[metric]}</h3>
         <div className="zone-prompt">
-          <p className="lede">{prompt}</p>
+          <p className="lede">
+            {prompt} <HelpLink topic="thresholds-and-zones">About thresholds and zones</HelpLink>
+          </p>
           <Link to="/settings" search={link} className="secondary link-button compact">
             {missing.length > 0 ? "Set thresholds" : "Open settings"}
           </Link>

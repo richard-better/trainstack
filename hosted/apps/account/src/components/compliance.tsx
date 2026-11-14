@@ -8,6 +8,7 @@ import {
   stepTarget,
 } from "../lib/compliance";
 import { formatHours } from "../lib/statistics";
+import { HelpLink } from "./help-link";
 
 function RatingMark({ rating }: { rating: Rating | null }) {
   return (
@@ -97,6 +98,9 @@ export function ComplianceDetail({
         </ul>
       )}
       {steps && steps.length > 0 && <Steps steps={steps} sport={sport} />}
+      <p className="lede">
+        <HelpLink topic="compliance">How this is scored</HelpLink>
+      </p>
     </div>
   );
 }

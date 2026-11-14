@@ -29,6 +29,7 @@ const { product, installHref } = Astro.props;
   </div>
   <nav class="flex items-center gap-6 text-[13px] text-[#a8aaaf]">
     {installHref && <a href={installHref} class="hover:text-ts-mist max-sm:hidden">Install</a>}
+    <a href="/help" class="hover:text-ts-mist">Help</a>
     <a href={links.docs} class="hover:text-ts-mist max-sm:hidden">Docs</a>
     <a href={links.github} class="flex items-center gap-2 hover:text-ts-mist">
       <GitHubIcon class="size-4" />

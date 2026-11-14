@@ -15,6 +15,7 @@ import {
   subscribeUrl,
   whatSubscribersSee,
 } from "../lib/calendar-feed";
+import { HelpLink } from "./help-link";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -121,7 +122,8 @@ function WhatSubscribersSee({ withActivities }: { withActivities: boolean }) {
       <p className="setting-help">
         It never shows your routes or where you were, or the heart rate, power or other readings
         your activities recorded. Calendar services such as Google keep a copy on their servers.
-        Keep the address private like a password, and make a new one if it gets out.
+        Keep the address private like a password, and make a new one if it gets out.{" "}
+        <HelpLink topic="calendar-feed">More about the feed</HelpLink>
       </p>
     </div>
   );

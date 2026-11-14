@@ -17,6 +17,7 @@ import { formatMinutes, lapStepsText, overviewOf, sportNames } from "../lib/work
 import { FileDropTarget } from "./uploads";
 import { WorkoutThumb } from "./workout-chart";
 import { rememberWorkout, useReference } from "./workout-data";
+import { HelpLink } from "./help-link";
 
 type Item =
   | { readonly key: string; readonly phase: "reading"; readonly file: File }
@@ -222,7 +223,12 @@ function ImportItem({ item, imports }: { item: Item; imports: WorkoutImports }) 
             instead.
           </p>
         ) : (
-          <FormatIssues issues={reading.issues} title="What is wrong:" />
+          <>
+            <FormatIssues issues={reading.issues} title="What is wrong:" />
+            <p className="lede">
+              <HelpLink topic="workouts">Which files work, and what each format holds</HelpLink>
+            </p>
+          </>
         )}
         <div className="import-actions">{dismiss}</div>
       </div>

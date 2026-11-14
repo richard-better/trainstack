@@ -1,0 +1,41 @@
+---
+import { getCollection } from "astro:content";
+
+import HelpLayout from "../../components/help/HelpLayout.astro";
+import { helpSections } from "../../lib/help";
+
+const pages = (await getCollection("help")).toSorted((a, b) => a.data.order - b.data.order);
+---
+
+<HelpLayout
+  title="Help - TrainStack"
+  description="How to use TrainStack: getting activities in, thresholds and zones, analysis, planning, workouts, logging, and your data."
+>
+  <h1 class="font-grotesk text-[40px] font-medium leading-tight tracking-[-0.02em]">Help</h1>
+  <p class="mt-3 text-[15px] leading-relaxed text-ts-ash">
+    How to use TrainStack on the web at account.trainstackhq.com, and where it meets the Ride app. Each page answers one
+    thing you are trying to do, and says plainly what TrainStack cannot do yet.
+  </p>
+  {
+    helpSections.map((section) => {
+      const inSection = pages.filter((page) => page.data.section === section);
+      return (
+        inSection.length > 0 && (
+          <section class="mt-10">
+            <h2 class="font-geist-mono text-[11px] uppercase tracking-[0.08em] text-ts-steel">{section}</h2>
+            <ul class="mt-3 divide-y divide-[#1c1d1f] border-y border-[#1c1d1f]">
+              {inSection.map((page) => (
+                <li>
+                  <a href={`/help/${page.id}`} class="block py-4 hover:opacity-80">
+                    <span class="block text-[15px] font-medium text-ts-mist">{page.data.title}</span>
+                    <span class="mt-1 block text-[14px] text-ts-ash">{page.data.summary}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      );
+    })
+  }
+</HelpLayout>

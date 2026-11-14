@@ -22,6 +22,7 @@ import {
   undoOf,
 } from "../lib/workouts";
 import { SportIcon } from "./sport-icon";
+import { HelpLink } from "./help-link";
 
 const LINK_PAGE_SIZE = 30;
 
@@ -114,7 +115,8 @@ export function Sources({ activity, title }: { activity: ActivityDetail; title: 
       <p className="lede sources-lede">
         {many
           ? "This workout was recorded more than once. The primary source gives it its place and numbers in your activity list. Every source keeps its own file."
-          : "This workout has one source. If a watch or another app recorded it too, uploading that file links it here, or you can link one by hand."}
+          : "This workout has one source. If a watch or another app recorded it too, uploading that file links it here, or you can link one by hand."}{" "}
+        <HelpLink topic="fix-activities">About sources</HelpLink>
       </p>
       <ol className="source-list">
         {sources.map((source) => (

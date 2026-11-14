@@ -18,6 +18,7 @@ import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
 import { CheckInPrompt } from "./check-in-prompt";
+import { HelpLink } from "./help-link";
 import { loggedFigures } from "../lib/logbook";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
@@ -283,6 +284,9 @@ function EmptyState() {
       <a className="secondary link-button" href="https://trainstackhq.com/ride">
         Get Ride
       </a>
+      <p className="lede">
+        <HelpLink topic="add-activities">Where to find your files, and which ones work</HelpLink>
+      </p>
     </div>
   );
 }

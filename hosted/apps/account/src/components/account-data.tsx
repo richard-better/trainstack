@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { authClient } from "../auth";
 import { type Deletion, deleteAccount, exportUrl } from "../lib/account";
+import { HelpLink } from "./help-link";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -59,7 +60,8 @@ export function AccountData({ confirmDeleting }: { confirmDeleting?: boolean }) 
           <p className="setting-name">Export your data</p>
           <p className="setting-help">
             One archive with the original file of every activity, and your activities, settings with
-            their history, workouts and account as documented JSON.
+            their history, workouts and account as documented JSON.{" "}
+            <HelpLink topic="your-data">Privacy and your data</HelpLink>
           </p>
         </div>
         <a className="link-button secondary compact" href={exportUrl(serverUrl)} download>

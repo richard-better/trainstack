@@ -1,0 +1,16 @@
+---
+import { getEntry, render } from "astro:content";
+
+import HelpLayout from "../../components/help/HelpLayout.astro";
+
+const page = Astro.params.slug ? await getEntry("help", Astro.params.slug) : undefined;
+if (!page) return new Response("No such help page", { status: 404 });
+const { Content } = await render(page);
+---
+
+<HelpLayout title={`${page.data.title} - TrainStack help`} description={page.data.summary} current={page.id}>
+  <article class="help-prose">
+    <h1>{page.data.title}</h1>
+    <Content />
+  </article>
+</HelpLayout>

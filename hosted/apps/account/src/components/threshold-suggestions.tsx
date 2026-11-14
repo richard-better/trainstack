@@ -8,6 +8,7 @@ import { suggestionsQueryKey, suggestionWords } from "../lib/thresholds";
 import { todayIn } from "../lib/time-zone";
 import { refreshAnalysis } from "./settings-data";
 import { useAthleteSettings } from "./time-zone";
+import { HelpLink } from "./help-link";
 
 export function useThresholdSuggestions() {
   return useQuery({
@@ -32,13 +33,18 @@ export function ThresholdSuggestions({
 }) {
   if (suggestions.length === 0) return null;
   return (
-    <ul className="threshold-suggestions" aria-label="Detected thresholds">
-      {suggestions.map((suggestion) => (
-        <li key={suggestion.id}>
-          <SuggestionCard suggestion={suggestion} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="threshold-suggestions" aria-label="Detected thresholds">
+        {suggestions.map((suggestion) => (
+          <li key={suggestion.id}>
+            <SuggestionCard suggestion={suggestion} />
+          </li>
+        ))}
+      </ul>
+      <p className="lede">
+        <HelpLink topic="thresholds-and-zones">How these are estimated</HelpLink>
+      </p>
+    </>
   );
 }
 

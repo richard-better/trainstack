@@ -7,7 +7,7 @@
   "scripts": {
     "check-types": "astro check",
     "astro": "astro",
-    "dev:bare": "astro dev",
+    "dev:bare": "bun dev.ts",
     "env:generate": "varlock codegen"
   },
   "dependencies": {
@@ -20,8 +20,10 @@
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.85",
     "@astrojs/check": "^0.9.12",
     "@cloudflare/workers-types": "catalog:",
+    "@effect/platform-node": "4.1.2",
     "@tailwindcss/vite": "^4.3.4",
     "@trainstack/config": "workspace:*",
+    "effect": "4.1.2",
     "tailwindcss": "^4.3.4",
     "typescript": "catalog:"
   }
