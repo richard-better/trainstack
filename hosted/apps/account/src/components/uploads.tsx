@@ -43,7 +43,27 @@ export function UploadButton() {
 const carriesFiles = (event: DragEvent) => event.dataTransfer?.types.includes("Files") ?? false;
 
 export function DropTarget() {
+  return (
+    <FileDropTarget
+      title="Drop to upload"
+      detail={`FIT, GPX and TCX files, up to ${sizeLimit} each`}
+      onFiles={(files) => void uploads.add(files)}
+    />
+  );
+}
+
+export function FileDropTarget({
+  title,
+  detail,
+  onFiles,
+}: {
+  title: string;
+  detail: string;
+  onFiles: (files: File[]) => void;
+}) {
   const [over, setOver] = useState(false);
+  const latest = useRef(onFiles);
+  latest.current = onFiles;
 
   useEffect(() => {
     let depth = 0;
@@ -68,7 +88,7 @@ export function DropTarget() {
       event.preventDefault();
       depth = 0;
       setOver(false);
-      void uploads.add([...(event.dataTransfer?.files ?? [])]);
+      latest.current([...(event.dataTransfer?.files ?? [])]);
     };
     window.addEventListener("dragenter", enter);
     window.addEventListener("dragover", hover);
@@ -84,8 +104,8 @@ export function DropTarget() {
 
   return over ? (
     <div className="drop-target" aria-hidden="true">
-      <p className="drop-title">Drop to upload</p>
-      <p className="lede">FIT, GPX and TCX files, up to {sizeLimit} each</p>
+      <p className="drop-title">{title}</p>
+      <p className="lede">{detail}</p>
     </div>
   ) : null;
 }
