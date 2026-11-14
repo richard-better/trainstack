@@ -37,10 +37,12 @@ public struct Workout: Equatable, Sendable {
 
   public var name: String
   public var steps: [Step]
+  public var rampSteps: Range<Int>?
 
-  public init(name: String, steps: [Step]) {
+  public init(name: String, steps: [Step], rampSteps: Range<Int>? = nil) {
     self.name = name
     self.steps = steps
+    self.rampSteps = rampSteps
   }
 
   public func targetPower(at elapsed: TimeInterval) -> Int? {
