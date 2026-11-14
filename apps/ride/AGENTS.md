@@ -15,7 +15,7 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   the same rule as `@trainstack/analysis` on the server (`SamplingRule`), so the app and the web
   give a ride the same numbers. `packages/analysis/test/swift-parity.test.ts` checks this. `RideBluetooth` finds nearby
   devices, and pairs and reconnects the rider's own. `RideUI` has a folder per feature
-  (`App`, `Today`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`,
+  (`App`, `Today`, `Calendar`, `Workouts`, `Player`, `History`, `Progress`, `Settings`, `Devices`,
   `Health`, `Sync`) and
   `Shared` for what several use, with one type per file. `RideCore` runs a ride as a pure
   function of its inputs, and records and replays them (see below). `RideWatchUI` is the watch app,
@@ -110,6 +110,23 @@ nothing) and deletes the athlete's own, which stays deleted: the device remember
 any later write of it, as the server refuses them. Signing out hides the workouts and keeps the
 file; another account sees only its own; deleting the account removes its file. A ride copies the
 workout when it starts, so a change or deletion on the web during the ride does not reach it.
+
+Signed in, `CalendarSync` keeps the athlete's training calendar on the device (`AccountCalendar`, one
+file per account in `Application Support/CalendarSync`): the weeks from four weeks before today to four
+weeks after (`CalendarWindow`) as `calendar.range` returns them, with each day's planned workouts,
+activities, pairings, compliance and the week totals, so Today and the calendar read it offline. The
+range is the source of what is on screen, because the server works out state, pairing and compliance as
+it reads and an arriving activity bumps no revision. Each pass (`SyncPasses`) reads
+`planned-workouts/changes` after its cursor, which is small, and reads the range again when that shows a
+change, when the screen asks (the app becomes active, Today appears, a ride uploads),
+when the day has changed, every 15 minutes, and at each check while an analysis is due. A check runs
+each minute while the app runs, so a change on the web, or an analysis finishing, shows up within a
+minute. Today is the athlete's
+day, by the time zone in their settings (UTC until they set one), read with the range, so it moves on at
+the athlete's midnight offline and does not move when the device travels; a workout before today that
+was neither done nor skipped then reads missed, as the server would say. Account rules follow
+`WorkoutSync`: signing out hides the calendar and keeps the file, another account sees only its own, and
+deleting the account removes its file.
 
 Apple asks apps with Sign in with Apple to revoke the user's tokens when the account is deleted,
 so the server needs a refresh token Ride's own sign-in got. After every native sign-in Ride sends

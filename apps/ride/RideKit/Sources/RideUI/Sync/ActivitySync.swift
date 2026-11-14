@@ -14,6 +14,8 @@ final class ActivitySync {
     try await self?.sync()
   }
 
+  var onUploaded: (() -> Void)?
+
   var onSignedOut: (() -> Void)? {
     get { passes.onSignedOut }
     set { passes.onSignedOut = newValue }
@@ -105,6 +107,7 @@ final class ActivitySync {
       update(account) { state in
         if !state.deleted.contains(id) { state.onServer.insert(id) }
       }
+      onUploaded?()
     case .deletedOnTheServer:
       guard !state(of: account).deleted.contains(id) else { return }
       update(account) { $0.deleted.insert(id) }
