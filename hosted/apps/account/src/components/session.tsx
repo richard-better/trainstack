@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 
 import { queryClient, uploads } from "../api";
 import { authClient } from "../auth";
+import { TimeZoneFromBrowser } from "./time-zone";
 
 type SignedInUser = { name: string; email: string };
 
@@ -31,6 +32,7 @@ export function SignedIn({
   const user = { name: session.user.name, email: session.user.email };
   return (
     <div className="app">
+      <TimeZoneFromBrowser />
       <AppHeader user={user} />
       {children}
     </div>
@@ -57,6 +59,9 @@ function AppHeader({ user }: { user: SignedInUser }) {
       <nav aria-label="Main" className="main-nav">
         <Link to="/" className="nav-link" activeOptions={{ exact: true }}>
           Activities
+        </Link>
+        <Link to="/training" className="nav-link">
+          Training
         </Link>
         <Link to="/workouts" className="nav-link">
           Workouts
