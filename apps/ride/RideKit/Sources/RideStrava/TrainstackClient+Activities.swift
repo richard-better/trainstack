@@ -59,9 +59,21 @@ extension TrainstackClient: ActivityServer {
   public func upload(_ file: ActivityFile, for account: ActivityAccount) async throws
     -> ActivityUploadResult
   {
+    try await send(file, to: Self.activitiesPath, for: account)
+  }
+
+  public func restore(_ file: ActivityFile, for account: ActivityAccount) async throws
+    -> ActivityUploadResult
+  {
+    try await send(file, to: "\(Self.activitiesPath)/restore", for: account)
+  }
+
+  private func send(_ file: ActivityFile, to path: String, for account: ActivityAccount)
+    async throws -> ActivityUploadResult
+  {
     let boundary = "ride-\(UUID().uuidString)"
     let (_, response) = try await send(
-      "POST", Self.activitiesPath, body: Self.multipart(file, boundary: boundary),
+      "POST", path, body: Self.multipart(file, boundary: boundary),
       contentType: "multipart/form-data; boundary=\(boundary)", as: account)
     switch response.statusCode {
     case 410: return .deletedOnTheServer

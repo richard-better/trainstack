@@ -48,6 +48,20 @@ struct ActivityUploadTests {
     #expect(try await client.upload(file, for: account) == .refused)
   }
 
+  @Test func restoresTheSameMultipartFormAtItsOwnPath() async throws {
+    let deleted = json(
+      #"{"code":"ACTIVITY_DELETED","status":410,"data":{"id":"abc","deletedAt":"2026-11-13T00:00:00.000Z"}}"#,
+      status: 410)
+    let (client, transport) = identifiedClient([json(#"{"id":"abc"}"#), deleted])
+    #expect(try await client.restore(file, for: account) == .stored)
+    #expect(try await client.restore(file, for: account) == .deletedOnTheServer)
+    let request = try #require(await transport.requests.first)
+    #expect(request.httpMethod == "POST")
+    #expect(request.url?.path == "/api-reference/activities/restore")
+    let body = String(decoding: try #require(request.httpBody), as: UTF8.self)
+    #expect(body.contains("name=\"file\"; filename=\"ride.fit\""))
+  }
+
   @Test func listsEveryActivityIDAcrossPages() async throws {
     let (client, transport) = identifiedClient([
       json(#"{"activities":[{"id":"a"},{"id":"b"}],"nextCursor":"1.b"}"#),
