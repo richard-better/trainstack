@@ -60,6 +60,7 @@ export const plannedWorkoutsRouter = {
     const userId = context.session.user.id;
     if (isEditedInTheFuture(input.updatedAt)) throw errors.EDITED_IN_THE_FUTURE();
     if (isContentTooLarge(input.content)) throw errors.WORKOUT_TOO_LARGE();
+    const before = await findPlanned(db, userId, input.id);
     const written = await putPlanned(db, userId, input);
     if (written.kind === "deleted") {
       throw errors.PLANNED_WORKOUT_DELETED({
@@ -67,7 +68,9 @@ export const plannedWorkoutsRouter = {
       });
     }
     if (written.kind !== "written") throw errors.DAY_FULL();
-    await checkComplianceOn(db, userId, [written.row.day!]);
+    if (before?.revision !== written.row.revision) {
+      await checkComplianceOn(db, userId, [written.row.day!]);
+    }
     return present(db, userId, written.row);
   }),
 
@@ -84,7 +87,9 @@ export const plannedWorkoutsRouter = {
     }
     if (written.kind === "missing") throw errors.NOT_FOUND();
     if (written.kind === "dayFull") throw errors.DAY_FULL();
-    await checkComplianceOn(db, userId, [written.row.day!, ...(before?.day ? [before.day] : [])]);
+    if (before?.revision !== written.row.revision) {
+      await checkComplianceOn(db, userId, [written.row.day!, ...(before?.day ? [before.day] : [])]);
+    }
     return present(db, userId, written.row);
   }),
 

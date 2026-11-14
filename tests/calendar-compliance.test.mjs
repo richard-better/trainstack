@@ -305,3 +305,23 @@ test("power targets on a ride without power keep the intervals part, with no sha
   assert.equal(compliance.parts.duration.score, 1);
   assert.equal(compliance.score, 100);
 });
+
+test("replaying an edit that changes nothing leaves the day's compliance as it was", async () => {
+  const { client } = await athlete();
+  const day = "2026-07-16";
+  const content = powerWorkout(150, 250);
+  const { id } = await client.plannedWorkouts.put({
+    id: randomUUID(),
+    day,
+    position: 1,
+    content,
+    updatedAt: at(1),
+  });
+  await upload(client, day);
+  await runCronUntilAnalysed();
+  await client.plannedWorkouts.put({ id, day, position: 1, content, updatedAt: at(1) });
+  await client.plannedWorkouts.move({ id, day, position: 1, updatedAt: at(0) });
+  const { compliance } = await client.plannedWorkouts.get({ id });
+  assert.equal(compliance.pending, false);
+  assert.ok(compliance.parts.intervals.share > 0.95);
+});
