@@ -38,7 +38,7 @@ const stressSources = sql`CASE s.name
   WHEN 'rpe_stress_tss' THEN 'rpe'
   ELSE 'heart_rate' END`;
 
-function loadedActivities(db: Database, userId: string, through: string) {
+export function loadedActivities(db: Database, userId: string, through: string) {
   return db.all<LoadRow>(sql`
     SELECT a.id AS id, a.local_day AS day, l.value AS stress, (
       SELECT ${stressSources} FROM ${activityStatistic} s
