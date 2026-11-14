@@ -67,7 +67,7 @@ export const readinessReasonSchema = z
       usual: z
         .number()
         .describe(
-          `The athlete's mean for this item over the ${checkInBaseline.days} days before, from at least ${checkInBaseline.minimum} check-ins and leaving out days marked ill; else 3, the scale's normal`,
+          `The athlete's mean for this item over the ${checkInBaseline.days} days before, from at least ${checkInBaseline.minimum} check-ins and leaving out days marked ill, rounded to the nearest anchor; else 3, the scale's normal`,
         ),
       against: z
         .enum(["own", "scale"])
