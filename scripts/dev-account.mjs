@@ -1,11 +1,10 @@
 import { spawn } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { parseArgs } from "node:util";
 
 import { mockApple } from "../tests/helpers/apple.mjs";
-import { seedCheckIns, seedHistory, seedPlan } from "./dev-history.mjs";
+import { seedCheckIns, seedHistory, seedLibrary, seedLogbook, seedPlan } from "./dev-history.mjs";
 import { migrate, rpcClient, startWorker } from "../tests/helpers/worker.mjs";
 
 const { values: options } = parseArgs({
@@ -79,10 +78,6 @@ const API = `http://localhost:${apiPort}`;
 const APPLE = `http://localhost:${applePort}`;
 const WEB = `http://localhost:${webPort}`;
 const ATHLETE = { email: "athlete@example.com", subject: "001234.local-athlete" };
-const SEEDED_RIDES = [
-  "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit",
-  "apps/ride/RideKit/Tests/RideCoreTests/Traces/trainer-and-strap.fit",
-];
 
 const apple = mockApple();
 const worker = await startWorker({
@@ -211,32 +206,16 @@ function handleApple(req, res) {
 <form method="post" action="${attribute(redirectURI)}">${hiddenFields(cancel)}<button id="cancel">Cancel</button></form>`);
 }
 
+let seededRides = 0;
 if (!options.empty) {
   const { token } = await apple.signIn(runtime, ATHLETE);
   const ride = rpcClient(runtime, { token });
-  for (const path of SEEDED_RIDES) {
-    const file = new File([await readFile(path)], path.split("/").at(-1));
-    await ride.activities.upload({ file, source: "trainstack" });
-  }
-  const now = new Date();
-  const copies = [];
-  for (const id of ["threshold-classic-60", "vo2-max-booster", "long-endurance-90"]) {
-    copies.push(await ride.builtinWorkouts.copy({ id, as: crypto.randomUUID(), updatedAt: now }));
-  }
-  const list = await ride.workoutLists.put({
-    id: crypto.randomUUID(),
-    name: "This week",
-    updatedAt: now,
-  });
-  let after = null;
-  for (const copy of copies) {
-    await ride.workoutLists.place({ id: list.id, workoutId: copy.id, after, updatedAt: now });
-    after = copy.id;
-  }
+  ({ rides: seededRides } = await seedLibrary(ride));
   if (options.history) {
     await seedHistory(ride);
     await seedPlan(ride);
     await seedCheckIns(ride);
+    await seedLogbook(ride);
   }
 }
 
@@ -294,7 +273,7 @@ web?.on("exit", stop);
 
 console.log(`
 API on ${API}, with Apple played by ${APPLE}. ${API}${LOCAL_STORAGE_DUMP} shows everything in D1 and R2.
-${options.empty ? "Nothing is seeded." : `${SEEDED_RIDES.length} rides from apps/ride, three workouts and a list are seeded${options.history ? ", with 30 weeks of rides and runs before today and a plan from three weeks back to three ahead" : ""}.`}
+${options.empty ? "Nothing is seeded." : `${seededRides} rides from apps/ride, three workouts and a list are seeded${options.history ? ", with 30 weeks of rides and runs before today and a plan from three weeks back to three ahead, check-ins and ten weeks of strength and bouldering" : ""}.`}
 Activities are analysed every ${ANALYSIS_EVERY_MS / 1000} seconds, as the deployed API's cron does every minute.
 ${web ? `Open ${WEB} and sign in with Apple to reach ${ATHLETE.email}.` : `The web app is not started. Start it on ${WEB}, the origin the API trusts, with VITE_SERVER_URL=${API}.`}
 Everything lives in memory and is gone when this stops.

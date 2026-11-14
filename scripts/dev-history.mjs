@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { FitWriter, fitTime, semicircles } from "../packages/fit/test/fit-writer.ts";
 import { BUDA_HILLS_LOOP, MARGARET_ISLAND_LOOP, decodePolyline } from "./dev-routes.mjs";
 
@@ -179,7 +180,7 @@ export function activityFile({
       if (sport === "cycling") {
         const watts = Math.max(0, block.watts * (1 + (next() - 0.5) * 0.18 + hill * 0.08));
         power = withPower ? Math.round(watts) : null;
-        speed = 4 + Math.cbrt(watts) * 1.55 - hill * 1.2;
+        speed = Math.max(2, 1.5 + Math.cbrt(watts) * 1.15 - hill * 1.6);
         effort = block.watts / 250;
       } else {
         speed = block.speed * (1 + (next() - 0.5) * 0.06 - hill * 0.06);
@@ -272,7 +273,8 @@ export function trainingHistory({ today = new Date(), weeks = 30 } = {}) {
           ],
         ];
     for (const [offset, sport, kind, name, indoor = false] of plan) {
-      const time = monday + offset * DAY_MS + (sport === "running" ? 6.5 : 17.5) * 3600_000;
+      const time =
+        monday + offset * DAY_MS + (sport === "running" ? 6.5 : offset >= 5 ? 8 : 17.5) * 3600_000;
       if (time > today.getTime() - 3600_000 * 3) continue;
       activities.push({
         sport,
@@ -475,4 +477,151 @@ export async function seedCheckIns(client, { today = new Date(), days = 56 } = {
     written += 1;
   }
   return written;
+}
+
+const SEEDED_RIDES = [
+  "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit",
+  "apps/ride/RideKit/Tests/RideCoreTests/Traces/trainer-and-strap.fit",
+];
+
+export async function seedLibrary(client) {
+  for (const path of SEEDED_RIDES) {
+    const file = new File([await readFile(path)], path.split("/").at(-1));
+    await client.activities.upload({ file, source: "trainstack" });
+  }
+  const now = new Date();
+  const copies = [];
+  for (const id of ["threshold-classic-60", "vo2-max-booster", "long-endurance-90"]) {
+    copies.push(await client.builtinWorkouts.copy({ id, as: crypto.randomUUID(), updatedAt: now }));
+  }
+  const list = await client.workoutLists.put({
+    id: crypto.randomUUID(),
+    name: "This week",
+    updatedAt: now,
+  });
+  let after = null;
+  for (const copy of copies) {
+    await client.workoutLists.place({ id: list.id, workoutId: copy.id, after, updatedAt: now });
+    after = copy.id;
+  }
+  return { rides: SEEDED_RIDES.length, workouts: copies, list };
+}
+
+const kilograms = (value) => ({ kind: "weight", weight: { value, unit: "kg" } });
+
+const liftSet = (kind, reps, kg, rpe = null) => ({
+  kind,
+  reps,
+  seconds: null,
+  load: kg === null ? { kind: "bodyweight" } : kilograms(kg),
+  rpe,
+  repsInReserve: null,
+  tempo: null,
+  restSeconds: kind === "warm_up" ? 90 : 180,
+});
+
+const lift = (exerciseId, warmUp, working, reps, sets = 3) => ({
+  exerciseId,
+  group: null,
+  notes: null,
+  sets: [
+    ...(warmUp === null ? [] : [liftSet("warm_up", 8, warmUp)]),
+    ...Array.from({ length: sets }, (_, index) =>
+      liftSet("working", reps, working, index === sets - 1 ? 8.5 : null),
+    ),
+  ],
+});
+
+const roundTo = (step, value) => Math.round(value / step) * step;
+
+const problem = (grade, outcome, attempts, extra = {}) => ({
+  grade,
+  name: null,
+  attempts: outcome === "flash" ? 1 : attempts,
+  outcome,
+  styles: [],
+  angle: null,
+  notes: null,
+  restSeconds: null,
+  ...extra,
+});
+
+const font = (grade) => ({ scale: "font", grade });
+
+export async function seedLogbook(client, { today = new Date(), weeks = 10 } = {}) {
+  const todayStart = Date.parse(`${dayIso(today.getTime())}T00:00:00Z`);
+  const thisMonday = todayStart - ((today.getUTCDay() + 6) % 7) * DAY_MS;
+  let logged = 0;
+  const put = async (session) => {
+    logged += 1;
+    return client.logbook.put({
+      id: crypto.randomUUID(),
+      session,
+      editedAt: new Date(
+        Math.min(Date.now(), session.startedAt.getTime() + session.durationSeconds * 1000),
+      ),
+    });
+  };
+  for (let week = -weeks; week <= 0; week++) {
+    const monday = thisMonday + week * 7 * DAY_MS;
+    const progress = (week + weeks) / weeks;
+    const strengthDay = new Date(monday + 3 * DAY_MS + 12.25 * 3600_000);
+    if (strengthDay.getTime() < today.getTime() - 3600_000) {
+      await put({
+        startedAt: strengthDay,
+        durationSeconds: 65 * 60,
+        name: week % 2 === 0 ? "Lower body" : "Full body",
+        notes: week === -3 ? "Knee felt fine on the squats, kept depth" : null,
+        rpe: week % 4 === 3 ? 5 : 7,
+        detail: {
+          sport: "strength",
+          exercises:
+            week % 2 === 0
+              ? [
+                  lift("back_squat", 60, roundTo(2.5, 85 + 12.5 * progress), 5),
+                  lift("romanian_deadlift", 50, roundTo(2.5, 70 + 10 * progress), 8),
+                  lift("lunge", null, roundTo(2, 12 + 4 * progress), 10, 2),
+                  lift("calf_raise", null, 60, 15, 2),
+                ]
+              : [
+                  lift("deadlift", 70, roundTo(2.5, 110 + 15 * progress), 5),
+                  lift("bench_press", 40, roundTo(2.5, 62.5 + 7.5 * progress), 6),
+                  lift("pull_up", null, null, 6 + Math.round(2 * progress)),
+                  lift("face_pull", null, 20, 15, 2),
+                ],
+        },
+      });
+    }
+    const wallDay = new Date(monday + 4 * DAY_MS + 18.5 * 3600_000);
+    if (wallDay.getTime() < today.getTime() - 3600_000 && week % 2 !== 0) {
+      const hard = progress > 0.6;
+      await put({
+        startedAt: wallDay,
+        durationSeconds: 100 * 60,
+        name: "Evening at the wall",
+        notes: hard ? "Finally stuck the drop-knee on the prow" : null,
+        rpe: 6,
+        detail: {
+          sport: "bouldering",
+          venue: { kind: "gym", name: "Boulderbar Wien" },
+          circuit: null,
+          problems: [
+            problem(font("5"), "flash", 1, { styles: ["jugs"] }),
+            problem(font("5+"), "flash", 1),
+            problem(font("6A"), "flash", 1, { angle: "vertical" }),
+            problem(font("6A"), "send", 2, { styles: ["technical"], angle: "slab" }),
+            problem(font("6A+"), "flash", 1, { styles: ["crimpy"], angle: "slab" }),
+            problem(font("6B"), "send", 3, { styles: ["slopey"] }),
+            problem(font("6B+"), "send", 4, { styles: ["powerful", "dynamic"], angle: "overhang" }),
+            problem(font("6C"), hard ? "send" : "project", hard ? 7 : 5, {
+              styles: ["pinchy", "compression"],
+              angle: "overhang",
+              name: "The prow",
+            }),
+          ],
+        },
+      });
+    }
+  }
+  return logged;
 }

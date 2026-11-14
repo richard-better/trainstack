@@ -136,10 +136,12 @@ test("a poor night reads as fair, says why first, and what it did not read", asy
 
 test("illness says rest in the athlete's own terms, and nothing at all says so plainly", async () => {
   const { client, today } = await athlete();
-  assert.deepEqual(headlineOf(await readinessOn(client, today)), {
+  const nothing = await readinessOn(client, today);
+  assert.deepEqual(headlineOf(nothing), {
     title: "Not enough to go on",
     line: "Check in, and readiness reads your answers against your usual.",
   });
+  assert.deepEqual(gapLines(nothing), ["No check-in today.", "No training yet."]);
   await client.checkIns.put(checkIn(today, {}, { illness: { kind: "fever" } }));
   const ill = await readinessOn(client, today);
   assert.deepEqual(headlineOf(ill), { title: "Poor", line: "You said you are ill. Rest today." });

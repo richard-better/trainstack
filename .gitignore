@@ -57,3 +57,6 @@ coverage
 .cache
 tmp
 temp
+
+# The showcase's recordings and screenshots (bun run showcase)
+hosted/apps/account/.showcase

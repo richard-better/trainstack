@@ -1,12 +1,13 @@
 import { QueryClient } from "@tanstack/react-query";
 
+import { showcaseFrame } from "./dev-showcase";
 import { createApiClient } from "./lib/client";
 import { placeActivity, refreshWorkoutOf, sendWithProgress } from "./lib/upload";
 import { createUploads } from "./lib/uploads";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 
-export const api = createApiClient(serverUrl);
+export const api = createApiClient(serverUrl, showcaseFrame?.send);
 
 export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
@@ -18,7 +19,8 @@ export const activityKey = (id: string) => ["activity", id] as const;
 
 export const uploads = createUploads({
   api,
-  uploadClient: (onProgress) => createApiClient(serverUrl, sendWithProgress(onProgress)),
+  uploadClient: (onProgress) =>
+    createApiClient(serverUrl, showcaseFrame?.send ?? sendWithProgress(onProgress)),
   onActivity: (activity) => {
     placeActivity(queryClient, activitiesQueryKey, activity);
     refreshWorkoutOf(queryClient, activity, activityKey);
