@@ -29,13 +29,13 @@ export function mockApple() {
   const tokenRequests = [];
   const revocations = [];
 
-  async function attemptSignIn(runtime, { email, subject = email }) {
+  async function attemptSignIn(runtime, { email, subject = email, name = "Test Rider" }) {
     const nonce = randomUUID();
     const token = identityToken({
       aud: "com.trainstackhq.ride",
       sub: subject,
       email,
-      name: "Test Rider",
+      name,
       nonce: createHash("sha256").update(nonce).digest("hex"),
     });
     return runtime.dispatchFetch(`${api}/api/auth/sign-in/social`, {
@@ -98,8 +98,8 @@ export function mockApple() {
       unexchangedCodes.set(code, { subject, email });
       return code;
     },
-    async signIn(runtime, { email = `${randomUUID()}@example.com`, subject = email } = {}) {
-      const response = await attemptSignIn(runtime, { email, subject });
+    async signIn(runtime, { email = `${randomUUID()}@example.com`, subject = email, name } = {}) {
+      const response = await attemptSignIn(runtime, { email, subject, name });
       assert.equal(response.status, 200, await response.clone().text());
       const sessionToken = response.headers.get("set-auth-token");
       assert.ok(sessionToken, "the session token is exposed for the app to keep");
