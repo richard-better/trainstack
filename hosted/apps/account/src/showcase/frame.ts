@@ -74,8 +74,8 @@ function replay(recording: Recording, entry: ShowcaseEntry) {
     );
     const found =
       byKey(own, key) ??
-      byPath(own, request.method, path) ??
       byKey(world, key) ??
+      byPath(own, request.method, path) ??
       byPath(world, request.method, path);
     if (!found) {
       console.error(`The showcase recorded no answer to ${request.method} ${path}`);
