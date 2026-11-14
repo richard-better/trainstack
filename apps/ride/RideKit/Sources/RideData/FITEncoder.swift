@@ -146,8 +146,7 @@ public enum FITEncoder {
     return writer.file()
   }
 
-  static func localTimestamp(at timestamp: UInt32, offsetSeconds: Int?) -> [FITWriter.Field]
-  {
+  static func localTimestamp(at timestamp: UInt32, offsetSeconds: Int?) -> [FITWriter.Field] {
     let longest = FITProfile.longestUTCOffsetSeconds
     guard let offsetSeconds, (-longest...longest).contains(offsetSeconds) else {
       return []

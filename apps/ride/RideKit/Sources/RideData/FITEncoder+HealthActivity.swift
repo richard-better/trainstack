@@ -47,7 +47,8 @@ extension FITEncoder {
         .uint32(timestamp, row.timestamp),
         .sint32(Record.positionLat, semicircles(row.location?.latitude)),
         .sint32(Record.positionLong, semicircles(row.location?.longitude)),
-        .uint8(Record.heartRate, row.heartRate.map { UInt8(clamping: Int($0.rounded())) } ?? invalid8),
+        .uint8(
+          Record.heartRate, row.heartRate.map { UInt8(clamping: Int($0.rounded())) } ?? invalid8),
         .uint8(Record.cadence, row.cadence.map { UInt8(clamping: Int($0.rounded())) } ?? invalid8),
         .uint32(Record.distance, scaledDistance(row.distance)),
         .uint16(
@@ -187,7 +188,9 @@ extension FITEncoder {
     -> [Range<UInt32>]
   {
     let spans = activity.pauses
-      .map { min(max(fitTimestamp($0.from), start), end)..<min(max(fitTimestamp($0.to), start), end) }
+      .map {
+        min(max(fitTimestamp($0.from), start), end)..<min(max(fitTimestamp($0.to), start), end)
+      }
       .filter { !$0.isEmpty }
       .sorted { ($0.lowerBound, $0.upperBound) < ($1.lowerBound, $1.upperBound) }
     var merged: [Range<UInt32>] = []

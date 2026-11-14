@@ -83,7 +83,8 @@ struct HealthActivityFITTests {
   }
 
   @Test func everyHealthSportHasAFITSport() {
-    #expect(HealthSport.strength.fit == (FITProfile.Sport.training, FITProfile.SubSport.strengthTraining))
+    #expect(
+      HealthSport.strength.fit == (FITProfile.Sport.training, FITProfile.SubSport.strengthTraining))
     #expect(HealthSport.other.fit.sport == FITProfile.Sport.generic)
   }
 }
