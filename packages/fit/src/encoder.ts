@@ -22,15 +22,23 @@ export type EncodedField =
 const stringBaseType = 0x07;
 const utf8 = new TextEncoder();
 
-export function fitString(text: string): Uint8Array {
-  const bytes: number[] = [];
+export function fitText(text: string): string {
+  let length = 0;
+  let kept = "";
   for (const character of text) {
-    const encoded = utf8.encode(character);
-    if (bytes.length + encoded.length + 1 > longestStringBytes) break;
-    bytes.push(...encoded);
+    const size = utf8.encode(character).length;
+    if (length + size + 1 > longestStringBytes) break;
+    length += size;
+    kept += character;
   }
-  bytes.push(0);
-  return new Uint8Array(bytes);
+  return kept;
+}
+
+function fitString(text: string): Uint8Array {
+  const kept = utf8.encode(fitText(text));
+  const bytes = new Uint8Array(kept.length + 1);
+  bytes.set(kept);
+  return bytes;
 }
 
 function encodedValue(field: EncodedField): Uint8Array {

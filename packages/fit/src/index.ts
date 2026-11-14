@@ -46,3 +46,5 @@ export {
   type SwimStroke,
   type WorkoutEquipment,
 } from "./workout.ts";
+export { fitText } from "./encoder.ts";
+export { workoutHeartRateBpmOffset, workoutPowerWattsOffset } from "./profile.ts";

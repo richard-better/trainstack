@@ -1,10 +1,13 @@
 import {
   encodeFitWorkout,
+  fitText,
   type FitWorkoutDuration,
   type FitWorkoutStep,
   type FitWorkoutTarget,
   type Intensity as FitIntensity,
   maxWorkoutSteps,
+  workoutHeartRateBpmOffset,
+  workoutPowerWattsOffset,
 } from "@trainstack/fit";
 import { type Converted, IssueLog } from "./issues.ts";
 import type { Block, Duration, Intensity, Level, Repeat, Step, Target, Workout } from "./model.ts";
@@ -92,7 +95,7 @@ class FitWriter {
     if (this.log.errors.length > 0) return this.log.result(new Uint8Array());
     return this.log.result(
       encodeFitWorkout(
-        { name: input.name, sport: input.sport, steps: this.steps },
+        { name: this.text(input.name, "the name"), sport: input.sport, steps: this.steps },
         { timeCreated: this.options.timeCreated },
       ),
     );
@@ -134,7 +137,7 @@ class FitWriter {
     this.repeatCues(repeat, at);
     repeat.steps.forEach((child, index) => this.block(child, `${at}.steps.${index}`, true));
     this.steps.push({
-      name: repeat.name,
+      name: this.text(repeat.name, "the name", at),
       duration: { type: "repeat", fromStep, count: repeat.count },
     });
   }
@@ -168,8 +171,8 @@ class FitWriter {
     }
     const cadence = step.cadence && this.cadence(step.cadence, at);
     const base: FitWorkoutStep = {
-      name: step.name,
-      notes: step.notes,
+      name: this.text(step.name, "the name", at),
+      notes: this.text(step.notes, "the notes", at),
       intensity: step.intensity && fitIntensities[step.intensity],
       duration: { type: "open" },
     };
@@ -186,7 +189,9 @@ class FitWriter {
       );
       this.push({
         ...base,
-        name: step.name ? `${step.name} (${allOut.toLowerCase()})` : allOut,
+        name: step.name
+          ? this.text(`${step.name} (${allOut.toLowerCase()})`, "the name", at)
+          : allOut,
         intensity: base.intensity ?? "active",
         duration: this.duration(step.duration, at),
         ...this.targets(undefined, cadence),
@@ -245,6 +250,10 @@ class FitWriter {
         ? this.integer(duration.seconds * 1000, "The step's length in milliseconds", at)
         : this.integer(duration.meters * 100, "The step's length in centimetres", at);
     const base = Math.floor(whole / count);
+    if (base === 0) {
+      this.fail("unsupported", `The ramp is too short to write as ${count} steps`, at);
+      return [];
+    }
     return Array.from({ length: count }, (_, index) => {
       const amount = base + (index < whole - base * count ? 1 : 0);
       return duration.type === "time"
@@ -253,9 +262,9 @@ class FitWriter {
     });
   }
 
-  private integer(value: number, what: string, at: string, quiet = false): number {
+  private integer(value: number, what: string, at: string, quiet = false, max = maxUint32): number {
     const rounded = Math.round(value);
-    if (rounded > maxUint32) {
+    if (rounded > max) {
       this.fail("unsupported", `${what} is too large for a .fit file`, at);
       return 0;
     }
@@ -320,7 +329,13 @@ class FitWriter {
           };
         }
         const watts = (value: number) => {
-          const rounded = this.integer(value, "Power in watts", at, quiet);
+          const rounded = this.integer(
+            value,
+            "Power in watts",
+            at,
+            quiet,
+            maxUint32 - workoutPowerWattsOffset,
+          );
           return rounded === 0
             ? ({ unit: "percentFtp", value: 0 } as const)
             : ({ unit: "watts", value: rounded } as const);
@@ -346,7 +361,13 @@ class FitWriter {
           );
         }
         const bpm = (value: number) => {
-          const rounded = this.integer(value * factor, "Heart rate in bpm", at, quiet);
+          const rounded = this.integer(
+            value * factor,
+            "Heart rate in bpm",
+            at,
+            quiet,
+            maxUint32 - workoutHeartRateBpmOffset,
+          );
           return rounded === 0
             ? ({ unit: "percentMaxHeartRate", value: 0 } as const)
             : ({ unit: "bpm", value: rounded } as const);
@@ -393,6 +414,19 @@ class FitWriter {
   ): Pick<FitWorkoutStep, "target" | "secondaryTarget"> {
     if (!target) return { target: cadence };
     return { target, secondaryTarget: cadence };
+  }
+
+  private text(value: string | undefined, what: string, at?: string): string | undefined {
+    if (value === undefined) return undefined;
+    const kept = fitText(value);
+    if (kept !== value) {
+      this.warn(
+        "dropped",
+        `Only the first ${[...kept].length} characters of ${what} fit in a .fit file`,
+        at,
+      );
+    }
+    return kept;
   }
 
   private fail(code: "unsupported", message: string, at?: string): void {

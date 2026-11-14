@@ -94,9 +94,10 @@ out so the file has the fewest steps. It throws when FIT cannot say what the wor
   `approximated`.
 - Power above 1000% of FTP, or a value too large for its field.
 
-Values are rounded to FIT's precision, with an `approximated` warning when that changes one.
+Values are rounded to FIT's precision, with an `approximated` warning when that changes one. A
+name or note longer than FIT's 254 bytes is cut, reported as `dropped`.
 
-`parseFit(bytes, options)` reads a FIT workout file. It throws for what the model cannot hold:
+`parseFit(bytes, options)` reads a FIT workout file. `options.athlete` holds the athlete's `maxHeartRate` and `zones`, or is a function from the workout's sport to them, since the sport is known only once the file is read. It throws for what the model cannot hold:
 
 - A step that lasts until the lap button is pressed (`open`), or until a heart rate, power,
   calories or anything but a time or distance. The error names the step.
@@ -105,8 +106,8 @@ Values are rounded to FIT's precision, with an `approximated` warning when that 
   range, reported as `converted` with the zones' `source`. A zone with no upper limit is refused.
 - Heart rate as a percentage of max heart rate, unless `maxHeartRate` is given to turn it into
   bpm, reported as `converted`.
-- A sport other than cycling, running or swimming, grade and resistance targets, and repeats
-  that do not form a nested run of steps.
+- A sport other than cycling, running or swimming, grade and resistance targets, repeats that do
+  not form a nested run of steps, and repeats nested more than 32 deep (`maxRepeatDepth`).
 
 The sub sport, pool length, swim stroke and equipment have nowhere to go and are reported as
 `dropped`, as is lap or short-window averaging on a power, heart rate or speed target.

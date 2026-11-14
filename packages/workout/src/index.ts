@@ -37,7 +37,14 @@ export {
   workoutFileFormats,
   workoutFormats,
 } from "./issues.ts";
-export { parseFit, type FitParseOptions, type FitZone, type FitZones } from "./fit-read.ts";
+export {
+  maxRepeatDepth,
+  parseFit,
+  type FitAthlete,
+  type FitParseOptions,
+  type FitZone,
+  type FitZones,
+} from "./fit-read.ts";
 export {
   staircaseMetersPerStep,
   staircaseSecondsPerStep,

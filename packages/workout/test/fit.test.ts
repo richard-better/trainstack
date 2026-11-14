@@ -157,16 +157,21 @@ describe("parseFit on files written by other tools", () => {
 
   test("Garmin Connect: a heart rate zone becomes the athlete's zone range, with a warning naming the zones", () => {
     const { value, warnings } = parseFit(reference("garmin-connect-run-intervals.fit"), {
-      zones: {
-        heartRate: [
-          { low: null, high: 120 },
-          { low: 121, high: 140 },
-          { low: 141, high: 155 },
-          { low: 156, high: 170 },
-          { low: 171, high: null },
-        ],
-        source: "the athlete's zones on 2026-11-14",
-      },
+      athlete: (sport) =>
+        sport === "running"
+          ? {
+              zones: {
+                heartRate: [
+                  { low: null, high: 120 },
+                  { low: 121, high: 140 },
+                  { low: 141, high: 155 },
+                  { low: 156, high: 170 },
+                  { low: 171, high: null },
+                ],
+                source: "the athlete's zones on 2026-11-14",
+              },
+            }
+          : undefined,
     });
     assert.deepEqual(warnings, [
       {
@@ -203,18 +208,20 @@ describe("parseFit on files written by other tools", () => {
 
   test("a zone the athlete's zones do not reach, or one with no upper limit, is refused", () => {
     const options = {
-      zones: {
-        heartRate: [
-          { low: null, high: 130 },
-          { low: 131, high: null },
-        ],
+      athlete: {
+        zones: {
+          heartRate: [
+            { low: null, high: 130 },
+            { low: 131, high: null },
+          ],
+        },
       },
     };
     assert.deepEqual(
       messages(
         failure(() =>
           parseFit(reference("garmin-connect-run-intervals.fit"), {
-            zones: { heartRate: [{ low: null, high: 130 }] },
+            athlete: { zones: { heartRate: [{ low: null, high: 130 }] } },
           }),
         ),
       ),
@@ -237,7 +244,7 @@ describe("parseFit on files written by other tools", () => {
 
   test("percent of max heart rate becomes bpm from the athlete's max heart rate", () => {
     const { value, warnings } = parseFit(reference("trainingpeaks-run-heart-rate.fit"), {
-      maxHeartRate: 190,
+      athlete: { maxHeartRate: 190 },
     });
     assert.deepEqual(warnings, [
       {
@@ -264,11 +271,13 @@ describe("parseFit on files written by other tools", () => {
 
   test("Garmin Connect: watts past the 1000 offset, a power zone from the athlete's zones, and cadence", () => {
     const { value, warnings } = parseFit(reference("garmin-connect-bike-watts.fit"), {
-      zones: {
-        power: [
-          { low: null, high: 137 },
-          { low: 138, high: 187 },
-        ],
+      athlete: {
+        zones: {
+          power: [
+            { low: null, high: 137 },
+            { low: 138, high: 187 },
+          ],
+        },
       },
     });
     assert.deepEqual(
@@ -398,6 +407,19 @@ describe("parseFit on files it cannot take", () => {
     assert.deepEqual(messages(error), [
       "malformed steps: A workout can expand to at most 10000 steps",
     ]);
+  });
+
+  test("a chain of repeats nested past the depth limit fails as malformed, not with a stack overflow", () => {
+    const steps: FitWorkout["steps"][number][] = [{ duration: { type: "time", seconds: 1 } }];
+    for (let index = 0; index < 9_999; index++) {
+      steps.push({ duration: { type: "repeat", fromStep: 0, count: 1 } });
+    }
+    assert.deepEqual(
+      messages(
+        failure(() => parseFit(encodeFitWorkout({ name: "Deep", sport: "cycling", steps }))),
+      ),
+      ["malformed step 34: Repeats nest more than 32 deep, which no workout needs"],
+    );
   });
 
   test("random corruption of a written file only ever fails with a WorkoutFormatError", () => {
@@ -600,6 +622,55 @@ describe("writeFit", () => {
     assert.deepEqual(parseFit(written.value).value.steps, [powerStep(60, 0.86)]);
   });
 
+  test("cuts names and notes to what a .fit file holds, and says so", () => {
+    const long = "a".repeat(300);
+    const written = writeFit({
+      name: long,
+      sport: "cycling",
+      steps: [{ type: "step", duration: { type: "time", seconds: 60 }, name: long, notes: long }],
+    });
+    assert.deepEqual(
+      written.warnings.map((warning) => `${warning.at ?? "-"}: ${warning.message}`),
+      [
+        "steps.0: Only the first 254 characters of the name fit in a .fit file",
+        "steps.0: Only the first 254 characters of the notes fit in a .fit file",
+        "-: Only the first 254 characters of the name fit in a .fit file",
+      ],
+    );
+    assert.equal(parseFit(written.value).value.name, "a".repeat(254));
+  });
+
+  test("refuses watts and bpm too large for FIT's fields once offset", () => {
+    const workout: Workout = {
+      name: "Huge",
+      sport: "cycling",
+      steps: [
+        {
+          type: "step",
+          duration: { type: "time", seconds: 60 },
+          target: {
+            type: "power",
+            unit: "watts",
+            level: { kind: "constant", value: 4_294_967_000 },
+          },
+        },
+        {
+          type: "step",
+          duration: { type: "time", seconds: 60 },
+          target: {
+            type: "heartRate",
+            unit: "bpm",
+            level: { kind: "constant", value: 4_294_967_294 },
+          },
+        },
+      ],
+    };
+    assert.deepEqual(messages(failure(() => writeFit(workout))), [
+      "unsupported steps.0: Power in watts is too large for a .fit file",
+      "unsupported steps.1: Heart rate in bpm is too large for a .fit file",
+    ]);
+  });
+
   test("writes zero watts and zero bpm so they read back as zero", () => {
     const workout: Workout = {
       name: "Zero",
@@ -797,6 +868,28 @@ describe("writeFit with approximate", () => {
     );
   });
 
+  test("refuses a ramp too short to split into steps", () => {
+    const error = failure(() =>
+      writeFit(
+        {
+          name: "Blink",
+          sport: "cycling",
+          steps: [
+            {
+              type: "step",
+              duration: { type: "time", seconds: 0.001 },
+              target: { type: "power", unit: "ftp", level: { kind: "ramp", from: 0.4, to: 0.6 } },
+            },
+          ],
+        },
+        { approximate: true },
+      ),
+    );
+    assert.deepEqual(messages(error), [
+      "unsupported steps.0: The ramp is too short to write as 2 steps",
+    ]);
+  });
+
   test("writes a max effort as a step with no target named all out", () => {
     const written = writeFit(
       {
@@ -882,7 +975,7 @@ describe("parseWorkoutFile with .fit", () => {
 
   test("passes the athlete's settings through to the FIT reader", () => {
     const { value } = parseWorkoutFile("run.fit", reference("trainingpeaks-run-heart-rate.fit"), {
-      maxHeartRate: 200,
+      athlete: { maxHeartRate: 200 },
     });
     assert.equal(value.steps.length, 2);
   });

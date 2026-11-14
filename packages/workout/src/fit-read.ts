@@ -32,11 +32,17 @@ export type FitZones = {
   source?: string | undefined;
 };
 
-export type FitParseOptions = {
-  name?: string | undefined;
+export type FitAthlete = {
   maxHeartRate?: number | undefined;
   zones?: FitZones | undefined;
 };
+
+export type FitParseOptions = {
+  name?: string | undefined;
+  athlete?: FitAthlete | ((sport: Sport) => FitAthlete | undefined) | undefined;
+};
+
+export const maxRepeatDepth = 32;
 
 const untitled = "Untitled workout";
 
@@ -98,7 +104,7 @@ function stepLabel(index: number, step: FitWorkoutStep): string {
   return step.name ? `Step ${index + 1} ("${step.name}")` : `Step ${index + 1}`;
 }
 
-type Placed = { start: number; block: Block };
+type Placed = { start: number; depth: number; block: Block };
 
 function level(low: number, high: number): Cadence {
   const [bottom, top] = low <= high ? [low, high] : [high, low];
@@ -110,6 +116,7 @@ function level(low: number, high: number): Cadence {
 class FitReader {
   private readonly log = new IssueLog("fit");
   private readonly options: FitParseOptions;
+  private athlete: FitAthlete = {};
 
   constructor(options: FitParseOptions) {
     this.options = options;
@@ -118,6 +125,8 @@ class FitReader {
   read(data: Uint8Array | ArrayBuffer): Converted<Workout> {
     const file = this.decoded(data);
     const sport = this.sport(file);
+    const athlete = this.options.athlete;
+    this.athlete = (typeof athlete === "function" ? athlete(sport) : athlete) ?? {};
     const placed: Placed[] = [];
     file.steps.forEach((step, index) => {
       const at = `step ${index + 1}`;
@@ -126,7 +135,7 @@ class FitReader {
         return;
       }
       const converted = this.step(step, index, at);
-      if (converted) placed.push({ start: index, block: converted });
+      if (converted) placed.push({ start: index, depth: 0, block: converted });
     });
     const fileName = file.name ?? this.options.name;
     if (!fileName) {
@@ -195,8 +204,9 @@ class FitReader {
     }
     const inside: Placed[] = [];
     while (placed.length > 0 && placed[placed.length - 1]!.start >= fromStep) {
-      inside.unshift(placed.pop()!);
+      inside.push(placed.pop()!);
     }
+    inside.reverse();
     if (inside[0]?.start !== fromStep) {
       placed.push(...inside);
       this.log.fail(
@@ -206,9 +216,18 @@ class FitReader {
       );
       return;
     }
+    const depth = 1 + Math.max(...inside.map((entry) => entry.depth));
+    if (depth > maxRepeatDepth) {
+      this.log.abort(
+        "malformed",
+        `Repeats nest more than ${maxRepeatDepth} deep, which no workout needs`,
+        at,
+      );
+    }
     if (step.notes) this.log.warn("dropped", "Notes on a repeat are not kept", at);
     placed.push({
       start: fromStep,
+      depth,
       block: {
         type: "repeat",
         count,
@@ -310,7 +329,7 @@ class FitReader {
       power: { title: "Power", setting: "power zones", unit: "W" },
       speed: { title: "Speed", setting: "pace zones", unit: "m/s" },
     }[metric];
-    const zones = this.options.zones?.[metric];
+    const zones = this.athlete.zones?.[metric];
     if (!zones) {
       this.log.fail(
         "unsupported",
@@ -337,7 +356,7 @@ class FitReader {
       return undefined;
     }
     const low = found.low ?? 0;
-    const source = this.options.zones?.source;
+    const source = this.athlete.zones?.source;
     this.log.warn(
       "converted",
       `${names.title} zone ${zoneNumber} became ${formatNumber(low)}-${formatNumber(found.high)} ${names.unit}${source ? ` from ${source}` : ""}`,
@@ -387,7 +406,7 @@ class FitReader {
         if (low.unit === "bpm") {
           return { type: "heartRate", unit: "bpm", level: level(low.value, high.value) };
         }
-        const max = this.options.maxHeartRate;
+        const max = this.athlete.maxHeartRate;
         if (max === undefined) {
           this.log.fail(
             "unsupported",
