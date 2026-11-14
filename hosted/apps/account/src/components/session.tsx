@@ -63,6 +63,9 @@ function AppHeader({ user }: { user: SignedInUser }) {
         <Link to="/training" className="nav-link">
           Training
         </Link>
+        <Link to="/calendar" search={{ view: "month" }} className="nav-link">
+          Calendar
+        </Link>
         <Link to="/workouts" className="nav-link">
           Workouts
         </Link>

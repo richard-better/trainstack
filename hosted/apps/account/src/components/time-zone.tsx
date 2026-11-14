@@ -19,6 +19,7 @@ export function useSetTimeZone() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: athleteSettingsQueryKey }),
         queryClient.invalidateQueries({ queryKey: ["training"] }),
+        queryClient.invalidateQueries({ queryKey: ["calendar"] }),
       ]);
     },
   });
@@ -62,13 +63,13 @@ export function useTimeZoneDifference() {
   return stored !== null && browser !== null && stored !== browser ? { stored, browser } : null;
 }
 
-export function TimeZoneOffer({ where }: { where: "training" | "settings" }) {
+export function TimeZoneOffer({ where }: { where: "training" | "calendar" | "settings" }) {
   const difference = useTimeZoneDifference();
   const setTimeZone = useSetTimeZone();
   const [kept, setKept] = useState(false);
   if (!difference) return null;
   const { stored, browser } = difference;
-  if (where === "training" && (kept || wasKept(stored, browser))) return null;
+  if (where !== "settings" && (kept || wasKept(stored, browser))) return null;
   return (
     <div className="time-zone-offer" role="status">
       <p className="lede">
@@ -85,7 +86,7 @@ export function TimeZoneOffer({ where }: { where: "training" | "settings" }) {
         >
           {setTimeZone.isPending ? "Changing…" : `Use ${timeZoneName(browser)}`}
         </button>
-        {where === "training" && (
+        {where !== "settings" && (
           <button
             type="button"
             className="quiet"
