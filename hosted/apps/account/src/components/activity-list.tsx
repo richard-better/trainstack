@@ -1,6 +1,7 @@
 import type { Activity } from "@trainstack/contract";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 
 import { activitiesQueryKey, api } from "../api";
 import { ACTIVITIES_PER_PAGE } from "../lib/client";
@@ -12,6 +13,7 @@ import {
 } from "../lib/analysis";
 import { activityWeeks, type WeekTotals } from "../lib/activity-weeks";
 import { activityDate, weekLabel } from "../lib/dates";
+import { routePath, storedRouteSegments } from "../lib/route";
 import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
@@ -130,6 +132,26 @@ function Totals({ totals }: { totals: WeekTotals }) {
   );
 }
 
+const THUMBNAIL_WIDTH = 72;
+const THUMBNAIL_HEIGHT = 44;
+
+function RouteThumbnail({ route }: { route: Activity["route"] }) {
+  const path = useMemo(
+    () =>
+      route ? routePath(storedRouteSegments(route), THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, 5) : null,
+    [route],
+  );
+  return (
+    <span className="row-route" aria-hidden="true">
+      {path && (
+        <svg viewBox={`0 0 ${THUMBNAIL_WIDTH} ${THUMBNAIL_HEIGHT}`} focusable="false">
+          <path d={path} />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 function ActivityRow({ activity }: { activity: Activity }) {
   const sport = sportName(activity.sport, activity.indoor);
   const figures = headlineFigures(activity.statistics);
@@ -137,7 +159,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
   const analysing = analysisState(activity).kind === "pending";
   const updating = analysisUpdating(activity);
   return (
-    <Link to="/activities/$id" params={{ id: activity.id }} className="row">
+    <Link to="/activities/$id" params={{ id: activity.id }} className="row activity-row">
       <span className="row-icon" title={sport.label}>
         <SportIcon family={sport.family} />
       </span>
@@ -185,6 +207,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
           )}
         </dl>
       )}
+      <RouteThumbnail route={activity.route} />
     </Link>
   );
 }

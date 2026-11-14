@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
+import { encodePolyline } from "@trainstack/analysis";
 import { readActivityFile } from "../hosted/apps/account/src/lib/activity-file.ts";
 import {
-  BREAK_AFTER_METRES,
+  decodePolyline,
   mercator,
   metresBetween,
   nearestPoint,
   pointAtSecond,
   routeOf,
   routePath,
+  storedRouteSegments,
 } from "../hosted/apps/account/src/lib/route.ts";
 import {
   MAGNITUDE_RAMP,
@@ -85,8 +87,8 @@ test("positions lost to a GPS gap leave a hole in the route and no position on t
   assert.equal(pointAtSecond(route, 1041).second, 1041);
 });
 
-test("a jump between two positions breaks the line even when no record is missing", () => {
-  const north = 47.5 + (BREAK_AFTER_METRES * 2) / 111_000;
+test("a jump faster than 100 m/s breaks the line even when no record is missing", () => {
+  const north = 47.5 + 500 / 111_000;
   const route = routeOf([
     record(0, 47.5, 19.04),
     record(1, 47.50005, 19.04),
@@ -94,7 +96,21 @@ test("a jump between two positions breaks the line even when no record is missin
     record(3, north + 0.00005, 19.04),
   ]);
   assert.equal(route.segments.length, 2);
-  assert.ok(metresBetween(route.points[1], route.points[2]) > BREAK_AFTER_METRES);
+  assert.ok(metresBetween(route.points[1], route.points[2]) > 100);
+});
+
+test("the timer's pauses end a line and what was recorded during them is not drawn", () => {
+  const records = Array.from({ length: 10 }, (_, second) =>
+    record(second, 47.5 + second * 0.00005, 19.04),
+  );
+  const route = routeOf(records, [{ from: 3, to: 6 }]);
+  assert.deepEqual(
+    route.segments.map((segment) => segment.map((point) => point.second)),
+    [
+      [0, 1, 2, 3],
+      [6, 7, 8, 9],
+    ],
+  );
 });
 
 test("indoor rides and files without usable positions have no route", async () => {
@@ -107,7 +123,7 @@ test("indoor rides and files without usable positions have no route", async () =
 test("the route thumbnail is a plain SVG path, one stroke per line, fitted to its box and thinned to its pixels", () => {
   const ride = decoded(named("Coffee ride"));
   const route = routeOf(ride.records);
-  const path = routePath(route, 64, 40, 2);
+  const path = routePath(route.segments, 64, 40, 2);
   assert.equal(path.match(/M/g).length, 2);
   const numbers = path.match(/-?\d+(\.\d+)?/g).map(Number);
   const xs = numbers.filter((_, index) => index % 2 === 0);
@@ -199,8 +215,8 @@ test("a coloured route changes colour where its measure does, and never joins ac
     record(1, 47.5001, 19.04),
     record(2, 47.5002, 19.04),
     record(3),
-    record(4, 47.5003, 19.04),
-    record(5, 47.5004, 19.04),
+    record(64, 47.5003, 19.04),
+    record(65, 47.5004, 19.04),
   ]);
   const bands = [
     { color: "low", from: null, to: 10 },
@@ -274,9 +290,61 @@ test("pointing anywhere on the drawn line picks the route, not only near its rec
   assert.equal(nearestPoint(route, between.x, between.y, tight).second, 0);
   const later = mercator(47.5, 19.0407);
   assert.equal(nearestPoint(route, later.x, later.y, tight).second, 1);
-  const gapped = routeOf([record(0, 47.5, 19.04), record(1), record(2, 47.5, 19.042)]);
+  const gapped = routeOf([record(0, 47.5, 19.04), record(1), record(100, 47.5, 19.042)]);
   assert.equal(
     nearestPoint(gapped, mercator(47.5, 19.041).x, mercator(47.5, 19.041).y, tight),
     null,
   );
+});
+
+test("a stored route decodes from its polylines and draws in true proportion at any latitude", () => {
+  const square = (latitude) => {
+    const north = latitude + 1000 / 111_195;
+    const east = 19 + 1000 / (111_195 * Math.cos((latitude * Math.PI) / 180));
+    return [
+      { latitude, longitude: 19 },
+      { latitude: north, longitude: 19 },
+      { latitude: north, longitude: east },
+      { latitude, longitude: east },
+    ];
+  };
+  for (const latitude of [0, 47.5, 70]) {
+    const corners = square(latitude);
+    const encoded = encodePolyline(corners);
+    decodePolyline(encoded).forEach((point, index) => {
+      assert.ok(Math.abs(point.latitude - corners[index].latitude) < 1e-5);
+      assert.ok(Math.abs(point.longitude - corners[index].longitude) < 1e-5);
+    });
+    const path = routePath(
+      storedRouteSegments({ segments: [encoded], bounds: [0, 0, 0, 0] }),
+      100,
+      100,
+    );
+    const numbers = path.match(/-?\d+(\.\d+)?/g).map(Number);
+    const xs = numbers.filter((_, index) => index % 2 === 0);
+    const ys = numbers.filter((_, index) => index % 2 === 1);
+    const ratio = (Math.max(...xs) - Math.min(...xs)) / (Math.max(...ys) - Math.min(...ys));
+    assert.ok(
+      Math.abs(ratio - 1) < 0.03,
+      `a square kilometre at ${latitude}° draws ${ratio} wide per tall`,
+    );
+  }
+});
+
+test("each stored segment is its own stroke, so a pause in a stored route is not bridged", () => {
+  const first = encodePolyline([
+    { latitude: 47.5, longitude: 19 },
+    { latitude: 47.51, longitude: 19 },
+  ]);
+  const second = encodePolyline([
+    { latitude: 47.52, longitude: 19.01 },
+    { latitude: 47.53, longitude: 19.01 },
+  ]);
+  const path = routePath(
+    storedRouteSegments({ segments: [first, second], bounds: [19, 47.5, 19.01, 47.53] }),
+    72,
+    44,
+    5,
+  );
+  assert.equal(path.match(/M/g).length, 2);
 });
