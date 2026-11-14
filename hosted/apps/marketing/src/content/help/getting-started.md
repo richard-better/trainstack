@@ -23,13 +23,14 @@ If signing in stops at **Sign in was cancelled.** or **Sign in did not finish. T
 
 ## Where things are
 
-| Page           | What it is for                                                                 |
-| -------------- | ------------------------------------------------------------------------------ |
-| **Activities** | Everything you did, newest first, with this week's totals. Upload and log here |
-| **Training**   | Fitness, fatigue and form, and your bests                                      |
-| **Calendar**   | What you planned, what you did, and how closely they matched                   |
-| **Workouts**   | Your workout library, the built-in workouts, lists, and the editor             |
-| **Settings**   | Weight, time zone, thresholds and zones, the calendar feed, and your data      |
+| Page           | What it is for                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Today**      | How ready you are, today's plan with a suggestion for each session, and today's check-in. Where you land after signing in |
+| **Activities** | Everything you did, newest first, with this week's totals. Upload and log here                                            |
+| **Training**   | Fitness, fatigue and form, and your bests                                                                                 |
+| **Calendar**   | What you planned, what you did, and how closely they matched                                                              |
+| **Workouts**   | Your workout library, the built-in workouts, lists, and the editor                                                        |
+| **Settings**   | Weight, time zone, thresholds and zones, the calendar feed, and your data                                                 |
 
 ## A good first hour
 
