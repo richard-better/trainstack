@@ -150,7 +150,7 @@ const exportInput = {
     .boolean()
     .optional()
     .describe(
-      "For .fit: write a ramp as a staircase of steady steps and a max effort as a step with no target, each reported in warnings, instead of refusing the workout",
+      "Approximate what the format cannot say, each reported in warnings, instead of refusing the workout. For .fit: a ramp becomes a staircase of steady steps and a max effort a step with no target. For .zwo, .erg and .mrc: a lap-button step becomes a step of its expected length; one with no expected length is still refused",
     ),
   ftp: z
     .number()
