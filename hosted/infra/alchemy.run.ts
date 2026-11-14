@@ -19,6 +19,10 @@ const serverDomainForStage = Output.fromEffect(
 const serverWorkersDevForStage = Output.fromEffect(production.pipe(Effect.map((prod) => !prod)));
 const compatibility = { date: "2026-07-30", flags: ["nodejs_compat"] };
 const SUBREQUESTS_FOR_AN_EXPORT_OF_A_LARGE_ACCOUNT = 100_000;
+const LOGS_WITHOUT_REQUEST_URLS_SINCE_FEED_URLS_ARE_SECRETS = {
+  enabled: true,
+  logs: { enabled: true, invocationLogs: false },
+};
 
 export const db = Cloudflare.D1.Database("database", {
   migrations: "../apps/api/src/db/migrations",
@@ -52,6 +56,7 @@ export const server = Cloudflare.Worker("server", {
   compatibility,
   crons: ["* * * * *"],
   limits: { subrequests: SUBREQUESTS_FOR_AN_EXPORT_OF_A_LARGE_ACCOUNT },
+  observability: LOGS_WITHOUT_REQUEST_URLS_SINCE_FEED_URLS_ARE_SECRETS,
   domain: serverDomainForStage,
   workersDev: serverWorkersDevForStage,
   env: {
