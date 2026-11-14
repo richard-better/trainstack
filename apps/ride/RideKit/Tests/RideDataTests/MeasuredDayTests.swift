@@ -10,9 +10,9 @@ struct MeasuredDayTests {
     return calendar
   }()
 
-  private func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+  private func at(_ day: Int, _ hour: Int, _ minute: Int = 0, month: Int = 11) -> Date {
     calendar.date(
-      from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
+      from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
   }
 
   private let today = SettingDay("2026-11-14")!
@@ -57,5 +57,16 @@ struct MeasuredDayTests {
     let days = MeasuredDay.days(
       [today], asleep: [], restingHeartRate: [], hrv: [], calendar: calendar)
     #expect(days[0].isEmpty)
+  }
+
+  @Test func eachNightRunsFromLocalNoonToLocalNoonAcrossAClockChange() {
+    let days = MeasuredDay.days(
+      [SettingDay("2026-03-29")!, SettingDay("2026-10-25")!],
+      asleep: [
+        DateInterval(start: at(28, 11, month: 3), end: at(29, 13, month: 3)),
+        DateInterval(start: at(24, 11, month: 10), end: at(25, 13, month: 10)),
+      ],
+      restingHeartRate: [], hrv: [], calendar: calendar)
+    #expect(days.map(\.sleepSeconds) == [23 * 3600, 25 * 3600])
   }
 }

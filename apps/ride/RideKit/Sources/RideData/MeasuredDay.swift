@@ -23,9 +23,10 @@ public struct MeasuredDay: Hashable, Codable, Sendable {
     return days.map { day in
       let start = day.date(in: calendar)
       let nextDay = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+      let previousDay = calendar.date(byAdding: .day, value: -1, to: start) ?? start
       let night = DateInterval(
-        start: calendar.date(byAdding: .hour, value: -12, to: start) ?? start,
-        end: calendar.date(byAdding: .hour, value: 12, to: start) ?? start)
+        start: calendar.date(bySettingHour: 12, minute: 0, second: 0, of: previousDay) ?? start,
+        end: calendar.date(bySettingHour: 12, minute: 0, second: 0, of: start) ?? start)
       let nightSleep = sleep.compactMap { $0.intersection(with: night) }
       let asleepSeconds = nightSleep.reduce(0) { $0 + $1.duration }
       let duringSleep = hrv.filter { reading in
