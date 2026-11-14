@@ -327,7 +327,7 @@ export async function exportWorkout(
     id: source.id,
     format,
     ...(ftp === null ? {} : { ftp }),
-    ...(format === "fit" ? { approximate: true } : {}),
+    approximate: true,
   };
   const [error, file] = await safe(
     source.kind === "own" ? api.workouts.export(input) : api.builtinWorkouts.export(input),

@@ -3,6 +3,7 @@ import type {
   Cue,
   Intensity,
   Level,
+  MeasuredDuration,
   Repeat,
   Sport,
   Step,
@@ -15,7 +16,9 @@ import {
   type Problem,
   pathKey,
   withCadence,
+  lengthAs,
   withDurationType,
+  withExpected,
   withLevelKind,
   withTargetType,
   withUnit,
@@ -280,46 +283,32 @@ function StepForm({
           options={[
             ["time", "Time"],
             ["distance", "Distance"],
-            ...(step.duration.type === "open" ? [["open", "Until lap"] as const] : []),
+            ["open", "Until lap"],
           ]}
-          onChange={(type) =>
-            type !== "open" && set(withDurationType(step, type, secondsPerMeter), "duration-type")
-          }
+          onChange={(type) => set(withDurationType(step, type, secondsPerMeter), "duration-type")}
         />
-        {step.duration.type === "open" ? null : step.duration.type === "time" ? (
-          <TextField
-            label="Time"
-            value={step.duration.seconds}
-            format={formatClock}
-            parse={(text) => {
-              const seconds = parseClock(text);
-              return seconds !== null && seconds > 0 && seconds <= 24 * 3600 ? seconds : null;
-            }}
-            hint="Minutes and seconds, like 5:00"
-            inputMode="numeric"
-            width={96}
-            problem={problemAt(problems, "duration")}
-            onCommit={(seconds) =>
-              set({ ...step, duration: { type: "time", seconds } }, "duration")
-            }
+        {step.duration.type === "open" ? (
+          <ExpectedFields
+            step={step}
+            expected={step.duration.expected}
+            secondsPerMeter={secondsPerMeter}
+            problems={problems}
+            set={set}
           />
         ) : (
-          <TextField
-            label="Distance"
-            value={step.duration.meters}
-            format={formatNumber(0)}
-            parse={parseNumber(1, 1_000_000)}
-            hint="Metres, at least 1"
-            unit="m"
-            inputMode="numeric"
-            width={96}
+          <LengthField
+            length={step.duration}
+            label={step.duration.type === "time" ? "Time" : "Distance"}
             problem={problemAt(problems, "duration")}
-            onCommit={(meters) =>
-              set({ ...step, duration: { type: "distance", meters } }, "duration")
-            }
+            onCommit={(duration) => set({ ...step, duration }, "duration")}
           />
         )}
       </div>
+      {step.duration.type === "open" && (
+        <p className="field-hint">
+          Lasts until the lap button is pressed. The expected length only helps plan the day.
+        </p>
+      )}
 
       <div className="form-row">
         <Select
@@ -521,7 +510,7 @@ function TargetFields({
         options={[
           ["constant", "Steady"],
           ["range", "Range"],
-          ["ramp", "Ramp"],
+          ...(step.duration.type === "open" ? [] : [["ramp", "Ramp"] as const]),
         ]}
         onChange={(kind) => setLevel(withLevelKind(level, kind), "level-kind")}
       />
@@ -607,6 +596,91 @@ function NotesField({
         }
       />
     </label>
+  );
+}
+
+function LengthField({
+  length,
+  label,
+  problem,
+  onCommit,
+}: {
+  length: MeasuredDuration;
+  label: string;
+  problem: string | undefined;
+  onCommit: (length: MeasuredDuration) => void;
+}) {
+  return length.type === "time" ? (
+    <TextField
+      label={label}
+      value={length.seconds}
+      format={formatClock}
+      parse={(text) => {
+        const seconds = parseClock(text);
+        return seconds !== null && seconds > 0 && seconds <= 24 * 3600 ? seconds : null;
+      }}
+      hint="Minutes and seconds, like 5:00"
+      inputMode="numeric"
+      width={96}
+      problem={problem}
+      onCommit={(seconds) => onCommit({ type: "time", seconds })}
+    />
+  ) : (
+    <TextField
+      label={label}
+      value={length.meters}
+      format={formatNumber(0)}
+      parse={parseNumber(1, 1_000_000)}
+      hint="Metres, at least 1"
+      unit="m"
+      inputMode="numeric"
+      width={96}
+      problem={problem}
+      onCommit={(meters) => onCommit({ type: "distance", meters })}
+    />
+  );
+}
+
+function ExpectedFields({
+  step,
+  expected,
+  secondsPerMeter,
+  problems,
+  set,
+}: {
+  step: Step;
+  expected: MeasuredDuration | undefined;
+  secondsPerMeter: number;
+  problems: readonly Problem[];
+  set: (next: Step, field: string) => void;
+}) {
+  const kind = expected?.type ?? "none";
+  const choose = (next: "none" | MeasuredDuration["type"]) =>
+    set(
+      withExpected(step, next === "none" ? undefined : lengthAs(expected, next, secondsPerMeter)),
+      "expected-kind",
+    );
+  return (
+    <>
+      <Select<"none" | MeasuredDuration["type"]>
+        label="Expected"
+        value={kind}
+        options={[
+          ["none", "Not set"],
+          ["time", "Time"],
+          ["distance", "Distance"],
+        ]}
+        onChange={choose}
+      />
+      {expected && (
+        <LengthField
+          length={expected}
+          label="About"
+          problem={problemAt(problems, "duration")}
+          onCommit={(length) => set(withExpected(step, length), "expected")}
+        />
+      )}
+    </>
   );
 }
 

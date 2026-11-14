@@ -28,7 +28,9 @@ import {
   undo,
   ungroup,
   updateStep,
+  lengthAs,
   withDurationType,
+  withExpected,
   withLevelKind,
   withTargetType,
   withUnit,
@@ -268,6 +270,33 @@ test("changing a target's kind, unit and level keeps what can be kept", () => {
     { type: "time", seconds: 300 },
     "a lap-button step with no expected length becomes five minutes",
   );
+  const ramp = {
+    ...at(300, 0.5),
+    target: { type: "power", unit: "ftp", level: { kind: "ramp", from: 0.5, to: 0.7 } },
+    cues: [{ at: { type: "distance", meters: 100 }, text: "Go" }],
+  };
+  const opened = withDurationType(ramp, "open", 1 / 3);
+  assert.deepEqual(opened.duration, { type: "open", expected: { type: "time", seconds: 300 } });
+  assert.deepEqual(
+    opened.target.level,
+    { kind: "range", low: 0.5, high: 0.7 },
+    "a lap-button step cannot ramp, so the ramp becomes the range it spans",
+  );
+  assert.equal(opened.cues.length, 1, "a lap-button step keeps cues by time or distance");
+  assert.equal(
+    workoutSchema.safeParse({ ...blankWorkout("cycling"), steps: [opened] }).success,
+    true,
+  );
+  assert.deepEqual(withExpected(opened, undefined).duration, { type: "open" });
+  assert.deepEqual(withExpected(at(300, 0.5), { type: "time", seconds: 60 }).duration, {
+    type: "time",
+    seconds: 300,
+  });
+  assert.deepEqual(lengthAs(undefined, "distance", 1 / 4), { type: "distance", meters: 1200 });
+  assert.deepEqual(lengthAs({ type: "distance", meters: 1000 }, "time", 1 / 4), {
+    type: "time",
+    seconds: 250,
+  });
 });
 
 test("dragging and the arrow keys on the chart change a step's level and length", () => {

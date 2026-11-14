@@ -192,6 +192,16 @@
   opacity: 0.55;
 }
 
+.lap-end {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.lap-unknown .lap-end {
+  stroke-dasharray: 1.5 3;
+}
+
 .workout-chart {
   margin: 0;
 }
@@ -443,6 +453,11 @@
 
 .figure dd.figure-note {
   font-size: 14px;
+}
+
+.figure dd + dd.figure-note {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .imports {
@@ -769,6 +784,12 @@
 .field-problem {
   margin: 0;
   color: var(--warn);
+  font-size: 12px;
+}
+
+.field-hint {
+  margin: -8px 0 0;
+  color: var(--muted);
   font-size: 12px;
 }
 

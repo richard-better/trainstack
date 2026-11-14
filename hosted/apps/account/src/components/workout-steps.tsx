@@ -12,6 +12,7 @@ import {
   durationText,
   formatMeters,
   formatSpan,
+  lapStepsText,
   intensityNames,
   type Overview,
   type Reference,
@@ -95,6 +96,7 @@ function RepeatItem({
   const once = [
     inner.seconds > 0 ? formatSpan(inner.seconds) : null,
     inner.meters > 0 ? formatMeters(inner.meters) : null,
+    inner.open.steps > 0 ? lapStepsText(inner.open.steps) : null,
   ]
     .filter(Boolean)
     .join(" + ");

@@ -129,6 +129,11 @@ export const measuredLength = (step: Step): MeasuredDuration | undefined =>
 
 export const unknownOpenSeconds = 300;
 
+export type Lap = "expected" | "unknown" | null;
+
+export const lapOf = (step: Step): Lap =>
+  step.duration.type !== "open" ? null : step.duration.expected ? "expected" : "unknown";
+
 export function stepSeconds(step: Step, reference: Reference) {
   const length = measuredLength(step);
   if (!length) return { seconds: unknownOpenSeconds, estimated: true };
@@ -147,6 +152,7 @@ export type Segment = {
   readonly start: number;
   readonly seconds: number;
   readonly estimated: boolean;
+  readonly lap: Lap;
   readonly shape: "level" | "range" | "ramp" | "free" | "max";
   readonly from: number;
   readonly to: number;
@@ -221,7 +227,16 @@ export function segmentsOf(workout: Pick<Workout, "steps">, reference: Reference
   return steps.map(({ step, path, key }) => {
     const { seconds, estimated } = stepSeconds(step, reference);
     const target = step.target;
-    const base = { key, path, step, start, seconds, estimated, zone: zoneOf(target, reference) };
+    const base = {
+      key,
+      path,
+      step,
+      start,
+      seconds,
+      estimated,
+      lap: lapOf(step),
+      zone: zoneOf(target, reference),
+    };
     start += seconds;
     if (!target) {
       const level = FREE_RIDE_SHARE;
@@ -276,7 +291,11 @@ function stepMeanSquare(step: Step, reference: Reference): number | null {
   return meanSquare(target.level) * unit ** 2;
 }
 
+const hasUnknownLength = (segments: readonly Segment[]) =>
+  segments.some((segment) => segment.lap === "unknown");
+
 export function loadOf(segments: readonly Segment[], reference: Reference): Load | null {
+  if (hasUnknownLength(segments)) return null;
   let weighted = 0;
   let seconds = 0;
   for (const segment of segments) {
@@ -293,6 +312,7 @@ export function loadOf(segments: readonly Segment[], reference: Reference): Load
 }
 
 export function averagePower(segments: readonly Segment[], reference: Reference): number | null {
+  if (hasUnknownLength(segments)) return null;
   let work = 0;
   let seconds = 0;
   for (const segment of segments) {
@@ -309,6 +329,9 @@ export function averagePower(segments: readonly Segment[], reference: Reference)
 export type Overview = {
   readonly segments: Segment[];
   readonly seconds: number;
+  readonly drawnSeconds: number;
+  readonly lapSteps: number;
+  readonly unknownLapSteps: number;
   readonly estimated: boolean;
   readonly meters: number;
   readonly load: Load | null;
@@ -318,10 +341,14 @@ export type Overview = {
 export function overviewOf(workout: Pick<Workout, "steps">, reference: Reference): Overview {
   const segments = segmentsOf(workout, reference);
   const last = segments.at(-1);
+  const known = segments.filter((segment) => segment.lap !== "unknown");
   return {
     segments,
-    seconds: last ? last.start + last.seconds : 0,
-    estimated: segments.some((segment) => segment.estimated),
+    seconds: known.reduce((sum, segment) => sum + segment.seconds, 0),
+    drawnSeconds: last ? last.start + last.seconds : 0,
+    lapSteps: segments.filter((segment) => segment.lap !== null).length,
+    unknownLapSteps: segments.length - known.length,
+    estimated: known.some((segment) => segment.estimated),
     meters: segments.reduce(
       (sum, { step }) => sum + (step.duration.type === "distance" ? step.duration.meters : 0),
       0,
@@ -360,6 +387,9 @@ export function formatMeters(meters: number) {
 
 const lengthText = (length: MeasuredDuration) =>
   length.type === "time" ? formatSpan(length.seconds) : formatMeters(length.meters);
+
+export const lapStepsText = (count: number) =>
+  count === 1 ? "1 lap-button step" : `${count} lap-button steps`;
 
 export const durationText = (step: Step) => {
   if (step.duration.type !== "open") return lengthText(step.duration);
