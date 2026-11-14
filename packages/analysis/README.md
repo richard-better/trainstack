@@ -212,8 +212,9 @@ The analysis keeps what detection needs as statistics:
   efforts were not all-out; above it the 20 min effort was weak against the short ones. A
   trusted fit gives the estimate, `high` when the 20 min rule agrees within 5 % and the 20 min
   effort was maximal, otherwise `medium`. An untrusted or missing fit falls back to the 20 min
-  rule, `medium` at most. An hour held above either raises the estimate to it. A sub-maximal 20
-  min effort gives no estimate.
+  rule, `medium` at most. An hour held above either raises the estimate to it. The best 20 min
+  is taken from the rides whose 20 min was not sub-maximal, and when every one was, there is no
+  estimate.
 
 - **Threshold pace.** Riegel's model, T₂ = T₁ × (D₂ / D₁)^1.06 (Riegel, "Athletic records and
   human endurance", _American Scientist_ 69 (1981), 285-290), predicts from each best effort of

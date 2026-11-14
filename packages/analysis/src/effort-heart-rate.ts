@@ -25,17 +25,40 @@ export interface BestEffortHeartRate {
 
 export function sustainedMaxHeartRate(samples: Samples): number | null {
   const { held, heartRate } = samples;
+  const pulse = (segment: number) => heartRate[held.record[segment]!]!;
+  const lowest = new Int32Array(held.count);
   let best = -Infinity;
-  for (let first = 0; first < held.count; first++) {
-    let lowest = heartRate[held.record[first]!]!;
-    for (let last = first + 1; last < held.count && !Number.isNaN(lowest); last++) {
-      if (held.start[last] !== held.end[last - 1]) break;
-      lowest = Math.min(lowest, heartRate[held.record[last]!]!);
-      if (held.end[last]! - held.start[first]! >= sustainedHeartRateSeconds) {
-        if (lowest > best) best = lowest;
-        break;
-      }
+  for (let chain = 0; chain < held.count;) {
+    if (Number.isNaN(pulse(chain))) {
+      chain++;
+      continue;
     }
+    let end = chain;
+    while (
+      end + 1 < held.count &&
+      held.start[end + 1] === held.end[end] &&
+      !Number.isNaN(pulse(end + 1))
+    ) {
+      end++;
+    }
+    let head = 0;
+    let tail = 0;
+    lowest[tail++] = chain;
+    let last = chain;
+    for (let first = chain; first <= end; first++) {
+      while (lowest[head]! < first) head++;
+      while (
+        last < end &&
+        (last === first || held.end[last]! - held.start[first]! < sustainedHeartRateSeconds)
+      ) {
+        last++;
+        while (tail > head && pulse(lowest[tail - 1]!) >= pulse(last)) tail--;
+        lowest[tail++] = last;
+      }
+      if (last === first || held.end[last]! - held.start[first]! < sustainedHeartRateSeconds) break;
+      best = Math.max(best, pulse(lowest[head]!));
+    }
+    chain = end + 1;
   }
   return Number.isFinite(best) ? rounded(best) : null;
 }

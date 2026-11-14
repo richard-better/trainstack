@@ -253,22 +253,28 @@ function detectFtp(
   maxHeartRate: MaxHeartRate | undefined,
 ): ThresholdDetection {
   const power = (seconds: number) => best(activities, `best_power_${seconds}s_w`, true);
-  const twentyEffort = power(1200);
-  if (!twentyEffort) {
+  if (!power(1200)) {
     const anyPower = activities.some((activity) =>
       Object.keys(activity.statistics).some((name) => /^best_power_\d+s_w$/.test(name)),
     );
     return none(sport, "ftp", anyPower ? "too_short" : "no_data");
   }
   const heartRateStatistic = "best_power_1200s_heart_rate_bpm";
+  const twentyEffortOf = ({ statistics }: Dated) =>
+    effortOf(statistics[heartRateStatistic], maxHeartRate, 1200);
+  const twentyEffort = best(
+    activities.filter((activity) => twentyEffortOf(activity) !== "submaximal"),
+    "best_power_1200s_w",
+    true,
+  );
+  if (!twentyEffort) return none(sport, "ftp", "efforts_not_maximal");
   const heartRate = twentyEffort.activity.statistics[heartRateStatistic];
-  const effort = effortOf(heartRate, maxHeartRate, 1200);
-  if (effort === "submaximal") return none(sport, "ftp", "efforts_not_maximal");
+  const effort = twentyEffortOf(twentyEffort.activity);
 
   const signals: ThresholdSignal[] = [effortSignal(effort)];
   const twenty = twentyMinuteShare * twentyEffort.value;
   const curvePoints = criticalPowerDurations
-    .map(power)
+    .map((seconds) => (seconds === 1200 ? twentyEffort : power(seconds)))
     .filter((point): point is Candidate => point !== undefined);
   const fit =
     curvePoints.length === criticalPowerDurations.length

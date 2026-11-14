@@ -317,6 +317,24 @@ describe("awkward athletes", () => {
     within(ftp.value, 0.95 * test20.statistics.best_power_1200s_w!, 1);
   });
 
+  test("a sub-maximal 20 minutes does not hide another ride's maximal one", () => {
+    const ride = (id: string, watts: number, heartRate: number): ThresholdActivity => ({
+      id,
+      day: dayBefore(today, 1),
+      sport: "cycling",
+      statistics: { best_power_1200s_w: watts, best_power_1200s_heart_rate_bpm: heartRate },
+    });
+    const ftp = estimate(
+      detectThresholds([ride("maximal", 300, 180), ride("odd", 310, 150)], "cycling", {
+        today,
+        current: withMax,
+      }),
+      "ftp",
+    );
+    assert.equal(ftp.value, 285);
+    assert.equal(ftp.activityId, "maximal");
+  });
+
   test("an hour held above the estimate raises it to the hour", () => {
     const ride = (statistics: Record<string, number>, id: string): ThresholdActivity => ({
       id,
