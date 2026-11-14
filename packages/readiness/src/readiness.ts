@@ -7,12 +7,18 @@ import {
 import { dayNumber, dayOf, shiftDay } from "./day.ts";
 import { type HealthReason, healthReasons } from "./health.ts";
 import {
+  type Measure,
+  type MeasuredDay,
   type ReadinessCheckIn,
   type ReadinessInput,
   type ReadinessPlanned,
-  unmeasured,
-  type Unmeasured,
 } from "./inputs.ts";
+import {
+  maxMeasuredWeight,
+  type MeasuredGap,
+  type MeasuredReason,
+  measuredState,
+} from "./measured.ts";
 import { type Intensity, intensityOf } from "./planned.ts";
 import {
   type LoadSeries,
@@ -36,12 +42,14 @@ export const levelFromWeight: readonly { readonly from: number; readonly level: 
 export type Reason<Area extends string = string> =
   | HealthReason<Area>
   | CheckInReason
-  | TrainingReason;
+  | TrainingReason
+  | MeasuredReason;
 
 export type Gap =
   | { readonly kind: "no_check_in" }
   | { readonly kind: "short_baseline"; readonly checkIns: number }
-  | TrainingGap;
+  | TrainingGap
+  | MeasuredGap;
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -59,7 +67,7 @@ export interface Basis {
   readonly checkIn: boolean;
   readonly baselineCheckIns: number;
   readonly trainingDays: number;
-  readonly unmeasured: Unmeasured[];
+  readonly unmeasured: Measure[];
 }
 
 export interface DayReadiness<Area extends string = string> {
@@ -115,7 +123,7 @@ const effectOrder = { lowers: 0, raises: 1, steady: 2 } as const;
 
 function ordered<Area extends string>(
   health: readonly HealthReason<Area>[],
-  scored: readonly (CheckInReason | TrainingReason)[],
+  scored: readonly (CheckInReason | TrainingReason | MeasuredReason)[],
 ): Reason<Area>[] {
   return [
     ...health,
@@ -130,6 +138,8 @@ interface Prepared<Area extends string> {
   readonly byDay: ReadonlyMap<string, ReadinessCheckIn<Area>>;
   readonly series: LoadSeries;
   readonly planned: ReadonlyMap<string, readonly ReadinessPlanned[]>;
+  readonly measured: readonly MeasuredDay[];
+  readonly measuredByDay: ReadonlyMap<string, MeasuredDay>;
 }
 
 const isAnswered = (checkIn: ReadinessCheckIn<string>) =>
@@ -147,6 +157,8 @@ function prepare<Area extends string>(
     byDay: new Map(checkIns.map((checkIn) => [checkIn.day, checkIn])),
     series: loadSeries(input.stress, shiftDay(through, -1)),
     planned: input.planned,
+    measured: input.measured ?? [],
+    measuredByDay: new Map((input.measured ?? []).map((measured) => [measured.day, measured])),
   };
 }
 
@@ -157,6 +169,7 @@ function readinessFrom<Area extends string>(
   const today = prepared.byDay.get(day) ?? null;
   const training = trainingState(prepared.series, day);
   const health = healthReasons(today, prepared.checkIns, day);
+  const measured = measuredState(prepared.measured, prepared.measuredByDay, day);
   const checkIn = today ? checkInReasons(today, prepared.checkIns) : [];
   const baseline = baselineCheckIns(
     prepared.checkIns,
@@ -168,10 +181,14 @@ function readinessFrom<Area extends string>(
   else if (baseline < checkInBaseline.minimum)
     gaps.push({ kind: "short_baseline", checkIns: baseline });
   if (training.gap) gaps.push(training.gap);
-  const reasons = ordered(health, [...checkIn, ...training.reasons]);
+  gaps.push(...measured.gaps);
+  const reasons = ordered(health, [...checkIn, ...training.reasons, ...measured.reasons]);
   const weight =
-    sumOfWeights(checkIn) + Math.min(maxTrainingWeight, sumOfWeights(training.reasons));
-  const hasBasis = today !== null || training.gap === null || health.length > 0;
+    sumOfWeights(checkIn) +
+    Math.min(maxTrainingWeight, sumOfWeights(training.reasons)) +
+    Math.min(maxMeasuredWeight, sumOfWeights(measured.reasons));
+  const hasBasis =
+    today !== null || training.gap === null || health.length > 0 || measured.reasons.length > 0;
   const level = hasBasis ? levelOf(weight, health) : null;
   const suggestions: Suggestion[] =
     level === null
@@ -198,7 +215,7 @@ function readinessFrom<Area extends string>(
       checkIn: today !== null,
       baselineCheckIns: baseline,
       trainingDays: training.historyDays,
-      unmeasured: [...unmeasured],
+      unmeasured: measured.unmeasured,
     },
     suggestions,
   };

@@ -21,12 +21,20 @@ export interface ReadinessPlanned {
   readonly load: number | null;
 }
 
+export interface MeasuredDay {
+  readonly day: string;
+  readonly sleepSeconds: number | null;
+  readonly restingHeartRateBpm: number | null;
+  readonly hrvMs: number | null;
+}
+
 export interface ReadinessInput<Area extends string = string> {
   readonly checkIns: readonly ReadinessCheckIn<Area>[];
   readonly stress: ReadonlyMap<string, number>;
   readonly planned: ReadonlyMap<string, readonly ReadinessPlanned[]>;
+  readonly measured?: readonly MeasuredDay[];
 }
 
-export const unmeasured = ["sleep", "resting_heart_rate", "hrv"] as const;
+export const measures = ["sleep", "resting_heart_rate", "hrv"] as const;
 
-export type Unmeasured = (typeof unmeasured)[number];
+export type Measure = (typeof measures)[number];

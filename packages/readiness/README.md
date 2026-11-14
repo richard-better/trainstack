@@ -1,14 +1,15 @@
 # @trainstack/readiness
 
-How ready an athlete is to train on a day, worked out from what Trainstack holds today: the
-athlete's daily check-in (`docs/check-in.md`) and their training load (`@trainstack/analysis`).
+How ready an athlete is to train on a day, worked out from what Trainstack holds: the athlete's
+daily check-in (`docs/check-in.md`), the sleep, resting heart rate and HRV their devices measured
+(today from Apple Health, through Ride), and their training load (`@trainstack/analysis`).
 It says how ready they are on four worded levels, which inputs drove it, how sure it is given
 what is missing, and what it would change about each session planned for the day. It is pure
 code with no dependency beyond `@trainstack/analysis`, and runs in Workers and the browser.
 
-It is not Whoop's recovery, Garmin's training readiness or Oura's readiness. Those rest on sleep,
-resting heart rate and HRV measured by a device. Trainstack does not have them yet, so readiness
-says so on every day (`basis.unmeasured`) and claims nothing they would be needed for. It never
+It is not Whoop's recovery, Garmin's training readiness or Oura's readiness, which rest mostly on
+what a device measures. Here the measured values are one input beside the check-in and the load,
+each against the athlete's own usual, and a day without them says so (`basis.unmeasured`). It never
 diagnoses: illness and injury are what the athlete said, and the answer to them is rest or less,
 never a judgement of how ill or how hurt.
 
@@ -17,8 +18,8 @@ never a judgement of how ill or how hurt.
 ```ts
 import { readinessOn, readinessRange } from "@trainstack/readiness";
 
-const today = readinessOn({ checkIns, stress, planned }, "2026-11-14");
-const month = readinessRange({ checkIns, stress, planned }, "2026-10-15", "2026-11-14");
+const today = readinessOn({ checkIns, stress, planned, measured }, "2026-11-14");
+const month = readinessRange({ checkIns, stress, planned, measured }, "2026-10-15", "2026-11-14");
 ```
 
 - `checkIns`: the athlete's check-ins, any order. Readiness reads the day's own and the 28 days
@@ -27,6 +28,9 @@ const month = readinessRange({ checkIns, stress, planned }, "2026-10-15", "2026-
   Fitness, fatigue and form are worked out from the first day, exactly as `training.load` does.
 - `planned`: each day's planned items with their state and planned seconds and load, as the
   calendar holds them.
+- `measured` (optional): each day's `sleepSeconds` (asleep in the night before), `restingHeartRateBpm`
+  and `hrvMs`, any of them null, from one source. Readiness reads the day's own and up to 60 days
+  before it.
 
 ## What a day says
 
@@ -120,9 +124,10 @@ Confidence is `high` when the athlete is ill or cannot train, since that is thei
 
 ### Confidence
 
-- `low`: no check-in on the day, so readiness comes from training alone; or no level at all.
-- `medium`: a check-in, but fewer than 7 earlier check-ins that rated each item rated that day,
-  or a gap in training history.
+- `low`: no check-in on the day, so readiness comes from training and measured values alone; or no
+  level at all.
+- `medium`: a check-in, but fewer than 7 earlier check-ins that rated each item rated that day, a
+  gap in training history, or a measured value with too few days before it.
 - `high`: neither.
 
 ### Suggestions
@@ -150,21 +155,37 @@ its planned load and time, and the day's reasons say why. Plan adaptation can re
 values to change the plan itself; `ease` and `swap_easy` are directions, not prescriptions, and
 the amount belongs to the plan.
 
-## Where measured sleep, resting heart rate and HRV go
+### Measured sleep, resting heart rate and HRV
 
-Each will be a further input of `ReadinessInput`, a daily series with its own baseline from
-`baselineOf`, read by its own module beside `check-in.ts` and `training.ts`, giving reasons of
-its own kind with a weight, and leaving `basis.unmeasured`. The levels, gaps, confidence and
-suggestions keep their shape. The likely rules, to be decided with the data:
+Each is read against the athlete's own usual from the same source, never against a population,
+and only on a day that has a value. A value without enough days before it is a gap
+(`short_measured_baseline`), not a reason.
 
-- HRV: the 7-day rolling mean of ln rMSSD against its own 60-day mean and smallest worthwhile
-  change (Plews and others 2013).
-- Resting heart rate: the morning value against its own 28-day mean.
-- Measured sleep: duration and timing against the athlete's own, kept apart from the check-in's
-  sleep, which is their judgement.
+- **Sleep**: seconds asleep in the night before, every source's sleep merged so no minute counts
+  twice, against the mean of the 28 days before (at least 7). One hour short weighs 1, two hours
+  2; an hour more than usual raises. Kept apart from the check-in's sleep, which is the athlete's
+  own judgement: a night can be short and still feel fine, and the two can both count. Timing is
+  not read yet.
+- **Resting heart rate**: the day's value against the mean of the 28 days before (at least 7). 5
+  bpm above usual weighs 1, 10 bpm 2; 5 below raises. A resting heart rate raised by several beats
+  over the athlete's own norm is a common sign of incomplete recovery, illness coming on or heat
+  and alcohol the night before (Buchheit 2014); the 5 and 10 are our choice.
+- **HRV**: the night's value (Apple Health measures SDNN; another source's rMSSD would be compared
+  only with its own history) as its natural log, against the mean and standard deviation of the
+  log over the 60 days before (at least 14), after Plews and others 2013. 1.5 standard deviations
+  below weighs 1, 2.5 below 2; 1.5 above raises. The standard deviation is taken as at least 0.1
+  (about 10 %), so a very steady month does not turn ordinary noise into strain. Plews reads a
+  7-day rolling mean for trends over a block; a day's own value is read here because readiness is
+  about the morning, at the cost of more noise, which the 1.5 is chosen to absorb.
+- **Measured together weigh at most 3**, so a device alone never takes readiness below fair: a bad
+  night is a reason to go easier on the hard parts, and how the athlete feels decides more, since
+  self-reported measures track the training response better than objective ones (Saw and others
+  2016). A bad night and a check-in that says so too add up.
 
 ## Sources
 
+- Buchheit M. Monitoring training status with HR measures: do all roads lead to Rome? _Front
+  Physiol_. 2014;5:73.
 - McLean BD, Coutts AJ, Kelly V, McGuigan MR, Cormack SJ. Neuromuscular, endocrine, and perceptual
   fatigue responses during different length between-match microcycles in professional rugby league
   players. _Int J Sports Physiol Perform_. 2010;5(3):367-383.
