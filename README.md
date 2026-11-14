@@ -56,12 +56,15 @@ build it and [the release guide](docs/ride-release.md) to ship a TestFlight buil
 website, API and account app are deployed as described in [the deployment guide](docs/deployment.md).
 
 To run the web app signed in on your machine, run `bun run dev:account`. It starts the API in
-workerd on `http://localhost:3000` with an in-memory database, a local page on
-`http://localhost:3002` that plays Apple's part in signing in, and the web app on
-`http://localhost:3001`. Sign in with Apple there and press Continue to reach a test athlete with
-two rides from `apps/ride` already uploaded. Pass `-- --empty` to start with no activities, or
-`-- --api-only` to start the web app yourself. Nothing is kept when it stops, and it needs no
-Cloudflare or Apple credentials.
+workerd with an in-memory database, a local page that plays Apple's part in signing in, and the
+web app, on `http://localhost:3000`, `3002` and `3001` when those are free and on free ports
+otherwise, and prints the addresses it chose. Choose them with `--api-port`, `--apple-port` and
+`--web-port`, or `TRAINSTACK_API_PORT`, `TRAINSTACK_APPLE_PORT` and `TRAINSTACK_WEB_PORT`, so
+several checkouts can run it at once. Sign in with Apple there and press Continue to reach a test
+athlete with two rides from `apps/ride` already uploaded. `<API>/__local/storage` shows
+everything in the database and the activity files bucket. Pass `-- --empty` to start with no
+activities, or `-- --api-only` to start the web app yourself. Nothing is kept when it stops, and it
+needs no Cloudflare or Apple credentials.
 
 ## License
 
