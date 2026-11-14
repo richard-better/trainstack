@@ -1,7 +1,7 @@
 # @trainstack/fit
 
 Decodes a FIT activity file into typed data: a summary, sessions, laps, records and events, for
-any sport. It has no dependencies and uses no Node APIs, so it runs in Cloudflare Workers and in
+any sport. It also reads and writes FIT workout files. It has no dependencies and uses no Node APIs, so it runs in Cloudflare Workers and in
 the browser.
 
 ```ts
@@ -39,9 +39,49 @@ more than 10,000 laps or sessions.
   `virtualActivity`), and keep a number the profile does not name.
 - Units are SI and named in each field: metres, seconds, metres per second.
 
+## Workouts
+
+```ts
+import { decodeFitWorkout, encodeFitWorkout, readFitFileId } from "@trainstack/fit";
+
+const { fileId, name, sport, subSport, poolLengthMeters, steps } = decodeFitWorkout(bytes);
+const file = encodeFitWorkout({ name, sport, steps }, { timeCreated: new Date() });
+```
+
+`decodeFitWorkout` reads the `workout` and `workout_step` messages of a file whose `file_id`
+says it is a workout, and fails with `noWorkout` for any other file, such as an activity, or one
+with no steps, and with `tooLarge` past 10,000 steps (`maxWorkoutSteps`). `decodeFit` fails with
+`noActivity` on a workout file, and `readFitFileId` tells the two apart. Each step resolves the
+FIT profile's dynamic fields into typed values:
+
+- `duration`: `time` in seconds, `distance` in metres, `open` (until the lap button), `repeat`
+  (FIT's `repeat_until_steps_cmplt`: go back to the step at index `fromStep` until the steps have
+  run `count` times in all), or `other` with the FIT duration type and its raw values.
+- `target` and `secondaryTarget`: `power` (an `averaging` of `instant`, `3s`, `10s`, `30s` or
+  `lap`), `heartRate` and `speed` (`instant` or `lap`), and `cadence`, each with either a `zone`
+  number or a custom `low` and `high`; `swimStroke`; or `other` with raw values. An open target is
+  no target. FIT's offsets are undone: a power value above 1000 is watts plus 1000 and anything up
+  to 1000 is a percentage of FTP, and a heart rate above 100 is bpm plus 100 and anything up to 100
+  is a percentage of max heart rate. Speed is in metres per second, cadence in rpm.
+- `name`, `notes`, `intensity` and `equipment`, with the FIT profile's names in camelCase.
+
+`encodeFitWorkout` writes the same shape back as a FIT 2.0 file with a 14-byte header, a header
+and file CRC, a `file_id` of type workout from the development manufacturer, the `workout`
+message, and one `workout_step` per step, defining each message layout once. It rounds values to
+FIT's precision (milliseconds, centimetres, millimetres per second, whole watts, percent, bpm
+and rpm) and throws a `RangeError` for a value a field cannot hold.
+
 ## Tests
 
 The tests decode the golden FIT files that Ride's Swift tests use, in place under
 `apps/ride/RideKit`, and assert the values those tests assert. `test/fit-writer.ts` writes
 synthetic files for what the goldens do not cover, such as routes, other sports, compressed
 timestamps and big-endian messages. Run them with `bun run test` from the repository root.
+
+`test/fixtures/workouts/` holds workout files laid out the way Garmin Connect, TrainingPeaks and
+intervals.icu write them: fixed-size strings, invalid sentinels for unused fields, zones, power
+past the 1000 offset, lap-button steps, nested repeats and big-endian messages.
+`test/workout-fixtures.ts` writes them, and a test fails when the committed files differ. After
+changing it, run `node packages/fit/test/workout-fixtures.ts --write`. Garmin's FIT SDK reads
+every fixture and every file `encodeFitWorkout` writes without errors; its licence keeps it out
+of this repository (see `LICENSING.md`), so that check runs outside it.

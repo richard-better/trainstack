@@ -156,17 +156,17 @@ export interface FitActivityColumns extends FitActivitySummary {
   readonly records: RecordColumns;
 }
 
-function integer(message: FitMessage, field: number): number | undefined {
+export function integer(message: FitMessage, field: number): number | undefined {
   const value = message.fields.get(field);
   return typeof value === "number" ? value : undefined;
 }
 
-function text(message: FitMessage, field: number): string | undefined {
+export function text(message: FitMessage, field: number): string | undefined {
   const value = message.fields.get(field);
   return typeof value === "string" ? value : undefined;
 }
 
-function divided(message: FitMessage, field: number, scale: number): number | undefined {
+export function divided(message: FitMessage, field: number, scale: number): number | undefined {
   const value = integer(message, field);
   return value === undefined ? undefined : value / scale;
 }
@@ -176,7 +176,7 @@ function degrees(message: FitMessage, field: number): number | undefined {
   return value === undefined ? undefined : value * degreesPerSemicircle;
 }
 
-function named<Names extends Record<number, string>>(
+export function named<Names extends Record<number, string>>(
   names: Names,
   value: number | undefined,
 ): FitEnum<Names> | undefined {
@@ -193,7 +193,7 @@ function date(message: FitMessage, field: number): Date | undefined {
   return value === undefined ? undefined : dateFromFit(value);
 }
 
-function fileId(message: FitMessage): FitFileId {
+export function fileId(message: FitMessage): FitFileId {
   return {
     type: named(fileTypes, integer(message, FileIdField.type)),
     manufacturer: integer(message, FileIdField.manufacturer),

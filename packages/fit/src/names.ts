@@ -288,3 +288,83 @@ export const fileTypes = {
   66: "tsbSonarEvents",
   67: "tsbDiverConfig",
 } as const;
+
+export const intensities = {
+  0: "active",
+  1: "rest",
+  2: "warmup",
+  3: "cooldown",
+  4: "recovery",
+  5: "interval",
+  6: "other",
+} as const;
+
+export const stepDurationTypes = {
+  0: "time",
+  1: "distance",
+  2: "hrLessThan",
+  3: "hrGreaterThan",
+  4: "calories",
+  5: "open",
+  6: "repeatUntilStepsCmplt",
+  7: "repeatUntilTime",
+  8: "repeatUntilDistance",
+  9: "repeatUntilCalories",
+  10: "repeatUntilHrLessThan",
+  11: "repeatUntilHrGreaterThan",
+  12: "repeatUntilPowerLessThan",
+  13: "repeatUntilPowerGreaterThan",
+  14: "powerLessThan",
+  15: "powerGreaterThan",
+  16: "trainingPeaksTss",
+  17: "repeatUntilPowerLastLapLessThan",
+  18: "repeatUntilMaxPowerLastLapLessThan",
+  19: "power3sLessThan",
+  20: "power10sLessThan",
+  21: "power30sLessThan",
+  22: "power3sGreaterThan",
+  23: "power10sGreaterThan",
+  24: "power30sGreaterThan",
+  25: "powerLapLessThan",
+  26: "powerLapGreaterThan",
+  27: "repeatUntilTrainingPeaksTss",
+  28: "repetitionTime",
+  29: "reps",
+  31: "timeOnly",
+} as const;
+
+export const stepTargetTypes = {
+  0: "speed",
+  1: "heartRate",
+  2: "open",
+  3: "cadence",
+  4: "power",
+  5: "grade",
+  6: "resistance",
+  7: "power3s",
+  8: "power10s",
+  9: "power30s",
+  10: "powerLap",
+  11: "swimStroke",
+  12: "speedLap",
+  13: "heartRateLap",
+} as const;
+
+export const swimStrokes = {
+  0: "freestyle",
+  1: "backstroke",
+  2: "breaststroke",
+  3: "butterfly",
+  4: "drill",
+  5: "mixed",
+  6: "im",
+} as const;
+
+export const workoutEquipment = {
+  0: "none",
+  1: "swimFins",
+  2: "swimKickboard",
+  3: "swimPaddles",
+  4: "swimPullBuoy",
+  5: "swimSnorkel",
+} as const;

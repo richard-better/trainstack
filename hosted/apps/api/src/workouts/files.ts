@@ -4,6 +4,7 @@ import {
   type Workout,
   type WorkoutFormat,
   WorkoutFormatError,
+  formatOfFile,
   parseWorkoutFile,
   writeWorkout,
 } from "@trainstack/workout";
@@ -28,6 +29,13 @@ function converted<T>(convert: () => Converted<T>): Converted<T> | FormatFailure
 }
 
 export function importedWorkout(fileName: string, bytes: Uint8Array) {
+  if (!formatOfFile(fileName)) {
+    return {
+      failure: new WorkoutFormatError(undefined, [
+        { code: "unsupported", message: `"${fileName}" is not a .zwo, .erg or .mrc file` },
+      ]),
+    };
+  }
   const text = new TextDecoder("utf-8").decode(bytes);
   return converted(() => parseWorkoutFile(fileName, text));
 }

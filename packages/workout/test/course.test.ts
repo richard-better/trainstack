@@ -312,6 +312,6 @@ describe("parseWorkoutFile", () => {
     const { value } = parseWorkoutFile("downloads/Easy spin.MRC", text);
     assert.equal(value.name, "Easy spin");
     assert.deepEqual(value.steps, [{ type: "step", duration: seconds(60), target: ftp(0.5) }]);
-    assert.equal(failure(() => parseWorkoutFile("ride.fit", "")).format, undefined);
+    assert.equal(failure(() => parseWorkoutFile("ride.gpx", "")).format, undefined);
   });
 });

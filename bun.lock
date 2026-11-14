@@ -182,9 +182,11 @@
     "packages/workout": {
       "name": "@trainstack/workout",
       "dependencies": {
+        "@trainstack/fit": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@cloudflare/workers-types": "catalog:",
         "@trainstack/config": "workspace:*",
         "@types/node": "catalog:",
         "miniflare": "4.20260730.0",

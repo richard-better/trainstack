@@ -40,7 +40,7 @@ export default {
 test("bundles for the browser with no imports at all", async () => {
   const { code, imports } = await browserBundle();
   assert.deepEqual(imports, []);
-  assert.ok(code.length < 40_000, `${code.length} bytes`);
+  assert.ok(code.length < 56_000, `${code.length} bytes`);
 });
 
 test("decodes a FIT file inside the Workers runtime", async () => {
