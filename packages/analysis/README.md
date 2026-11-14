@@ -349,7 +349,10 @@ fixture.
 
 ## Tests
 
-Run them with `bun run test` from the repository root. `test/analysis.test.ts` includes Ride's
+Run them with `bun run test` from the repository root. Cost tests never assert on wall time, which a
+loaded machine stretches: a time budget is CPU time (`test/measure.ts`), with a wide margin
+over what the README states, and a claim that work grows with the input, not its square, is the
+ratio of the fastest of three runs at two sizes eight times apart, measured in the same process. `test/analysis.test.ts` includes Ride's
 `RideAnalysisTests` and `test/load.test.ts` includes its `TrainingLoadTests`.
 `test/runtime.test.ts` bundles the package for the browser and analyses a FIT file inside
 workerd.

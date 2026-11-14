@@ -10,6 +10,7 @@ import {
   statisticsOf,
   sustainedMaxHeartRate,
 } from "../src/index.ts";
+import { growth } from "./measure.ts";
 
 const analysed = (sport: string, records: AnalysisRecord[]) => ({
   statistics: statisticsOf(
@@ -99,12 +100,17 @@ describe("per activity", () => {
   });
 
   test("the sustained max stays linear when records crowd into a few seconds", () => {
-    const records = Array.from({ length: 200_000 }, (_, index) => ({
-      elapsedSeconds: index / 20_000,
-      heartRate: 120 + (index % 50),
-    }));
-    const started = performance.now();
-    assert.equal(sustainedMaxHeartRate(samplesOf(records, null)), 120);
-    assert.ok(performance.now() - started < 1000);
+    const crowded = (count: number) => {
+      const samples = samplesOf(
+        Array.from({ length: count }, (_, index) => ({
+          elapsedSeconds: (index / count) * 10,
+          heartRate: 120 + (index % 50),
+        })),
+        null,
+      );
+      return () => assert.equal(sustainedMaxHeartRate(samples), 120);
+    };
+    const ratio = growth(crowded, 25_000, 200_000);
+    assert.ok(ratio < 24, `eight times the records took ${ratio.toFixed(1)} times the CPU`);
   });
 });

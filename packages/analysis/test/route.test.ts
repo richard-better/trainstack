@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { encodePolyline, routeMaxPoints, routeOf, type RouteColumns } from "../src/index.ts";
+import { measured } from "./measure.ts";
 
 function decodePolyline(text: string) {
   const points: [number, number][] = [];
@@ -123,16 +124,16 @@ test("a million winding points stay inside the cap, quickly", () => {
     latitude[index] = 47.5 + 0.02 * Math.sin(turn) + index * 1e-7;
     longitude[index] = 19 + 0.02 * Math.cos(turn) + index * 1e-7;
   }
-  const began = performance.now();
-  const route = routeOf({ ...columns, count, elapsedSeconds: elapsed, latitude, longitude });
-  const milliseconds = performance.now() - began;
+  const { result: route, cpuMilliseconds: milliseconds } = measured(() =>
+    routeOf({ ...columns, count, elapsedSeconds: elapsed, latitude, longitude }),
+  );
   assert.ok(route);
   const points = route.segments.reduce((sum, segment) => sum + decodePolyline(segment).length, 0);
   assert.ok(points <= routeMaxPoints, `${points} points`);
   assert.ok(points > routeMaxPoints / 4, `${points} points`);
   const bytes = route.segments.reduce((sum, segment) => sum + segment.length, 0);
   assert.ok(bytes < 3000, `${bytes} bytes`);
-  assert.ok(milliseconds < 1000, `${milliseconds} ms`);
+  assert.ok(milliseconds < 1000, `${milliseconds} ms of CPU`);
 });
 
 test("many short pieces still stay inside the cap", () => {
@@ -155,12 +156,12 @@ test("a track too tangled to draw in the cap still fits it, quickly", () => {
     latitude[index] = 47.5 + 0.02 * Math.sin(index / 500) + index * 1e-7;
     longitude[index] = 19 + 0.02 * Math.cos(index / 500) + index * 1e-7;
   }
-  const began = performance.now();
-  const route = routeOf({ count, elapsedSeconds: elapsed, latitude, longitude });
-  const milliseconds = performance.now() - began;
+  const { result: route, cpuMilliseconds: milliseconds } = measured(() =>
+    routeOf({ count, elapsedSeconds: elapsed, latitude, longitude }),
+  );
   const points = route!.segments.reduce((sum, segment) => sum + decodePolyline(segment).length, 0);
   assert.ok(points <= routeMaxPoints, `${points} points`);
-  assert.ok(milliseconds < 1000, `${milliseconds} ms`);
+  assert.ok(milliseconds < 1000, `${milliseconds} ms of CPU`);
 });
 
 test("thousands of two-point pieces end inside the cap, keeping the longest", () => {
@@ -172,9 +173,8 @@ test("thousands of two-point pieces end inside the cap, keeping the longest", ()
       longitude: 19 + piece * 0.001 + (piece === 7 ? 0.0009 : 0.0002),
     },
   ]).flat();
-  const began = performance.now();
-  const route = routeOf(track(pieces));
-  assert.ok(performance.now() - began < 1000);
+  const { result: route, cpuMilliseconds: milliseconds } = measured(() => routeOf(track(pieces)));
+  assert.ok(milliseconds < 1000, `${milliseconds} ms of CPU`);
   assert.equal(route!.segments.length, routeMaxPoints / 2);
   assert.ok(
     route!.segments.some(

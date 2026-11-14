@@ -24,6 +24,7 @@ import {
   trainingRide,
   trueFtp,
 } from "./synthetic-athlete.ts";
+import { cpuMilliseconds } from "./measure.ts";
 
 const today = "2026-11-01";
 const withMax = { max_heart_rate: athlete.maxHeartRate };
@@ -408,12 +409,12 @@ test("reads five years of activities in well under a Worker's budget", () => {
       day: dayBefore(today, Math.floor(random() * 1800)),
     };
   });
-  const started = performance.now();
-  for (const sport of ["cycling", "running"]) {
-    detectThresholds(activities, sport, { today, current: withMax });
-  }
-  const elapsed = performance.now() - started;
-  assert.ok(elapsed < 100, `${elapsed} ms`);
+  const milliseconds = cpuMilliseconds(() => {
+    for (const sport of ["cycling", "running"]) {
+      detectThresholds(activities, sport, { today, current: withMax });
+    }
+  });
+  assert.ok(milliseconds < 100, `${milliseconds} ms of CPU`);
 });
 
 test("reads only statistics the analysis stores, and no others from the synthetic athletes", () => {

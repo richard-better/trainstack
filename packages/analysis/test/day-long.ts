@@ -38,7 +38,7 @@ const laps = Array.from({ length: 24 * 4 }, (_, index) => ({
 
 globalThis.gc?.();
 const before = process.memoryUsage();
-const began = performance.now();
+const cpuBefore = process.cpuUsage();
 const analysis = analyzeActivity(
   {
     summary: { startTime: start, sport: "running", subSport: undefined, elapsedSeconds: day },
@@ -47,12 +47,13 @@ const analysis = analyzeActivity(
   },
   profile,
 );
-const milliseconds = performance.now() - began;
+const cpu = process.cpuUsage(cpuBefore);
+const cpuMilliseconds = (cpu.user + cpu.system) / 1000;
 const after = process.memoryUsage();
 console.log(
   JSON.stringify({
     records: records.length,
-    milliseconds,
+    cpuMilliseconds,
     recordsHeapBytes: before.heapUsed,
     typedArrayBytes: after.arrayBuffers - before.arrayBuffers,
     load: analysis.load,
