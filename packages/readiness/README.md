@@ -128,7 +128,8 @@ The planned session's intensity comes from its planned load and time. Its intens
 √(load ÷ (100 × hours)), the inverse of TSS. Below 0.75 is easy, 0.75 to 0.85 moderate, 0.85 or
 more hard, after Allen and Coggan's intensity factor by kind of ride (recovery below 0.75,
 endurance 0.75 to 0.85, tempo and above from 0.85). A session whose load is at least 1.5 times
-fitness is hard too, by the same rule as a hard day, so a long endurance day counts. Without a
+fitness is hard too, by the same rule as a hard day, so a long endurance day counts; this needs
+fitness to be read, so not in the first 84 days. Without a
 planned load or time it is `unknown` and treated as moderate.
 
 | Level   | Easy       | Moderate   | Hard       |

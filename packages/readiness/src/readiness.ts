@@ -179,7 +179,7 @@ function readinessFrom<Area extends string>(
       : (prepared.planned.get(day) ?? [])
           .filter((planned) => planned.kind === "workout" && planned.state === "planned")
           .map((planned) => {
-            const intensity = intensityOf(planned, training.fitness);
+            const intensity = intensityOf(planned, training.gap === null ? training.fitness : 0);
             return {
               plannedId: planned.id,
               intensity,

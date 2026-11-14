@@ -347,3 +347,16 @@ test("check-ins that rated nothing that is rated today do not make a baseline fo
   const sleep = readiness.reasons.find((r) => r.kind === "check_in" && r.item === "sleep");
   assert.equal(sleep?.kind === "check_in" && sleep.against, "scale");
 });
+
+test("before load can be read, a session is hard by its intensity alone, not by a small early fitness", () => {
+  const readiness = readinessOn(
+    athlete({
+      stress: trainedFor(20, shift(today, -1), () => 30),
+      checkIns: [checkIn(today)],
+      planned: [workout("long", 3 * 3600, 150)],
+    }),
+    today,
+  );
+  assert.deepEqual(readiness.gaps.at(-1), { kind: "short_training_history", days: 20 });
+  assert.equal(readiness.suggestions[0]?.intensity, "easy");
+});
