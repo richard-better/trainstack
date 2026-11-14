@@ -40,6 +40,7 @@ const sizeLimit = `${MAX_WORKOUT_FILE_BYTES / 1024 / 1024} MB`;
 
 export function useWorkoutImports() {
   const [items, setItems] = useState<Item[]>([]);
+  const stamps = useRef(new Map<string, Date>());
   const replace = (key: string, item: Item) =>
     setItems((current) => current.map((held) => (held.key === key ? item : held)));
 
@@ -51,15 +52,23 @@ export function useWorkoutImports() {
     }));
     setItems((current) => [...added, ...current]);
     for (const item of added) {
-      const reading = await readWorkoutFile(item.file, MAX_WORKOUT_FILE_BYTES);
+      const reading = await readWorkoutFile(item.file, MAX_WORKOUT_FILE_BYTES).catch(
+        (): FileReading => ({
+          kind: "refused",
+          file: item.file,
+          issues: [{ code: "malformed", message: "The file could not be read." }],
+        }),
+      );
       replace(item.key, { key: item.key, phase: "read", reading });
     }
   }
 
   async function save(key: string, reading: Extract<FileReading, { kind: "ready" }>) {
     replace(key, { key, phase: "saving", reading });
+    const updatedAt = stamps.current.get(key) ?? new Date();
+    stamps.current.set(key, updatedAt);
     try {
-      const imported = await importWorkoutFile(api, reading.file, key);
+      const imported = await importWorkoutFile(api, reading.file, key, updatedAt);
       if (imported.kind === "saved") {
         await rememberWorkout(imported.workout);
         replace(key, {
@@ -148,7 +157,12 @@ export function FormatIssues({ issues, title }: { issues: readonly FormatIssue[]
 
 function ImportItem({ item, imports }: { item: Item; imports: WorkoutImports }) {
   const dismiss = (
-    <button type="button" className="quiet compact" onClick={() => imports.dismiss(item.key)}>
+    <button
+      type="button"
+      className="quiet compact"
+      disabled={item.phase === "saving"}
+      onClick={() => imports.dismiss(item.key)}
+    >
       {item.phase === "saved" ? "Done" : "Cancel"}
     </button>
   );

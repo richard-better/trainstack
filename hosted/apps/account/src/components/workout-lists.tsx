@@ -171,7 +171,7 @@ export function ListPage({ listId }: { listId: string }) {
   }
   return (
     <LibraryShell current={listId}>
-      <ListHead list={list} />
+      <ListHead key={list.id} list={list} />
       {list.workoutIds.length === 0 ? (
         <div className="state empty">
           <p className="state-title">This list is empty.</p>
@@ -452,6 +452,7 @@ function ListEntries({
 }
 
 export function AddToList({ workoutId }: { workoutId: string }) {
+  const pendingList = useRef<WorkoutList | null>(null);
   const lists = useLists();
   const [failed, setFailed] = useState(false);
   const [naming, setNaming] = useState(false);
@@ -475,6 +476,14 @@ export function AddToList({ workoutId }: { workoutId: string }) {
     <details className="menu">
       <summary className="secondary link-button">Add to list</summary>
       <div className="menu-panel">
+        {lists.isError && (
+          <div>
+            <p className="lede">Your lists did not load.</p>
+            <button type="button" className="quiet compact" onClick={() => lists.refetch()}>
+              Try again
+            </button>
+          </div>
+        )}
         {lists.data?.lists.length === 0 && !naming && (
           <p className="lede">You have no lists yet.</p>
         )}
@@ -494,11 +503,14 @@ export function AddToList({ workoutId }: { workoutId: string }) {
             submit="Create and add"
             onCancel={() => setNaming(false)}
             onSave={async (name) => {
-              const created = await api.workoutLists.put({
-                id: crypto.randomUUID(),
-                name,
-                updatedAt: new Date(),
-              });
+              const created =
+                pendingList.current ??
+                (await api.workoutLists.put({
+                  id: crypto.randomUUID(),
+                  name,
+                  updatedAt: new Date(),
+                }));
+              pendingList.current = created;
               await rememberList(created);
               await writeList(
                 created.id,
@@ -511,6 +523,7 @@ export function AddToList({ workoutId }: { workoutId: string }) {
                     updatedAt: new Date(),
                   }),
               );
+              pendingList.current = null;
               setNaming(false);
             }}
           />

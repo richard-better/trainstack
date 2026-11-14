@@ -165,6 +165,7 @@ test("a step in watts reads as a share of FTP, and without FTP keeps its watts",
   });
   const overview = overviewOf({ steps: [step] }, noReference("cycling"));
   assert.equal(overview.load, null, "no load without FTP");
+  assert.equal(overview.averagePower, 300, "watts average without FTP");
   assert.equal(overview.segments[0].scaled, true);
   const withFtp = { ...noReference("cycling"), ftp: 250 };
   assert.deepEqual(targetText(step.target, withFtp), { main: "300 W", detail: "120% FTP" });
@@ -699,4 +700,21 @@ test("a list created or deleted while the lists are being read stays so when the
     await dropListIn(queryClient, queryKey, created[0].id);
   });
   assert.deepEqual(deleted, []);
+});
+
+test("an import tried again with its first stamp does not overwrite a later edit from another device", async () => {
+  const { webApp, ride } = await signInOnTheWeb();
+  const file = await fixture("over-unders.mrc");
+  const id = randomUUID();
+  const first = minutesAgo(5);
+  await importWorkoutFile(webApp, file, id, first);
+  await ride.workouts.put({
+    id,
+    workout: workout("Edited on Ride", [power(600, constant(0.6))]),
+    updatedAt: minutesAgo(1),
+  });
+  const again = await importWorkoutFile(webApp, file, id, first);
+  assert.equal(again.kind, "saved");
+  assert.equal(again.workout.name, "Edited on Ride");
+  assert.equal((await webApp.workouts.get({ id })).name, "Edited on Ride");
 });

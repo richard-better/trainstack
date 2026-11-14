@@ -280,8 +280,11 @@ export function WorkoutChart({
         aria-describedby={describedBy}
         onKeyDown={onKeyDown}
         onBlur={() => show(null)}
+        onPointerDown={(event) => show(segmentAt(event.clientX, event.currentTarget))}
         onPointerMove={(event) => show(segmentAt(event.clientX, event.currentTarget))}
-        onPointerLeave={() => show(null)}
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse") show(null);
+        }}
       >
         {width > 0 && (
           <svg width={width} height={height} aria-hidden="true" focusable="false">

@@ -182,10 +182,14 @@ function CopyButton({
   onCopied?: ((copy: StoredWorkout) => void) | undefined;
 }) {
   const navigate = useNavigate();
+  const attempt = useRef<{ as: string; updatedAt: Date } | null>(null);
   const copy = useMutation({
-    mutationFn: () =>
-      api.builtinWorkouts.copy({ id, as: crypto.randomUUID(), updatedAt: new Date() }),
+    mutationFn: () => {
+      attempt.current ??= { as: crypto.randomUUID(), updatedAt: new Date() };
+      return api.builtinWorkouts.copy({ id, ...attempt.current });
+    },
     onSuccess: async (copied) => {
+      attempt.current = null;
       await rememberWorkout(copied);
       if (onCopied) onCopied(copied);
       else await navigate({ to: "/workouts/$id", params: { id: copied.id } });
