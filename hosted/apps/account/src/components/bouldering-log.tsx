@@ -193,7 +193,11 @@ export function BoulderingEditor({
                 </button>
               ))}
               {scale === "circuit" && (
-                <button type="button" className="quiet" onClick={() => setEditingCircuit(true)}>
+                <button
+                  type="button"
+                  className="quiet edit-colours"
+                  onClick={() => setEditingCircuit(true)}
+                >
                   Edit colours
                 </button>
               )}

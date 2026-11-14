@@ -399,6 +399,12 @@
   grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
 }
 
+.edit-colours {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 6px;
+}
+
 .grade-chip {
   height: 44px;
   padding: 0 4px;

@@ -426,6 +426,16 @@ export const showcaseEntries: readonly ShowcaseEntry[] = [
     world: "newcomer",
     path: () => "/settings",
   },
+  {
+    id: "log-bouldering-colours",
+    screen: "Bouldering log",
+    title: "Choosing a circuit colour",
+    route: "/log/bouldering",
+    world: "athlete",
+    path: () => "/log/bouldering",
+    steps: [{ click: "Colours" }],
+  },
+
 ];
 
 export const SHOWCASE_PARAMETER = "showcase";
