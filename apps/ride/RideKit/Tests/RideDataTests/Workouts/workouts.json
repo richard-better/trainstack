@@ -1,0 +1,189 @@
+[
+  {
+    "name": "Nested repeats with ramps, ranges, watts, cadence and cues",
+    "workout": {
+      "name": "Over-unders with sprints",
+      "sport": "cycling",
+      "focus": "threshold",
+      "description": "Ramps in and out, threshold blocks with sprints inside.",
+      "steps": [
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 600 },
+          "target": {
+            "type": "power",
+            "unit": "ftp",
+            "level": { "kind": "ramp", "from": 0.5, "to": 0.75 }
+          },
+          "cadence": { "kind": "range", "low": 85, "high": 95 },
+          "intensity": "warmUp",
+          "name": "Warm up"
+        },
+        {
+          "type": "repeat",
+          "count": 3,
+          "name": "Main set",
+          "cues": [
+            { "at": { "type": "time", "seconds": 0 }, "text": "Here we go" },
+            { "at": { "type": "time", "seconds": 330 }, "text": "Sprint now", "shownForSeconds": 5 }
+          ],
+          "steps": [
+            {
+              "type": "step",
+              "duration": { "type": "time", "seconds": 300 },
+              "target": {
+                "type": "power",
+                "unit": "ftp",
+                "level": { "kind": "constant", "value": 0.95 }
+              },
+              "name": "Over",
+              "notes": "Stay seated",
+              "cues": [{ "at": { "type": "time", "seconds": 10 }, "text": "Settle in" }]
+            },
+            {
+              "type": "repeat",
+              "count": 2,
+              "steps": [
+                {
+                  "type": "step",
+                  "duration": { "type": "time", "seconds": 30 },
+                  "target": {
+                    "type": "power",
+                    "unit": "watts",
+                    "level": { "kind": "constant", "value": 400 }
+                  },
+                  "cadence": { "kind": "constant", "value": 110 }
+                },
+                { "type": "step", "duration": { "type": "time", "seconds": 30 } }
+              ]
+            },
+            {
+              "type": "step",
+              "duration": { "type": "time", "seconds": 120 },
+              "target": {
+                "type": "power",
+                "unit": "ftp",
+                "level": { "kind": "range", "low": 0.55, "high": 0.65 }
+              },
+              "intensity": "recovery"
+            }
+          ]
+        },
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 300 },
+          "target": {
+            "type": "power",
+            "unit": "ftp",
+            "level": { "kind": "ramp", "from": 0.6, "to": 0.4 }
+          },
+          "intensity": "coolDown"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Heart rate, max effort and watts ramps",
+    "workout": {
+      "name": "Heart rate and sprints",
+      "sport": "cycling",
+      "steps": [
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 600 },
+          "target": {
+            "type": "heartRate",
+            "unit": "bpm",
+            "level": { "kind": "range", "low": 130, "high": 140 }
+          }
+        },
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 300 },
+          "target": {
+            "type": "heartRate",
+            "unit": "threshold",
+            "level": { "kind": "constant", "value": 0.85 }
+          }
+        },
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 20 },
+          "target": { "type": "maxEffort" }
+        },
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 240 },
+          "target": {
+            "type": "power",
+            "unit": "watts",
+            "level": { "kind": "ramp", "from": 200, "to": 300 }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "A running workout",
+    "workout": {
+      "name": "Easy run",
+      "sport": "running",
+      "steps": [
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 1800 },
+          "target": {
+            "type": "pace",
+            "unit": "threshold",
+            "level": { "kind": "constant", "value": 0.8 }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "A cycling workout with a pace target",
+    "workout": {
+      "name": "Pace on the bike",
+      "sport": "cycling",
+      "steps": [
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 600 },
+          "target": {
+            "type": "pace",
+            "unit": "metersPerSecond",
+            "level": { "kind": "constant", "value": 9 }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "A cycling workout with a distance step",
+    "workout": {
+      "name": "Ten kilometres steady",
+      "sport": "cycling",
+      "steps": [
+        {
+          "type": "step",
+          "duration": { "type": "time", "seconds": 300 },
+          "target": {
+            "type": "power",
+            "unit": "ftp",
+            "level": { "kind": "constant", "value": 0.6 }
+          }
+        },
+        {
+          "type": "step",
+          "duration": { "type": "distance", "meters": 10000 },
+          "target": {
+            "type": "power",
+            "unit": "ftp",
+            "level": { "kind": "constant", "value": 0.75 }
+          }
+        }
+      ]
+    }
+  }
+]

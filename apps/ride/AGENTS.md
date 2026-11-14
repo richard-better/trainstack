@@ -121,6 +121,27 @@ and iOS stops timers there, so the trainer's measurements also move `RideControl
 paired trainer disconnects mid ride the ride pauses, and the rider resumes it once the trainer is
 back.
 
+The player runs a `PlannedWorkout`: a bundled `WorkoutTemplate` becomes one (`planned`), and so
+does a workout from the athlete's TrainStack library. That arrives in the model of
+`@trainstack/workout` as `TrainStackWorkout`, and `rideability` is the one place that maps it to
+what the player runs, or to the reason it cannot be ridden. It expands repeats as the package's
+`flatten` does, placing each repeat's cues on the step they fall in; `tests/ride-workouts.test.mjs`
+holds the steps Ride plays for `Tests/RideDataTests/Workouts/workouts.json` (recorded in
+`played.json` with `RIDE_RECORD_WORKOUTS=1`) to `flatten`. Everything a trainer can do plays as
+written: power as a share of FTP or in watts, constant, ranged (ERG holds the middle of the range)
+or ramped (ERG follows the ramp each second), cadence, cues and nested repeats. A step without a
+target is a free ride and a max effort is all out; in ERG mode the trainer gets a flat road for
+both, as it does once a workout ends. A heart rate target is shown for the rider to hold, also on a
+flat road. Ride refuses, and says why: another sport, pace targets (a trainer holds power, not
+pace), steps or cues measured in distance (Ride has no speed model to time them by), lap-button
+steps (until the player can wait for the rider's next), and, by name, any kind of step, target or
+level this version does not know, so a newer model never crashes it or plays silently changed.
+It also refuses what would crash the player rather than play: a target no rider or trainer can
+hold (`TargetLevel.most…`), a range whose low end is above its high end, a step longer than a day
+(`PlannedStep.longest`) and more than `TrainStackWorkout.mostSteps` steps once repeats are counted out. A ride's
+trace keeps the `PlannedWorkout` it started with, so a workout edited or deleted on the web during
+a ride does not change the ride. Traces written before kept a `template`, and still read.
+
 Speed and distance come from power through `VirtualBike`, as in Zwift and TrainerRoad: many
 trainers report no speed, and in ERG mode what they report follows the gear, not the effort.
 Workouts are labelled with the fixed `PowerZone` bands, since their steps are shares of FTP

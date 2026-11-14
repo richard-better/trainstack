@@ -1,0 +1,427 @@
+[
+  {
+    "name" : "Nested repeats with ramps, ranges, watts, cadence and cues",
+    "steps" : [
+      {
+        "cadence" : {
+          "high" : 95,
+          "kind" : "range",
+          "low" : 85
+        },
+        "duration" : {
+          "seconds" : 600,
+          "type" : "time"
+        },
+        "name" : "Warm up",
+        "target" : {
+          "level" : {
+            "from" : 0.5,
+            "kind" : "ramp",
+            "to" : 0.75
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "cues" : [
+          {
+            "at" : {
+              "seconds" : 0,
+              "type" : "time"
+            },
+            "text" : "Here we go"
+          },
+          {
+            "at" : {
+              "seconds" : 10,
+              "type" : "time"
+            },
+            "text" : "Settle in"
+          }
+        ],
+        "duration" : {
+          "seconds" : 300,
+          "type" : "time"
+        },
+        "name" : "Over",
+        "notes" : "Stay seated",
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 0.95
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "cadence" : {
+          "kind" : "constant",
+          "value" : 110
+        },
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 400
+          },
+          "type" : "power",
+          "unit" : "watts"
+        },
+        "type" : "step"
+      },
+      {
+        "cues" : [
+          {
+            "at" : {
+              "seconds" : 0,
+              "type" : "time"
+            },
+            "shownForSeconds" : 5,
+            "text" : "Sprint now"
+          }
+        ],
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "type" : "step"
+      },
+      {
+        "cadence" : {
+          "kind" : "constant",
+          "value" : 110
+        },
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 400
+          },
+          "type" : "power",
+          "unit" : "watts"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 120,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "high" : 0.65,
+            "kind" : "range",
+            "low" : 0.55
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "cues" : [
+          {
+            "at" : {
+              "seconds" : 10,
+              "type" : "time"
+            },
+            "text" : "Settle in"
+          }
+        ],
+        "duration" : {
+          "seconds" : 300,
+          "type" : "time"
+        },
+        "name" : "Over",
+        "notes" : "Stay seated",
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 0.95
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "cadence" : {
+          "kind" : "constant",
+          "value" : 110
+        },
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 400
+          },
+          "type" : "power",
+          "unit" : "watts"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "type" : "step"
+      },
+      {
+        "cadence" : {
+          "kind" : "constant",
+          "value" : 110
+        },
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 400
+          },
+          "type" : "power",
+          "unit" : "watts"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 120,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "high" : 0.65,
+            "kind" : "range",
+            "low" : 0.55
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "cues" : [
+          {
+            "at" : {
+              "seconds" : 10,
+              "type" : "time"
+            },
+            "text" : "Settle in"
+          }
+        ],
+        "duration" : {
+          "seconds" : 300,
+          "type" : "time"
+        },
+        "name" : "Over",
+        "notes" : "Stay seated",
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 0.95
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "cadence" : {
+          "kind" : "constant",
+          "value" : 110
+        },
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 400
+          },
+          "type" : "power",
+          "unit" : "watts"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "type" : "step"
+      },
+      {
+        "cadence" : {
+          "kind" : "constant",
+          "value" : 110
+        },
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 400
+          },
+          "type" : "power",
+          "unit" : "watts"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 30,
+          "type" : "time"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 120,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "high" : 0.65,
+            "kind" : "range",
+            "low" : 0.55
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 300,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "from" : 0.6,
+            "kind" : "ramp",
+            "to" : 0.4
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      }
+    ]
+  },
+  {
+    "name" : "Heart rate, max effort and watts ramps",
+    "steps" : [
+      {
+        "duration" : {
+          "seconds" : 600,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "high" : 140,
+            "kind" : "range",
+            "low" : 130
+          },
+          "type" : "heartRate",
+          "unit" : "bpm"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 300,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 0.85
+          },
+          "type" : "heartRate",
+          "unit" : "threshold"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 20,
+          "type" : "time"
+        },
+        "target" : {
+          "type" : "maxEffort"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "seconds" : 240,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "from" : 200,
+            "kind" : "ramp",
+            "to" : 300
+          },
+          "type" : "power",
+          "unit" : "watts"
+        },
+        "type" : "step"
+      }
+    ]
+  },
+  {
+    "name" : "A running workout",
+    "reason" : "A running workout. Ride plays cycling workouts on a trainer.",
+    "steps" : [
+
+    ]
+  },
+  {
+    "name" : "A cycling workout with a pace target",
+    "reason" : "It sets pace targets, and a trainer holds power, not pace.",
+    "steps" : [
+
+    ]
+  },
+  {
+    "name" : "A cycling workout with a distance step",
+    "reason" : "It has steps measured in distance, and Ride plays steps measured in time.",
+    "steps" : [
+
+    ]
+  }
+]
