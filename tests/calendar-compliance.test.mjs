@@ -325,3 +325,77 @@ test("replaying an edit that changes nothing leaves the day's compliance as it w
   assert.equal(compliance.pending, false);
   assert.ok(compliance.parts.intervals.share > 0.95);
 });
+
+const tcxRide = (day, laps) => {
+  let second = 0;
+  const lapXml = laps
+    .map(({ seconds, watts }) => {
+      const lapStart = new Date(Date.parse(`${day}T06:00:00Z`) + second * 1000).toISOString();
+      const points = Array.from({ length: seconds }, (_, offset) => {
+        const time = new Date(
+          Date.parse(`${day}T06:00:00Z`) + (second + offset) * 1000,
+        ).toISOString();
+        return `<Trackpoint><Time>${time}</Time><Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Watts>${watts}</Watts></TPX></Extensions></Trackpoint>`;
+      }).join("");
+      second += seconds;
+      return `<Lap StartTime="${lapStart}"><TotalTimeSeconds>${seconds}</TotalTimeSeconds><Track>${points}</Track></Lap>`;
+    })
+    .join("");
+  return new File(
+    [
+      `<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Biking"><Id>${day}T06:00:00Z</Id>${lapXml}</Activity></Activities></TrainingCenterDatabase>`,
+    ],
+    "ride.tcx",
+  );
+};
+
+test("a step that lasts until the lap button is found by the athlete's lap, scored on its target alone, and its expected length is never held against them", async () => {
+  const { client } = await athlete();
+  const day = "2026-07-18";
+  const watts = (value) => ({
+    type: "power",
+    unit: "watts",
+    level: { kind: "range", low: value - 20, high: value + 20 },
+  });
+  const { id } = await plan(client, day, {
+    kind: "workout",
+    workout: {
+      name: "Warm up, then hold until lap",
+      sport: "cycling",
+      steps: [
+        { type: "step", duration: { type: "time", seconds: 300 }, target: watts(150) },
+        {
+          type: "step",
+          duration: { type: "open", expected: { type: "time", seconds: 1200 } },
+          target: watts(250),
+        },
+      ],
+    },
+    source: null,
+    notes: null,
+  });
+  await client.activities.upload({
+    file: tcxRide(day, [
+      { seconds: 300, watts: 150 },
+      { seconds: 400, watts: 250 },
+    ]),
+    source: "upload",
+    sport: "cycling",
+  });
+  await runCronUntilAnalysed();
+  const { compliance } = await client.plannedWorkouts.get({ id });
+  assert.equal(compliance.parts.intervals.alignedBy, "laps");
+  assert.ok(compliance.parts.intervals.share > 0.95, JSON.stringify(compliance.parts.intervals));
+  assert.deepEqual(
+    compliance.parts.intervals.steps.map(({ placed }) => placed),
+    [true, true],
+  );
+  assert.equal(
+    compliance.parts.duration,
+    null,
+    "400 s against an expected 1,200 s is not a shortfall",
+  );
+  assert.equal(compliance.parts.load, null);
+  assert.ok(compliance.score >= 95);
+  assert.equal(compliance.rating, "on_target");
+});

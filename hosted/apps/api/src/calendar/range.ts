@@ -16,7 +16,7 @@ import {
   plannedWorkout,
 } from "../db/schema";
 import { analysisDueOf } from "../activities/analysis";
-import { complianceOf, contentHashOf, intervalsOf } from "./compliance";
+import { complianceOf, contentHashOf, intervalsOf, lastsUntilLap } from "./compliance";
 import { type Pair, pairDay, type PairChoice } from "./pairing";
 import { plannedOf, type PlannedRow, type Presented } from "./planned";
 
@@ -133,6 +133,11 @@ const sportOf = (row: PlannedRow) =>
     ? (JSON.parse(row.content!) as PlannedContent & { kind: "workout" }).workout.sport
     : null;
 
+const plannedWorkoutLastsUntilLap = (row: PlannedRow) => {
+  const content = JSON.parse(row.content!) as PlannedContent;
+  return content.kind === "workout" && lastsUntilLap(content.workout.steps);
+};
+
 export type LoadedDay = {
   planned: PlannedRow[];
   activities: CalendarActivity[];
@@ -206,6 +211,7 @@ export async function loadDays(
           intervals: isCurrent ? (stored?.result ?? null) : null,
           withSteps,
           pending: done.analysisDue === 1,
+          lengthIsTheAthletes: plannedWorkoutLastsUntilLap(plannedRow),
         }),
       });
     }

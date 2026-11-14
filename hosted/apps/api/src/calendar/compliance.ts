@@ -22,6 +22,11 @@ export const contentHashOf = (content: string) => sha256Hex(new TextEncoder().en
 
 export type PlannedForCompliance = { id: string; contentHash: string; workout: Workout };
 
+export const lastsUntilLap = (blocks: Workout["steps"]): boolean =>
+  blocks.some((block) =>
+    block.type === "repeat" ? lastsUntilLap(block.steps) : block.duration.type === "open",
+  );
+
 const hasTargets = (blocks: Workout["steps"]): boolean =>
   blocks.some((block) =>
     block.type === "repeat"
@@ -151,17 +156,21 @@ export function complianceOf({
   intervals,
   withSteps,
   pending,
+  lengthIsTheAthletes,
 }: {
   planned: { seconds: number | null; meters: number | null; load: number | null };
   done: { seconds: number | null; meters: number | null; load: number | null };
   intervals: IntervalCompliance | null;
   withSteps: boolean;
   pending: boolean;
+  lengthIsTheAthletes: boolean;
 }): PlannedCompliance {
+  const length = (plannedValue: number | null, doneValue: number | null) =>
+    lengthIsTheAthletes ? null : part(plannedValue, doneValue);
   const parts = {
-    duration: part(planned.seconds, done.seconds),
-    distance: part(planned.meters, done.meters),
-    load: part(planned.load, done.load),
+    duration: length(planned.seconds, done.seconds),
+    distance: length(planned.meters, done.meters),
+    load: length(planned.load, done.load),
     intervals: intervals
       ? {
           secondsWithData: intervals.secondsWithData,

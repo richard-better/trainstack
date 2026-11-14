@@ -124,7 +124,9 @@ const compliancePart = (what: string) =>
         ),
     })
     .nullable()
-    .describe(`${what}; null when either side lacks it`);
+    .describe(
+      `${what}; null when either side lacks it, and for a workout with a step that lasts until the lap button, whose length is the athlete's to choose: its expected length is an estimate, never held against them, so such a workout is scored on its intervals alone`,
+    );
 
 export const intervalStepSchema = z.object({
   index: z.number().int().describe("The step's place in the workout with its repeats written out"),
