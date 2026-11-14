@@ -664,6 +664,25 @@ function CueList({
             width={240}
             onCommit={(text) => replace(index, { ...cue, text }, "text")}
           />
+          <TextField<number | undefined>
+            label="Shown for"
+            value={cue.shownForSeconds}
+            format={(seconds) => (seconds === undefined ? "" : formatNumber(0)(seconds))}
+            parse={(text) => (text.trim() === "" ? undefined : parseNumber(1, 3600)(text))}
+            hint="Seconds, or leave empty"
+            unit="s"
+            inputMode="numeric"
+            width={64}
+            onCommit={(shownForSeconds) =>
+              replace(
+                index,
+                shownForSeconds === undefined
+                  ? { at: cue.at, text: cue.text }
+                  : { ...cue, shownForSeconds },
+                "shown",
+              )
+            }
+          />
           <button
             type="button"
             className="quiet icon-button"

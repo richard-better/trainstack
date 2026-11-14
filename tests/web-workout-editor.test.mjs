@@ -4,6 +4,7 @@ import { after, before, test } from "node:test";
 import { workoutSchema } from "@trainstack/workout";
 import {
   canDragLevel,
+  draggedSeconds,
   nudgeLength,
   nudgeLevel,
   withLength,
@@ -18,6 +19,7 @@ import {
   insertAt,
   moveBlock,
   newStep,
+  pathAfterMove,
   problemsByPath,
   problemsOf,
   redo,
@@ -403,4 +405,20 @@ test("a draft equals what the server returns however its keys are ordered", () =
     true,
   );
   assert.equal(sameWorkout(draft, { name: "Y", sport: "cycling", steps: draft.steps }), false);
+});
+
+test("the open step stays open on the same step when it, its repeat or a neighbour moves", () => {
+  assert.deepEqual(pathAfterMove([1, 2], [1], [2]), [2, 2], "a step inside a moved repeat");
+  assert.deepEqual(pathAfterMove([2], [1], [2]), [1], "the neighbour a block moved past");
+  assert.deepEqual(pathAfterMove([1], [2], [1]), [2]);
+  assert.deepEqual(pathAfterMove([0], [1], [2]), [0], "a block the move did not reach");
+  assert.deepEqual(pathAfterMove([1, 0], [1, 1], [1, 0]), [1, 1], "inside one repeat");
+  assert.deepEqual(pathAfterMove([2, 0], [1, 1], [1, 0]), [2, 0], "another repeat's step");
+});
+
+test("dragging a bar's right edge lengthens it by the distance dragged, the last bar too", () => {
+  assert.equal(draggedSeconds(300, 500, 560, 2), 420);
+  assert.equal(draggedSeconds(300, 500, 300, 2), 1, "never shorter than a second");
+  const last = withLength(at(300, 0.5), draggedSeconds(300, 900, 940, 3.3), 0);
+  assert.deepEqual(last.duration, { type: "time", seconds: 435 });
 });

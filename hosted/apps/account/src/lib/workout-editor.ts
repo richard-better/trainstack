@@ -120,6 +120,24 @@ export function siblingCount(blocks: readonly Block[], path: Path) {
   return block?.type === "repeat" ? block.steps.length : 0;
 }
 
+export function pathAfterMove(path: Path, from: Path, to: Path): Path {
+  const parent = from.slice(0, -1);
+  const depth = parent.length;
+  if (path.length <= depth || !parent.every((part, index) => path[index] === part)) return path;
+  const index = path[depth]!;
+  const moved = from[depth]!;
+  const target = to[depth]!;
+  const shifted =
+    index === moved
+      ? target
+      : moved < target && index > moved && index <= target
+        ? index - 1
+        : moved > target && index >= target && index < moved
+          ? index + 1
+          : index;
+  return [...path.slice(0, depth), shifted, ...path.slice(depth + 1)];
+}
+
 export function moveBlock(
   blocks: readonly Block[],
   path: Path,

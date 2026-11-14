@@ -10,6 +10,7 @@ import {
 
 import {
   canDragLevel,
+  draggedSeconds,
   type LevelPart,
   nudgeLength,
   nudgeLevel,
@@ -297,12 +298,6 @@ export function WorkoutChart({
     return Math.max(0, ((geometry.top + geometry.height - y) / geometry.height) * geometry.yMax);
   }
 
-  function lengthAt(x: number, current: Drag) {
-    const fraction = Math.min(0.98, Math.max(0, (x - geometry.left) / Math.max(geometry.width, 1)));
-    const others = current.total - current.segment.seconds;
-    return Math.max(1, (fraction * others - current.segment.start) / (1 - fraction));
-  }
-
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     show(segmentAt(event.clientX, event.currentTarget));
     if (!editing || event.button !== 0) return;
@@ -321,7 +316,8 @@ export function WorkoutChart({
       segment,
       part: partAt(levelOf(segment.step), (hit.x - start) / Math.max(end - start, 1)),
       fromShare: shareAt(hit.y),
-      total: geometry.total,
+      fromX: hit.x,
+      secondsPerPixel: geometry.total / Math.max(geometry.width, 1),
       yMax: geometry.yMax,
       metersPerSecond: meters > 0 ? meters / segment.seconds : 0,
       id: `drag:${pathKey(segment.path)}:${Date.now()}`,
@@ -339,7 +335,11 @@ export function WorkoutChart({
     const next =
       current.kind === "level"
         ? withLevelShare(segment.step, current.part, current.fromShare, shareAt(y), reference)
-        : withLength(segment.step, lengthAt(x, current), current.metersPerSecond);
+        : withLength(
+            segment.step,
+            draggedSeconds(segment.seconds, current.fromX, x, current.secondsPerPixel),
+            current.metersPerSecond,
+          );
     editing.onChange(segment.path, next, current.id);
     return true;
   }
@@ -547,7 +547,8 @@ type Drag = {
   readonly segment: Segment;
   readonly part: LevelPart;
   readonly fromShare: number;
-  readonly total: number;
+  readonly fromX: number;
+  readonly secondsPerPixel: number;
   readonly yMax: number;
   readonly metersPerSecond: number;
   readonly id: string;

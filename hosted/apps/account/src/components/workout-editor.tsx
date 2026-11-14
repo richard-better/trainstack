@@ -24,6 +24,7 @@ import {
   newStep,
   parsePath,
   type Path,
+  pathAfterMove,
   pathKey,
   problemsByPath,
   problemsOf,
@@ -44,6 +45,11 @@ import { Shell, useStoredWorkout, workoutKey } from "./workout-page";
 
 export function EditWorkoutPage({ id }: { id: string }) {
   const { valid, workout, query } = useStoredWorkout(id);
+  const [opened, setOpened] = useState<StoredWorkout | null>(null);
+  if (workout?.id === id && opened?.id !== id) setOpened(workout);
+  if (opened?.id === id) {
+    return <WorkoutEditor key={opened.id} id={opened.id} initial={opened.workout} base={opened} />;
+  }
   if (!valid || query.isError) {
     return (
       <Shell>
@@ -57,15 +63,10 @@ export function EditWorkoutPage({ id }: { id: string }) {
       </Shell>
     );
   }
-  if (!workout) {
-    return (
-      <Shell>
-        <div className="traces-loading" aria-busy="true" aria-label="Loading workout" />
-      </Shell>
-    );
-  }
   return (
-    <WorkoutEditor key={workout.id} id={workout.id} initial={workout.workout} base={workout} />
+    <Shell>
+      <div className="traces-loading" aria-busy="true" aria-label="Loading workout" />
+    </Shell>
   );
 }
 
@@ -179,13 +180,17 @@ function WorkoutEditor({
   });
 
   const canSave = !invalid && !save.isPending && dirty;
+  const travel = useCallback((step: (history: History) => History) => {
+    setChecked(new Set());
+    setHistory(step);
+  }, []);
   const trySave = useCallback(() => {
     if (canSave) save.mutate(false);
   }, [canSave, save]);
 
   useEditorShortcuts(
     useMemo(
-      () => ({ undo: () => setHistory(undo), redo: () => setHistory(redo), save: trySave }),
+      () => ({ undo: () => travel(undo), redo: () => travel(redo), save: trySave }),
       [trySave],
     ),
   );
@@ -217,7 +222,10 @@ function WorkoutEditor({
         const moved = moveBlock(history.draft.steps, path, offset);
         if (!moved) return;
         apply((current) => ({ ...current, steps: moved.blocks }));
-        setSelected((current) => (current === pathKey(path) ? pathKey(moved.path) : current));
+        const follow = (current: string | null) =>
+          current === null ? null : pathKey(pathAfterMove(parsePath(current), path, moved.path));
+        setSelected(follow);
+        setRevealed(follow);
         setChecked(new Set());
         const control = focusedControl();
         requestAnimationFrame(() => focusBlock(moved.path, control));
@@ -278,6 +286,7 @@ function WorkoutEditor({
   }
 
   function keepTheirs(stored: StoredWorkout) {
+    setChecked(new Set());
     setHistory((current) => edit(current, stored.workout));
     setSaved({ workout: stored.workout, base: stored });
     setConflict(null);
@@ -294,7 +303,7 @@ function WorkoutEditor({
 
   return (
     <FieldErrorsProvider errors={fieldErrors.errors}>
-      <main className="content detail editor">
+      <main className="content detail editor" inert={save.isPending && saved.base === null}>
         <Link
           to={saved.base ? "/workouts/$id" : "/workouts"}
           params={{ id }}
@@ -319,7 +328,7 @@ function WorkoutEditor({
             <button
               type="button"
               className="secondary compact"
-              onClick={() => setHistory(undo)}
+              onClick={() => travel(undo)}
               disabled={history.past.length === 0}
               title="Undo (⌘Z)"
             >
@@ -328,7 +337,7 @@ function WorkoutEditor({
             <button
               type="button"
               className="secondary compact"
-              onClick={() => setHistory(redo)}
+              onClick={() => travel(redo)}
               disabled={history.future.length === 0}
               title="Redo (⇧⌘Z)"
             >

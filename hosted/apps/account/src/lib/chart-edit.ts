@@ -117,3 +117,10 @@ export function nudgeLength(step: Step, direction: 1 | -1): Step {
     duration: { type: "distance", meters: Math.max(amount, meters + amount * direction) },
   };
 }
+
+export const draggedSeconds = (
+  seconds: number,
+  fromX: number,
+  x: number,
+  secondsPerPixel: number,
+) => Math.max(1, seconds + (x - fromX) * secondsPerPixel);
