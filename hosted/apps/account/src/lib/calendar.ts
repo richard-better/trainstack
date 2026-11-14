@@ -290,6 +290,7 @@ export function draftPlanned(
     planned: null,
     skipped: null,
     pairing: null,
+    compliance: null,
     createdAt: now,
     updatedAt: now,
     state: "planned" as const,

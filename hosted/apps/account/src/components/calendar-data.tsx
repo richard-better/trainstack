@@ -1,15 +1,13 @@
-import type { Activity } from "@trainstack/contract";
 import type { Sport } from "@trainstack/workout";
 import { profileOn } from "@trainstack/zones";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { api, queryClient } from "../api";
-import { analysisRefreshMs, anyAnalysisDue } from "../lib/analysis";
+import { analysisRefreshMs } from "../lib/analysis";
 import { type CalendarRange, type Period, rangeKey } from "../lib/calendar";
 import { createCalendarWrites, plannedKey } from "../lib/calendar-writes";
 import { datedChanges } from "../lib/settings";
-import { shiftDay } from "../lib/training";
 import { referenceFor } from "../lib/workout-profile";
 import { useSettingsHistory } from "./settings-data";
 
@@ -20,14 +18,12 @@ export function useWritesVersion() {
 }
 
 export function useCalendar(period: Pick<Period, "from" | "through">) {
-  const routes = useActivitiesIn(period.from, period.through);
-  const due = anyAnalysisDue(routes.data ?? []);
   const query = useQuery({
     queryKey: rangeKey(period.from, period.through),
     queryFn: () => api.calendar.range({ from: period.from, through: period.through }),
     staleTime: 15_000,
     refetchOnWindowFocus: true,
-    refetchInterval: analysisRefreshMs(due),
+    refetchInterval: (query) => analysisRefreshMs((query.state.data?.analysesDue ?? 0) > 0),
     placeholderData: (previous) => previous,
   });
   const version = useWritesVersion();
@@ -35,43 +31,7 @@ export function useCalendar(period: Pick<Period, "from" | "through">) {
     () => (query.data ? calendarWrites.view(query.data) : undefined),
     [query.data, version],
   );
-  const activities = useMemo(
-    () => new Map((routes.data ?? []).map((activity) => [activity.id, activity])),
-    [routes.data],
-  );
-  return { query, range: shown, activities };
-}
-
-const PAGE = 200;
-const MAX_PAGES = 3;
-
-function useActivitiesIn(from: string, through: string) {
-  return useQuery({
-    queryKey: ["calendar-activities", from, through],
-    queryFn: async () => {
-      const startedAfter = new Date(`${shiftDay(from, -1)}T00:00:00Z`);
-      const startedBefore = new Date(`${shiftDay(through, 2)}T00:00:00Z`);
-      const found: Activity[] = [];
-      let cursor: string | undefined;
-      for (let page = 0; page < MAX_PAGES; page++) {
-        const result = await api.activities.list({
-          limit: PAGE,
-          onePerWorkout: true,
-          startedAfter,
-          startedBefore,
-          ...(cursor ? { cursor } : {}),
-        });
-        found.push(...result.activities);
-        if (!result.nextCursor) break;
-        cursor = result.nextCursor;
-      }
-      return found;
-    },
-    staleTime: 15_000,
-    refetchOnWindowFocus: true,
-    refetchInterval: (query) => analysisRefreshMs(anyAnalysisDue(query.state.data ?? [])),
-    placeholderData: (previous) => previous,
-  });
+  return { query, range: shown };
 }
 
 export function usePlanned(id: string) {

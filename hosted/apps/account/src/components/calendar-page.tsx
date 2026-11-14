@@ -1,5 +1,4 @@
 import type {
-  Activity,
   CalendarActivity,
   CalendarDay,
   CalendarTotals,
@@ -91,7 +90,7 @@ export function CalendarPage({ view, at }: { view: CalendarView; at: string | un
   const [knownToday, setKnownToday] = useState<string | null>(null);
   const today = knownToday ?? todayIn(settings.data?.timeZone ?? null);
   const period = periodOf(view, at, today);
-  const { query, range, activities } = useCalendar(period);
+  const { query, range } = useCalendar(period);
   const referenceOn = useReferenceOn();
   const [dialog, setDialog] = useState<DialogRequest | null>(null);
   const [moving, setMoving] = useState<Moving | null>(null);
@@ -257,7 +256,6 @@ export function CalendarPage({ view, at }: { view: CalendarView; at: string | un
         <CalendarGrid
           range={shown}
           period={period}
-          activities={activities}
           referenceOn={referenceOn}
           movingId={moving?.id ?? null}
           actions={actions}
@@ -438,14 +436,12 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
 function CalendarGrid({
   range,
   period,
-  activities,
   referenceOn,
   movingId,
   actions,
 }: {
   range: CalendarRange;
   period: Period;
-  activities: Map<string, Activity>;
   referenceOn: ReferenceOn;
   movingId: string | null;
   actions: Actions;
@@ -475,7 +471,6 @@ function CalendarGrid({
                 day={day}
                 today={range.today}
                 outside={!isInMonth(period, day.day)}
-                activities={activities}
                 referenceOn={referenceOn}
                 movingId={movingId}
                 actions={actions}
@@ -520,7 +515,6 @@ function DayCell({
   day,
   today,
   outside,
-  activities,
   referenceOn,
   movingId,
   actions,
@@ -529,7 +523,6 @@ function DayCell({
   day: CalendarDay;
   today: string;
   outside: boolean;
-  activities: Map<string, Activity>;
   referenceOn: ReferenceOn;
   movingId: string | null;
   actions: Actions;
@@ -605,11 +598,7 @@ function DayCell({
         <ul className="day-items">
           {items}
           {day.activities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              detail={activities.get(activity.id)}
-            />
+            <ActivityCard key={activity.id} activity={activity} />
           ))}
         </ul>
       )}
@@ -865,7 +854,7 @@ function PlannedMenu({
 const ROUTE_WIDTH = 48;
 const ROUTE_HEIGHT = 32;
 
-function RouteDrawing({ route }: { route: NonNullable<Activity["route"]> }) {
+function RouteDrawing({ route }: { route: NonNullable<CalendarActivity["route"]> }) {
   const path = useMemo(
     () => routePath(storedRouteSegments(route), ROUTE_WIDTH, ROUTE_HEIGHT, 3),
     [route],
@@ -883,16 +872,10 @@ function RouteDrawing({ route }: { route: NonNullable<Activity["route"]> }) {
   );
 }
 
-function ActivityCard({
-  activity,
-  detail,
-}: {
-  activity: CalendarActivity;
-  detail: Activity | undefined;
-}) {
+function ActivityCard({ activity }: { activity: CalendarActivity }) {
   const sport = sportName(activity.sport, activity.indoor);
   const distance = activity.meters ? formatDistance(activity.meters) : null;
-  const analysing = activity.load === null && detail?.analysisDue === true;
+  const analysing = activity.load === null && activity.analysisDue;
   return (
     <li className="done-card" data-state="done">
       <Link to="/activities/$id" params={{ id: activity.id }} className="done-link">
@@ -922,7 +905,7 @@ function ActivityCard({
             analysing && <span className="muted">Analysing</span>
           )}
         </span>
-        {detail?.route && <RouteDrawing route={detail.route} />}
+        {activity.route && <RouteDrawing route={activity.route} />}
         <span className="visually-hidden">, done</span>
       </Link>
     </li>
