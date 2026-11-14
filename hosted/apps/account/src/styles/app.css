@@ -1550,8 +1550,15 @@ input[aria-invalid="true"] {
 }
 
 @media (max-width: 640px) {
+  .app-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
   .main-nav {
-    margin-left: 4px;
+    order: 3;
+    flex-basis: 100%;
+    margin-left: -10px;
   }
 
   .setting-row {
