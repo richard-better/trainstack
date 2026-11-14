@@ -10,10 +10,12 @@ import { activityDate, weekLabel } from "../lib/dates";
 import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
+import { useSettingsChangedRecently } from "./settings-data";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
 
 export function ActivityList() {
+  const settling = useSettingsChangedRecently();
   const activities = useInfiniteQuery({
     queryKey: activitiesQueryKey,
     queryFn: ({ pageParam }) =>
@@ -21,6 +23,7 @@ export function ActivityList() {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     refetchInterval: (query) =>
+      settling ||
       query.state.data?.pages.some((page) =>
         page.activities.some((activity) => analysisState(activity).kind === "pending"),
       )
