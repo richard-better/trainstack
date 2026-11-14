@@ -5,6 +5,7 @@ import { settingDaySchema } from "./settings.ts";
 
 export const MAX_HEALTH_DAYS_PER_WRITE = 100;
 export const MAX_HEALTH_DAYS_READ = 3 * 366;
+export const LONGEST_NIGHT_SECONDS = 25 * 3600;
 
 const daysApart = (from: string, through: string) =>
   (Date.parse(`${through}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
@@ -18,10 +19,10 @@ const measuredShape = {
     .number()
     .int()
     .min(0)
-    .max(24 * 3600)
+    .max(LONGEST_NIGHT_SECONDS)
     .nullable()
     .describe(
-      "Time asleep in the night that ended on the morning of this day, in seconds, every source's sleep merged so no minute counts twice; null when nothing measured it",
+      "Time asleep in the night that ended on the morning of this day, in seconds, every source's sleep merged so no minute counts twice; null when nothing measured it. At most 25 hours, the longest noon to noon across a clock change",
     ),
   restingHeartRateBpm: z
     .number()

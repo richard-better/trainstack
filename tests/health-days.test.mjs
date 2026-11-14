@@ -79,6 +79,12 @@ test("a write from the future is refused, and one athlete never sees another's d
   assert.deepEqual(await everything(grace.client), []);
 });
 
+test("a night across the autumn clock change can hold 25 hours", async () => {
+  const { client } = await athlete();
+  const longest = measured("2026-10-25", { sleepSeconds: 25 * 3600 });
+  assert.deepEqual(await client.healthDays.put({ days: [longest] }), { days: [longest] });
+});
+
 test("a day sent twice in one write is refused", async () => {
   const { client } = await athlete();
   const [error] = await safe(
