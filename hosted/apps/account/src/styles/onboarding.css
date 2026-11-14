@@ -1,0 +1,254 @@
+.getting-started {
+  margin-bottom: 40px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  padding: 16px 16px 12px;
+}
+
+.getting-started-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.getting-started-head p {
+  margin: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.start-checklist {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.start-check + .start-check {
+  border-top: 1px solid var(--line);
+}
+
+.start-check-link {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 14px;
+  align-items: start;
+  gap: 12px;
+  margin: 0 -8px;
+  border-radius: 8px;
+  padding: 12px 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.start-check-link:hover {
+  background: var(--ink);
+}
+
+.start-check-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.start-check-title {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.start-check-line {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.start-check[data-state="done"] .start-check-title {
+  color: var(--soft);
+}
+
+.start-check-arrow {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.getting-started-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+
+.step-mark {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-mark[data-state="done"] {
+  border-color: transparent;
+  background: var(--graphite);
+  color: var(--mist);
+}
+
+.step-mark[data-state="waiting"] {
+  border-style: dashed;
+}
+
+.start-intro {
+  max-width: 640px;
+  margin-top: -16px;
+}
+
+.start-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.start-step {
+  max-width: 720px;
+  margin-top: 48px;
+  scroll-margin-top: 24px;
+}
+
+.start-step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.start-step-title {
+  margin: 0;
+  flex: 1;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.start-step-state {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.start-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0 0 36px;
+}
+
+.history-sources {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-source {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+}
+
+.history-source:first-child {
+  padding-top: 0;
+}
+
+.history-source[data-state="not_yet"] .setting-name,
+.history-source[data-state="coming"] .setting-name {
+  color: var(--soft);
+}
+
+.start-losses {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: -6px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.start-losses strong {
+  color: var(--mist);
+  font-weight: 500;
+}
+
+.start-suggestions .group-title {
+  margin-bottom: 12px;
+}
+
+.start-suggestions .threshold-suggestions {
+  margin-bottom: 8px;
+}
+
+.quick-thresholds {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.quick-thresholds .group-title {
+  margin: 0;
+}
+
+.quick-thresholds > .lede {
+  margin-top: -8px;
+}
+
+.quick-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px 24px;
+}
+
+.quick-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quick-field .input-with-unit {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.start-help {
+  margin-top: 48px;
+}
+
+@media (max-width: 599px) {
+  .start-step-body {
+    padding-left: 0;
+  }
+
+  .history-source {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .history-source .link-button,
+  .history-source button {
+    justify-self: start;
+  }
+}

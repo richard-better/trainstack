@@ -1,6 +1,6 @@
 import type { FileRoutesById } from "../routeTree.gen.ts";
 
-export type ShowcaseWorld = "athlete" | "rough-day" | "newcomer";
+export type ShowcaseWorld = "athlete" | "rough-day" | "newcomer" | "imported";
 
 export type ShowcaseNetwork = "answers" | "waits" | "fails";
 
@@ -22,7 +22,10 @@ export interface ShowcasePlaces {
   readonly plannedAhead: string;
 }
 
-export type ShowcaseStep = { readonly click: string } | { readonly upload: readonly string[] };
+export type ShowcaseStep =
+  | { readonly click: string }
+  | { readonly upload: readonly string[] }
+  | { readonly fill: Readonly<Record<string, string>> };
 
 export interface ShowcaseEntry {
   readonly id: string;
@@ -55,9 +58,17 @@ export const showcaseEntries: readonly ShowcaseEntry[] = [
   {
     id: "today-newcomer",
     screen: "Today",
-    title: "A new account with nothing in it",
+    title: "A new account with nothing in it: getting started on top",
     route: "/",
     world: "newcomer",
+    path: () => "/",
+  },
+  {
+    id: "today-imported",
+    screen: "Today",
+    title: "Eight weeks uploaded, no thresholds set yet",
+    route: "/",
+    world: "imported",
     path: () => "/",
   },
   {
@@ -77,6 +88,39 @@ export const showcaseEntries: readonly ShowcaseEntry[] = [
     world: "athlete",
     network: "fails",
     path: () => "/",
+  },
+  {
+    id: "start-newcomer",
+    screen: "Getting started",
+    title: "A new account: where history can come from, why thresholds matter",
+    route: "/start",
+    world: "newcomer",
+    path: () => "/start",
+  },
+  {
+    id: "start-imported",
+    screen: "Getting started",
+    title: "History uploaded: thresholds suggested from the hardest efforts",
+    route: "/start",
+    world: "imported",
+    path: () => "/start#thresholds",
+  },
+  {
+    id: "start-quick-problem",
+    screen: "Getting started",
+    title: "Typed thresholds, one out of range",
+    route: "/start",
+    world: "newcomer",
+    path: () => "/start#thresholds",
+    steps: [{ fill: { FTP: "2000", "Max heart rate": "188" } }, { click: "Save" }],
+  },
+  {
+    id: "start-done",
+    screen: "Getting started",
+    title: "Every step done",
+    route: "/start",
+    world: "athlete",
+    path: () => "/start",
   },
   {
     id: "activities",

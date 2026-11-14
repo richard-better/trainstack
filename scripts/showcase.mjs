@@ -75,6 +75,20 @@ const WORLDS = {
     subject: "001234.showcase-newcomer",
     seed: async () => null,
   },
+  imported: {
+    name: "Dóra Szabó",
+    email: "dora@example.com",
+    subject: "001234.showcase-imported",
+    seed: async (client, at) => {
+      await client.settings.setTimeZone({ timeZone: TIME_ZONE });
+      await seedHistory(client, {
+        today: new Date(`${localDay(at)}T03:00:00Z`),
+        weeks: 8,
+        withSettings: false,
+      });
+      return null;
+    },
+  },
 };
 
 const localDay = (date) => date.toLocaleDateString("en-CA", { timeZone: TIME_ZONE });
@@ -237,7 +251,11 @@ async function quiet(page, busy = () => 0) {
 async function act(page, steps, files) {
   for (const step of steps ?? []) {
     if ("click" in step) await page.getByRole("button", { name: step.click }).first().click();
-    else {
+    else if ("fill" in step) {
+      for (const [label, text] of Object.entries(step.fill)) {
+        await page.getByLabel(label, { exact: true }).fill(text);
+      }
+    } else {
       await page
         .locator('input[type="file"]')
         .first()
