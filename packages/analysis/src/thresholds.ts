@@ -298,8 +298,6 @@ function detectFtp(
     signals.push(agree ? "methods_agree" : "methods_differ");
     if (agree && effort === "maximal") confidence = "high";
   }
-  confidence = aged(confidence, Math.max(...used.map(({ activity }) => activity.age)), signals);
-
   const hourEffort = power(3600);
   if (hourEffort && hourEffort.value > value) {
     signals.push("hour_effort_higher");
@@ -308,6 +306,7 @@ function detectFtp(
     used = [...used, hourEffort];
     key = hourEffort;
   }
+  confidence = aged(confidence, Math.max(...used.map(({ activity }) => activity.age)), signals);
 
   const evidence = used.map(evidenceOf);
   if (heartRate !== undefined) {
@@ -401,6 +400,7 @@ function detectThresholdHeartRate(
   sport: string,
   activities: readonly Dated[],
   reference: Reference | null,
+  maxHeartRate: MaxHeartRate | undefined,
 ): ThresholdDetection {
   const threshold = "lactate_threshold_heart_rate";
   const running = sport === "running";
@@ -416,22 +416,30 @@ function detectThresholdHeartRate(
   );
   if (eligible.length === 0) return none(sport, threshold, "no_data");
   if (!reference) return none(sport, threshold, "needs_threshold");
-  const qualifying = eligible
-    .filter(
-      ({ statistics }) => statistics[effortStatistic]! >= thresholdEffortShare * reference.value,
-    )
+  const hardEnough = eligible.filter(
+    ({ statistics }) => statistics[effortStatistic]! >= thresholdEffortShare * reference.value,
+  );
+  if (hardEnough.length === 0) return none(sport, threshold, "no_qualifying_effort");
+  const effortOfActivity = ({ statistics }: Dated) =>
+    effortOf(statistics[heartRateStatistic], maxHeartRate, thresholdEffortSeconds);
+  const qualifying = hardEnough
+    .filter((activity) => effortOfActivity(activity) !== "submaximal")
     .sort((a, b) => a.age - b.age);
   const latest = qualifying[0];
-  if (!latest) return none(sport, threshold, "no_qualifying_effort");
+  if (!latest) return none(sport, threshold, "efforts_not_maximal");
   const heartRate = latest.statistics[heartRateStatistic]!;
+  const effort = effortOfActivity(latest);
   const support = qualifying.find(
     (other) =>
       other !== latest &&
       other.age - latest.age <= recentEffortDays &&
       Math.abs(other.statistics[heartRateStatistic]! - heartRate) <= thresholdHeartRateAgreementBpm,
   );
-  const signals: ThresholdSignal[] = [support ? "corroborated" : "uncorroborated"];
-  let confidence: ThresholdConfidence = support ? "high" : "medium";
+  const signals: ThresholdSignal[] = [
+    effortSignal(effort),
+    support ? "corroborated" : "uncorroborated",
+  ];
+  let confidence: ThresholdConfidence = effort !== "maximal" ? "low" : support ? "high" : "medium";
   if (reference.confidence !== "high") {
     signals.push("reference_uncertain");
     confidence = atMost(confidence, reference.confidence);
@@ -510,7 +518,9 @@ export function detectThresholds(
     results.push(primary);
   }
   if (wanted.includes("lactate_threshold_heart_rate")) {
-    results.push(detectThresholdHeartRate(sport, dated, referenceFor(sport, primary, current)));
+    results.push(
+      detectThresholdHeartRate(sport, dated, referenceFor(sport, primary, current), maxForEfforts),
+    );
   }
   results.push(maxHeartRate);
   return results;

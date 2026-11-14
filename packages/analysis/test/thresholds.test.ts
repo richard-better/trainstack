@@ -168,6 +168,48 @@ describe("awkward athletes", () => {
     assert.equal("reason" in ftp && ftp.reason, "efforts_not_maximal");
   });
 
+  test("a steady ride at a stale FTP is no threshold heart rate effort", () => {
+    const steady = activityOf(
+      "steady",
+      dayBefore(today, 2),
+      "cycling",
+      Array.from({ length: 1800 }, (_, second) => ({
+        elapsedSeconds: second,
+        power: 200,
+        heartRate: 140,
+      })),
+    );
+    const heartRate = find(
+      detectThresholds([steady], "cycling", { today, current: { ftp: 200, ...withMax } }),
+      "lactate_threshold_heart_rate",
+    );
+    assert.equal(heartRate.value, null);
+    assert.equal("reason" in heartRate && heartRate.reason, "efforts_not_maximal");
+  });
+
+  test("an old hour that raises FTP makes the estimate as old as it", () => {
+    const ride = (statistics: Record<string, number>, id: string, daysAgo: number) => ({
+      id,
+      day: dayBefore(today, daysAgo),
+      sport: "cycling",
+      statistics,
+    });
+    const ftp = estimate(
+      detectThresholds(
+        [
+          ride({ best_power_1200s_w: 300, best_power_1200s_heart_rate_bpm: 176 }, "fresh", 1),
+          ride({ best_power_1200s_w: 290, best_power_3600s_w: 310 }, "old-hour", 100),
+        ],
+        "cycling",
+        { today, current: withMax },
+      ),
+      "ftp",
+    );
+    assert.equal(ftp.method, "hour");
+    assert.equal(ftp.confidence, "low");
+    assert.ok(ftp.signals.includes("efforts_stale"));
+  });
+
   test("only easy riding gives at most a low-confidence FTP without one", () => {
     const rides = season({ today, days: 120, sport: "cycling", seed: 3, training: easyRiding });
     const detections = detectThresholds(rides, "cycling", { today });

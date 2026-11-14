@@ -225,9 +225,11 @@ The analysis keeps what detection needs as statistics:
   20 min of a solo 30 min all-out effort (Friel, _The Cyclist's Training Bible_ and _Total
   Heart Rate Training_, 2006). An activity qualifies when its best 30 min of power, or of
   grade-adjusted speed, is at least 98 % of FTP or threshold speed, taken from the estimate
-  above unless it is `low`, then from the athlete's own. The latest qualifying activity gives
-  the estimate, `high` when another within 42 days agrees within 4 bpm, and never more
-  confident than the threshold it was qualified against.
+  above unless it is `low`, then from the athlete's own, and its heart rate is not sub-maximal
+  by the rule above, so a ride at a stale, low FTP does not qualify. The latest qualifying
+  activity gives the estimate, `high` when another within 42 days agrees within 4 bpm, `low`
+  when its heart rate does not show it maximal, and never more confident than the threshold it
+  was qualified against.
 - **Max heart rate.** The highest `sustained_max_heart_rate_bpm`. When it is more than 10 bpm
   above the next activity's, it is taken for a lost or locked sensor and the next one counts. It
   is `medium` when another activity comes within 3 bpm, else `low`, and never `high`, since it
