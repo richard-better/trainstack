@@ -21,6 +21,8 @@ Packages that chose a permissive license:
   resolves athlete settings with it, and the web app draws zones with it.
 - `packages/analysis` (Apache-2.0): analysis of activities and training load. `hosted/`
   derives statistics with it, and the web app charts them.
+- `packages/logbook` (Apache-2.0): the model of logged strength and bouldering sessions.
+  `hosted/` stores sessions in it, and the web app logs and charts them.
 
 Each workspace `package.json` declares its license as an SPDX identifier, and `bun run test`
 checks it against these rules.
