@@ -7,13 +7,15 @@ import os
 final class HealthImport {
   static let source = "apple_health"
   static let settleTime: TimeInterval = 5 * 60
+  static let measuredDays = 90
   static let onKey = "healthImportIsOn"
 
-  private let store: any HealthWorkoutStore
-  private let server: any ActivityServer
+  private let store: any HealthStore
+  private let server: any ActivityServer & HealthDayServer
   private let directory: URL
   private let defaults: UserDefaults
   private let now: () -> Date
+  private let calendar: Calendar
   private var states: [String: HealthImportState] = [:]
   private var refusedThisLaunch: Set<String> = []
   private var settling: Task<Void, Never>?
@@ -30,15 +32,16 @@ final class HealthImport {
   }
 
   init(
-    store: any HealthWorkoutStore, server: any ActivityServer,
+    store: any HealthStore, server: any ActivityServer & HealthDayServer,
     directory: URL = defaultDirectory, defaults: UserDefaults = .standard,
-    now: @escaping () -> Date = Date.init
+    now: @escaping () -> Date = Date.init, calendar: Calendar = .current
   ) {
     self.store = store
     self.server = server
     self.directory = directory
     self.defaults = defaults
     self.now = now
+    self.calendar = calendar
   }
 
   static var defaultDirectory: URL {
@@ -65,6 +68,7 @@ final class HealthImport {
     guard isOn else { return }
     guard let account = try await server.signedInAccount() else { throw StravaError.signedOut }
     try Task.checkCancellation()
+    try await sendMeasuredDays(for: account)
     let settledBefore = now().addingTimeInterval(-Self.settleTime)
     var settlingUntil: Date?
     let entries = try await store.workouts().sorted {
@@ -93,6 +97,38 @@ final class HealthImport {
         guard !Task.isCancelled else { return }
         self?.syncSoon()
       }
+    }
+  }
+
+  private func sendMeasuredDays(for account: ActivityAccount) async throws {
+    let today = now()
+    let days = (0..<Self.measuredDays).reversed().compactMap {
+      calendar.date(byAdding: .day, value: -$0, to: today).map {
+        SettingDay($0, calendar: calendar)
+      }
+    }
+    let measured = try await store.measuredDays(days, calendar: calendar)
+    let sent = state(of: account.id).sentDays
+    let changed = measured.filter { day in
+      sent[day.day] != day && !(day.isEmpty && sent[day.day] == nil)
+    }
+    var start = changed.startIndex
+    while start < changed.endIndex {
+      try Task.checkCancellation()
+      guard isOn else { return }
+      let chunk = Array(
+        changed[start..<min(start + TrainstackClient.maxHealthDayWrites, changed.endIndex)])
+      let stamp = max(SettingStamp(now()), state(of: account.id).lastStamp.next)
+      try await server.writeHealthDays(chunk, at: stamp, for: account)
+      update(account.id) { state in
+        for day in chunk { state.sentDays[day.day] = day }
+        state.lastStamp = stamp
+      }
+      start += chunk.count
+    }
+    let oldest = days.first
+    update(account.id) { state in
+      state.sentDays = state.sentDays.filter { day, _ in oldest.map { day >= $0 } ?? true }
     }
   }
 

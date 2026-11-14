@@ -1,5 +1,6 @@
 import type {
   CheckInItem,
+  MeasuredDay,
   ReadinessCheckIn,
   ReadinessInput,
   ReadinessPlanned,
@@ -67,12 +68,38 @@ export function athlete({
   stress = new Map(),
   checkIns = [],
   planned = [],
+  measured = [],
   day = today,
 }: {
   stress?: Map<string, number>;
   checkIns?: ReadinessCheckIn[];
   planned?: ReadinessPlanned[];
+  measured?: MeasuredDay[];
   day?: string;
 }): ReadinessInput {
-  return { stress, checkIns, planned: new Map([[day, planned]]) };
+  return { stress, checkIns, planned: new Map([[day, planned]]), measured };
+}
+
+export type MeasuredValues = {
+  sleepSeconds?: number | null;
+  restingHeartRateBpm?: number | null;
+  hrvMs?: number | null;
+};
+
+export function measuredFor(
+  days: number,
+  through: string,
+  valuesOf: (back: number) => MeasuredValues = () => ({}),
+): MeasuredDay[] {
+  const measured: MeasuredDay[] = [];
+  for (let back = days - 1; back >= 0; back--) {
+    measured.push({
+      day: shift(through, -back),
+      sleepSeconds: 7.5 * 3600 + ((back * 7) % 5) * 300 - 600,
+      restingHeartRateBpm: 50 + (back % 3) - 1,
+      hrvMs: 60 * Math.exp((((back * 5) % 7) - 3) / 60),
+      ...valuesOf(back),
+    });
+  }
+  return measured;
 }

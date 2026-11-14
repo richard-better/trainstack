@@ -54,6 +54,7 @@ export function ReadinessSummary({ readiness }: { readiness: DayReadiness }) {
   const headline = headlineOf(readiness);
   const lines = reasonLines(readiness);
   const gaps = gapLines(readiness);
+  const unmeasured = unmeasuredLine(readiness);
   return (
     <section
       className="readiness"
@@ -95,7 +96,7 @@ export function ReadinessSummary({ readiness }: { readiness: DayReadiness }) {
             {gap}
           </p>
         ))}
-        <p className="muted">{unmeasuredLine}</p>
+        {unmeasured && <p className="muted">{unmeasured}</p>}
       </div>
     </section>
   );

@@ -4,14 +4,15 @@
   import HealthKit
   import RideData
 
-  final class HealthKitWorkouts: HealthWorkoutStore {
+  final class HealthKitWorkouts: HealthStore {
     static let readTypes: Set<HKObjectType> = [
       .workoutType(), HKSeriesType.workoutRoute(), HKQuantityType(.heartRate),
       HKQuantityType(.cyclingPower), HKQuantityType(.cyclingCadence),
       HKQuantityType(.cyclingSpeed), HKQuantityType(.runningPower),
       HKQuantityType(.runningSpeed), HKQuantityType(.distanceWalkingRunning),
       HKQuantityType(.distanceCycling), HKQuantityType(.distanceSwimming),
-      HKQuantityType(.activeEnergyBurned),
+      HKQuantityType(.activeEnergyBurned), HKCategoryType(.sleepAnalysis),
+      HKQuantityType(.restingHeartRate), HKQuantityType(.heartRateVariabilitySDNN),
     ]
 
     private let store: HKHealthStore
@@ -55,6 +56,35 @@
         limit: 1)
       guard let workout = try await query.result(for: store).first else { return nil }
       return try await activity(of: workout)
+    }
+
+    func measuredDays(_ days: [SettingDay], calendar: Calendar) async throws -> [MeasuredDay] {
+      guard HKHealthStore.isHealthDataAvailable(), let first = days.min(), let last = days.max()
+      else { return [] }
+      let from = calendar.date(byAdding: .day, value: -1, to: first.date(in: calendar))
+      let through = calendar.date(byAdding: .day, value: 1, to: last.date(in: calendar))
+      guard let from, let through else { return [] }
+      let window = HKQuery.predicateForSamples(withStart: from, end: through)
+      let asleepValues = HKCategoryValueSleepAnalysis.allAsleepValues.map(\.rawValue)
+      let sleep = try await HKSampleQueryDescriptor(
+        predicates: [.categorySample(type: HKCategoryType(.sleepAnalysis), predicate: window)],
+        sortDescriptors: []
+      ).result(for: store)
+      let asleep = sleep.filter { asleepValues.contains($0.value) }.map {
+        DateInterval(start: $0.startDate, end: max($0.startDate, $0.endDate))
+      }
+      let perMinute = HKUnit.count().unitDivided(by: .minute())
+      let restingHeartRate = try await samples(of: HKQuantityType(.restingHeartRate), window)
+        .map {
+          HealthActivity.Reading(date: $0.startDate, value: $0.quantity.doubleValue(for: perMinute))
+        }
+      let hrv = try await samples(of: HKQuantityType(.heartRateVariabilitySDNN), window)
+        .map {
+          HealthActivity.Reading(
+            date: $0.startDate, value: $0.quantity.doubleValue(for: .secondUnit(with: .milli)))
+        }
+      return MeasuredDay.days(
+        days, asleep: asleep, restingHeartRate: restingHeartRate, hrv: hrv, calendar: calendar)
     }
 
     private func activity(of workout: HKWorkout) async throws -> HealthActivity {

@@ -131,7 +131,10 @@ test("a poor night reads as fair, says why first, and what it did not read", asy
     "0 of 7 check-ins in the last four weeks rated what you rated today: until there are 7, those answers are read against normal rather than your own usual.",
     "No training yet, so this comes from your check-in alone.",
   ]);
-  assert.match(unmeasuredLine, /sleep, resting heart rate and HRV/);
+  assert.match(
+    unmeasuredLine(readiness),
+    /Not measured today: sleep, resting heart rate and HRV\./,
+  );
 });
 
 test("illness says rest in the athlete's own terms, and nothing at all says so plainly", async () => {
@@ -314,4 +317,30 @@ test("an easy swap goes after its session even when another shares its position"
   ];
   assert.equal(swapPosition(day, "a"), 1.5);
   assert.equal(swapPosition(day, "c"), 3);
+});
+
+test("with measured values, a gap never says readiness comes from training or the check-in alone", () => {
+  const day = (gaps, reasons) => ({ gaps, reasons });
+  const shortSleep = {
+    kind: "measured",
+    item: "sleep",
+    value: 4 * 3600,
+    usual: 7.5 * 3600,
+    difference: -3.5 * 3600,
+    effect: "lowers",
+    weight: 2,
+  };
+  assert.deepEqual(gapLines(day([{ kind: "no_check_in" }], [shortSleep])), [
+    "No check-in today, so this comes from your training and what was measured last night.",
+  ]);
+  assert.deepEqual(gapLines(day([{ kind: "no_training" }], [shortSleep])), [
+    "No training yet, so this comes from your check-in and what was measured last night.",
+  ]);
+  assert.deepEqual(gapLines(day([{ kind: "no_check_in" }], [])), [
+    "No check-in today, so this comes from your training alone.",
+  ]);
+  assert.deepEqual(
+    gapLines(day([{ kind: "no_check_in" }, { kind: "no_training" }], [shortSleep])),
+    ["No check-in today.", "No training yet."],
+  );
 });

@@ -199,6 +199,12 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
     },
     readable: { createdAt: fromUnixSeconds },
   },
+  healthDay: {
+    about:
+      "Sleep, resting heart rate and HRV a device measured for each day, as the app read them from Apple Health: seconds asleep the night before, the day's resting heart rate in beats per minute and the night's HRV in milliseconds, with when the app read them.",
+    owner: (table) => table.userId,
+    readable: { value: parsedJson },
+  },
   checkIn: {
     about:
       "The athlete's daily check-ins: for each day, how they slept and felt on a 1 to 5 scale where 3 is normal, whether they were ill or injured, and their note, as they entered it. A removed one keeps only its day and when it was removed, so a device cannot bring it back.",
