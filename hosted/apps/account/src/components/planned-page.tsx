@@ -1,4 +1,4 @@
-import { pairingChoices } from "../lib/planned-actions";
+import { canSkip, pairingChoices } from "../lib/planned-actions";
 import { ORPCError } from "@orpc/client";
 import {
   type CalendarDay,
@@ -198,7 +198,7 @@ function PlannedView({
               Edit this copy
             </Link>
           )}
-          {item.content.kind === "workout" &&
+          {canSkip(item) &&
             (item.skipped ? (
               <button
                 type="button"

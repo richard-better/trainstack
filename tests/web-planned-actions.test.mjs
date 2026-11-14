@@ -17,4 +17,3 @@ test("pairing keeps the planned sport family, including indoor activities", () =
   assert.deepEqual(pairingChoices(content("swimming"), activities, null), []);
   assert.deepEqual(pairingChoices({ kind: "rest" }, activities, null), []);
 });
-

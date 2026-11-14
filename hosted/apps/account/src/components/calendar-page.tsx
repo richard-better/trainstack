@@ -1,3 +1,4 @@
+import { canSkip } from "../lib/planned-actions";
 import type {
   CalendarActivity,
   CalendarDay,
@@ -911,7 +912,7 @@ function PlannedMenu({
           >
             Copy to another day
           </button>
-          {item.content.kind === "workout" &&
+          {canSkip(item) &&
             (item.skipped ? (
               <button
                 type="button"
