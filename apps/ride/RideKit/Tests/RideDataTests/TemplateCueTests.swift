@@ -29,6 +29,19 @@ struct TemplateCueTests {
       ])
   }
 
+  @Test func aCueLeftOutsideItsStepByTheLastRoundingIsDropped() {
+    let template = WorkoutTemplate(
+      name: "Easy 3", category: .endurance,
+      steps: [
+        .init(duration: 100, intensity: 0.5), .init(duration: 40, intensity: 0.5),
+        .init(duration: 40, intensity: 0.5),
+      ],
+      cues: [TemplateCue(step: 0, at: 98, text: "Nearly there")])
+    let fitted = template.fitted(to: 178)
+    #expect(fitted.steps.map(\.duration) == [98, 40, 40])
+    #expect(fitted.cues.isEmpty)
+  }
+
   @Test func aWorkoutSavedWithoutTextStillReads() throws {
     let json = Data(
       #"{"name":"Old","category":1,"about":"","steps":[{"duration":60,"intensity":0.5}]}"#.utf8)

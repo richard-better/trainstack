@@ -76,16 +76,16 @@ public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
       return length > 0 ? (index, Step(duration: length, intensity: step.intensity)) : nil
     }
     result.steps = fitted.map(\.step)
-    result.cues = fitted.enumerated().flatMap { newIndex, kept in
-      cues.filter { $0.step == kept.index && $0.at < kept.step.duration }.map {
-        TemplateCue(step: newIndex, at: $0.at, text: $0.text)
-      }
-    }
     if let longest = result.steps.indices.max(by: {
       result.steps[$0].duration < result.steps[$1].duration
     }) {
       let roundingLeftover = duration - result.duration
       result.steps[longest].duration += roundingLeftover
+    }
+    result.cues = fitted.enumerated().flatMap { newIndex, kept in
+      cues.filter { $0.step == kept.index && $0.at < result.steps[newIndex].duration }.map {
+        TemplateCue(step: newIndex, at: $0.at, text: $0.text)
+      }
     }
     let suffix = " \(Int((self.duration / 60).rounded()))"
     if name.hasSuffix(suffix) {

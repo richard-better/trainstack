@@ -21,28 +21,48 @@ struct PlayerBannerTests {
     return session
   }
 
+  private func shown(at seconds: Int) -> [PlayerBanner] {
+    PlayerBanner.shown(in: session(at: seconds), ftp: 250)
+  }
+
   @Test func showsACueForItsShownForTime() {
-    #expect(PlayerBanner(session: session(at: 4), ftp: 250) == nil)
-    #expect(PlayerBanner(session: session(at: 5), ftp: 250)?.text == "Settle in")
-    #expect(PlayerBanner(session: session(at: 24), ftp: 250)?.kind == .cue)
-    #expect(PlayerBanner(session: session(at: 25), ftp: 250) == nil)
+    #expect(shown(at: 4).isEmpty)
+    #expect(shown(at: 5).map(\.text) == ["Settle in"])
+    #expect(shown(at: 24).map(\.kind) == [.cue])
+    #expect(shown(at: 25).isEmpty)
+  }
+
+  @Test func aCueStillShowingDoesNotHoldBackTheNextStep() {
+    let short = Workout(
+      name: "Short",
+      steps: [
+        .init(
+          duration: 15, target: .power(.constant(150)), cues: [PlannedCue(at: 0, text: "Easy")]),
+        .init(duration: 15, target: .power(.constant(250))),
+      ])
+    var session = RideSession(workout: short)
+    for _ in 0..<6 { session.advance(by: 1, reading: .init(power: 150)) }
+    #expect(PlayerBanner.shown(in: session, ftp: 250).map(\.kind) == [.cue, .upcoming])
   }
 
   @Test func announcesTheNextStepByItsNameAndTargetAsItApproaches() {
-    #expect(PlayerBanner(session: session(at: 49), ftp: 250) == nil)
-    let banner = PlayerBanner(session: session(at: 50), ftp: 250)
+    #expect(shown(at: 49).isEmpty)
+    let banner = shown(at: 50).first
     #expect(banner?.kind == .upcoming)
     #expect(banner?.text == "Next: Threshold block · 250 W · for 5:00")
   }
 
   @Test func announcesALapButtonStepAsLastingUntilTheLap() {
-    let banner = PlayerBanner(session: session(at: 355), ftp: 250)
+    let banner = shown(at: 355).first
     #expect(banner?.text == "Next: Free ride · until you press lap")
   }
 
   @Test func saysWhenTheRiderMarkedALap() {
     var session = session(at: 20)
     session.markLap()
-    #expect(PlayerBanner(session: session, ftp: 250) == .init(kind: .lap, text: "Lap 2"))
+    #expect(
+      PlayerBanner.shown(in: session, ftp: 250) == [
+        .init(kind: .lap, text: "Lap 2"), .init(kind: .cue, text: "Settle in"),
+      ])
   }
 }

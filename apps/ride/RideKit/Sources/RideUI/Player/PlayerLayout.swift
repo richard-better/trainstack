@@ -20,10 +20,12 @@ struct PlayerLayout: View {
           }
         }
         .overlay(alignment: .top) {
-          if controller.trainerNotice == nil, !session.isPaused,
-            let banner = PlayerBanner(session: session, ftp: controller.ftp)
-          {
-            PlayerCue(banner: banner)
+          if controller.trainerNotice == nil, !session.isPaused {
+            VStack(spacing: 0) {
+              ForEach(PlayerBanner.shown(in: session, ftp: controller.ftp), id: \.kind) {
+                PlayerCue(banner: $0)
+              }
+            }
           }
         }
       }

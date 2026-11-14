@@ -178,4 +178,19 @@ struct RideGlanceTests {
     #expect(!json.contains("cue"))
     #expect(try JSONDecoder().decode(RideGlance.self, from: older).cue == nil)
   }
+
+  @Test func aNamedHeartRateStepKeepsItsTargetBesideItsName() {
+    var session = RideSession(
+      workout: Workout(
+        name: "Named",
+        steps: [
+          .init(
+            duration: 60, target: .heartRate(.beatsPerMinute(.constant(140))), name: "Openers"),
+          .init(duration: 60, target: .power(.constant(200)), name: "Push"),
+        ]))
+    session.advance(by: 1, reading: .init(power: 150))
+    let glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+    #expect(glance.interval?.label == "Openers · Heart rate 140 bpm")
+    #expect(glance.next?.label == "Push")
+  }
 }

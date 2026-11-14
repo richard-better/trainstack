@@ -107,7 +107,14 @@ extension RideGlance {
     powerDisplay: PowerDisplay = .standard
   ) {
     let zones = session.intervals.map { $0.zone(ftp: ftp) }
-    let labels = session.intervals.map { $0.step.name ?? Self.label(of: $0.step.target) }
+    let labels = session.intervals.map { interval in
+      let target = Self.label(of: interval.step.target)
+      return switch (interval.step.name, interval.step.target) {
+      case (let name?, .power), (let name?, nil): name
+      case (let name?, _): [name, target].compactMap(\.self).joined(separator: " · ")
+      case (nil, _): target
+      }
+    }
     let ergTarget = { (interval: RideSession.Interval, position: TimeInterval) in
       session.mode == .erg ? interval.plannedPower(at: position).map(session.adjusted) : nil
     }

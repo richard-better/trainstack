@@ -20,16 +20,12 @@ struct PlayerBanner: Equatable {
     self.text = text
   }
 
-  init?(session: RideSession, ftp: Int) {
-    if let lap = session.justMarkedLap {
-      self.init(kind: .lap, text: "Lap \(lap)")
-    } else if let cue = session.cue {
-      self.init(kind: .cue, text: cue.text)
-    } else if let next = Self.upcoming(in: session, ftp: ftp) {
-      self.init(kind: .upcoming, text: next)
-    } else {
-      return nil
-    }
+  static func shown(in session: RideSession, ftp: Int) -> [PlayerBanner] {
+    [
+      session.justMarkedLap.map { PlayerBanner(kind: .lap, text: "Lap \($0)") },
+      session.cue.map { PlayerBanner(kind: .cue, text: $0.text) },
+      upcoming(in: session, ftp: ftp).map { PlayerBanner(kind: .upcoming, text: $0) },
+    ].compactMap(\.self)
   }
 
   private static func upcoming(in session: RideSession, ftp: Int) -> String? {
