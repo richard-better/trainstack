@@ -10,12 +10,10 @@ import { refreshAnalysis } from "./settings-data";
 import { useAthleteSettings } from "./time-zone";
 import { HelpLink } from "./help-link";
 
-type Suggestions = Awaited<ReturnType<typeof api.thresholds.suggestions>>;
-
 export function useThresholdSuggestions({
   refetchInterval = false,
 }: {
-  refetchInterval?: number | false | ((query: { state: { data?: Suggestions } }) => number | false);
+  refetchInterval?: number | false;
 } = {}) {
   return useQuery({
     queryKey: suggestionsQueryKey,

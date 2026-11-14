@@ -354,12 +354,11 @@ function ThresholdsStep({ view }: { view: OnboardingView }) {
   const stillLooking =
     onboarding.thresholds.state !== "done" && onboarding.history.state === "done";
   const suggestions = useThresholdSuggestions({
-    refetchInterval: (query) =>
-      view.awaitingDetection
-        ? ANALYSIS_POLL_MS
-        : stillLooking && query.state.data?.suggestions.length === 0
-          ? ANALYSIS_REFRESH_MS
-          : false,
+    refetchInterval: view.awaitingDetection
+      ? ANALYSIS_POLL_MS
+      : stillLooking
+        ? ANALYSIS_REFRESH_MS
+        : false,
   });
   const found = suggestions.data?.suggestions ?? [];
   const { state } = onboarding.thresholds;
