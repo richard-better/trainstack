@@ -161,6 +161,7 @@ function onRowKeys(event: KeyboardEvent, path: Path, context: TreeContext) {
   if (!event.altKey) return;
   if (event.key === "ArrowUp" || event.key === "ArrowDown") {
     event.preventDefault();
+    event.stopPropagation();
     context.actions.move(path, event.key === "ArrowUp" ? -1 : 1);
   }
 }
@@ -729,9 +730,8 @@ function CueList({
 function parseShownFor(text: string): number | undefined | null {
   const trimmed = text.trim().replace(",", ".");
   if (trimmed === "") return undefined;
-  if (!/^\d*\.?\d+$/.test(trimmed)) return null;
   const seconds = Number(trimmed);
-  return seconds > 0 && Number.isFinite(seconds) ? seconds : null;
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }
 
 function RepeatEditor({
@@ -757,11 +757,8 @@ function RepeatEditor({
       data-invalid={problems ? true : undefined}
       data-checked={context.checked.has(key) || undefined}
       onKeyDown={(event) => {
-        if (
-          event.target === event.currentTarget ||
-          (event.target as HTMLElement).closest(".repeat-head")
-        )
-          onRowKeys(event, path, context);
+        const head = (event.target as HTMLElement).closest(".repeat-head");
+        if (head?.parentElement === event.currentTarget) onRowKeys(event, path, context);
       }}
     >
       <div className="block-row repeat-head">
