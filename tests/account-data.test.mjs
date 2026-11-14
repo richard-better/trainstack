@@ -272,6 +272,7 @@ test("an athlete's export holds every row of theirs, every original file, and no
   assert.equal(activity.source, "trainstack");
   assert.equal(activity.fileSport, "cycling");
   assert.equal(activity.startedAt, "2026-10-06T14:21:15.000Z");
+  assert.equal(activity.occurredAt, activity.startedAt);
   const statistics = jsonLines(entries, `${folder}/data/activity_statistic`).filter(
     ({ activityId }) => activityId === athlete.rides[0].id,
   );

@@ -26,6 +26,9 @@ export type Handling<T extends TableKey> = Exported<T> | NotExported;
 const fromUnixSeconds = (value: unknown) =>
   typeof value === "number" ? new Date(value * 1000).toISOString() : value;
 
+const fromUnixMilliseconds = (value: unknown) =>
+  typeof value === "number" ? new Date(value).toISOString() : value;
+
 const parsedJson = (value: unknown) =>
   typeof value === "string" && value !== "" ? JSON.parse(value) : null;
 
@@ -86,6 +89,7 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
     about:
       "Every activity: where it came from, its sport, name and start, its file, its summary, and the workout it belongs to. The file itself is under activities/.",
     owner: (table) => table.userId,
+    readable: { occurredAt: fromUnixMilliseconds },
   },
   activityStatistic: {
     about: "Numbers that sum up each activity, named <what>_<unit>, such as distance_m.",
