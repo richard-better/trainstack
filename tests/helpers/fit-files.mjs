@@ -9,7 +9,13 @@ const RECORD_DEFINITION = [
 ];
 const RECORD_SIZE = 25;
 
-export function denseRide(targetBytes, startIso = "2026-08-01T06:00:00Z") {
+const straightLine = (i) => [566_000_000 + i, 227_000_000 + i];
+
+export function denseRide(
+  targetBytes,
+  startIso = "2026-08-01T06:00:00Z",
+  { position = straightLine } = {},
+) {
   const records = Math.floor(
     (targetBytes - HEADER_SIZE - CHECKSUM_SIZE - RECORD_DEFINITION.length) / RECORD_SIZE,
   );
@@ -32,8 +38,9 @@ export function denseRide(targetBytes, startIso = "2026-08-01T06:00:00Z") {
     bytes[offset + 8] = 90;
     view.setUint16(offset + 9, 8000, true);
     view.setUint32(offset + 11, i * 800, true);
-    view.setInt32(offset + 15, 566_000_000 + i, true);
-    view.setInt32(offset + 19, 227_000_000 + i, true);
+    const [latitude, longitude] = position(i);
+    view.setInt32(offset + 15, latitude, true);
+    view.setInt32(offset + 19, longitude, true);
     view.setUint16(offset + 23, 2600, true);
     offset += RECORD_SIZE;
   }

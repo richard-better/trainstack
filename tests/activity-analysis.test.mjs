@@ -53,7 +53,7 @@ async function runCron() {
 async function runCronUntilAnalysed() {
   for (let run = 0; run < 30; run++) {
     const due = await db
-      .prepare("SELECT count(*) AS n FROM activity_analysis WHERE due = 1 OR version < 2")
+      .prepare("SELECT count(*) AS n FROM activity_analysis WHERE due = 1 OR version < 3")
       .first();
     const unsummarised = await db
       .prepare(
@@ -223,7 +223,7 @@ test("a file with more records than the analysis reads says so and is not retrie
     .prepare("SELECT due, attempts, version FROM activity_analysis WHERE user_id = ?")
     .bind(user.id)
     .first();
-  assert.deepEqual(row, { due: 0, attempts: 0, version: 2 });
+  assert.deepEqual(row, { due: 0, attempts: 0, version: 3 });
 
   await bucket.delete(`activities/${user.id}/${id}`);
   await client.settings.write({ writes: [put("2026-01-01", threshold("ftp", 210))] });
@@ -234,7 +234,7 @@ test("a file with more records than the analysis reads says so and is not retrie
       .prepare("SELECT due, attempts, version FROM activity_analysis WHERE user_id = ?")
       .bind(user.id)
       .first(),
-    { due: 0, attempts: 0, version: 2 },
+    { due: 0, attempts: 0, version: 3 },
   );
 });
 
@@ -313,4 +313,112 @@ test("an activity whose file does not decode is not analysed", async () => {
   assert.equal(activity.analysisError, null);
   assert.equal(activity.analysisDue, false);
   assert.deepEqual(activity.missingThresholds, []);
+});
+
+const gpx = (segments) =>
+  new File(
+    [
+      `<?xml version="1.0"?><gpx version="1.1"><trk><type>cycling</type>${segments
+        .map(
+          (points) =>
+            `<trkseg>${points
+              .map(
+                ({ seconds, latitude, longitude }) =>
+                  `<trkpt lat="${latitude.toFixed(6)}" lon="${longitude.toFixed(6)}"><time>${new Date(Date.parse("2026-09-05T07:00:00Z") + seconds * 1000).toISOString()}</time></trkpt>`,
+              )
+              .join("")}</trkseg>`,
+        )
+        .join("")}</trk></gpx>`,
+    ],
+    "ride.gpx",
+  );
+
+const along = (from, seconds, start = 0) =>
+  Array.from({ length: seconds }, (_, second) => ({
+    seconds: start + second,
+    latitude: 47.5 + second * 0.00005,
+    longitude: from + second * 0.0001,
+  }));
+
+function decodedPolyline(text) {
+  const points = [];
+  let index = 0;
+  let latitude = 0;
+  let longitude = 0;
+  const next = () => {
+    let result = 0;
+    let shift = 0;
+    let byte;
+    do {
+      byte = text.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    return result & 1 ? ~(result >> 1) : result >> 1;
+  };
+  while (index < text.length) {
+    latitude += next();
+    longitude += next();
+    points.push([latitude / 1e5, longitude / 1e5]);
+  }
+  return points;
+}
+
+test("a ride paused halfway has a route in two pieces, with no line across the pause", async () => {
+  const { client } = await athlete();
+  const { id } = await client.activities.upload({
+    file: gpx([along(19, 600), along(19.2, 600, 900)]),
+    source: "upload",
+  });
+  assert.equal((await client.activities.get({ id })).route, null);
+  await runCronUntilAnalysed();
+  const { route } = await client.activities.get({ id });
+  assert.equal(route.segments.length, 2);
+  const [first, second] = route.segments.map(decodedPolyline);
+  assert.deepEqual(first[0], [47.5, 19]);
+  assert.deepEqual(second[0], [47.5, 19.2]);
+  assert.deepEqual(route.bounds, [19, 47.5, 19.2 + 599 * 0.0001, 47.5 + 599 * 0.00005]);
+  const listed = await client.activities.list({});
+  assert.deepEqual(listed.activities[0].route, route);
+});
+
+test("a GPS gap splits the route, and an indoor ride or a file without positions has none", async () => {
+  const { client } = await athlete();
+  const gapped = await client.activities.upload({
+    file: gpx([[...along(19, 300), ...along(19.1, 300, 600)]]),
+    source: "upload",
+  });
+  const indoor = await client.activities.upload({
+    file: gpx([along(19, 300)]),
+    source: "upload",
+    indoor: true,
+    startedAt: new Date("2026-09-06T07:00:00Z"),
+  });
+  const rideFile = await client.activities.upload({ file: fitFile(), source: "trainstack" });
+  await runCronUntilAnalysed();
+  assert.equal((await client.activities.get({ id: gapped.id })).route.segments.length, 2);
+  assert.equal((await client.activities.get({ id: indoor.id })).route, null);
+  assert.equal((await client.activities.get({ id: rideFile.id })).route, null);
+});
+
+test("a dense file of a week of winding positions gets a route inside the cap in one scheduled run", async () => {
+  const { client } = await athlete();
+  const semicircles = (degrees) => Math.round((degrees * 2 ** 31) / 180);
+  const { id } = await client.activities.upload({
+    file: fitFile(
+      denseRide(26_000_000, "2026-07-01T00:00:00Z", {
+        position: (i) => [
+          semicircles(47.5 + 0.05 * Math.sin(i / 3000) + i * 1e-7),
+          semicircles(19 + 0.05 * Math.cos(i / 3000) + i * 1e-7),
+        ],
+      }),
+    ),
+    source: "upload",
+  });
+  await runCron();
+  const { route, analyzedAt } = await client.activities.get({ id });
+  assert.ok(analyzedAt instanceof Date);
+  const points = route.segments.flatMap(decodedPolyline);
+  assert.ok(points.length <= 300 && points.length > 50, `${points.length} points`);
+  assert.ok(route.segments.join("").length < 3000);
 });

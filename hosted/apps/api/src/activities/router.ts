@@ -93,6 +93,7 @@ function toActivity(
     analyzedAt: analysis?.analyzedAt ?? null,
     analysisError: analysis?.error ?? null,
     analysisDue: isAnalysisDue(row, analysis),
+    route: (row.indoor ?? row.fileIndoor) === true ? null : (analysis?.route ?? null),
     missingThresholds: analysis?.missingThresholds ?? [],
     createdAt: row.createdAt,
     primary: row.isPrimary,

@@ -1,0 +1,1 @@
+ALTER TABLE `activity_analysis` ADD `route` text;
