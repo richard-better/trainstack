@@ -25,9 +25,9 @@ struct UTCOffsetTests {
     #expect(decoded.utcOffsetSeconds == nil)
   }
 
-  @Test func anOffsetNoPlaceOnEarthHasIsLeftOut() throws {
-    let decoded = try FITDecoder.decode(
-      FITEncoder.encode(recording(utcOffsetSeconds: 15 * 3600)))
+  @Test(arguments: [15 * 3600, -15 * 3600, Int.min, Int.max])
+  func anOffsetNoPlaceOnEarthHasIsLeftOut(_ offset: Int) throws {
+    let decoded = try FITDecoder.decode(FITEncoder.encode(recording(utcOffsetSeconds: offset)))
     #expect(decoded.utcOffsetSeconds == nil)
   }
 
