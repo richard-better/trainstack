@@ -3,16 +3,20 @@ import { and, asc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Database } from "../db";
 import {
   activity,
+  activityAnalysis,
   activityEvent,
   activityStatistic,
+  athleteTimeZone,
   type ActivityFileFormat,
   type ActivitySummaryError,
 } from "../db/schema";
 import { summaryOfFile } from "./activity-file";
+import { isAnalysisStatistic } from "./analysis-statistics";
 import { SummaryError, type FileSummary } from "./file-summary";
 import { fileKey } from "./files";
+import { localDayOf } from "./local-day";
 
-export const SUMMARY_VERSION = 3;
+export const SUMMARY_VERSION = 4;
 export const MAX_SUMMARY_ATTEMPTS = 3;
 export const SUMMARIES_PER_SCHEDULED_RUN = 5;
 export const MAX_EVENTS_PER_ACTIVITY = 2000;
@@ -26,13 +30,39 @@ export type SummaryTarget = {
   summaryAttempts: number;
 };
 
+async function dayOfArrival(db: Database, { userId, id }: SummaryTarget) {
+  const row = await db
+    .select({
+      startedAt: activity.startedAt,
+      createdAt: activity.createdAt,
+      localDay: activity.localDay,
+      localDaySource: activity.localDaySource,
+      localDayZone: activity.localDayZone,
+      athleteTimeZone: athleteTimeZone.timeZone,
+    })
+    .from(activity)
+    .leftJoin(athleteTimeZone, eq(athleteTimeZone.userId, activity.userId))
+    .where(and(eq(activity.userId, userId), eq(activity.id, id)))
+    .get();
+  return (summary: FileSummary | undefined) =>
+    row &&
+    localDayOf({
+      instant: summary?.startedAt ?? row.startedAt ?? row.createdAt,
+      fileUtcOffsetSeconds: summary?.utcOffsetSeconds,
+      stored: row,
+      athleteTimeZone: row.athleteTimeZone,
+    });
+}
+
 async function store(
   db: Database,
-  { userId, id }: SummaryTarget,
+  target: SummaryTarget,
   attemptsWhenStarted: number,
   outcome: Outcome,
 ) {
+  const { userId, id } = target;
   const summary = "summary" in outcome ? outcome.summary : undefined;
+  const localDay = (await dayOfArrival(db, target))(summary);
   const stillOurs = sql`EXISTS (SELECT 1 FROM ${activity} WHERE user_id = ${userId} AND id = ${id} AND summary_attempts = ${attemptsWhenStarted})`;
   const statistics = JSON.stringify(summary?.statistics ?? {});
   const events = JSON.stringify(
@@ -45,7 +75,7 @@ async function store(
   );
   await db.batch([
     db.run(
-      sql`DELETE FROM ${activityStatistic} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
+      sql`DELETE FROM ${activityStatistic} WHERE user_id = ${userId} AND activity_id = ${id} AND ${summary ? sql`NOT ${isAnalysisStatistic(sql`name`)}` : sql`1`} AND ${stillOurs}`,
     ),
     db.run(
       sql`DELETE FROM ${activityEvent} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
@@ -59,10 +89,25 @@ async function store(
       SELECT ${userId}, ${id}, key, value ->> 'type', value ->> 'startedAt', value ->> 'endedAt', value -> 'data'
       FROM json_each(${events}) WHERE ${stillOurs}
     `),
+    summary
+      ? db.run(sql`
+          INSERT INTO ${activityAnalysis} (user_id, activity_id) SELECT ${userId}, ${id} WHERE ${stillOurs}
+          ON CONFLICT DO UPDATE SET due = 1, generation = generation + 1, attempts = 0, profile = NULL
+        `)
+      : db.run(
+          sql`DELETE FROM ${activityAnalysis} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
+        ),
     db
       .update(activity)
       .set({
         ...(summary?.startedAt ? { startedAt: summary.startedAt } : {}),
+        ...(localDay
+          ? {
+              localDay: localDay.day,
+              localDaySource: localDay.source,
+              localDayZone: localDay.zone,
+            }
+          : {}),
         fileSport: summary?.sport ?? null,
         fileIndoor: summary?.indoor ?? null,
         fileName: summary?.name ?? null,

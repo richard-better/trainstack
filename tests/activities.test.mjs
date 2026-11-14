@@ -77,7 +77,12 @@ test("a rider uploads a ride's FIT file and reads it back by its SHA-256", async
       file: { format: "fit", size: rideBytes.byteLength },
       summarizedAt: undefined,
       summaryError: null,
+      localDay: "2026-10-06",
+      localDaySource: "file",
       statistics: undefined,
+      analyzedAt: null,
+      analysisError: null,
+      missingThresholds: [],
       createdAt: undefined,
       primary: true,
       duplicates: [],
@@ -244,6 +249,70 @@ test("the list pages through activities, newest first", async () => {
   } while (cursor);
   assert.deepEqual(seen, [summarizedRide.id, uploaded[1].id, uploaded[2].id, uploaded[0].id]);
   await assert.rejects(client.activities.list({ cursor: "nonsense" }), { code: "BAD_REQUEST" });
+});
+
+test("the list narrows to a time range and to text in the name or sport, paging as before", async () => {
+  const { client } = await rider();
+  const at = (day, hour = "06") => new Date(`${day}T${hour}:00:00Z`);
+  const upload = (day, fields) =>
+    client.activities.upload({
+      file: gpx(at(day).toISOString()),
+      source: "upload",
+      startedAt: at(day),
+      ...fields,
+    });
+  const morning = await upload("2026-04-01", { name: "Morning Tempo", sport: "running" });
+  const ride = await upload("2026-04-02", { name: "Gravel loop", sport: "cycling" });
+  const swim = await upload("2026-04-03", { sport: "swimming", name: "Évening swim" });
+  const later = await upload("2026-04-05", { name: "Long run", sport: "running" });
+  const ids = (page) => page.activities.map((activity) => activity.id);
+
+  assert.deepEqual(ids(await client.activities.list({})), [later.id, swim.id, ride.id, morning.id]);
+  assert.deepEqual(
+    ids(
+      await client.activities.list({
+        startedAfter: at("2026-04-02"),
+        startedBefore: at("2026-04-05"),
+      }),
+    ),
+    [swim.id, ride.id],
+  );
+  assert.deepEqual(ids(await client.activities.list({ startedBefore: at("2026-04-02") })), [
+    morning.id,
+  ]);
+  assert.deepEqual(ids(await client.activities.list({ query: "RUN" })), [later.id, morning.id]);
+  assert.deepEqual(ids(await client.activities.list({ query: "tempo" })), [morning.id]);
+  assert.deepEqual(ids(await client.activities.list({ query: "swim" })), [swim.id]);
+  assert.deepEqual(ids(await client.activities.list({ query: "50%" })), []);
+  assert.deepEqual(ids(await client.activities.list({ query: "Évening" })), [swim.id]);
+  assert.deepEqual(
+    ids(await client.activities.list({ query: "run", startedAfter: at("2026-04-02") })),
+    [later.id],
+  );
+
+  const first = await client.activities.list({ limit: 1, startedBefore: at("2026-04-05") });
+  assert.deepEqual(ids(first), [swim.id]);
+  const second = await client.activities.list({
+    limit: 1,
+    startedBefore: at("2026-04-05"),
+    cursor: first.nextCursor,
+  });
+  assert.deepEqual(ids(second), [ride.id]);
+});
+
+test("the list filters use the index on the athlete's start times", async () => {
+  const plan = await db
+    .prepare(
+      "EXPLAIN QUERY PLAN SELECT id FROM activity WHERE user_id = ? AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at DESC, id DESC LIMIT 51",
+    )
+    .bind("someone", 0, 1)
+    .all();
+  const details = plan.results.map((row) => row.detail).join("\n");
+  assert.match(
+    details,
+    /USING (COVERING )?INDEX activity_user_occurred_idx \(user_id=\? AND occurred_at>\? AND occurred_at<\?\)/,
+  );
+  assert.doesNotMatch(details, /TEMP B-TREE/);
 });
 
 test("statistics and events from any sport come back with the activity", async () => {

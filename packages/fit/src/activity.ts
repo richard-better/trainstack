@@ -1,6 +1,7 @@
 import { FitDecodeError } from "./error.ts";
 import { eventTypes, events, fileTypes, lapTriggers, sports, subSports } from "./names.ts";
 import {
+  ActivityField,
   CommonField,
   EventField,
   FileIdField,
@@ -13,6 +14,7 @@ import {
   altitudeOffsetMetres,
   degreesPerSemicircle,
   fitEpochInUnixSeconds,
+  maxUtcOffsetSeconds,
 } from "./profile.ts";
 import { forEachFitMessage, type FitMessage, type FitValue } from "./reader.ts";
 
@@ -100,6 +102,7 @@ export interface FitEvent {
 
 export interface ActivitySummary {
   readonly startTime: Date;
+  readonly utcOffsetSeconds: number | undefined;
   readonly sport: Sport | undefined;
   readonly subSport: SubSport | undefined;
   readonly elapsedSeconds: number;
@@ -395,8 +398,17 @@ class RecordStats {
   }
 }
 
+function utcOffset(message: FitMessage): number | undefined {
+  const timestamp = integer(message, CommonField.timestamp);
+  const local = integer(message, ActivityField.localTimestamp);
+  if (timestamp === undefined || local === undefined) return undefined;
+  const offset = Math.round((local - timestamp) / 60) * 60;
+  return Math.abs(offset) <= maxUtcOffsetSeconds ? offset : undefined;
+}
+
 function summarize(
   start: number,
+  utcOffsetSeconds: number | undefined,
   sessions: readonly FitSession[],
   records: RecordStats,
 ): ActivitySummary {
@@ -409,6 +421,7 @@ function summarize(
       : sessions[0]?.sport;
   return {
     startTime: dateFromFit(start),
+    utcOffsetSeconds,
     sport,
     subSport: onlyValue(sessions.map((session) => session.subSport)),
     elapsedSeconds,
@@ -461,6 +474,7 @@ function readActivity(
   let recordCount = 0;
   let fileIdMessage: FitMessage | undefined;
   let workoutName: string | undefined;
+  let utcOffsetSeconds: number | undefined;
   let firstSessionStart: number | undefined;
   let firstSessionEnd: number | undefined;
   const sessions: FitSession[] = [];
@@ -504,6 +518,9 @@ function readActivity(
       case MessageNumber.workout:
         workoutName ??= text(message, WorkoutField.name);
         break;
+      case MessageNumber.activity:
+        utcOffsetSeconds ??= utcOffset(message);
+        break;
     }
   });
   if (sessions.length === 0 && stats.firstTimestamp === undefined) {
@@ -514,7 +531,7 @@ function readActivity(
     activity: {
       fileId: fileIdMessage && fileId(fileIdMessage),
       workoutName,
-      summary: summarize(start, sessions, stats),
+      summary: summarize(start, utcOffsetSeconds, sessions, stats),
       sessions,
       laps,
     },

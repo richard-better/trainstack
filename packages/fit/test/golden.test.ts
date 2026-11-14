@@ -16,6 +16,10 @@ describe("SampleRide.fit, as FITDecoderTests asserts", () => {
     assert.ok(Math.abs(ride.summary.distanceMetres! - 14389) < 1);
   });
 
+  test("takes the offset from UTC from the activity's local timestamp", () => {
+    assert.equal(ride.summary.utcOffsetSeconds, 2 * 60 * 60);
+  });
+
   test("decodes the sport", () => {
     assert.equal(ride.summary.sport, "cycling");
     assert.equal(ride.summary.subSport, "generic");

@@ -148,8 +148,19 @@ export const metricSettingsSchema = z.object({
 
 const metricMap = <T extends z.ZodType>(value: T) => z.partialRecord(metric, value);
 
+export const timeZoneSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .describe("An IANA time zone, such as Europe/Budapest");
+
 export const athleteSettingsSchema = z.object({
   day: settingDaySchema.nullable().describe("The day these settings held on, or null for now"),
+  timeZone: timeZoneSchema
+    .nullable()
+    .describe(
+      "The athlete's time zone, or null until they set one, while the server uses UTC. It gives the day of an activity that arrives without its own local time, and where today ends. Changing it moves no activity already stored",
+    ),
   weightKg: z.number().nullable(),
   defaults: metricMap(metricSettingsSchema).describe("Used by every sport without its own"),
   sports: z
@@ -190,6 +201,19 @@ export const settingsContract = {
     .errors(unauthorized)
     .input(z.object({ since: z.string().regex(/^\d+$/).optional() }))
     .output(historySchema),
+  setTimeZone: oc
+    .route({
+      method: "POST",
+      path: "/settings/time-zone",
+      description:
+        "Set the athlete's time zone. Activities that arrive from now on without their own local time take their day from it; activities already stored keep theirs",
+    })
+    .errors({
+      ...unauthorized,
+      INVALID_TIME_ZONE: { status: 422, message: "Not an IANA time zone" },
+    })
+    .input(z.object({ timeZone: timeZoneSchema }))
+    .output(z.object({ timeZone: timeZoneSchema })),
   write: oc
     .route({ method: "POST", path: "/settings/history" })
     .errors({

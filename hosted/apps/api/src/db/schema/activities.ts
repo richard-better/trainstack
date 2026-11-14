@@ -1,4 +1,4 @@
-import type { ActivitySummaryError } from "@trainstack/contract";
+import type { ActivityLocalDaySource, ActivitySummaryError } from "@trainstack/contract";
 import { sql } from "drizzle-orm";
 import {
   foreignKey,
@@ -20,7 +20,7 @@ const ownedBy = () =>
     .references(() => user.id, { onDelete: "cascade" });
 
 export type ActivityFileFormat = "fit" | "gpx" | "tcx";
-export type { ActivitySummaryError };
+export type { ActivityLocalDaySource, ActivitySummaryError };
 
 export const activity = sqliteTable(
   "activity",
@@ -33,6 +33,9 @@ export const activity = sqliteTable(
     indoor: integer("indoor", { mode: "boolean" }),
     name: text("name"),
     startedAt: timestamp("started_at"),
+    localDay: text("local_day"),
+    localDaySource: text("local_day_source").$type<ActivityLocalDaySource>(),
+    localDayZone: text("local_day_zone"),
     fileFormat: text("file_format").$type<ActivityFileFormat>(),
     fileSize: integer("file_size"),
     summarizedAt: timestamp("summarized_at"),

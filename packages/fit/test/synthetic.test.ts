@@ -379,3 +379,22 @@ test("accepts an ArrayBuffer and a view into a larger buffer", () => {
   assert.deepEqual(decodeFit(padded.subarray(4, 4 + data.length)), expected);
   assert.deepEqual(decodeFit(data.slice().buffer), expected);
 });
+
+function withActivity(localOffsetSeconds: number | null) {
+  const writer = new FitWriter()
+    .define(0, 20, [{ number: 253, type: "uint32" }])
+    .data(0, [start])
+    .define(1, 34, [
+      { number: 253, type: "uint32" },
+      { number: 5, type: "uint32" },
+    ])
+    .data(1, [start + 60, localOffsetSeconds === null ? null : start + 60 + localOffsetSeconds]);
+  return writer.file();
+}
+
+test("reads the offset from UTC from the activity message, to the minute, within 14 hours", () => {
+  assert.equal(decodeFit(withActivity(-5 * 60 * 60)).summary.utcOffsetSeconds, -18_000);
+  assert.equal(decodeFit(withActivity(5 * 60 * 60 + 45 * 60 + 2)).summary.utcOffsetSeconds, 20_700);
+  assert.equal(decodeFit(withActivity(null)).summary.utcOffsetSeconds, undefined);
+  assert.equal(decodeFit(withActivity(15 * 60 * 60)).summary.utcOffsetSeconds, undefined);
+});

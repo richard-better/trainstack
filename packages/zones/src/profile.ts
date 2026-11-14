@@ -133,8 +133,6 @@ export function applyOrder(change: SettingChange) {
   }
 }
 
-const sameProfile = (a: Profile, b: Profile) => JSON.stringify(a) === JSON.stringify(b);
-
 function byDay(changes: readonly DatedChange[]) {
   const days = new Map<string, SettingChange[]>();
   for (const { day, change } of changes) {
@@ -150,15 +148,25 @@ function byDay(changes: readonly DatedChange[]) {
     }));
 }
 
-export function profileOn(changes: readonly DatedChange[], day: string | null): Profile {
+function replay(changes: readonly DatedChange[], day: string | null): Profile {
   const profile = emptyProfile();
   let tookEffect = false;
   for (const entry of byDay(changes)) {
     if (day !== null && entry.day > day && tookEffect) break;
-    const before = JSON.parse(JSON.stringify(profile)) as Profile;
+    const before = JSON.stringify(profile);
     for (const change of entry.changes) apply(profile, change);
-    tookEffect ||= !sameProfile(before, profile);
+    tookEffect ||= JSON.stringify(profile) !== before;
   }
+  return profile;
+}
+
+export function profileOn(changes: readonly DatedChange[], day: string | null): Profile {
+  const isWeight = ({ change }: DatedChange) => change.kind === "weight";
+  const profile = replay(
+    changes.filter((change) => !isWeight(change)),
+    day,
+  );
+  profile.weightKg = replay(changes.filter(isWeight), day).weightKg;
   return profile;
 }
 

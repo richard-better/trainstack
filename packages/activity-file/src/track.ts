@@ -375,6 +375,7 @@ export function summarize({ start, end, sport, laps, track }: SummaryInput): Act
   const distanceMetres = sum(fromLaps((lap) => lap.distanceMetres)) ?? track.distanceMetres;
   return {
     startTime: new Date(start),
+    utcOffsetSeconds: undefined,
     sport: sport.sport,
     subSport: sport.subSport,
     elapsedSeconds,

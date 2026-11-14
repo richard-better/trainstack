@@ -1,13 +1,21 @@
 import { ORPCError } from "@orpc/server";
 import type { Activity, ActivityDetail, DuplicateActivity } from "@trainstack/contract";
-import { and, asc, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
-import { activity, activityEvent, activityStatistic, deletedActivity } from "../db/schema";
+import {
+  activity,
+  activityAnalysis,
+  activityEvent,
+  activityStatistic,
+  athleteTimeZone,
+  deletedActivity,
+} from "../db/schema";
 import { ENV } from "../env.server";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { contentTypes, fileKey, formatOf, sha256Hex } from "./files";
+import { DEFAULT_TIME_ZONE } from "./local-day";
 import { summarizeActivity } from "./summary";
 import {
   electPrimary,
@@ -38,12 +46,32 @@ async function statisticsOf(db: Database, userId: string, ids: string[]) {
   return byActivity;
 }
 
+type AnalysisRow = typeof activityAnalysis.$inferSelect;
+
+async function analysesOf(db: Database, userId: string, ids: string[]) {
+  if (ids.length === 0) return new Map<string, AnalysisRow>();
+  const rows = await db
+    .select()
+    .from(activityAnalysis)
+    .where(
+      and(
+        eq(activityAnalysis.userId, userId),
+        inArray(
+          activityAnalysis.activityId,
+          sql`(SELECT value FROM json_each(${JSON.stringify(ids)}))`,
+        ),
+      ),
+    );
+  return new Map(rows.map((row) => [row.activityId, row]));
+}
+
 const fileOf = (row: ActivityRow) =>
   row.fileFormat && row.fileSize !== null ? { format: row.fileFormat, size: row.fileSize } : null;
 
 function toActivity(
   row: ActivityRow,
   statistics: Record<string, number>,
+  analysis: AnalysisRow | undefined,
   duplicates: DuplicateActivity[],
 ): Activity {
   return {
@@ -57,7 +85,12 @@ function toActivity(
     file: fileOf(row),
     summarizedAt: row.summarizedAt,
     summaryError: row.summaryError,
+    localDay: row.localDay,
+    localDaySource: row.localDaySource,
     statistics,
+    analyzedAt: analysis?.analyzedAt ?? null,
+    analysisError: analysis?.error ?? null,
+    missingThresholds: analysis?.missingThresholds ?? [],
     createdAt: row.createdAt,
     primary: row.isPrimary,
     duplicates,
@@ -98,11 +131,14 @@ async function duplicatesOf(db: Database, userId: string, rows: ActivityRow[]) {
 
 async function toActivities(db: Database, userId: string, rows: ActivityRow[]) {
   const ids = rows.map((row) => row.id);
-  const [statistics, duplicates] = await Promise.all([
+  const [statistics, analyses, duplicates] = await Promise.all([
     statisticsOf(db, userId, ids),
+    analysesOf(db, userId, ids),
     duplicatesOf(db, userId, rows),
   ]);
-  return rows.map((row) => toActivity(row, statistics.get(row.id)!, duplicates.get(row.id)!));
+  return rows.map((row) =>
+    toActivity(row, statistics.get(row.id)!, analyses.get(row.id), duplicates.get(row.id)!),
+  );
 }
 
 const findActivity = (db: Database, userId: string, id: string) =>
@@ -128,6 +164,13 @@ async function currentActivity(db: Database, userId: string, id: string) {
   const row = await findActivity(db, userId, id);
   if (!row) throw new ORPCError("NOT_FOUND", { message: "No such activity" });
   return withStatistics(db, row);
+}
+
+function matchesText(query: string) {
+  return or(
+    sql`instr(lower(coalesce(${activity.name}, ${activity.fileName}, '')), lower(${query})) > 0`,
+    sql`instr(lower(coalesce(${activity.sport}, ${activity.fileSport}, '')), lower(${query})) > 0`,
+  );
 }
 
 const encodeCursor = (row: ActivityRow) => `${row.occurredAt}.${row.id}`;
@@ -187,9 +230,12 @@ export const activitiesRouter = {
     await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
     try {
       await db.run(sql`
-        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size)
+        INSERT INTO ${activity} (user_id, id, workout_id, source, source_id, sport, indoor, name, started_at, file_format, file_size, local_day_source, local_day_zone)
         SELECT ${userId}, ${id}, ${id}, ${input.source}, ${input.sourceId ?? null}, ${sport}, ${indoor},
-          ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength}
+          ${input.name ?? null}, ${input.startedAt?.getTime() ?? null}, ${format}, ${bytes.byteLength},
+          'time_zone', coalesce(
+            (SELECT time_zone FROM ${athleteTimeZone} WHERE user_id = ${userId}), ${DEFAULT_TIME_ZONE}
+          )
         WHERE NOT EXISTS (
           SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
         )
@@ -228,6 +274,9 @@ export const activitiesRouter = {
         and(
           eq(activity.userId, userId),
           input.onePerWorkout ? eq(activity.isPrimary, true) : undefined,
+          input.startedAfter ? gte(activity.occurredAt, input.startedAfter.getTime()) : undefined,
+          input.startedBefore ? lt(activity.occurredAt, input.startedBefore.getTime()) : undefined,
+          input.query ? matchesText(input.query) : undefined,
           after
             ? or(
                 lt(activity.occurredAt, after.occurredAt),

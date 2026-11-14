@@ -149,3 +149,13 @@ export function recordedSession({
     ])
     .file();
 }
+
+export function recordsAtOneMoment(count, startIso = "2026-09-03T06:00:00Z") {
+  const start = fitTime(startIso);
+  const writer = new FitWriter().define(0, 20, [
+    { number: 253, type: "uint32" },
+    { number: 7, type: "uint16" },
+  ]);
+  for (let i = 0; i < count; i++) writer.data(0, [start, 200]);
+  return writer.file();
+}

@@ -5,3 +5,4 @@ export * from "./feedback";
 export * from "./activities";
 export * from "./settings";
 export * from "./workouts";
+export * from "./analysis";

@@ -1,8 +1,12 @@
 import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
-import { settingsContract } from "./settings.ts";
-import { activityStatistics } from "./statistics.ts";
+import { settingDaySchema, settingsContract } from "./settings.ts";
+import {
+  activityStatistics,
+  analysisStatistics,
+  zoneTimeStatisticDescription,
+} from "./statistics.ts";
 import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from "./workouts.ts";
 
 export * from "./settings.ts";
@@ -41,6 +45,18 @@ export const activitySummaryErrorSchema = z
     "Why the server could not derive the summary from the file: truncated (the file ends early), corrupt (it does not read as its format), no_activity (it reads, but holds no activity), too_large (more laps or sessions than an activity can have) or failed (summarising it kept failing)",
   );
 
+export const activityAnalysisErrorSchema = z
+  .enum(["too_large", "failed"])
+  .describe(
+    "Why the server could not analyse the file: too_large (more records than one a second over the week the analysis reads) or failed (analysing it kept failing)",
+  );
+
+export const activityLocalDaySourceSchema = z
+  .enum(["file", "time_zone", "athlete"])
+  .describe(
+    "What decided the activity's day: file (the local time the file records), time_zone (the athlete's time zone when the activity arrived) or athlete (the athlete set it)",
+  );
+
 export const duplicateActivitySchema = z.object({
   id: activityIdSchema,
   source: activitySourceSchema,
@@ -64,10 +80,28 @@ export const activitySchema = z.object({
     .nullable()
     .describe("When the server derived the summary from the file; null while it has not yet"),
   summaryError: activitySummaryErrorSchema.nullable(),
+  localDay: settingDaySchema
+    .nullable()
+    .describe(
+      "The calendar day the activity belongs to, where it was done. It is fixed when the activity arrives: from the local time the file records, else from the athlete's time zone at that moment. Changing the time zone later moves no activity. Thresholds, daily load and bests all use this day",
+    ),
+  localDaySource: activityLocalDaySourceSchema.nullable(),
   statistics: z
     .record(z.string(), z.number())
     .describe(
-      `Numbers that sum up the activity, named <what>_<unit>: ${activityStatistics.map(({ name }) => name).join(", ")}, and more over time`,
+      `Numbers that sum up the activity, named <what>_<unit>. From the file's summary: ${activityStatistics.map(({ name }) => name).join(", ")}. From the analysis: ${analysisStatistics.map(({ name }) => name).join(", ")}, and ${zoneTimeStatisticDescription}. More may come over time`,
+    ),
+  analyzedAt: z
+    .date()
+    .nullable()
+    .describe(
+      "When the server last analysed the file with the athlete's settings of the activity's day; null while it has not. It analyses again by itself when those settings change",
+    ),
+  analysisError: activityAnalysisErrorSchema.nullable(),
+  missingThresholds: z
+    .array(z.string())
+    .describe(
+      "Thresholds the analysis needed on the activity's day but the athlete had not set, such as ftp, threshold_pace, resting_heart_rate, max_heart_rate or lactate_threshold_heart_rate. What needs none, such as work, the power curve and best efforts, is there without them",
     ),
   createdAt: z.date(),
   primary: z
@@ -86,7 +120,11 @@ export const activityEventSchema = z.object({
   type: slug.describe("Such as lap, pause or interval"),
   startedAt: z.date(),
   endedAt: z.date().nullable(),
-  data: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+  data: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .describe(
+      "A lap's statistics, named as the activity's are. Once analysed, a lap also has normalized_power_w, work_kj and average_grade_adjusted_speed_mps where its data allows",
+    ),
 });
 
 export const activityDetailSchema = activitySchema.extend({
@@ -137,6 +175,27 @@ export const activitiesContract = {
           .default(false)
           .describe(
             "List only the primary activity of each workout, so a workout recorded twice appears once. Without it the list holds every activity, as a client that syncs by id needs",
+          ),
+        startedAfter: z
+          .date()
+          .optional()
+          .describe(
+            "Only activities that started at or after this instant. An activity with no start time counts from when it was uploaded",
+          ),
+        startedBefore: z
+          .date()
+          .optional()
+          .describe(
+            "Only activities that started before this instant, the instant itself left out",
+          ),
+        query: z
+          .string()
+          .trim()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            "Only activities whose name or sport contains this text, ignoring the case of A to Z. The name is the athlete's own, else the file's; the sport is the athlete's, else the file's, such as cycling or running",
           ),
       }),
     )
@@ -208,3 +267,5 @@ export type ActivityDetail = z.infer<typeof activityDetailSchema>;
 export type DuplicateActivity = z.infer<typeof duplicateActivitySchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
 export type ActivitySummaryError = z.infer<typeof activitySummaryErrorSchema>;
+export type ActivityAnalysisError = z.infer<typeof activityAnalysisErrorSchema>;
+export type ActivityLocalDaySource = z.infer<typeof activityLocalDaySourceSchema>;
