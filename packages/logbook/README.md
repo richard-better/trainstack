@@ -84,13 +84,13 @@ its order wherever its ranges rise with it, and every set of problems has one ha
 
 ### Numbers
 
-| Number        | Definition                                                                                                                                                                                   |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tops          | Problems flashed, sent or repeated                                                                                                                                                           |
-| Sends         | First ascents: flashes and sends                                                                                                                                                             |
-| Attempts      | All attempts in the session, on every problem                                                                                                                                                |
-| Hardest top   | The hardest problem topped, and the hardest flashed                                                                                                                                          |
-| Grade pyramid | First ascents and projects per grade in one scale, hardest first; repeats are left out, problems that do not convert are counted as ungraded, and a circuit's colours go by its latest order |
+| Number        | Definition                                                                                                                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tops          | Problems flashed, sent or repeated                                                                                                                                                                                                       |
+| Sends         | First ascents: flashes and sends                                                                                                                                                                                                         |
+| Attempts      | All attempts in the session, on every problem                                                                                                                                                                                            |
+| Hardest top   | The hardest problem topped, and the hardest flashed                                                                                                                                                                                      |
+| Grade pyramid | First ascents and projects per grade in one scale, hardest first; repeats are left out, problems that do not convert are counted as ungraded, and a circuit's colours go by its latest order: `gradePyramid` takes sessions oldest first |
 
 ## Training load
 
