@@ -33,8 +33,9 @@ public struct RideLap: Equatable, Sendable {
     from start: TimeInterval, to end: TimeInterval, trigger: LapTrigger, stepIndex: Int?,
     samples: [RideRecording.Sample]
   ) {
-    let inside = samples.filter { $0.elapsed > start && $0.elapsed <= end }
-    let distanceBefore = samples.last { $0.elapsed <= start }?.distanceMetres ?? 0
+    let first = Self.firstSample(after: start, in: samples)
+    let inside = samples[first..<Self.firstSample(after: end, in: samples)]
+    let distanceBefore = first > 0 ? samples[first - 1].distanceMetres ?? 0 : 0
     let powers = inside.compactMap(\.power)
     let heartRates = inside.compactMap(\.heartRate)
     self.init(
@@ -46,6 +47,18 @@ public struct RideLap: Equatable, Sendable {
   }
 
   public var end: TimeInterval { start + duration }
+
+  private static func firstSample(
+    after elapsed: TimeInterval, in samples: [RideRecording.Sample]
+  ) -> Int {
+    var low = 0
+    var high = samples.count
+    while low < high {
+      let middle = (low + high) / 2
+      if samples[middle].elapsed <= elapsed { low = middle + 1 } else { high = middle }
+    }
+    return low
+  }
 
   private static func average(_ values: [Int]) -> Int? {
     values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
