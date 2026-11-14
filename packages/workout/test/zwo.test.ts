@@ -30,7 +30,7 @@ describe("parseZwo", () => {
     assert.deepEqual(value, {
       name: "Threshold builder & sprints",
       sport: "cycling",
-      author: "TrainStack Coaching",
+      author: "Trainstack Coaching",
       description:
         "Ramp in, three threshold intervals,\nthen sprints. Keep cadence above 90 in the efforts.",
       tags: ["FTP", "Intervals"],
@@ -246,7 +246,7 @@ describe("writeZwo", () => {
       writeZwo(parseZwo(fixture("threshold-builder.zwo")).value).value,
       `<?xml version="1.0" encoding="UTF-8"?>
 <workout_file>
-    <author>TrainStack Coaching</author>
+    <author>Trainstack Coaching</author>
     <name>Threshold builder &amp; sprints</name>
     <description>Ramp in, three threshold intervals,
 then sprints. Keep cadence above 90 in the efforts.</description>

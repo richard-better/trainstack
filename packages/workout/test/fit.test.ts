@@ -377,7 +377,7 @@ describe("parseFit on files written by other tools", () => {
   test("Garmin Connect: a step until heart rate drops is refused, saying what it waits for", () => {
     const error = failure(() => parseFit(reference("garmin-connect-hr-recovery.fit")));
     assert.deepEqual(messages(error), [
-      "unsupported step 2: Step 2 lasts until heart rate drops below a value, and TrainStack steps last a time, a distance or until the lap button is pressed",
+      "unsupported step 2: Step 2 lasts until heart rate drops below a value, and Trainstack steps last a time, a distance or until the lap button is pressed",
     ]);
   });
 
@@ -494,14 +494,14 @@ describe("parseFit on files it cannot take", () => {
     assert.deepEqual(messages(error), ["malformed -: The data is not a FIT file."]);
   });
 
-  test("a sport TrainStack does not plan for is refused", () => {
+  test("a sport Trainstack does not plan for is refused", () => {
     const bytes = encodeFitWorkout({
       name: "Row",
       sport: "rowing",
       steps: [{ duration: { type: "time", seconds: 60 } }],
     });
     assert.deepEqual(messages(failure(() => parseFit(bytes))), [
-      'unsupported -: Sport "rowing" is not one TrainStack plans workouts for: cycling, running or swimming',
+      'unsupported -: Sport "rowing" is not one Trainstack plans workouts for: cycling, running or swimming',
     ]);
   });
 
@@ -545,7 +545,7 @@ describe("parseFit on files it cannot take", () => {
       ],
     });
     assert.deepEqual(messages(failure(() => parseFit(bytes))), [
-      "unsupported step 2: Step 2 lasts until a number of calories is burned, and TrainStack steps last a time, a distance or until the lap button is pressed",
+      "unsupported step 2: Step 2 lasts until a number of calories is burned, and Trainstack steps last a time, a distance or until the lap button is pressed",
     ]);
   });
 

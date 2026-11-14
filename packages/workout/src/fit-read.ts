@@ -174,7 +174,7 @@ class FitReader {
     if (!sport) {
       return this.log.abort(
         "unsupported",
-        `Sport "${file.sport}" is not one TrainStack plans workouts for: cycling, running or swimming`,
+        `Sport "${file.sport}" is not one Trainstack plans workouts for: cycling, running or swimming`,
       );
     }
     if (file.subSport !== undefined && file.subSport !== "generic") {
@@ -305,8 +305,8 @@ class FitReader {
         this.log.fail(
           "unsupported",
           condition
-            ? `${label} lasts until ${condition}, and TrainStack steps last a time, a distance or until the lap button is pressed`
-            : `${label} has FIT duration type ${type}, and TrainStack steps last a time, a distance or until the lap button is pressed`,
+            ? `${label} lasts until ${condition}, and Trainstack steps last a time, a distance or until the lap button is pressed`
+            : `${label} has FIT duration type ${type}, and Trainstack steps last a time, a distance or until the lap button is pressed`,
           at,
         );
         return undefined;
@@ -435,7 +435,7 @@ class FitReader {
       case "other":
         this.log.fail(
           "unsupported",
-          `A ${target.targetType} target has no place in a TrainStack workout`,
+          `A ${target.targetType} target has no place in a Trainstack workout`,
           at,
         );
         return undefined;
@@ -469,7 +469,7 @@ class FitReader {
     if (target.zone !== undefined) {
       this.log.fail(
         "unsupported",
-        `Cadence zone ${target.zone} refers to zones TrainStack does not keep`,
+        `Cadence zone ${target.zone} refers to zones Trainstack does not keep`,
         at,
       );
       return undefined;

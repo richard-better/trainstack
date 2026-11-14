@@ -404,7 +404,7 @@ test("a .zwo, .erg or .mrc file becomes a stored workout, with the reader's warn
     updatedAt: at(0),
   });
   assert.equal(zwo.workout.name, "Threshold builder & sprints");
-  assert.equal(zwo.workout.author, "TrainStack Coaching");
+  assert.equal(zwo.workout.author, "Trainstack Coaching");
   assert.deepEqual(zwo.workout.origin, {
     kind: "file",
     format: "zwo",

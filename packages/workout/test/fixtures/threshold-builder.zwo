@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Exported from a workout editor -->
 <workout_file>
-    <author>TrainStack Coaching</author>
+    <author>Trainstack Coaching</author>
     <name>Threshold builder &amp; sprints</name>
     <description><![CDATA[Ramp in, three threshold intervals,
 then sprints. Keep cadence above 90 in the efforts.]]></description>
