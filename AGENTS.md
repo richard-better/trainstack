@@ -5,7 +5,7 @@ Use Scoped Commits format for every PR title and commit in its branch: `<scope>:
 ## The product name
 
 The product is "Trainstack", with one capital, in prose, strings and identifiers alike.
-`tests/product-name.test.mjs` fails on any other spelling in a tracked file. Lowercase
+`tests/product-name.test.mjs` fails on any other spelling in a tracked file or its name. Lowercase
 `trainstack` stays where it already is: package names, bundle ids, domains and other identifiers.
 
 ## No comments in code
