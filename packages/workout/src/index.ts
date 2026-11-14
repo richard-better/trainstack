@@ -37,6 +37,7 @@ export {
   workoutFileFormats,
   workoutFormats,
 } from "./issues.ts";
+export { athleteThresholds, fitAthlete, type AthleteThresholds } from "./athlete.ts";
 export {
   maxRepeatDepth,
   parseFit,
