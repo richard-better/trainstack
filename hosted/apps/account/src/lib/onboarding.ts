@@ -144,18 +144,31 @@ export function onboardingOf({
   };
 }
 
+export const isNewAccount = (accountCreatedAt: Date | null, now: Date) =>
+  accountCreatedAt !== null &&
+  now.getTime() - accountCreatedAt.getTime() < NEW_ACCOUNT_DAYS * DAY_MS;
+
 export function showsGettingStarted(
   onboarding: Onboarding,
   accountCreatedAt: Date | null,
   now: Date,
 ) {
   if (onboarding.done) return false;
-  if (onboarding.history.count === 0) return true;
-  return (
-    accountCreatedAt !== null &&
-    now.getTime() - accountCreatedAt.getTime() < NEW_ACCOUNT_DAYS * DAY_MS
-  );
+  return onboarding.history.count === 0 || isNewAccount(accountCreatedAt, now);
 }
+
+export const DETECTION_SETTLE_MS = 3 * 60_000;
+
+export const awaitingDetection = (
+  activities: readonly Pick<Activity, "analysisDue" | "analyzedAt">[],
+  now: Date,
+) =>
+  activities.some(
+    (activity) =>
+      activity.analysisDue ||
+      (activity.analyzedAt !== null &&
+        now.getTime() - activity.analyzedAt.getTime() < DETECTION_SETTLE_MS),
+  );
 
 type QuickThreshold = "ftp" | "max_heart_rate" | "lactate_threshold_heart_rate" | "threshold_pace";
 
@@ -181,6 +194,9 @@ const quickThresholds: readonly {
 
 const metricOf = (threshold: ThresholdName): ZoneMetric => thresholds[threshold].metric;
 
+const anySportOwns = (profile: Profile, metric: ZoneMetric) =>
+  Object.values(profile.sports).some((metrics) => metrics[metric] !== undefined);
+
 function currentThreshold(profile: Profile, threshold: ThresholdName, sport: string | null) {
   const metric = metricOf(threshold);
   const zones = sport === null ? profile.defaults[metric] : profile.sports[sport]?.[metric];
@@ -197,6 +213,7 @@ export function quickFields(
   suggested: readonly SuggestedThreshold[] = [],
 ): QuickField[] {
   const fields: QuickField[] = quickThresholds
+    .filter(({ threshold, sport }) => sport !== null || !anySportOwns(profile, metricOf(threshold)))
     .filter(({ threshold, sport }) => currentThreshold(profile, threshold, sport) === null)
     .filter(
       ({ threshold, sport }) =>

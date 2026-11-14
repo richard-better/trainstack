@@ -1,10 +1,13 @@
 import type { SettingEntry } from "@trainstack/contract";
 import { type Profile, profileOn } from "@trainstack/zones";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 
+import { activitiesQueryKey, api } from "../api";
 import { authClient } from "../auth";
 import {
+  awaitingDetection,
   historySources,
   historySourceStateWords,
   type HistorySource,
@@ -13,6 +16,7 @@ import {
   type QuickField,
   quickFields,
   quickWrites,
+  isNewAccount,
   showsGettingStarted,
   type StepState,
   type SuggestedThreshold,
@@ -35,6 +39,7 @@ interface OnboardingView {
   readonly entries: SettingEntry[];
   readonly profile: Profile;
   readonly onboarding: Onboarding;
+  readonly awaitingDetection: boolean;
 }
 
 function useOnboarding(): OnboardingView | null {
@@ -53,6 +58,7 @@ function useOnboarding(): OnboardingView | null {
     today,
     entries: history.data.entries,
     profile,
+    awaitingDetection: awaitingDetection(first.activities, new Date()),
     onboarding: onboardingOf({
       activities: first.activities,
       moreActivities: first.nextCursor !== null,
@@ -107,9 +113,20 @@ const stepsDone = (onboarding: Onboarding) =>
   ).length;
 
 export function GettingStarted() {
-  const view = useOnboarding();
   const createdAt = useAccountCreatedAt();
-  const suggestions = useThresholdSuggestions();
+  const young = isNewAccount(createdAt, new Date());
+  const anyActivity = useQuery({
+    queryKey: [...activitiesQueryKey, "any"],
+    queryFn: () => api.activities.list({ limit: 1 }),
+    enabled: !young,
+  });
+  if (!young && anyActivity.data?.activities.length !== 0) return null;
+  return <Checklist createdAt={createdAt} />;
+}
+
+function Checklist({ createdAt }: { createdAt: Date | null }) {
+  const view = useOnboarding();
+  const suggestions = useThresholdSuggestions({ awaiting: view?.awaitingDetection });
   if (!view || !showsGettingStarted(view.onboarding, createdAt, new Date())) return null;
   const { onboarding } = view;
   return (
@@ -331,7 +348,7 @@ const losses: readonly { readonly what: string; readonly why: string }[] = [
 
 function ThresholdsStep({ view }: { view: OnboardingView }) {
   const { onboarding } = view;
-  const suggestions = useThresholdSuggestions();
+  const suggestions = useThresholdSuggestions({ awaiting: view.awaitingDetection });
   const found = suggestions.data?.suggestions ?? [];
   const { state } = onboarding.thresholds;
   return (
@@ -367,12 +384,17 @@ function ThresholdsStep({ view }: { view: OnboardingView }) {
       ) : (
         state === "open" &&
         onboarding.history.state === "done" &&
-        suggestions.data && (
+        suggestions.data &&
+        (view.awaitingDetection ? (
+          <p className="lede" role="status">
+            Looking through your efforts for thresholds to suggest.
+          </p>
+        ) : (
           <p className="lede">
             None of your activities has an effort hard enough to read a threshold from. Enter the
             ones you know below; after your next hard effort, Trainstack suggests them.
           </p>
-        )
+        ))
       )}
       <SettingsWriter>
         <QuickThresholds

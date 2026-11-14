@@ -4,6 +4,8 @@ import { test } from "node:test";
 import { emptyProfile, profileOn } from "@trainstack/zones";
 
 import {
+  awaitingDetection,
+  DETECTION_SETTLE_MS,
   historySources,
   NEW_ACCOUNT_DAYS,
   onboardingOf,
@@ -154,4 +156,24 @@ test("each history source says honestly whether it works, and has its own id", (
   for (const source of historySources) {
     assert.equal(source.state === "available", source.action !== undefined, source.id);
   }
+});
+
+test("a sport with its own zones keeps its thresholds in Settings, so the quick form does not offer the default", () => {
+  const ownPower = profileWith([
+    { kind: "sport", sport: "cycling", listed: true },
+    { kind: "own_zones", sport: "cycling", metric: "power", own: true },
+  ]);
+  assert.deepEqual(
+    quickFields(ownPower).map((field) => field.id),
+    ["max_heart_rate", "lactate_threshold_heart_rate", "threshold_pace", "weight"],
+  );
+});
+
+test("suggestions are awaited while activities are analysed and for a few minutes after", () => {
+  const now = new Date("2026-11-14T10:00:00Z");
+  const analysedAgo = (ms) => ({ analysisDue: false, analyzedAt: new Date(now.getTime() - ms) });
+  assert.equal(awaitingDetection([], now), false);
+  assert.equal(awaitingDetection([{ analysisDue: true, analyzedAt: null }], now), true);
+  assert.equal(awaitingDetection([analysedAgo(60_000)], now), true);
+  assert.equal(awaitingDetection([analysedAgo(DETECTION_SETTLE_MS + 1)], now), false);
 });
