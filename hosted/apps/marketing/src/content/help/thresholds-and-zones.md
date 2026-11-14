@@ -79,9 +79,10 @@ estimate differs enough from what you have, or when you have none. It never chan
 by itself. A suggestion names the effort it comes from (open it to see the activity) and how sure
 it is.
 
-- **Use from today** sets the threshold from today. Older activities keep their old thresholds,
-  unless this is the first entry of its kind in **History**: activities before your first entry
-  use your earliest settings, so then they use it too.
+- **Use from today** sets the threshold from today. Older activities keep the settings they had,
+  so if you had no FTP before, older rides still have none. Only when **History** is empty do
+  older activities take it too, because activities before your first entry use your earliest
+  settings. To measure older activities with it, use the button below.
 - **Use from** a day, when the effort was earlier, sets it from the day of the effort, so the
   activities since then are measured with it too.
 - **Dismiss** hides it. The same effort will not suggest it again, but a new effort can.

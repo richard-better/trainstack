@@ -21,8 +21,8 @@ roughly too.
 Open the activity and scroll to **Sources** to see every recording of it:
 
 - **Primary** marks the source that gives the workout its place and numbers in your activity
-  list. TrainStack picks the richest file: power counts most, then heart rate, cadence, distance
-  and elevation. Press **Make primary** on another source to choose it yourself. Your choice
+  list. TrainStack prefers a session you logged by hand, then the richest file: power counts
+  double, and heart rate, cadence, distance and elevation once each, then the larger file. Press **Make primary** on another source to choose it yourself. Your choice
   sticks, even when more files arrive later.
 - **Not the same workout** separates a source that was linked by mistake, such as two short runs
   on the same morning. It becomes a workout of its own, and TrainStack does not link the two again unless you link them yourself.
