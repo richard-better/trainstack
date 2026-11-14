@@ -1,7 +1,16 @@
 export const workoutFormats = ["zwo", "erg", "mrc"] as const;
 export type WorkoutFormat = (typeof workoutFormats)[number];
 
-export type IssueCode = "malformed" | "unsupported" | "dropped" | "expanded";
+export const workoutFileFormats = [...workoutFormats, "fit"] as const;
+export type WorkoutFileFormat = (typeof workoutFileFormats)[number];
+
+export type IssueCode =
+  | "malformed"
+  | "unsupported"
+  | "dropped"
+  | "expanded"
+  | "converted"
+  | "approximated";
 
 export type FormatIssue = {
   code: IssueCode;
@@ -17,10 +26,10 @@ export type Converted<T> = {
 export class WorkoutFormatError extends Error {
   override readonly name = "WorkoutFormatError";
 
-  readonly format: WorkoutFormat | undefined;
+  readonly format: WorkoutFileFormat | undefined;
   readonly issues: FormatIssue[];
 
-  constructor(format: WorkoutFormat | undefined, issues: FormatIssue[]) {
+  constructor(format: WorkoutFileFormat | undefined, issues: FormatIssue[]) {
     super(
       `${format ? `.${format} ` : ""}conversion failed: ${issues
         .map((issue) => (issue.at ? `${issue.at}: ${issue.message}` : issue.message))
@@ -35,9 +44,9 @@ export class IssueLog {
   readonly errors: FormatIssue[] = [];
   readonly warnings: FormatIssue[] = [];
 
-  readonly format: WorkoutFormat;
+  readonly format: WorkoutFileFormat;
 
-  constructor(format: WorkoutFormat) {
+  constructor(format: WorkoutFileFormat) {
     this.format = format;
   }
 
@@ -45,7 +54,7 @@ export class IssueLog {
     this.errors.push(at === undefined ? { code, message } : { code, message, at });
   }
 
-  warn(code: "dropped" | "expanded" | "malformed", message: string, at?: string): void {
+  warn(code: Exclude<IssueCode, "unsupported">, message: string, at?: string): void {
     this.warnings.push(at === undefined ? { code, message } : { code, message, at });
   }
 

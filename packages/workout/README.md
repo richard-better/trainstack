@@ -1,7 +1,7 @@
 # @trainstack/workout
 
 The typed workout model TrainStack stores, edits and plays, with import and export of `.zwo`,
-`.erg` and `.mrc` files. It has no Node-only APIs, so it runs
+`.erg`, `.mrc` and FIT workout files. It has no Node-only APIs, so it runs
 in Cloudflare Workers and the browser, and `test/runtime.test.ts` runs it in workerd.
 
 ## The model
@@ -48,8 +48,10 @@ cue on the step it falls in. `totals` adds up a workout's time and distance.
 ## Files
 
 `parseZwo`, `parseErg` and `parseMrc` read a file into a workout, and `writeZwo`, `writeErg` and
-`writeMrc` write one out. `parseWorkoutFile(fileName, text)` picks the reader from the
-extension, and `parseWorkout` and `writeWorkout` take the format by name.
+`writeMrc` write one out. `parseWorkout` and `writeWorkout` take these text formats by name
+(`workoutFormats`). `parseFit` reads FIT bytes and `writeFit` writes them. `parseWorkoutFile(fileName,
+content, options)` picks the reader from the extension among `workoutFileFormats`, and takes text or
+bytes; a `.fit` file must come as bytes.
 
 Every conversion returns `{ value, warnings }`. It throws a `WorkoutFormatError`, listing every
 issue it found, when the file is malformed or the target format cannot express what the workout
@@ -66,10 +68,48 @@ an `ftp`. Readers keep targets as the file states them.
 | `.zwo` | Zwift workouts for bike (power as a share of FTP) and run (pace as a share of threshold), timed or by distance, with ramps, ranges, `IntervalsT` repeats, free ride, max efforts, cadence and text events. Other repeats are written out step by step. |
 | `.erg` | Timed power in watts, constant or ramped, with course text.                                                                                                                                                                                            |
 | `.mrc` | Timed power as a percentage of FTP, constant or ramped, with course text.                                                                                                                                                                              |
+| `.fit` | Workouts for Garmin, Wahoo and COROS devices: timed or by distance, power, heart rate, speed and cadence, constant or ranged, repeats, names, notes and intensity. See [FIT](#fit).                                                                    |
 
 Zwift's `pace` attribute picks a reference pace for run workouts (one mile, 5 km and so on).
 The model has one threshold pace, so a run file's reference pace is read as threshold and
 reported. Zwift writes `pace="0"` on bike steps too, where it means nothing and is ignored.
+
+## FIT
+
+FIT is how a workout reaches a Garmin, Wahoo or COROS device. `@trainstack/fit` reads and writes
+the messages; this package maps them to the model.
+
+`writeFit(workout, options)` writes time and distance steps, power as a percentage of FTP or in
+watts, heart rate in bpm, pace as speed, cadence (as the secondary target beside another),
+constant levels and ranges, repeats, names, notes, intensity and sport. FIT repeats point back to
+a step and cannot nest, so a repeat inside a repeat is written out, choosing which level to write
+out so the file has the fewest steps. It throws when FIT cannot say what the workout asks:
+
+- Heart rate or pace as a share of threshold, unless `thresholdHeartRate` (bpm) or
+  `thresholdPace` (metres per second) is given to turn it into bpm or speed.
+- A ramp, or a max effort, unless `approximate` is set. Then a ramp becomes a staircase of
+  steady steps of equal length, one per 60 seconds or 200 metres of the ramp and at least two,
+  each at the ramp's level at its midpoint, so the length and the average stay the same to FIT's
+  precision. A max effort becomes a step with no target named "All out". Each is reported as
+  `approximated`.
+- Power above 1000% of FTP, or a value too large for its field.
+
+Values are rounded to FIT's precision, with an `approximated` warning when that changes one.
+
+`parseFit(bytes, options)` reads a FIT workout file. It throws for what the model cannot hold:
+
+- A step that lasts until the lap button is pressed (`open`), or until a heart rate, power,
+  calories or anything but a time or distance. The error names the step.
+- A zone target, unless `zones` gives the athlete's `heartRate`, `power` or `speed` zones as
+  `{ low, high }` in bpm, watts or metres per second, numbered from 1. A zone then becomes its
+  range, reported as `converted` with the zones' `source`. A zone with no upper limit is refused.
+- Heart rate as a percentage of max heart rate, unless `maxHeartRate` is given to turn it into
+  bpm, reported as `converted`.
+- A sport other than cycling, running or swimming, grade and resistance targets, and repeats
+  that do not form a nested run of steps.
+
+The sub sport, pool length, swim stroke and equipment have nowhere to go and are reported as
+`dropped`, as is lap or short-window averaging on a power, heart rate or speed target.
 
 ## Ride's library
 

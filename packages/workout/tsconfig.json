@@ -1,5 +1,10 @@
 {
   "extends": "@trainstack/config/tsconfig.base.json",
+  "references": [
+    {
+      "path": "../fit"
+    }
+  ],
   "compilerOptions": {
     "composite": true,
     "declaration": true,
@@ -8,7 +13,7 @@
     "outDir": "dist",
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "types": []
+    "types": ["@cloudflare/workers-types"]
   },
   "include": ["src/**/*.ts"]
 }

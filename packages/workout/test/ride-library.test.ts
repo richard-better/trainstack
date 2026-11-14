@@ -4,12 +4,14 @@ import {
   type Focus,
   flatten,
   parseErg,
+  parseFit,
   parseMrc,
   parseZwo,
   totals,
   type Workout,
   workoutSchema,
   writeErg,
+  writeFit,
   writeMrc,
   writeZwo,
 } from "../src/index.ts";
@@ -64,6 +66,16 @@ for (const [label, template] of library.map((template) => [template.name, templa
       assert.deepEqual(parseZwo(zwo.value).value, withoutFocus);
       const mrc = writeMrc(workout);
       assert.deepEqual(flatten(parseMrc(mrc.value).value.steps), flatten(workout.steps));
+    });
+
+    test("survives .fit unchanged apart from its description and focus", () => {
+      const fit = writeFit(workout);
+      assert.deepEqual(
+        fit.warnings.map((warning) => warning.code),
+        ["dropped", "dropped"],
+      );
+      const { description: _description, focus: _focus, ...kept } = workout;
+      assert.deepEqual(parseFit(fit.value), { value: kept, warnings: [] });
     });
 
     test("survives .erg as watts at a given FTP", () => {

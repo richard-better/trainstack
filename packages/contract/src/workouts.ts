@@ -1,5 +1,11 @@
 import { oc } from "@orpc/contract";
-import { focusSchema, sportSchema, workoutFormats, workoutSchema } from "@trainstack/workout";
+import {
+  focusSchema,
+  sportSchema,
+  workoutFileFormats,
+  workoutFormats,
+  workoutSchema,
+} from "@trainstack/workout";
 import { z } from "zod";
 
 export const MAX_WORKOUT_BYTES = 256 * 1024;
@@ -21,6 +27,8 @@ export const builtinWorkoutIdSchema = z
 export const workoutListIdSchema = z.uuid().describe("Chosen by the client that creates the list");
 
 export const workoutFormatSchema = z.enum(workoutFormats);
+
+export const workoutFileFormatSchema = z.enum(workoutFileFormats);
 
 const editedAt = z
   .date()
@@ -110,7 +118,7 @@ const filters = {
 export const workoutDeletionSchema = z.object({ id: workoutIdSchema, deletedAt: z.date() });
 
 export const formatIssueSchema = z.object({
-  code: z.enum(["malformed", "unsupported", "dropped", "expanded"]),
+  code: z.enum(["malformed", "unsupported", "dropped", "expanded", "converted", "approximated"]),
   message: z.string(),
   at: z.string().optional(),
 });
@@ -174,7 +182,7 @@ const conversionFailed = {
     status: 422,
     message: "The file could not be read, or the workout cannot be written in that format",
     data: z.object({
-      format: workoutFormatSchema.nullable(),
+      format: workoutFileFormatSchema.nullable(),
       issues: z.array(formatIssueSchema),
     }),
   },

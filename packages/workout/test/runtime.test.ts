@@ -23,13 +23,18 @@ async function browserBundle(): Promise<{ code: string; imports: string[] }> {
 }
 
 const worker = `
-import { parseWorkoutFile, WorkoutFormatError, writeWorkout } from "./workout.mjs";
+import { parseFit, parseWorkoutFile, WorkoutFormatError, writeFit, writeWorkout } from "./workout.mjs";
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     try {
       const imported = parseWorkoutFile(url.searchParams.get("name"), await request.text());
+      if (url.searchParams.get("to") === "fit") {
+        const fit = writeFit(imported.value, { approximate: true });
+        const back = parseFit(fit.value);
+        return Response.json({ name: back.value.name, bytes: fit.value.length, warnings: fit.warnings });
+      }
       const written = writeWorkout(url.searchParams.get("to"), imported.value, { ftp: 250 });
       return Response.json({ name: imported.value.name, text: written.value, warnings: written.warnings });
     } catch (error) {
@@ -67,6 +72,15 @@ test("converts workout files inside the Workers runtime", async () => {
     assert.equal(body.name, "Sweet spot 2x15");
     assert.match(body.text, /<SteadyState Duration="900" Power="0.9">/);
     assert.deepEqual(body.warnings, []);
+
+    const fit = await runtime.dispatchFetch("https://workout.test/?name=sweet-spot.erg&to=fit", {
+      method: "POST",
+      body: fixture("sweet-spot.erg"),
+    });
+    assert.equal(fit.status, 200);
+    const fitBody = (await fit.json()) as { name: string; bytes: number };
+    assert.equal(fitBody.name, "Sweet spot 2x15");
+    assert.ok(fitBody.bytes > 100);
 
     const rejected = await runtime.dispatchFetch(
       "https://workout.test/?name=threshold-builder.zwo&to=erg",
