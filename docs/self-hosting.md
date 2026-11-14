@@ -275,10 +275,13 @@ CORS on your domain after each deploy. Do not deploy from your machine while it 
 ## Upgrades
 
 ```bash
-git pull
-bun install --frozen-lockfile
-bun run check && bun run test
-bun run plan:production
+git pull --no-rebase && bun install --frozen-lockfile && bun run check && bun run test &&
+  bun run plan:production
+```
+
+Each step runs only if the one before passed. Read the plan, then deploy:
+
+```bash
 bun run deploy:production
 ```
 
@@ -402,12 +405,17 @@ export older than 30 days, copy from the dated copy you kept with it instead of
 `./backup/activity-files`.
 
 ```bash
-rclone copy ./backup/activity-files "r2:$BUCKET"
-for day in ./backup/deleted/*/; do
-  [[ "$(basename "$day")" < "$RESTORE_DATE" ]] && continue
-  rclone copy "$day" "r2:$BUCKET"
-done
+(
+  set -euo pipefail
+  rclone copy ./backup/activity-files "r2:$BUCKET"
+  for day in ./backup/deleted/*/; do
+    [[ "$(basename "$day")" < "$RESTORE_DATE" ]] && continue
+    rclone copy "$day" "r2:$BUCKET"
+  done
+)
 ```
+
+It stops at the first copy that fails, so a run that finishes without an error put back every file.
 
 Files never change once stored, so a restore only puts back what is missing. A folder is dated by
 the backup that found the deletion, not the deletion, and the bucket copy is as of the latest
