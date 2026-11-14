@@ -23,6 +23,8 @@ Packages that chose a permissive license:
   derives statistics with it, and the web app charts them.
 - `packages/logbook` (Apache-2.0): the model of logged strength and bouldering sessions.
   `hosted/` stores sessions in it, and the web app logs and charts them.
+- `packages/readiness` (Apache-2.0): daily readiness from the check-in and training load.
+  `hosted/` serves it, and the web app shows it beside the day's plan.
 
 Each workspace `package.json` declares its license as an SPDX identifier, and `bun run test`
 checks it against these rules.
