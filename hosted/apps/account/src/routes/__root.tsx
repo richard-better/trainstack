@@ -7,6 +7,7 @@ import analysisStyles from "../styles/analysis.css?url";
 import styles from "../styles/app.css?url";
 import routeStyles from "../styles/route.css?url";
 import calendarStyles from "../styles/calendar.css?url";
+import checkInStyles from "../styles/check-in.css?url";
 import trainingStyles from "../styles/training.css?url";
 import workoutStyles from "../styles/workouts.css?url";
 
@@ -31,6 +32,7 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: trainingStyles },
       { rel: "stylesheet", href: routeStyles },
       { rel: "stylesheet", href: calendarStyles },
+      { rel: "stylesheet", href: checkInStyles },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
   }),
