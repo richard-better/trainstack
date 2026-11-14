@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TodayCards: View {
   let suggestions: [TodaySuggestion]
+  let plan: TodayPlan?
   @Binding var state: TodayState
   @Binding var minutes: Int
   @Environment(\.openWorkout) private var openWorkout
@@ -12,7 +13,11 @@ struct TodayCards: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
-        TodayHeader()
+        TodayHeader(plan: plan)
+        if let plan {
+          TodayPlanCards(plan: plan)
+          Text("Or pick how long you have").font(.title3.bold())
+        }
         TodayTimePicker(minutes: $minutes, shuffle: shuffle)
         if let featured = suggestions.indices.contains(state.selectedIndex)
           ? suggestions[state.selectedIndex] : suggestions.first

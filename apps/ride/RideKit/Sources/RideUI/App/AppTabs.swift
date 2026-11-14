@@ -10,7 +10,7 @@ struct AppTabs: View {
   let library: RideLibrary
   let player: Namespace.ID
   @Environment(RideLauncher.self) private var launcher
-  @State private var todayPath: [WorkoutTemplate] = []
+  @State private var todayPath = NavigationPath()
   @State private var workoutsPath = NavigationPath()
 
   var body: some View {
@@ -19,8 +19,11 @@ struct AppTabs: View {
         NavigationStack(path: $todayPath) {
           TodayView(state: $today, openSettings: openSettings)
             .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
+            .navigationDestination(for: PlannedItemRoute.self) { PlannedItemDetailView(id: $0.id) }
         }
-        .environment(\.openWorkout, OpenWorkoutAction { todayPath.append($0) })
+        .environment(
+          \.openWorkout,
+          OpenWorkoutAction({ todayPath.append($0) }, planned: { todayPath.append($0) }))
       }
       Tab("Workouts", systemImage: "chart.bar", value: .workouts) {
         NavigationStack(path: $workoutsPath) {
