@@ -38,9 +38,11 @@ and a Polar H10, so please tell us what breaks.
 - Signed in to a TrainStack account, Ride sends your rides to the account, where
   account.trainstackhq.com shows them, and keeps your settings the same on every device signed in
   to it. Rides reach your other devices through iCloud, not the account. Deleting the account
-  deletes everything it holds from TrainStack's server for good: your rides and their files, your
-  settings and their history, your workouts and your Strava connection. Rides and settings on your
-  devices stay.
+  deletes everything it holds from TrainStack's server for good: your rides with their files and
+  analysis, your settings and their history, your workouts and lists, your feedback, your Strava
+  connection and Ride's Sign in with Apple access, and every device is signed out. Rides and
+  settings on your devices and in iCloud stay, and so do rides on Strava. Download Your data from
+  Settings on account.trainstackhq.com first to keep a copy.
 
 ## What does not work yet
 

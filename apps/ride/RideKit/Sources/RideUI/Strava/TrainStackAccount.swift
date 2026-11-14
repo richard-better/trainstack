@@ -2,6 +2,7 @@ import AuthenticationServices
 import Foundation
 import Observation
 import RideStrava
+import os
 
 @Observable
 final class TrainStackAccount {
@@ -13,6 +14,9 @@ final class TrainStackAccount {
   @ObservationIgnored let client: TrainStackClient
   @ObservationIgnored private var signInObservers: [() -> Void] = []
   @ObservationIgnored private var deletionObservers: [(String) -> Void] = []
+  @ObservationIgnored private(set) var keepingAppleAuthorization: Task<Void, Never>?
+  @ObservationIgnored private let log = Logger(
+    subsystem: "com.trainstackhq.ride", category: "account")
 
   init(
     server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
@@ -38,9 +42,14 @@ final class TrainStackAccount {
     await refreshFromClient()
   }
 
-  func signIn(identityToken: String, nonce: String, fullName: String?) async throws {
+  func signIn(
+    identityToken: String, nonce: String, fullName: String?, authorizationCode: String?
+  ) async throws {
     try await client.signInWithApple(
       identityToken: identityToken, nonce: nonce, fullName: fullName)
+    if let authorizationCode {
+      keepingAppleAuthorization = Task { await keepAppleAuthorization(code: authorizationCode) }
+    }
     await refreshFromClient()
     signInChanged()
     await refreshStrava()
@@ -70,14 +79,31 @@ final class TrainStackAccount {
     stravaAthleteName = nil
   }
 
-  func deleteAccount() async throws {
+  func deleteAccount(
+    askingAppleForAnAuthorizationCode askApple: () async throws -> String? = { nil }
+  ) async throws {
     guard let deleted = try await client.signedInAccount() else { throw StravaError.signedOut }
+    do {
+      if let code = try await askApple() { await keepAppleAuthorization(code: code) }
+    } catch {
+      log.notice(
+        "No fresh Apple authorization before deleting the account: \(String(describing: error), privacy: .public)"
+      )
+    }
     try await client.deleteAccount()
     await refreshFromClient()
     for observer in deletionObservers { observer(deleted.id) }
     signInChanged()
     isStravaConnected = false
     stravaAthleteName = nil
+  }
+
+  private func keepAppleAuthorization(code: String) async {
+    do {
+      try await client.keepAppleAuthorization(code: code)
+    } catch {
+      log.error("Apple authorization code not kept: \(String(describing: error), privacy: .public)")
+    }
   }
 
   func refreshSignIn() async {

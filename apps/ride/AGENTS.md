@@ -97,6 +97,14 @@ the device, unclaimed, for the next account. Settings saved before the ledger ar
 stamped at the Unix epoch, so any real edit, from any device or the web, wins over them; a
 weight other than the default goes on the day of the first zone history entry.
 
+Apple asks apps with Sign in with Apple to revoke the user's tokens when the account is deleted,
+so the server needs a refresh token Ride's own sign-in got. After every native sign-in Ride sends
+the credential's authorization code to `account/apple-authorization` (it lasts five minutes and
+works once), without waiting and without failing the sign-in if it is refused. Delete Account
+first asks Apple for a fresh credential and sends its code, which covers accounts created before
+Ride sent one; if the athlete cancels Apple's sheet the account is still deleted, as the
+confirmation says. The web sign-in (the Homebrew build) needs neither.
+
 HealthKit and iCloud can launch the app in the background with no window, so `RideApp.init`
 calls `WatchSupport.activateAtLaunch()` and `SyncSupport.activateAtLaunch()`.
 
