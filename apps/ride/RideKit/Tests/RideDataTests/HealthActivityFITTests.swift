@@ -76,10 +76,16 @@ struct HealthActivityFITTests {
     let activity = HealthActivity(
       sport: .strength, startDate: start, endDate: start.addingTimeInterval(120),
       heartRate: [.init(date: start, value: 100)],
-      power: [.init(date: start.addingTimeInterval(60), value: 200)])
+      power: [
+        .init(date: start.addingTimeInterval(30), value: 200),
+        .init(date: start.addingTimeInterval(60), value: 210),
+      ])
     let decoded = try FITDecoder.decode(FITEncoder.encode(activity))
-    #expect(decoded.samples.map(\.heartRate) == [100, nil])
-    #expect(decoded.samples.map(\.power) == [nil, 200])
+    let held = SamplingRule.heldIntervals(of: decoded.samples, pauses: [])
+    let heartRateSeconds = held.filter { decoded.samples[$0.sample].heartRate != nil }
+      .reduce(0) { $0 + $1.end - $1.start }
+    #expect(heartRateSeconds == SamplingRule.maxHeldGap)
+    #expect(decoded.samples.map(\.heartRate) == [100, nil, nil, nil])
   }
 
   @Test func aWorkoutWithoutMeasuredSpeedGetsItsSpeedFromItsDistance() throws {

@@ -137,13 +137,22 @@ extension FITEncoder {
       self.longestHold = longestHold
     }
 
-    var timestamps: [UInt32] { readings.map(\.timestamp) }
+    var timestamps: [UInt32] {
+      let measured = readings.map(\.timestamp)
+      guard let longestHold else { return measured }
+      let expiries = zip(measured, measured.dropFirst().map(Optional.some) + [nil]).compactMap {
+        reading, next -> UInt32? in
+        let expiry = reading + longestHold
+        return next.map { $0 > expiry } ?? true ? expiry : nil
+      }
+      return measured + expiries
+    }
 
     mutating func value(at timestamp: UInt32) -> Double? {
       while next < readings.count, readings[next].timestamp <= timestamp { next += 1 }
       guard next > 0 else { return nil }
       let latest = readings[next - 1]
-      if let longestHold, timestamp - latest.timestamp > longestHold { return nil }
+      if let longestHold, timestamp - latest.timestamp >= longestHold { return nil }
       return latest.value
     }
   }
@@ -167,7 +176,7 @@ extension FITEncoder {
     }
     let timestamps = Set(
       heartRate.timestamps + power.timestamps + cadence.timestamps + speed.timestamps
-        + distance.timestamps + locations.keys
+        + speedFromDistance.timestamps + distance.timestamps + locations.keys
     ).filter { $0 >= start && $0 <= end }.sorted()
     return timestamps.map { timestamp in
       let location = locations[timestamp]
