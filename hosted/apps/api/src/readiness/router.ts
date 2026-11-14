@@ -9,7 +9,7 @@ import {
 import { and, between, eq } from "drizzle-orm";
 
 import { DEFAULT_TIME_ZONE, dayIn } from "../activities/local-day";
-import { daysFrom, loadDays } from "../calendar/range";
+import { loadDays } from "../calendar/range";
 import { stateOf } from "../calendar/planned";
 import type { Database } from "../db";
 import { checkIn } from "../db/schema";
@@ -75,7 +75,7 @@ export const readinessRouter = {
     const [checkIns, loaded, planned] = await Promise.all([
       checkInsAround(db, userId, input.from, through),
       loadedActivities(db, userId, shift(through, -1)),
-      plannedOn(db, userId, daysFrom(input.from, through), today),
+      plannedOn(db, userId, through === today ? [today] : [], today),
     ]);
     return {
       today,

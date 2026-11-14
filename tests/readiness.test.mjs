@@ -221,6 +221,13 @@ test("a range ends at today, and the check-ins before it make the athlete's usua
   assert.equal(energy.effect, "lowers");
   assert.equal(days[2].basis.baselineCheckIns, 10);
 
+  const past = await client.readiness.range({
+    from: shifted(today, -3),
+    through: shifted(today, -1),
+  });
+  assert.equal(past.days.length, 3);
+  assert.equal(past.days[2].basis.checkIn, true);
+
   const future = await client.readiness.range({
     from: shifted(today, 1),
     through: shifted(today, 7),
