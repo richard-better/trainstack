@@ -721,3 +721,67 @@ test("the latest pairing choice holds the activity on screen, whichever workout 
   );
   assert.equal(stored.days[0].planned.find((item) => item.id === second.id).pairing, null);
 });
+
+test("a newer pairing confirmed first is not undone by an older one still waiting", async () => {
+  const { client } = await athlete();
+  const day = "2026-06-15";
+  const file = new File(
+    [denseRide(Math.round(60 * 60 * 25 + 200), `${day}T06:00:00Z`)],
+    "ride.fit",
+  );
+  const done = await client.activities.upload({ file, source: "upload", sport: "cycling" });
+  await planDay(client, day, ["First", "Second"]);
+  const gates = new Map();
+  const gate = (id) => {
+    let open;
+    const opened = new Promise((resolve) => (open = resolve));
+    gates.set(id, open);
+    return opened;
+  };
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const writes = createCalendarWrites({
+    queryClient,
+    api: {
+      ...client,
+      plannedWorkouts: {
+        pair: async (input) => {
+          await gate(input.id);
+          return client.plannedWorkouts.pair(input);
+        },
+      },
+    },
+    retryDelays: [5],
+    whenOnline: () => () => {},
+  });
+  const key = rangeKey(day, day);
+  const range = await queryClient.fetchQuery({
+    queryKey: key,
+    queryFn: () => client.calendar.range({ from: day, through: day }),
+  });
+  const holder = () =>
+    pairsOf(writes.view(queryClient.getQueryData(key)).days[0])
+      .planned.filter(({ done: activity }) => activity)
+      .map(({ item }) => item.content.workout.name);
+  const [first, second] = range.days[0].planned.toSorted((a, b) =>
+    a.content.workout.name < b.content.workout.name ? -1 : 1,
+  );
+
+  const toFirst = writes.pair(first, done.id);
+  const toSecond = writes.pair(second, done.id);
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.deepEqual(holder(), ["Second"]);
+  gates.get(second.id)();
+  await toSecond;
+  assert.deepEqual(holder(), ["Second"], "the older choice still waiting does not take it back");
+  gates.get(first.id)();
+  await toFirst;
+  await writes.settled();
+  assert.deepEqual(holder(), ["Second"]);
+  const stored = await client.calendar.range({ from: day, through: day });
+  assert.deepEqual(
+    pairsOf(stored.days[0])
+      .planned.filter(({ done: activity }) => activity)
+      .map(({ item }) => item.id),
+    [second.id],
+  );
+});

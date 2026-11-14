@@ -140,6 +140,7 @@ export function createCalendarWrites({
   let version = 0;
   const tails = new Map<string, Promise<void>>();
   const answered = new Map<string, PlannedWorkout | null>();
+  const latestChoice = new Map<string, number>();
   const sleepers = new Set<() => void>();
   let epoch = 0;
   const listeners = new Set<() => void>();
@@ -239,6 +240,10 @@ export function createCalendarWrites({
         await remember(outcome.result);
         const result = outcome.result;
         answered.set(entry.id, "deletedAt" in result ? null : result);
+        if (entry.choice) {
+          const { activityId } = entry.choice;
+          latestChoice.set(activityId, Math.max(latestChoice.get(activityId) ?? 0, entry.seq));
+        }
         if (!("deletedAt" in result) && write.won && !write.won(result) && write.retry) {
           notify({
             kind: "overruled",
@@ -268,6 +273,11 @@ export function createCalendarWrites({
       }
       pending = pending.filter((held) => held !== entry);
       if (!pending.some((held) => held.id === entry.id)) answered.delete(entry.id);
+      for (const activityId of latestChoice.keys()) {
+        if (!pending.some((held) => held.choice?.activityId === activityId)) {
+          latestChoice.delete(activityId);
+        }
+      }
       changed();
       settleCaches();
     });
@@ -294,11 +304,13 @@ export function createCalendarWrites({
         const next = writes.viewItem(findPlanned(current, id), id, current.today);
         return next ? withPlanned(current, next) : withoutPlanned(current, id);
       }, range);
-      return pending.reduce((current, { id, base, choice }) => {
+      return pending.reduce((current, { seq, id, base, choice }) => {
         const chooser = choice && findPlanned(current, id);
         if (!choice || !chooser || chooser.day !== base.day) return current;
         const { activityId, paired } = choice;
-        if (!paired) {
+        const overtaken = (latestChoice.get(activityId) ?? 0) > seq;
+        if (!paired || overtaken) {
+          if (overtaken && !paired) return current;
           return chooser.pairing?.activityId === activityId
             ? withPlanned(current, pairedAs(chooser, null, current.today))
             : current;
@@ -329,6 +341,7 @@ export function createCalendarWrites({
       pending = [];
       notices = [];
       answered.clear();
+      latestChoice.clear();
       tails.clear();
       for (const wake of sleepers) wake();
       changed();
