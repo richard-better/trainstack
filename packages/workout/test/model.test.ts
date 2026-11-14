@@ -238,3 +238,27 @@ test("a workout cannot expand past the step limit, so a file cannot exhaust memo
     true,
   );
 });
+
+test("a workout cannot carry more than a thousand cues, so a file cannot exhaust the CPU", () => {
+  const cued = (count: number): Workout => ({
+    name: "Chatty",
+    sport: "cycling",
+    steps: [
+      {
+        type: "repeat",
+        count: 10_000,
+        cues: Array.from({ length: count }, () => ({
+          at: { type: "time", seconds: 0 },
+          text: "Go",
+        })),
+        steps: [easy],
+      },
+    ],
+  });
+  const tooMany = workoutSchema.safeParse(cued(1001));
+  assert.deepEqual(
+    tooMany.error?.issues.map((issue) => issue.message),
+    ["A workout can have at most 1000 cues"],
+  );
+  assert.equal(workoutSchema.safeParse(cued(1000)).success, true);
+});
