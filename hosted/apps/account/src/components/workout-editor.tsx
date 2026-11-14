@@ -417,14 +417,20 @@ export function WorkoutEditor<Saved extends EditorSaved>({
               Redo
             </button>
           </div>
-          <p className="editor-status" role="status">
+          <p
+            className="editor-status"
+            role="status"
+            hidden={!dirty && saved.base !== null && !save.isPending && !invalid}
+          >
             {save.isPending
               ? "Saving…"
               : invalid
                 ? `Fix ${problems.length + fieldErrors.invalid.size === 1 ? "1 problem" : `${problems.length + fieldErrors.invalid.size} problems`} to save`
                 : dirty
                   ? "Unsaved changes"
-                  : "Saved"}
+                  : saved.base
+                    ? "Saved"
+                    : "Not saved yet"}
           </p>
           <button
             type="button"
@@ -433,7 +439,7 @@ export function WorkoutEditor<Saved extends EditorSaved>({
             disabled={!canSave}
             title="Save (⌘S)"
           >
-            {saved.base ? "Save" : target.firstSave}
+            {saved.base ? (!dirty && !save.isPending ? "Saved" : "Save") : target.firstSave}
           </button>
         </div>
 
