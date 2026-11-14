@@ -615,6 +615,31 @@ test("disconnecting when Strava will not refresh a token about to run out still 
   );
 });
 
+test("a sign-in whose account is deleted while Strava exchanges the code gives the grant back to Strava", async () => {
+  reset({
+    token: async () => {
+      await db.prepare("DELETE FROM strava_link").run();
+      return Response.json({
+        ...tokens(1),
+        athlete: { id: 42, firstname: "Ada", lastname: "Rider" },
+      });
+    },
+  });
+  const { token } = await signUp();
+  const link = await startConnecting(token);
+  strava.requests.length = 0;
+  const response = await callback(link.state);
+  assert.equal(response.status, 302);
+  assert.equal(
+    new URL(response.headers.get("location")).searchParams.get("error"),
+    "exchange_failed",
+  );
+  assert.deepEqual(
+    strava.requests.filter((r) => r.path === "/oauth/deauthorize").map((r) => r.auth),
+    ["Bearer access-1"],
+  );
+});
+
 test("disconnecting forgets the tokens even when Strava cannot be told", async () => {
   for (const [stravaCannotBeTold, deauthorize] of [
     ["Strava is down", () => new Response("{}", { status: 503 })],

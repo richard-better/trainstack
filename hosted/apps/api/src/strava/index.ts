@@ -111,6 +111,29 @@ export async function disconnectStrava(deps: StravaDisconnectDeps, userId: strin
   return row.athleteId;
 }
 
+async function deauthorizeUnlessHeldElsewhere(
+  deps: Pick<StravaDisconnectDeps, "database" | "fetcher">,
+  tokens: strava.TokenResponse,
+  userId: string,
+) {
+  const heldByAnotherAccount =
+    tokens.athlete &&
+    (await deps.database
+      .select({ userId: stravaConnection.userId })
+      .from(stravaConnection)
+      .where(
+        and(eq(stravaConnection.athleteId, tokens.athlete.id), ne(stravaConnection.userId, userId)),
+      )
+      .get());
+  if (heldByAnotherAccount) return;
+  const response = await strava
+    .deauthorize(deps.fetcher, tokens.access_token)
+    .catch((error: unknown) => error);
+  if (!(response instanceof Response && response.ok)) {
+    console.error("Strava did not deauthorize an unfinished sign-in", response);
+  }
+}
+
 export async function deauthorizeUnfinishedSignIns(
   deps: Pick<StravaDisconnectDeps, "database" | "vault" | "fetcher">,
   userId: string,
@@ -123,21 +146,7 @@ export async function deauthorizeUnfinishedSignIns(
     if (!tokens || tokens === PENDING_EXCHANGE) continue;
     const plain = await deps.vault.decrypt(tokens);
     if (!plain) continue;
-    const { access_token: accessToken, athlete } = JSON.parse(plain) as strava.TokenResponse;
-    const heldByAnotherAccount =
-      athlete &&
-      (await deps.database
-        .select({ userId: stravaConnection.userId })
-        .from(stravaConnection)
-        .where(and(eq(stravaConnection.athleteId, athlete.id), ne(stravaConnection.userId, userId)))
-        .get());
-    if (heldByAnotherAccount) continue;
-    const response = await strava
-      .deauthorize(deps.fetcher, accessToken)
-      .catch((error: unknown) => error);
-    if (!(response instanceof Response && response.ok)) {
-      console.error("Strava did not deauthorize an unfinished sign-in", response);
-    }
+    await deauthorizeUnlessHeldElsewhere(deps, JSON.parse(plain) as strava.TokenResponse, userId);
   }
 }
 
@@ -407,11 +416,21 @@ export function stravaRoutes(deps: StravaDeps) {
       return end("exchange_failed");
     const response = await strava.exchangeCode(fetcher, keysOfApp, code);
     if (!response.ok) return end("exchange_failed");
-    await deps
+    const tokens = (await response.json()) as strava.TokenResponse;
+    const kept = await deps
       .database()
       .update(stravaLink)
-      .set({ tokens: await keys.encrypt(JSON.stringify(await response.json())) })
-      .where(eq(stravaLink.id, link.id));
+      .set({ tokens: await keys.encrypt(JSON.stringify(tokens)) })
+      .where(eq(stravaLink.id, link.id))
+      .returning({ id: stravaLink.id });
+    if (kept.length === 0) {
+      await deauthorizeUnlessHeldElsewhere(
+        { database: deps.database(), fetcher },
+        tokens,
+        link.userId,
+      );
+      return c.redirect(toApp({ error: "exchange_failed" }), 302);
+    }
     return c.redirect(toApp({ connected: "1" }), 302);
   });
 
