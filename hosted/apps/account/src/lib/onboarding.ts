@@ -61,7 +61,7 @@ export const historySources: readonly HistorySource[] = [
     name: "Apple Health",
     state: "available",
     detail:
-      "Ride on iPhone brings in every workout in Apple Health, from your Apple Watch or any app that saves there, such as Garmin Connect. In Ride, open Settings, then Account, and turn on Import Workouts from Health.",
+      "Ride on iPhone brings in every workout in Apple Health, from your Apple Watch or any app that saves there, such as Garmin Connect, and your sleep, resting heart rate and HRV for readiness. In Ride, open Settings, then Account, and turn on Import from Health.",
     action: {
       kind: "link",
       href: `${helpUrl("add-activities")}#apple-health`,
