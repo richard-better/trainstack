@@ -105,7 +105,7 @@ test("a poor night before a key session eases it, and sleep is the reason given 
   const [first] = readiness.reasons;
   assert.equal(first?.kind === "check_in" && first.item, "sleep");
   assert.equal(first?.kind === "check_in" && first.against, "own");
-  assert.ok(first?.kind === "check_in" && Math.abs(first.usual - 3.5) < 0.01);
+  assert.equal(first?.kind === "check_in" && first.usual, 4);
 });
 
 test("a poor night leaves an easy session as planned", () => {
@@ -359,4 +359,18 @@ test("before load can be read, a session is hard by its intensity alone, not by 
   );
   assert.deepEqual(readiness.gaps.at(-1), { kind: "short_training_history", days: 20 });
   assert.equal(readiness.suggestions[0]?.intensity, "easy");
+});
+
+test("a second bad day in a row counts as much as the first", () => {
+  const allTwos = { sleep: 2, energy: 2, soreness: 2, stress: 2, mood: 2 };
+  const checkIns = [
+    ...checkedInFor(28, shift(today, -1)),
+    checkIn(shift(today, -1), allTwos),
+    checkIn(today, allTwos),
+  ];
+  const stress = trainedFor(120, shift(today, -1));
+  const first = readinessOn(athlete({ stress, checkIns, day: shift(today, -1) }), shift(today, -1));
+  const second = readinessOn(athlete({ stress, checkIns }), today);
+  assert.equal(first.level, "low");
+  assert.equal(second.level, first.level);
 });

@@ -57,7 +57,7 @@ export function checkInReasons(
       today.day,
       checkInBaseline,
     );
-    const usual = baseline?.mean ?? scaleNormal;
+    const usual = baseline ? Math.round(baseline.mean) : scaleNormal;
     const difference = rating - usual;
     const weight = difference <= -muchWorseBy ? 2 : difference <= -worseBy ? 1 : 0;
     const effect: Effect = weight > 0 ? "lowers" : difference >= betterBy ? "raises" : "steady";
