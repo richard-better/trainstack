@@ -327,3 +327,23 @@ test("a check-in with nothing rated and no illness or injury counts as no check-
   assert.equal(readiness.basis.checkIn, false);
   assert.deepEqual(readiness.gaps[0], { kind: "no_check_in" });
 });
+
+test("check-ins that rated nothing that is rated today do not make a baseline for it", () => {
+  const injuredOnly = checkedInFor(10, today).map((entry) => ({
+    ...entry,
+    ratings: { sleep: null, energy: null, soreness: null, stress: null, mood: null },
+    injury: { area: "knee", training: "full" as const },
+  }));
+  const readiness = readinessOn(
+    athlete({
+      stress: trainedFor(120, shift(today, -1)),
+      checkIns: [...injuredOnly, checkIn(today, { sleep: 2 })],
+    }),
+    today,
+  );
+  assert.equal(readiness.confidence, "medium");
+  assert.deepEqual(readiness.gaps, [{ kind: "short_baseline", checkIns: 0 }]);
+  assert.equal(readiness.basis.baselineCheckIns, 0);
+  const sleep = readiness.reasons.find((r) => r.kind === "check_in" && r.item === "sleep");
+  assert.equal(sleep?.kind === "check_in" && sleep.against, "scale");
+});

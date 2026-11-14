@@ -118,7 +118,8 @@ Confidence is `high` when the athlete is ill or cannot train, since that is thei
 ### Confidence
 
 - `low`: no check-in on the day, so readiness comes from training alone; or no level at all.
-- `medium`: a check-in, but a baseline of fewer than 7 check-ins or a gap in training history.
+- `medium`: a check-in, but fewer than 7 earlier check-ins that rated each item rated that day,
+  or a gap in training history.
 - `high`: neither.
 
 ### Suggestions

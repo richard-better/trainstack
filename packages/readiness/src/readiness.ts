@@ -158,7 +158,11 @@ function readinessFrom<Area extends string>(
   const training = trainingState(prepared.series, day);
   const health = healthReasons(today, prepared.checkIns, day);
   const checkIn = today ? checkInReasons(today, prepared.checkIns) : [];
-  const baseline = baselineCheckIns(prepared.checkIns, day);
+  const baseline = baselineCheckIns(
+    prepared.checkIns,
+    day,
+    checkIn.map((reason) => reason.item),
+  );
   const gaps: Gap[] = [];
   if (!today) gaps.push({ kind: "no_check_in" });
   else if (baseline < checkInBaseline.minimum)

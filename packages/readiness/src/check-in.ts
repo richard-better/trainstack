@@ -26,8 +26,19 @@ const isBaselineDay = (checkIn: ReadinessCheckIn, day: string) => {
   return before >= 1 && before <= checkInBaseline.days && checkIn.illness === null;
 };
 
-export function baselineCheckIns(checkIns: readonly ReadinessCheckIn[], day: string) {
-  return checkIns.filter((checkIn) => isBaselineDay(checkIn, day)).length;
+export function baselineCheckIns(
+  checkIns: readonly ReadinessCheckIn[],
+  day: string,
+  items: readonly CheckInItem[],
+) {
+  const history = checkIns.filter((checkIn) => isBaselineDay(checkIn, day));
+  const rated = (item: CheckInItem) =>
+    history.filter((checkIn) => checkIn.ratings[item] !== null).length;
+  if (items.length === 0) {
+    return history.filter((checkIn) => checkInItems.some((item) => checkIn.ratings[item] !== null))
+      .length;
+  }
+  return Math.min(...items.map(rated));
 }
 
 export function checkInReasons(
