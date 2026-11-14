@@ -246,4 +246,8 @@
   .route-map {
     height: 300px;
   }
+
+  .route-map .maplibregl-ctrl-bottom-left {
+    bottom: 22px;
+  }
 }
