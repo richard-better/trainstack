@@ -120,6 +120,19 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
   calendar does. `stressByDay` adds up the activities' loads per day.
   `combineZoneShares` adds zone time across activities by zone label and name, as Ride's
   `combined()` does.
+- **Routes.** `routeOf(columns, pauses)` turns the latitude and longitude columns that
+  `streamActivityFile` gives into a route for a map or a thumbnail: Google encoded polylines,
+  precision 5, and the bounds `[west, south, east, north]`. It keeps only positions while the
+  timer runs (`timerPauses`), drops impossible positions and 0,0, and starts a new segment after
+  a pause, a gap of more than 60 s between positions, or a jump faster than 100 m/s, so no
+  line crosses the map. Each segment is thinned to points at least 1e-4 degrees apart, then
+  simplified with Douglas-Peucker (Douglas & Peucker, "Algorithms for the reduction of the
+  number of points required to represent a digitized line or its caricature", _The Canadian
+  Cartographer_ 10 (1973), 112-122) at 1e-4 degrees of latitude, with longitude scaled by the
+  cosine of the first latitude. The tolerance doubles until all segments together have at most
+  300 points; when every segment is down to its two ends, the shortest go. A million positions
+  take about 0.1 to 0.2 s. The server stores what it returns, and later trimming, such as privacy
+  zones, belongs in this function so the stored route and a map drawn from the file agree.
 
 ## Sampling rules
 
