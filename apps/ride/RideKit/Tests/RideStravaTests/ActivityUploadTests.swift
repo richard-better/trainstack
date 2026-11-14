@@ -38,6 +38,20 @@ struct ActivityUploadTests {
     #expect(body.contains("name=\"file\"; filename=\"ride.fit\""))
   }
 
+  @Test func sendsTheSourcesOwnIDOnlyWhenTheFileHasOne() async throws {
+    let (client, transport) = identifiedClient([json(#"{"id":"abc"}"#), json(#"{"id":"def"}"#)])
+    var healthFile = file
+    healthFile.source = "apple_health"
+    healthFile.sourceID = "8F2C1D0E-1111-4A2B-9C3D-4E5F60718293"
+    _ = try await client.upload(healthFile, for: account)
+    _ = try await client.upload(file, for: account)
+    let bodies = await transport.requests.map {
+      String(decoding: $0.httpBody ?? Data(), as: UTF8.self)
+    }
+    #expect(bodies[0].contains("name=\"sourceId\"\r\n\r\n8F2C1D0E-1111-4A2B-9C3D-4E5F60718293\r\n"))
+    #expect(!bodies[1].contains("sourceId"))
+  }
+
   @Test func tellsAFileTheServerDeletedApartFromOneItRefuses() async throws {
     let deleted = json(
       #"{"code":"ACTIVITY_DELETED","status":410,"data":{"id":"abc","deletedAt":"2026-11-13T00:00:00.000Z"}}"#,

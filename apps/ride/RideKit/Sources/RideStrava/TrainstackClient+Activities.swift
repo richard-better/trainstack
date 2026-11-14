@@ -113,6 +113,7 @@ extension TrainstackClient: ActivityServer {
             .utf8))
     }
     field("source", file.source)
+    field("sourceId", file.sourceID)
     field("sport", file.sport)
     field("name", file.name)
     field(
