@@ -156,6 +156,9 @@ extension FITEncoder {
     var power = HeldChannel(activity.power, from: start, longestHold: hold)
     var cadence = HeldChannel(activity.cadence, from: start, longestHold: hold)
     var speed = HeldChannel(activity.speed, from: start, longestHold: hold)
+    var speedFromDistance = HeldChannel(
+      speeds(from: activity.distanceSoFar, longestGap: SamplingRule.maxHeldGap), from: start,
+      longestHold: hold)
     var distance = HeldChannel(activity.distanceSoFar, from: start, longestHold: nil)
     var locations: [UInt32: HealthActivity.Location] = [:]
     for location in activity.locations.sorted(by: isEarlier)
@@ -170,11 +173,24 @@ extension FITEncoder {
       let location = locations[timestamp]
       let measuredSpeed = location?.speedMetresPerSecond.flatMap { $0 >= 0 ? $0 : nil }
       let heldSpeed = speed.value(at: timestamp)
+      let derivedSpeed = speedFromDistance.value(at: timestamp)
       return HealthRow(
         timestamp: timestamp, heartRate: heartRate.value(at: timestamp),
         power: power.value(at: timestamp), cadence: cadence.value(at: timestamp),
-        speed: measuredSpeed ?? heldSpeed, distance: distance.value(at: timestamp),
+        speed: measuredSpeed ?? heldSpeed ?? derivedSpeed, distance: distance.value(at: timestamp),
         location: location)
+    }
+  }
+
+  private static func speeds(
+    from distanceSoFar: [HealthActivity.Reading], longestGap: TimeInterval
+  ) -> [HealthActivity.Reading] {
+    let ordered = distanceSoFar.filter { $0.value.isFinite }
+      .sorted { ($0.date, $0.value) < ($1.date, $1.value) }
+    return zip(ordered, ordered.dropFirst()).compactMap { from, to in
+      let seconds = to.date.timeIntervalSince(from.date)
+      guard seconds > 0, seconds <= longestGap, to.value >= from.value else { return nil }
+      return .init(date: from.date, value: (to.value - from.value) / seconds)
     }
   }
 

@@ -82,6 +82,20 @@ struct HealthActivityFITTests {
     #expect(decoded.samples.map(\.power) == [nil, 200])
   }
 
+  @Test func aWorkoutWithoutMeasuredSpeedGetsItsSpeedFromItsDistance() throws {
+    let start = Self.start
+    let activity = HealthActivity(
+      sport: .running, startDate: start, endDate: start.addingTimeInterval(60),
+      distanceSoFar: stride(from: 0.0, through: 60, by: 10).map {
+        .init(date: start.addingTimeInterval($0), value: 3 * $0)
+      },
+      locations: stride(from: 0.0, through: 60, by: 1).map {
+        .init(date: start.addingTimeInterval($0), latitude: 47.5, longitude: 19.04)
+      })
+    let decoded = try FITDecoder.decode(FITEncoder.encode(activity))
+    #expect(decoded.samples.dropLast().allSatisfy { $0.speedMetresPerSecond == 3 })
+  }
+
   @Test func everyHealthSportHasAFITSport() {
     #expect(
       HealthSport.strength.fit == (FITProfile.Sport.training, FITProfile.SubSport.strengthTraining))

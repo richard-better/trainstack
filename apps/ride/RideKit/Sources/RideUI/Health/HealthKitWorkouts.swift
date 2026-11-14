@@ -157,7 +157,7 @@
               date: location.timestamp, latitude: location.coordinate.latitude,
               longitude: location.coordinate.longitude,
               altitudeMetres: location.verticalAccuracy >= 0 ? location.altitude : nil,
-              speedMetresPerSecond: location.speedAccuracy >= 0 ? location.speed : nil))
+              speedMetresPerSecond: location.speed >= 0 ? location.speed : nil))
         }
       }
       return locations
