@@ -75,8 +75,9 @@ local API (weeks of training, a rough morning, and a new account), records what 
 the API for, then serves `/__dev/showcase`: every screen in its real components at phone and
 desktop width, answered from those recordings with the clock held at the moment they were made,
 with no API running and no sign-in. Add `-- --screenshots` to save a PNG of every screen at both
-widths in `hosted/apps/account/.showcase/screenshots`, and `--only today,activities` to take just
-those. The showcase and its recordings exist only in development: a production build holds none
+widths in `hosted/apps/account/.showcase/screenshots/en-GB`, and `--only today,activities` to take just
+those. Use `--locale hu-HU` for Hungarian native date fields; each locale has its own screenshot
+folder. Add `--no-record` to reuse the recorded athletes for another locale pass. The showcase and its recordings exist only in development: a production build holds none
 of it, which `tests/web-showcase.test.mjs` checks. A new route needs an entry in
 `hosted/apps/account/src/showcase/entries.ts`, or that test fails. It needs Playwright's Chromium:
 `bunx playwright install chromium` once.
