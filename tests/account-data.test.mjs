@@ -187,6 +187,14 @@ async function athleteWithEverything(identity) {
   athlete.stravaAthleteId = 900_000_000 + Math.floor(Math.random() * 99_999_999);
   strava.nextAthleteId = athlete.stravaAthleteId;
   await connectStrava(athlete.token);
+  const granted = await runtime.dispatchFetch(`${api}/account/apple-authorization`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${athlete.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      authorization_code: apple.appAuthorizationCode({ subject: athlete.subject }),
+    }),
+  });
+  assert.equal(granted.status, 204, await granted.clone().text());
   return athlete;
 }
 
@@ -471,8 +479,12 @@ test("deleting an account leaves nothing of the athlete, revokes Strava and Appl
   assert.equal(strava.deauthorized.length, 1, "Strava is told the athlete left");
   assert.match(strava.deauthorized[0], /^Bearer strava-access-/);
   assert.deepEqual(
-    apple.revocations.map((form) => form.get("token")),
-    [`apple-refresh-${athlete.subject}`],
+    apple.revocations.map((form) => [form.get("client_id"), form.get("token")]),
+    [
+      ["com.trainstackhq.ride.web", `apple-refresh-${athlete.subject}`],
+      ["com.trainstackhq.ride", `apple-refresh-${athlete.subject}`],
+    ],
+    "what Apple's web flow and Ride's native sign-in granted are both revoked",
   );
 
   const stale = await webRequest(athlete, "/account/export");

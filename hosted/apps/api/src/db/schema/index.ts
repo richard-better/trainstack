@@ -7,3 +7,4 @@ export * from "./settings";
 export * from "./workouts";
 export * from "./analysis";
 export * from "./account";
+export * from "./apple";

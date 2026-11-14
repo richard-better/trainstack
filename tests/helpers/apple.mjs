@@ -93,6 +93,11 @@ export function mockApple() {
       }
       return { url, form, redirectURI: url.searchParams.get("redirect_uri") };
     },
+    appAuthorizationCode({ subject, email = `${randomUUID()}@example.com` }) {
+      const code = `c${randomUUID().replaceAll("-", "")}.0.app`;
+      unexchangedCodes.set(code, { subject, email });
+      return code;
+    },
     async signIn(runtime, { email = `${randomUUID()}@example.com`, subject = email } = {}) {
       const response = await attemptSignIn(runtime, { email, subject });
       assert.equal(response.status, 200, await response.clone().text());
