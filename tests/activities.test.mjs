@@ -722,3 +722,99 @@ test("an upload a delete overtakes while it is being summarised answers that the
   assert.equal(await bucket.head(`activities/${user.id}/${sha256(rideBytes)}`), null);
   assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
 });
+
+const healthWorkout = "4C1B2A3D-5E6F-4A7B-8C9D-0E1F2A3B4C5D";
+const healthFile = (minute) => gpx(`2026-11-01T07:${String(minute).padStart(2, "0")}:00Z`);
+
+test("a source's own id is one activity: a second file for the same Health workout returns the first", async () => {
+  const { client } = await rider();
+  const first = await client.activities.upload({
+    file: healthFile(0),
+    source: "apple_health",
+    sourceId: healthWorkout,
+  });
+  assert.equal(first.sourceId, healthWorkout);
+  const second = await client.activities.upload({
+    file: healthFile(1),
+    source: "apple_health",
+    sourceId: healthWorkout,
+  });
+  assert.deepEqual(second, first);
+  assert.deepEqual(
+    (await client.activities.list({})).activities.map(({ id }) => id),
+    [first.id],
+  );
+
+  const otherWorkout = await client.activities.upload({
+    file: healthFile(1),
+    source: "apple_health",
+    sourceId: "another-workout",
+  });
+  assert.notEqual(otherWorkout.id, first.id);
+  const sameIdElsewhere = await client.activities.upload({
+    file: healthFile(2),
+    source: "strava",
+    sourceId: healthWorkout,
+  });
+  assert.notEqual(sameIdElsewhere.id, first.id, "the id belongs to its source");
+});
+
+test("a deleted Health workout stays deleted when its workout arrives again as another file", async () => {
+  const { client } = await rider();
+  const { id } = await client.activities.upload({
+    file: healthFile(0),
+    source: "apple_health",
+    sourceId: healthWorkout,
+  });
+  const deleted = await client.activities.delete({ id });
+
+  const [error] = await safe(
+    client.activities.upload({
+      file: healthFile(1),
+      source: "apple_health",
+      sourceId: healthWorkout,
+    }),
+  );
+  assert.ok(isDefinedError(error));
+  assert.equal(error.code, "ACTIVITY_DELETED");
+  assert.deepEqual(error.data, deleted, "the refusal names the activity that was deleted");
+  assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
+
+  const restored = await client.activities.restore({
+    file: healthFile(1),
+    source: "apple_health",
+    sourceId: healthWorkout,
+  });
+  assert.notEqual(restored.id, id);
+  const again = await client.activities.upload({
+    file: healthFile(0),
+    source: "apple_health",
+    sourceId: healthWorkout,
+  });
+  assert.deepEqual(
+    again,
+    restored,
+    "restoring cleared the workout's deletion, and it is one activity",
+  );
+});
+
+test("two files for the same Health workout uploaded at once make one activity", async () => {
+  const { client, user } = await rider();
+  const [a, b] = await Promise.all(
+    [0, 1].map((minute) =>
+      client.activities.upload({
+        file: healthFile(minute),
+        source: "apple_health",
+        sourceId: healthWorkout,
+      }),
+    ),
+  );
+  assert.deepEqual(a, b);
+  assert.equal((await client.activities.list({})).activities.length, 1);
+  const stored = await bucket.list({ prefix: `activities/${user.id}/` });
+  assert.deepEqual(
+    stored.objects.map(({ key }) => key),
+    [`activities/${user.id}/${a.id}`],
+    "the losing file is not kept",
+  );
+});

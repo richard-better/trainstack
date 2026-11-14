@@ -167,11 +167,49 @@ const findActivity = (db: Database, userId: string, id: string) =>
     .where(and(eq(activity.userId, userId), eq(activity.id, id)))
     .get();
 
-export const findDeletion = (db: Database, userId: string, id: string) =>
+export interface SourceKey {
+  readonly source: string;
+  readonly sourceId: string;
+}
+
+const sourceKeyOf = (input: { source: string; sourceId?: string | undefined }) =>
+  input.sourceId === undefined ? null : { source: input.source, sourceId: input.sourceId };
+
+const deletedAs = (userId: string, id: string, key: SourceKey | null) =>
+  and(
+    eq(deletedActivity.userId, userId),
+    key
+      ? or(
+          eq(deletedActivity.id, id),
+          and(eq(deletedActivity.source, key.source), eq(deletedActivity.sourceId, key.sourceId)),
+        )
+      : eq(deletedActivity.id, id),
+  );
+
+export const findDeletion = (
+  db: Database,
+  userId: string,
+  id: string,
+  key: SourceKey | null = null,
+) =>
   db
     .select()
     .from(deletedActivity)
-    .where(and(eq(deletedActivity.userId, userId), eq(deletedActivity.id, id)))
+    .where(deletedAs(userId, id, key))
+    .orderBy(desc(eq(deletedActivity.id, id)))
+    .get();
+
+const findBySource = (db: Database, userId: string, key: SourceKey) =>
+  db
+    .select()
+    .from(activity)
+    .where(
+      and(
+        eq(activity.userId, userId),
+        eq(activity.source, key.source),
+        eq(activity.sourceId, key.sourceId),
+      ),
+    )
     .get();
 
 async function withStatistics(db: Database, row: ActivityRow) {
@@ -230,7 +268,12 @@ export async function deleteActivity(db: Database, userId: string, id: string) {
     electPrimary(db, userId, id, id),
     db
       .insert(deletedActivity)
-      .values({ userId, id })
+      .values({
+        userId,
+        id,
+        source: sql`(SELECT source FROM ${activity} WHERE user_id = ${userId} AND id = ${id})`,
+        sourceId: sql`(SELECT source_id FROM ${activity} WHERE user_id = ${userId} AND id = ${id})`,
+      })
       .onConflictDoUpdate({
         target: [deletedActivity.userId, deletedActivity.id],
         set: { deletedAt: sql`${deletedActivity.deletedAt}` },
@@ -259,11 +302,16 @@ async function addFromFile(
   const format = formatOf(bytes);
   if (!format) throw refuse.unsupported();
   const id = await sha256Hex(bytes);
+  const key = sourceKeyOf(input);
   const { sport, indoor } = athleteSport(input.sport, input.indoor);
 
   const deletedRefusal = async () => {
-    const deletion = await findDeletion(db, userId, id);
-    return deletion && refuse.deleted({ id, deletedAt: deletion.deletedAt });
+    const deletion = await findDeletion(db, userId, id, key);
+    return deletion && refuse.deleted({ id: deletion.id, deletedAt: deletion.deletedAt });
+  };
+  const sameFromSource = async () => {
+    const row = key && (await findBySource(db, userId, key));
+    return row && row.id !== id ? withStatistics(db, row) : null;
   };
 
   if (!restoring) {
@@ -281,6 +329,8 @@ async function addFromFile(
     await keepFile();
     return withStatistics(db, existing);
   }
+  const fromSource = await sameFromSource();
+  if (fromSource) return fromSource;
 
   await storeFile(fileKey(userId, id), bytes, contentTypes[format]);
   const insert = db.run(sql`
@@ -290,19 +340,12 @@ async function addFromFile(
       'time_zone', coalesce(
         (SELECT time_zone FROM ${athleteTimeZone} WHERE user_id = ${userId}), ${DEFAULT_TIME_ZONE}
       )
-    WHERE NOT EXISTS (
-      SELECT 1 FROM ${deletedActivity} WHERE user_id = ${userId} AND id = ${id}
-    )
+    WHERE NOT EXISTS (SELECT 1 FROM ${deletedActivity} WHERE ${deletedAs(userId, id, key)})
     ON CONFLICT DO NOTHING
   `);
   try {
     if (restoring) {
-      await db.batch([
-        db
-          .delete(deletedActivity)
-          .where(and(eq(deletedActivity.userId, userId), eq(deletedActivity.id, id))),
-        insert,
-      ]);
+      await db.batch([db.delete(deletedActivity).where(deletedAs(userId, id, key)), insert]);
     } else {
       await insert;
     }
@@ -330,6 +373,10 @@ async function addFromFile(
   }
   const deletedDuringUpload = await deletedRefusal();
   await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+  if (!deletedDuringUpload) {
+    const storedMeanwhile = await sameFromSource();
+    if (storedMeanwhile) return storedMeanwhile;
+  }
   throw deletedDuringUpload ?? new Error(`Activity ${id} was neither stored nor deleted`);
 }
 

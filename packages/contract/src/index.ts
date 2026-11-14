@@ -180,7 +180,14 @@ const activityFileErrors = {
 const activityFileInput = z.object({
   file: z.file().min(1).max(MAX_ACTIVITY_FILE_BYTES),
   source: activitySourceSchema,
-  sourceId: z.string().min(1).max(128).optional(),
+  sourceId: z
+    .string()
+    .min(1)
+    .max(128)
+    .optional()
+    .describe(
+      "The source's own id for what was recorded, such as an Apple Health workout's UUID. An account holds one activity per source and sourceId: a later file with the same pair returns the activity the first one made, and once that activity is deleted the pair answers ACTIVITY_DELETED like its file does",
+    ),
   sport: activitySportSchema.optional(),
   indoor: activityIndoorSchema.optional(),
   name: z.string().trim().min(1).max(200).optional(),
@@ -194,7 +201,7 @@ export const activitiesContract = {
       path: "/activities",
       successStatus: 200,
       description:
-        "Add an activity from its file. Uploading a file the account has returns that activity. A file whose activity was deleted answers ACTIVITY_DELETED, so a device syncing in the background never brings it back",
+        "Add an activity from its file. Uploading a file the account has, or another file with the sourceId of an activity it has, returns that activity. A file whose activity was deleted, or one with a deleted activity's source and sourceId, answers ACTIVITY_DELETED with that activity, so a device syncing in the background never brings it back",
     })
     .errors(activityFileErrors)
     .input(activityFileInput)
@@ -205,7 +212,7 @@ export const activitiesContract = {
       path: "/activities/restore",
       successStatus: 200,
       description:
-        "Bring back an activity the athlete deleted, from its file, as an upload would add it: deleting removed the file, its summary and its analysis, so they come from this file again. Call it only when the athlete asks for it by hand, never from background sync. A file the account has, or never deleted, is added as upload adds it. A deletion that arrives while the restore is stored still wins, and answers ACTIVITY_DELETED",
+        "Bring back an activity the athlete deleted, from its file, as an upload would add it: deleting removed the file, its summary and its analysis, so they come from this file again. Call it only when the athlete asks for it by hand, never from background sync. Restoring clears the deletion of its file and of its source and sourceId. A file the account has, or never deleted, is added as upload adds it. A deletion that arrives while the restore is stored still wins, and answers ACTIVITY_DELETED",
     })
     .errors(activityFileErrors)
     .input(activityFileInput)

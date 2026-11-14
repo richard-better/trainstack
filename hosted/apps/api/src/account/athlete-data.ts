@@ -105,7 +105,7 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
   },
   deletedActivity: {
     about:
-      "Activities the athlete deleted, so that a device sending them again does not bring them back. Restoring one by hand removes its row.",
+      "Activities the athlete deleted, with the source each came from and that source's own id for it, so that a device sending them again, as the same file or another, does not bring them back. Restoring one by hand removes its row.",
     owner: (table) => table.userId,
   },
   activitySync: {
