@@ -100,7 +100,6 @@ public struct RideSession: Sendable {
       beginLap(at: elapsed - (position - interval.end), endingTheLastBy: trigger)
       trigger = .time
     }
-    if isComplete { position = min(position, duration) }
   }
 
   public var duration: TimeInterval { intervals.last?.end ?? 0 }
@@ -158,10 +157,10 @@ public struct RideSession: Sendable {
   public var cue: PlannedCue? {
     guard !isComplete else { return nil }
     return intervals.prefix(current + 1).reversed().lazy.compactMap { interval in
-      let lapped = interval.step.endsOnLap && interval.index < current
+      let finished = interval.index < current
       return interval.step.cues.last { cue in
         cue.isShowing(atOffset: self.position - interval.start)
-          && !(lapped && cue.at >= interval.end - interval.start)
+          && !(finished && cue.at >= interval.end - interval.start)
       }
     }
     .first
@@ -218,24 +217,20 @@ public struct RideSession: Sendable {
   }
 
   public mutating func previousInterval() {
-    guard let last = timeline.last else { return }
-    if let interval = currentInterval {
-      let stepIndex = interval.stepIndex
-      let again =
-        stepIndex > 0
-        ? [Planned(stepIndex: stepIndex - 1), Planned(stepIndex: stepIndex)]
-        : [Planned(stepIndex: stepIndex)]
-      let ridden = position - interval.start
-      if ridden > 0 {
-        timeline[current].ridden = ridden
-        current += 1
-      } else {
-        timeline.remove(at: current)
-      }
-      timeline.insert(contentsOf: again, at: current)
+    guard let interval = currentInterval else { return }
+    let stepIndex = interval.stepIndex
+    let again =
+      stepIndex > 0
+      ? [Planned(stepIndex: stepIndex - 1), Planned(stepIndex: stepIndex)]
+      : [Planned(stepIndex: stepIndex)]
+    let ridden = position - interval.start
+    if ridden > 0 {
+      timeline[current].ridden = ridden
+      current += 1
     } else {
-      timeline.append(Planned(stepIndex: last.stepIndex))
+      timeline.remove(at: current)
     }
+    timeline.insert(contentsOf: again, at: current)
     layOut()
     beginLap(at: elapsed, endingTheLastBy: .manual)
     moveOnFromFinishedIntervals()

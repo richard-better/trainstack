@@ -50,7 +50,7 @@ struct RideCommandTests {
     #expect(RideCommand.togglePause.isEnabled(in: launcher))
     #expect(RideCommand.end.isEnabled(in: launcher))
     #expect(RideCommand.lap.isEnabled(in: launcher))
-    #expect(RideCommand.previousInterval.isEnabled(in: launcher))
+    #expect(!RideCommand.previousInterval.isEnabled(in: launcher))
     #expect(!RideCommand.extendInterval.isEnabled(in: launcher))
   }
 

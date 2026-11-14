@@ -20,6 +20,7 @@ struct PlayerControls: View {
       )
       .labelStyle(.iconOnly)
       .buttonStyle(.glass)
+      .disabled(session.isComplete)
       .keyboardShortcut(previous)
       .help("Go back to the start of the interval before this one", shortcut: previous)
       Button("Skip interval", systemImage: "forward.end.fill", action: controller.skipInterval)

@@ -53,7 +53,7 @@ enum RideCommand: Hashable {
   func isEnabled(in launcher: RideLauncher?) -> Bool {
     guard let launcher, let ride = launcher.ride, !launcher.isConfirmingEnd else { return false }
     return switch self {
-    case .skipInterval: !ride.session.isComplete
+    case .skipInterval, .previousInterval: !ride.session.isComplete
     case .extendInterval: ride.session.canExtendInterval
     default: true
     }

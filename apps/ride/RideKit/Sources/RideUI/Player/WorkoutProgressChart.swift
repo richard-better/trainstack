@@ -62,7 +62,7 @@ struct WorkoutProgressChart: View {
         .foregroundStyle(Color.primary)
         .lineStyle(StrokeStyle(lineWidth: 1))
     }
-    .chartXScale(domain: 0...max(session.duration, 1))
+    .chartXScale(domain: 0...max(session.duration, session.position, 1))
     .chartYScale(domain: 0...scale.powerMaximum)
     .chartYAxis {
       AxisMarks(position: .leading, values: scale.gridlines) { value in

@@ -111,15 +111,40 @@ struct MidRideChangeTests {
     #expect(session.elapsed == 30)
   }
 
-  @Test func goingBackAfterTheEndRidesTheLastIntervalAgain() {
+  @Test func goingBackAfterTheEndChangesNothing() {
     var session = RideSession(workout: workout.workout(ftp: 250))
     ride(&session, seconds: 260)
     session.previousInterval()
-    #expect(session.currentInterval?.stepIndex == 2)
-    #expect(session.targetPower == 100)
-    ride(&session, seconds: 60)
     #expect(session.isComplete)
-    #expect(laps(session).map(\.step) == [0, 1, 2, nil, 2])
+    ride(&session, seconds: 60)
+    #expect(laps(session).map(\.step) == [0, 1, 2, nil])
+  }
+
+  @Test func aCueTheRiderNeverReachedInAnIntervalCutShortStaysUnshown() {
+    let cued = PlannedWorkout(
+      name: "Cued", category: nil,
+      steps: [
+        PlannedStep(duration: 60, target: .watts(.constant(150))),
+        PlannedStep(
+          duration: 120, target: .watts(.constant(250)),
+          cues: [PlannedCue(at: 40, text: "Later in the block")]),
+      ])
+    var session = RideSession(workout: cued.workout(ftp: 250))
+    ride(&session, seconds: 90)
+    session.previousInterval()
+    for _ in 0..<20 {
+      ride(&session, seconds: 1)
+      #expect(session.cue == nil)
+    }
+  }
+
+  @Test func theFreeRideMovesOnAlongTheTimelineEverySecond() {
+    var session = RideSession(workout: workout.workout(ftp: 250))
+    ride(&session, seconds: 300)
+    #expect(session.position == 300)
+    let positions = session.samples.suffix(60).map(\.position)
+    #expect(Set(positions).count == 60)
+    #expect(positions.first == 241)
   }
 
   @Test func ridingOnAfterTheEndKeepsRecordingAsAFreeRide() {
