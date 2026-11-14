@@ -85,7 +85,7 @@ test("every screen, button and setting a help page names in bold is still in the
   const app = await appText();
   const missing = [];
   for (const page of await helpPages()) {
-    for (const [, label] of bodyOf(page.text).matchAll(/\*\*(.+?)\*\*/g)) {
+    for (const [, label] of bodyOf(page.text).matchAll(/\*\*([\s\S]+?)\*\*/g)) {
       if (!app.includes(asOneLine(label))) missing.push(`${page.slug}: ${label}`);
     }
   }
@@ -97,7 +97,7 @@ test("links between help pages and to their images resolve", async () => {
   const slugs = new Set(pages.map((page) => page.slug));
   const broken = [];
   for (const page of pages) {
-    for (const [, slug] of page.text.matchAll(/\]\(\/help\/([a-z0-9-]+)\)/g)) {
+    for (const [, slug] of page.text.matchAll(/\]\(\/help\/([^)#?]*)[^)]*\)/g)) {
       if (!slugs.has(slug)) broken.push(`${page.slug}: /help/${slug}`);
     }
     for (const [, image] of page.text.matchAll(/\]\((\/help-images\/[^)]+)\)/g)) {
