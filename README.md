@@ -54,6 +54,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before sending a pull request.
 Ride lives in [`apps/ride`](apps/ride): see [`apps/ride/AGENTS.md`](apps/ride/AGENTS.md) to
 build it and [the release guide](docs/ride-release.md) to ship a TestFlight build. The hosted
 website, API and account app are deployed as described in [the deployment guide](docs/deployment.md).
+To run your own instance on your own Cloudflare account and domain, follow
+[the self-hosting guide](docs/self-hosting.md).
 
 To run the web app signed in on your machine, run `bun run dev:account`. It starts the API in
 workerd with an in-memory database, a local page that plays Apple's part in signing in, and the

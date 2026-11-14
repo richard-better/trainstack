@@ -1,5 +1,8 @@
 # Cloudflare deployment
 
+This is how trainstackhq.com runs. To run an instance of your own, see
+[the self-hosting guide](self-hosting.md).
+
 ## Infrastructure
 
 Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `hosted/infra/alchemy.run.ts` and optional Axiom infrastructure in `hosted/infra/observability.ts`; do not add a separate Wrangler or Terraform deployment of the same resources. The deployment manages:
@@ -11,7 +14,7 @@ Alchemy is the single infrastructure owner. Keep Cloudflare infrastructure in `h
 - When configured, Axiom dataset `trainstack-production-logs` and a dataset-scoped ingest token injected into both applications.
 - Shared Cloudflare state storage, using a Worker, Durable Object, and Secrets Store for encrypted state and authentication.
 
-Stack names `trainstack` and `trainstack-observability`, stage `production`, and logical resource IDs are persistent identities. Both stacks use the same remote Cloudflare state backend. Preserve them across deployments. Compatibility is pinned to `2026-07-30`; update it deliberately and test against the Workers runtime.
+The domain is `TRAINSTACK_DOMAIN` in `hosted/infra/.env.schema`, `trainstackhq.com` unless a GitHub `production` variable or the environment sets another; the web app and API take the `account.` and `api.` subdomains of it in the `production` stage. Stack names `trainstack` and `trainstack-observability`, stage `production`, and logical resource IDs are persistent identities. Both stacks use the same remote Cloudflare state backend. Preserve them across deployments. Compatibility is pinned to `2026-07-30`; update it deliberately and test against the Workers runtime.
 
 ## Production credentials
 
