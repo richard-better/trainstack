@@ -471,3 +471,46 @@ export function loggedFigures(summary: LoggedSummary) {
   if (hardest) figures.push({ name: "hardest", label: "Hardest", value: hardest, unit: "" });
   return figures;
 }
+
+export function movedExercise(list: ExerciseDraft[], index: number, by: number) {
+  const target = index + by;
+  if (target < 0 || target >= list.length) return list;
+  const next = list.map((entry) => ({ ...entry }));
+  const [entry] = next.splice(index, 1);
+  next.splice(target, 0, { ...entry!, group: null });
+  return withWholeGroups(next);
+}
+
+export function withWholeGroups(list: ExerciseDraft[]) {
+  const runs = new Map<number, number[]>();
+  list.forEach(({ group }, index) => {
+    if (group !== null) runs.set(group, [...(runs.get(group) ?? []), index]);
+  });
+  const broken = new Set(
+    [...runs]
+      .filter(
+        ([, indices]) => indices.length < 2 || indices.at(-1)! - indices[0]! !== indices.length - 1,
+      )
+      .map(([group]) => group),
+  );
+  return list.map((entry) =>
+    entry.group !== null && broken.has(entry.group) ? { ...entry, group: null } : entry,
+  );
+}
+
+export function groupWithNext(list: ExerciseDraft[], index: number, together: boolean) {
+  const next = list.map((entry) => ({ ...entry }));
+  const here = next[index]!;
+  const after = next[index + 1];
+  if (!after) return list;
+  if (together) {
+    const group = here.group ?? Math.max(0, ...next.map(({ group }) => group ?? 0)) + 1;
+    here.group = group;
+    after.group = group;
+  } else {
+    const group = here.group;
+    for (let i = index + 1; i < next.length && next[i]!.group === group; i++) next[i]!.group = null;
+    if (index === 0 || next[index - 1]!.group !== group) here.group = null;
+  }
+  return next;
+}

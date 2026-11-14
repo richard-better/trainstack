@@ -14,8 +14,10 @@ import {
   exerciseChoices,
   exerciseFromHistory,
   exerciseName,
+  groupWithNext,
   type LoadKind,
   loadKindLabels,
+  movedExercise,
   newKey,
   nextSet,
   repeatStrength,
@@ -23,6 +25,7 @@ import {
   setKindLabels,
   setKindMarks,
   type StrengthDraft,
+  withWholeGroups,
 } from "../lib/logbook";
 import { exercisesKey, latestWith, useExercises, useLatest } from "./logbook-data";
 
@@ -31,10 +34,12 @@ const kinds: SetKind[] = ["working", "warm_up", "drop", "failure"];
 export function StrengthEditor({
   draft,
   onChange,
+  updateDraft,
   editing,
 }: {
   draft: StrengthDraft;
   onChange: (draft: StrengthDraft) => void;
+  updateDraft: (change: (draft: StrengthDraft) => StrengthDraft) => void;
   editing: boolean;
 }) {
   const exercises = useExercises();
@@ -48,13 +53,13 @@ export function StrengthEditor({
 
   async function add(exerciseId: string) {
     const previous = await latestWith(exerciseId).catch(() => null);
-    onChange({
-      ...draft,
+    updateDraft((current) => ({
+      ...current,
       exercises: [
-        ...draft.exercises,
-        exerciseFromHistory(exerciseId, previous, draft.unit, custom),
+        ...current.exercises,
+        exerciseFromHistory(exerciseId, previous, current.unit, custom),
       ],
-    });
+    }));
   }
 
   return (
@@ -98,11 +103,15 @@ export function StrengthEditor({
               }
               last={index === draft.exercises.length - 1}
               onChange={(change) => update(entry.key, change)}
-              onRemove={() => setExercises(draft.exercises.filter(({ key }) => key !== entry.key))}
-              onGroupWithNext={(together) =>
-                setExercises(groupedWithNext(draft.exercises, index, together))
+              onRemove={() =>
+                setExercises(
+                  withWholeGroups(draft.exercises.filter(({ key }) => key !== entry.key)),
+                )
               }
-              onMove={(by) => setExercises(moved(draft.exercises, index, by))}
+              onGroupWithNext={(together) =>
+                setExercises(groupWithNext(draft.exercises, index, together))
+              }
+              onMove={(by) => setExercises(movedExercise(draft.exercises, index, by))}
             />
           </li>
         ))}
@@ -115,32 +124,6 @@ export function StrengthEditor({
       />
     </>
   );
-}
-
-function moved(list: ExerciseDraft[], index: number, by: number) {
-  const target = index + by;
-  if (target < 0 || target >= list.length) return list;
-  const next = list.map((entry) => ({ ...entry, group: null }));
-  const [entry] = next.splice(index, 1);
-  next.splice(target, 0, entry!);
-  return next;
-}
-
-function groupedWithNext(list: ExerciseDraft[], index: number, together: boolean) {
-  const next = list.map((entry) => ({ ...entry }));
-  const here = next[index]!;
-  const after = next[index + 1];
-  if (!after) return list;
-  if (together) {
-    const group = here.group ?? Math.max(0, ...next.map(({ group }) => group ?? 0)) + 1;
-    here.group = group;
-    after.group = group;
-  } else {
-    const group = here.group;
-    for (let i = index + 1; i < next.length && next[i]!.group === group; i++) next[i]!.group = null;
-    if (index === 0 || next[index - 1]!.group !== group) here.group = null;
-  }
-  return next;
 }
 
 function UnitSwitch({ unit, onChange }: { unit: MassUnit; onChange: (unit: MassUnit) => void }) {

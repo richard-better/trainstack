@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/client";
 import type { StoredSession } from "@trainstack/contract";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
@@ -41,8 +42,24 @@ function writeStash(sport: Draft["sport"], id: string, stash: Stash | null) {
 export function LogPage({ sport, id }: { sport: Draft["sport"]; id: string }) {
   const stored = useStoredSession(id);
   const [unit] = usePreferredUnit();
-  const notFound = stored.isError;
-  if (stored.isPending && !notFound) {
+  const absent =
+    stored.isError &&
+    stored.error instanceof ORPCError &&
+    (stored.error.code === "NOT_FOUND" || stored.error.code === "SESSION_DELETED");
+  if (stored.isError && !absent) {
+    return (
+      <LogShell>
+        <div className="state" role="alert">
+          <p className="state-title">This session did not load.</p>
+          <p className="lede">Your unsaved changes are kept on this device.</p>
+          <button type="button" className="secondary" onClick={() => stored.refetch()}>
+            Try again
+          </button>
+        </div>
+      </LogShell>
+    );
+  }
+  if (stored.isPending && !absent) {
     return (
       <LogShell>
         <div className="detail-head skeleton" aria-busy="true" aria-label="Loading session">
@@ -105,14 +122,15 @@ function LogForm({
   existing: StoredSession | null;
 }) {
   const [draft, setDraft] = useState<Draft>(initial);
+  const [startedFrom] = useState(base);
   const [saving, setSaving] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    writeStash(draft.sport, id, { draft, base });
-  }, [draft, id, base]);
+    writeStash(draft.sport, id, { draft, base: startedFrom });
+  }, [draft, id, startedFrom]);
 
   const checked = problemsWith(draft);
   const empty =
@@ -120,10 +138,11 @@ function LogForm({
 
   async function save() {
     setTried(true);
-    if (!checked.session) return;
+    const { session } = problemsWith(draft);
+    if (!session) return;
     setSaving(true);
     setRefusal(null);
-    const outcome = await saveSession(id, checked.session);
+    const outcome = await saveSession(id, session);
     setSaving(false);
     if (outcome.kind === "saved") {
       writeStash(draft.sport, id, null);
@@ -146,6 +165,9 @@ function LogForm({
         <StrengthEditor
           draft={draft}
           onChange={(next: StrengthDraft) => setDraft(next)}
+          updateDraft={(change) =>
+            setDraft((current) => (current.sport === "strength" ? change(current) : current))
+          }
           editing={existing !== null}
         />
       ) : (

@@ -4,7 +4,7 @@ import type { LoggedSession, LoggedSport, MassUnit } from "@trainstack/logbook";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { activitiesQueryKey, activityKey, api, queryClient } from "../api";
+import { activitiesQueryKey, api, queryClient } from "../api";
 import { unitKey } from "../lib/logbook";
 
 export const logbookKey = ["logbook"] as const;
@@ -37,9 +37,9 @@ export const latestWith = (exerciseId: string) =>
     staleTime: 60_000,
   });
 
-function refreshAround(stored: { activityId: string }) {
+function refreshAround() {
   void queryClient.invalidateQueries({ queryKey: activitiesQueryKey });
-  void queryClient.invalidateQueries({ queryKey: activityKey(stored.activityId) });
+  void queryClient.invalidateQueries({ queryKey: ["activity"] });
   void queryClient.invalidateQueries({ queryKey: logbookKey });
   void queryClient.invalidateQueries({ queryKey: ["calendar"] });
   void queryClient.invalidateQueries({ queryKey: ["training"] });
@@ -58,7 +58,7 @@ export async function saveSession(
   const [error, stored] = await safe(api.logbook.put({ id, session, editedAt }));
   if (stored) {
     queryClient.setQueryData(sessionKey(id), stored);
-    refreshAround(stored);
+    refreshAround();
     return { kind: "saved", stored };
   }
   if (isDefinedError(error)) {
@@ -79,10 +79,10 @@ export async function saveSession(
   };
 }
 
-export async function deleteSession(stored: Pick<StoredSession, "id" | "activityId">) {
+export async function deleteSession(stored: Pick<StoredSession, "id">) {
   await api.logbook.delete({ id: stored.id });
   queryClient.removeQueries({ queryKey: sessionKey(stored.id) });
-  refreshAround(stored);
+  refreshAround();
 }
 
 export function usePreferredUnit(): [MassUnit, (unit: MassUnit) => void] {

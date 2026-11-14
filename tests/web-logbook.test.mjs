@@ -9,6 +9,8 @@ import {
   exerciseChoices,
   exerciseFromHistory,
   formatMass,
+  groupWithNext,
+  movedExercise,
   gradeValueText,
   loggedFigures,
   nextSet,
@@ -16,6 +18,7 @@ import {
   repeatStrength,
   sessionOf,
   startOf,
+  withWholeGroups,
 } from "../hosted/apps/account/src/lib/logbook.ts";
 import { activityTitle, sportName } from "../hosted/apps/account/src/lib/sports.ts";
 import { mockApple } from "./helpers/apple.mjs";
@@ -187,4 +190,29 @@ test("the exercise search puts what the athlete did lately first", () => {
   const choices = exerciseChoices("press", [], [{ exerciseId: "overhead_press" }]);
   assert.equal(choices[0].id, "overhead_press");
   assert.ok(choices.every(({ name }) => name.toLowerCase().includes("press")));
+});
+
+test("moving or removing an exercise keeps the supersets it does not split", () => {
+  const entry = (exerciseId) => exerciseFromHistory(exerciseId, null, "kg", []);
+  let list = [entry("bench_press"), entry("barbell_row"), entry("back_squat"), entry("deadlift")];
+  list = groupWithNext(list, 0, true);
+  const groups = (entries) =>
+    entries.map(({ exerciseId, group }) => `${exerciseId}:${group ?? "-"}`);
+  assert.deepEqual(groups(movedExercise(list, 3, -1)), [
+    "bench_press:1",
+    "barbell_row:1",
+    "deadlift:-",
+    "back_squat:-",
+  ]);
+  assert.deepEqual(groups(movedExercise(list, 2, -1)), [
+    "bench_press:-",
+    "back_squat:-",
+    "barbell_row:-",
+    "deadlift:-",
+  ]);
+  assert.deepEqual(groups(withWholeGroups(list.filter((_, index) => index !== 1))), [
+    "bench_press:-",
+    "back_squat:-",
+    "deadlift:-",
+  ]);
 });
