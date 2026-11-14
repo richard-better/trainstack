@@ -11,6 +11,15 @@ struct RideTraceReplayTests {
   static let recordingGoldens = ProcessInfo.processInfo.environment["RIDE_RECORD_TRACES"] == "1"
 
   static let scenarios: [String: HeadlessRide] = [
+    "extended-repeated-and-ridden-on": HeadlessRide(
+      WorkoutTemplate.named("Recovery 30")!.fitted(to: 300), ftp: 220,
+      utcOffsetSeconds: 2 * 60 * 60,
+      events: [
+        20: [.rider(.extendInterval(seconds: 60))], 70: [.rider(.markLap)],
+        130: [.rider(.previousInterval)], 140: [.rider(.changeMode(.slope))],
+        160: [.rider(.changeMode(.erg))], 200: [.rider(.skipInterval)],
+        260: [.rider(.extendInterval(seconds: 30))],
+      ], ridingOnFor: 90),
     "laps-marked-paused-and-skipped": HeadlessRide(
       WorkoutTemplate.named("Recovery 30")!.fitted(to: 300), ftp: 220,
       utcOffsetSeconds: -5 * 60 * 60,

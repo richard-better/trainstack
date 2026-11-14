@@ -17,6 +17,7 @@ public struct HeadlessRide: Sendable {
 
   public var header: RideTrace.Header
   public var events: [Int: [Event]]
+  public var rideOnSeconds: Int
 
   public static let resumeDelayAfterReconnectSeconds = 5
   public static let longestRideShareOfWorkout = 3.0
@@ -24,18 +25,19 @@ public struct HeadlessRide: Sendable {
   public init(
     _ template: WorkoutTemplate, ftp: Int, riderWeight: Double = 75,
     startDate: Date = Date(timeIntervalSince1970: 1_800_000_000), utcOffsetSeconds: Int? = nil,
-    events: [Int: [Event]] = [:]
+    events: [Int: [Event]] = [:], ridingOnFor rideOnSeconds: Int = 0
   ) {
     self.init(
       template.planned, ftp: ftp, riderWeight: riderWeight, startDate: startDate,
-      utcOffsetSeconds: utcOffsetSeconds, events: events)
+      utcOffsetSeconds: utcOffsetSeconds, events: events, ridingOnFor: rideOnSeconds)
   }
 
   public init(
     _ workout: PlannedWorkout, ftp: Int, riderWeight: Double = 75,
     startDate: Date = Date(timeIntervalSince1970: 1_800_000_000), utcOffsetSeconds: Int? = nil,
-    events: [Int: [Event]] = [:]
+    events: [Int: [Event]] = [:], ridingOnFor rideOnSeconds: Int = 0
   ) {
+    self.rideOnSeconds = rideOnSeconds
     header = .init(
       workout: workout, ftp: ftp, startDate: startDate, utcOffsetSeconds: utcOffsetSeconds,
       riderWeight: riderWeight)
@@ -53,7 +55,12 @@ public struct HeadlessRide: Sendable {
     var trainerBackAt: Int?
     apply(.begin(trainerConnected: true))
     let lastSecond = Int(engine.session.duration * Self.longestRideShareOfWorkout)
-    for second in 0..<lastSecond where !engine.session.isComplete {
+    var rideOnLeft = rideOnSeconds
+    for second in 0..<lastSecond {
+      if engine.session.isComplete {
+        guard rideOnLeft > 0 else { break }
+        rideOnLeft -= 1
+      }
       for event in events[second] ?? [] {
         switch event {
         case .trainerDrops(let seconds): trainerBackAt = second + seconds

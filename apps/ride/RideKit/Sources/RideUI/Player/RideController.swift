@@ -66,8 +66,8 @@ final class RideController {
 
   private static func changesTotalsWithoutASample(_ input: RideInput) -> Bool {
     switch input {
-    case .begin, .resumeAfterCrash, .skipInterval, .markLap: true
-    case .tick, .togglePause, .adjust, .changeMode: false
+    case .begin, .resumeAfterCrash, .skipInterval, .markLap, .previousInterval: true
+    case .tick, .togglePause, .extendInterval, .adjust, .changeMode: false
     }
   }
 
@@ -160,6 +160,12 @@ final class RideController {
   func skipInterval() { apply(.skipInterval) }
 
   func markLap() { apply(.markLap) }
+
+  func previousInterval() { apply(.previousInterval) }
+
+  func extendInterval() { apply(.extendInterval(seconds: Self.extensionSeconds)) }
+
+  static let extensionSeconds = 60
 
   func adjust(by steps: Int) { apply(.adjust(steps: steps)) }
 
