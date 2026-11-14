@@ -34,6 +34,10 @@ final class ActivitySync {
   func start() {
     guard library.isStored else { return }
     library.onChange = { [weak self] change in self?.libraryChanged(change) }
+    library.onOpenedByHand = { [weak self] ids in
+      self?.openedByHand(ids)
+      self?.syncSoon()
+    }
     syncSoon()
   }
 
@@ -42,9 +46,22 @@ final class ActivitySync {
     syncSoon()
   }
 
+  func openedByHand(_ ids: [Ride.ID]) {
+    guard let account = lastAccountID else { return }
+    update(account) { state in
+      for id in ids where library[id] != nil {
+        state.onServer.remove(id)
+        state.deleted.remove(id)
+        state.deletionsToSend.remove(id)
+        state.restoresToSend.insert(id)
+      }
+    }
+  }
+
   func remember(_ change: RideLibrary.Change) {
     guard case .removed(let id) = change, let account = lastAccountID else { return }
     update(account) { state in
+      state.restoresToSend.remove(id)
       guard state.deleted.insert(id).inserted else { return }
       state.onServer.remove(id)
       state.deletionsToSend.insert(id)
@@ -68,12 +85,24 @@ final class ActivitySync {
       try checkStillSyncing(account)
       update(account.id) { $0.deletionsToSend.remove(id) }
     }
+    for id in state(of: account.id).restoresToSend.sorted() {
+      guard let ride = library[id] else {
+        update(account.id) { $0.restoresToSend.remove(id) }
+        continue
+      }
+      let result = try await server.restore(ride.activityFile, for: account)
+      try checkStillSyncing(account)
+      guard state(of: account.id).restoresToSend.contains(id) else { continue }
+      update(account.id) { $0.restoresToSend.remove(id) }
+      receive(result, for: id, account: account.id)
+    }
     let onServer = try await server.activityIDs(for: account)
     try checkStillSyncing(account)
     dropRidesDeletedOnTheServer(keeping: onServer, account: account.id)
     for ride in library.rides where needsUploading(ride.id, account: account.id) {
       let result = try await server.upload(ride.activityFile, for: account)
       try checkStillSyncing(account)
+      guard !state(of: account.id).restoresToSend.contains(ride.id) else { continue }
       receive(result, for: ride.id, account: account.id)
     }
   }
@@ -86,7 +115,7 @@ final class ActivitySync {
   private func needsUploading(_ id: Ride.ID, account: String) -> Bool {
     let state = state(of: account)
     return library[id] != nil && !state.onServer.contains(id) && !state.deleted.contains(id)
-      && !refusedThisLaunch.contains(id)
+      && !state.restoresToSend.contains(id) && !refusedThisLaunch.contains(id)
   }
 
   private func dropRidesDeletedOnTheServer(keeping onServer: Set<Ride.ID>, account: String) {

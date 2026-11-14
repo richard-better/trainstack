@@ -17,10 +17,19 @@ struct ActivitySyncTests {
       let library = RideLibrary(directory: rides)
       let sync = ActivitySync(library: library, server: server, directory: state)
       library.onChange = { sync.remember($0) }
+      library.onOpenedByHand = { sync.openedByHand($0) }
       return Device(library: library, sync: sync, server: server, rides: rides, state: state)
     }
 
     func relaunched() -> Device { .launched(server: server, rides: rides, state: state) }
+
+    func openByHand(_ data: Data) throws -> Ride.ID {
+      let file = rides.deletingLastPathComponent().appending(
+        path: "picked-\(UUID().uuidString).fit")
+      try data.write(to: file)
+      #expect(library.open([file]).isEmpty)
+      return Ride(recording: try FITDecoder.decode(data), fileData: data).id
+    }
 
     func ride(startingAt seconds: TimeInterval) throws -> Ride.ID {
       try library.add(rideFile(startingAt: seconds))
@@ -208,6 +217,136 @@ struct ActivitySyncTests {
       #expect(device.library[id] != nil)
       #expect(await device.server.uploads == [id])
     }
+  }
+
+  @Test func aDeletedRideTheRiderImportsByHandIsRestoredOnTheServer() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      try await device.sync.sync()
+      device.library.remove(id)
+      try await device.sync.sync()
+      #expect(await device.server.tombstones(of: "ada") == [id])
+      _ = try device.openByHand(data)
+      try await device.sync.sync()
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.activities(of: "ada") == [id])
+      #expect(await device.server.tombstones(of: "ada").isEmpty)
+      #expect(device.library[id] != nil)
+      try await device.sync.sync()
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.uploads == [id])
+    }
+  }
+
+  @Test func aRideDeletedElsewhereThatTheRiderImportsByHandIsRestoredNotDropped() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = Ride(recording: try FITDecoder.decode(data), fileData: data).id
+      try await device.sync.sync()
+      await device.server.deleteElsewhere(id, for: "ada")
+      _ = try device.openByHand(data)
+      try await device.sync.sync()
+      #expect(device.library[id] != nil)
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.uploads.isEmpty)
+    }
+  }
+
+  @Test func aSyncedRideDeletedOnTheWebThenOpenedByHandIsRestoredNotDropped() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      try await device.sync.sync()
+      await device.server.deleteElsewhere(id, for: "ada")
+      _ = try device.openByHand(data)
+      try await device.sync.sync()
+      #expect(device.library[id] != nil)
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.activities(of: "ada") == [id])
+    }
+  }
+
+  @Test func aRideOpenedByHandWhileTheListIsOnItsWayIsRestoredNotDropped() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      try await device.sync.sync()
+      await device.server.deleteElsewhere(id, for: "ada")
+      await device.server.holdReplies(to: .list)
+      let listing = Task { try await device.sync.sync() }
+      while !(await device.server.isHoldingAReply) { await Task.yield() }
+      _ = try device.openByHand(data)
+      await device.server.releaseReplies()
+      try await listing.value
+      try await device.sync.sync()
+      #expect(device.library[id] != nil)
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.activities(of: "ada") == [id])
+    }
+  }
+
+  @Test func aRideOpenedByHandWhileItsUploadIsRefusedAsDeletedIsRestored() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      await device.server.deleteElsewhere(id, for: "ada")
+      await device.server.holdReplies(to: .upload)
+      let uploading = Task { try await device.sync.sync() }
+      while !(await device.server.isHoldingAReply) { await Task.yield() }
+      _ = try device.openByHand(data)
+      await device.server.releaseReplies()
+      try await uploading.value
+      try await device.sync.sync()
+      #expect(device.library[id] != nil)
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.activities(of: "ada") == [id])
+    }
+  }
+
+  @Test func backgroundSyncNeverRestoresARideDeletedOnTheServer() async throws {
+    try await withDevice { device in
+      let id = try device.ride(startingAt: 0)
+      await device.server.deleteElsewhere(id, for: "ada")
+      try await device.sync.sync()
+      try await device.relaunched().sync.sync()
+      #expect(device.library[id] == nil)
+      #expect(await device.server.restores.isEmpty)
+      #expect(await device.server.tombstones(of: "ada") == [id])
+    }
+  }
+
+  @Test func aRestoreIsSentAfterARelaunchAndForgottenWhenTheRideIsDeletedFirst() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      try await device.sync.sync()
+      device.library.remove(id)
+      try await device.sync.sync()
+      await device.server.goOffline()
+      _ = try device.openByHand(data)
+      await #expect(throws: StravaError.unavailable) { try await device.sync.sync() }
+      await device.server.goOffline(false)
+      let relaunched = device.relaunched()
+      try await relaunched.sync.sync()
+      #expect(await device.server.restores == [id])
+
+      relaunched.library.remove(id)
+      try await relaunched.sync.sync()
+      _ = try relaunched.openByHand(data)
+      relaunched.library.remove(id)
+      try await relaunched.sync.sync()
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.tombstones(of: "ada") == [id])
+    }
+  }
+
+  @Test func aSyncStateSavedBeforeRestoresExistedStillLoads() throws {
+    let saved = Data(#"{"onServer":["a"],"deleted":["b"],"deletionsToSend":["b"]}"#.utf8)
+    let state = try JSONDecoder().decode(ActivitySyncState.self, from: saved)
+    #expect(state.deleted == ["b"])
+    #expect(state.deletionsToSend == ["b"])
+    #expect(state.restoresToSend.isEmpty)
   }
 
   @Test func aRideDeletedWhileSignedOutIsDeletedFromTheLastAccountWhenItSignsIn() async throws {

@@ -5,11 +5,12 @@ import RideStrava
 @testable import RideUI
 
 actor FakeActivityServer: ActivityServer {
-  enum Request { case list, upload }
+  enum Request { case list, upload, restore }
 
   enum Call: Equatable {
     case list(account: String)
     case upload(String, account: String)
+    case restore(String, account: String)
     case delete(String, account: String)
   }
 
@@ -61,6 +62,10 @@ actor FakeActivityServer: ActivityServer {
     calls.compactMap { if case .upload(let id, _) = $0 { id } else { nil } }
   }
 
+  var restores: [String] {
+    calls.compactMap { if case .restore(let id, _) = $0 { id } else { nil } }
+  }
+
   var deletions: [Call] {
     calls.filter { if case .delete = $0 { true } else { false } }
   }
@@ -94,6 +99,18 @@ actor FakeActivityServer: ActivityServer {
     if result == .stored { store(id, for: account.id) }
     await replyWhenReleased(to: .upload)
     return result
+  }
+
+  func restore(_ file: ActivityFile, for account: ActivityAccount) async throws
+    -> ActivityUploadResult
+  {
+    try check(account)
+    let id = Ride(recording: try FITDecoder.decode(file.data), fileData: file.data).id
+    calls.append(.restore(id, account: account.id))
+    tombstones[account.id, default: []].remove(id)
+    store(id, for: account.id)
+    await replyWhenReleased(to: .restore)
+    return .stored
   }
 
   func deleteActivity(_ id: String, for account: ActivityAccount) async throws {

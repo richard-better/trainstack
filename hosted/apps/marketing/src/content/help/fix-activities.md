@@ -45,6 +45,7 @@ does not add it back, so a phone that was offline cannot bring back something yo
 Deleting removes the activity's file too, so you need the file to bring it back. Upload it from
 **Activities** as in [Getting activities in](/help/add-activities). Trainstack says when you deleted
 it; press **Restore** and the activity comes back, with its numbers worked out from the file again.
+In Ride, open the ride's FIT file in History, and Ride brings it back to your account too.
 If the workout had other sources, Trainstack links the restored one to them again, but a choice
 you made about which source is primary, or that two activities are not the same workout, is not
 brought back.
