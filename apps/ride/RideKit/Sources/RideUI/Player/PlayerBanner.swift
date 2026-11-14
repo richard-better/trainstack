@@ -33,8 +33,8 @@ struct PlayerBanner: Equatable {
       let next = session.nextInterval
     else { return nil }
     let target: String? =
-      if session.mode == .erg, let watts = next.plannedPower(at: next.start) {
-        "\(session.adjusted(watts)) W"
+      if let watts = next.plannedPower(at: next.start) {
+        "\(session.mode == .erg ? session.adjusted(watts) : watts) W"
       } else if case .heartRate(let heartRate) = next.step.target {
         StepTargetText.heartRate(heartRate).value + " "
           + StepTargetText.heartRate(heartRate).unit

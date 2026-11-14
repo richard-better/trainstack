@@ -52,6 +52,20 @@ struct PlayerBannerTests {
     #expect(banner?.text == "Next: Threshold block · 250 W · for 5:00")
   }
 
+  @Test func announcesTheNextPowerTargetInEveryModeAndAdjustsItOnlyInERG() {
+    var slope = session(at: 50)
+    slope.mode = .slope
+    slope.adjust(by: 3)
+    #expect(
+      PlayerBanner.shown(in: slope, ftp: 250).first?.text
+        == "Next: Threshold block · 250 W · for 5:00")
+    var harder = session(at: 50)
+    harder.adjust(by: 10)
+    #expect(
+      PlayerBanner.shown(in: harder, ftp: 250).first?.text
+        == "Next: Threshold block · 275 W · for 5:00")
+  }
+
   @Test func announcesALapButtonStepAsLastingUntilTheLap() {
     let banner = shown(at: 355).first
     #expect(banner?.text == "Next: Free ride · until you press lap")
