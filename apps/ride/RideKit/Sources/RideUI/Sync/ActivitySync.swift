@@ -49,7 +49,7 @@ final class ActivitySync {
   func openedByHand(_ ids: [Ride.ID]) {
     guard let account = lastAccountID else { return }
     update(account) { state in
-      for id in ids where library[id] != nil && !state.onServer.contains(id) {
+      for id in ids where library[id] != nil {
         state.deleted.remove(id)
         state.deletionsToSend.remove(id)
         state.restoresToSend.insert(id)
@@ -101,6 +101,7 @@ final class ActivitySync {
     for ride in library.rides where needsUploading(ride.id, account: account.id) {
       let result = try await server.upload(ride.activityFile, for: account)
       try checkStillSyncing(account)
+      guard !state(of: account.id).restoresToSend.contains(ride.id) else { continue }
       receive(result, for: ride.id, account: account.id)
     }
   }

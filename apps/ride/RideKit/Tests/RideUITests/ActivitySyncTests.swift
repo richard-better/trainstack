@@ -253,6 +253,38 @@ struct ActivitySyncTests {
     }
   }
 
+  @Test func aSyncedRideDeletedOnTheWebThenOpenedByHandIsRestoredNotDropped() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      try await device.sync.sync()
+      await device.server.deleteElsewhere(id, for: "ada")
+      _ = try device.openByHand(data)
+      try await device.sync.sync()
+      #expect(device.library[id] != nil)
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.activities(of: "ada") == [id])
+    }
+  }
+
+  @Test func aRideOpenedByHandWhileItsUploadIsRefusedAsDeletedIsRestored() async throws {
+    try await withDevice { device in
+      let data = try rideFile(startingAt: 0)
+      let id = try device.library.add(data)
+      await device.server.deleteElsewhere(id, for: "ada")
+      await device.server.holdReplies(to: .upload)
+      let uploading = Task { try await device.sync.sync() }
+      while !(await device.server.isHoldingAReply) { await Task.yield() }
+      _ = try device.openByHand(data)
+      await device.server.releaseReplies()
+      try await uploading.value
+      try await device.sync.sync()
+      #expect(device.library[id] != nil)
+      #expect(await device.server.restores == [id])
+      #expect(await device.server.activities(of: "ada") == [id])
+    }
+  }
+
   @Test func backgroundSyncNeverRestoresARideDeletedOnTheServer() async throws {
     try await withDevice { device in
       let id = try device.ride(startingAt: 0)
