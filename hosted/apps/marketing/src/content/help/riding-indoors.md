@@ -1,6 +1,6 @@
 ---
 title: Riding indoors with Ride
-summary: How Ride shows and records power on a smart trainer, and how to hold a separate power meter on target with Power match.
+summary: How Ride shows and records power on a smart trainer, Power match for a separate power meter, the ramp test and calibrating your trainer.
 section: Training
 order: 23
 ---
@@ -48,3 +48,39 @@ What it does and does not do:
 
 Calibrate your power meter (its zero offset, in its own app) before a ride, as its maker
 recommends. Power match makes the trainer agree with the meter, so the meter has to be right.
+
+## Ramp test
+
+The ramp test estimates your FTP in about 20 minutes. Start it in Ride under Settings, then Ramp
+Test. It runs like any workout, in ERG mode:
+
+1. Five minutes of warm-up.
+2. One-minute steps, each a little harder than the last. They start at half your FTP and go up by
+   6% of it each minute, so the ramp lasts about the same time whatever your FTP. Without an FTP,
+   Ride sizes the steps for 200 W.
+3. Hold each step as long as you can at a steady cadence. The ramp ends by itself once your power
+   stays under 80% of the step for ten seconds, or as soon as you stop pedalling. The player shows an
+   open-ended ramp rather than a time left.
+4. Five minutes of cool-down, then end and save the ride as usual.
+
+When you save it, Ride shows the result and how it got there: your best minute of the ride, and
+75% of it, which is your FTP estimate. The ramp test favours riders with a strong sprint, who can
+hold a high last minute; if that is you, your FTP may be a little lower than the estimate.
+
+Nothing changes until you decide. Set FTP keeps the estimate as a ramp test dated today and sets
+your FTP from today, which updates your zones and reaches your account like any other change (see
+[Thresholds and zones](/help/thresholds-and-zones)). When the test took your heart rate higher than your
+maximum heart rate, Ride offers to set the new maximum; do that only if you rode yourself out.
+
+## Calibrating your trainer
+
+A spin-down tells the trainer how much its flywheel slows by itself, so it measures your power more
+accurately. Do one after about ten minutes of riding, once the trainer is warm, and again if you
+move it or change its tyre pressure.
+
+In Ride, open Settings, then Calibrate Trainer, and press Start Spin-Down. Pedal up past the speed
+shown, then stop pedalling when Ride says so and keep still while the flywheel coasts to a stop.
+Ride then says whether the trainer finished; the trainer keeps the result itself.
+
+Ride calibrates trainers that offer a spin-down over Bluetooth (FTMS). For a trainer that does not,
+Ride says so: calibrate it in its maker's app.

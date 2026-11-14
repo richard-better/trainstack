@@ -5,18 +5,23 @@ public struct PlannedWorkout: Hashable, Codable, Sendable {
   public var category: PowerZone?
   public var about: String
   public var steps: [PlannedStep]
+  public var rampSteps: Range<Int>?
 
-  public init(name: String, category: PowerZone?, about: String = "", steps: [PlannedStep]) {
+  public init(
+    name: String, category: PowerZone?, about: String = "", steps: [PlannedStep],
+    rampSteps: Range<Int>? = nil
+  ) {
     self.name = name
     self.category = category
     self.about = about
     self.steps = steps
+    self.rampSteps = rampSteps
   }
 
   public var duration: TimeInterval { steps.reduce(0) { $0 + $1.duration } }
 
   public func workout(ftp: Int) -> Workout {
-    Workout(name: name, steps: steps.map { $0.resolved(ftp: ftp) })
+    Workout(name: name, steps: steps.map { $0.resolved(ftp: ftp) }, rampSteps: rampSteps)
   }
 }
 

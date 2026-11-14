@@ -24,6 +24,12 @@ struct SettingsList: View {
           NavigationLink(value: SettingsPage.player) {
             Label("Player", systemImage: "gauge.with.needle")
           }
+          NavigationLink(value: SettingsPage.rampTest) {
+            Label("Ramp Test", systemImage: "chart.line.uptrend.xyaxis")
+          }
+          NavigationLink(value: SettingsPage.spinDown) {
+            Label("Calibrate Trainer", systemImage: "arrow.trianglehead.2.clockwise")
+          }
           NavigationLink(value: SettingsPage.devices) {
             Label("Devices", systemImage: "antenna.radiowaves.left.and.right")
           }

@@ -10,6 +10,7 @@ final class RideLauncher {
   private(set) var interrupted: InterruptedRide?
   var isPlayerPresented = false
   var isConfirmingEnd = false
+  var rampTestOutcome: RampTestOutcome?
   let devices: BluetoothDevices
   var powerDisplay = PowerDisplay.standard {
     didSet { ride?.powerDisplay = powerDisplay }
@@ -89,6 +90,7 @@ final class RideLauncher {
     var rideID: Ride.ID?
     if let recording = ride?.session.recording(), !recording.samples.isEmpty, let library {
       rideID = keep(recording, in: library)
+      handOverRampTest(of: ride?.workout, recording: recording)
       if let rideID, let planned, let startedAt = ride?.session.startDate {
         onPlannedRideSaved?(planned, rideID, startedAt, .now)
       }
@@ -108,6 +110,11 @@ final class RideLauncher {
       WatchLink.shared.isRecordingRide = false
       WatchLink.shared.endRide()
     #endif
+  }
+
+  private func handOverRampTest(of workout: PlannedWorkout?, recording: RideRecording) {
+    guard workout?.rampSteps != nil else { return }
+    rampTestOutcome = RampTestOutcome(result: RampTestResult(recording))
   }
 
   private func keep(_ recording: RideRecording, in library: RideLibrary) -> Ride.ID? {
@@ -146,7 +153,9 @@ final class RideLauncher {
 
   func saveInterrupted(to library: RideLibrary) {
     guard let interrupted else { return }
-    let rideID = keep(interrupted.session.recording(), in: library)
+    let recording = interrupted.session.recording()
+    let rideID = keep(recording, in: library)
+    handOverRampTest(of: interrupted.trace.header.workout, recording: recording)
     self.interrupted = nil
     RideJournal.finish(in: journalDirectory, keepingFor: rideID)
   }

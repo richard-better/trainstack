@@ -14,6 +14,7 @@ struct CyclingSensorReadings: Sendable {
 
   private var power: [CyclingCharacteristic: Reading] = [:]
   private var cadence: [CyclingCharacteristic: Reading] = [:]
+  private var speed: (kilometresPerHour: Double, date: Date)?
   private var cranks: [CyclingCharacteristic: CrankCadence] = [:]
   private var powerCranks: [CyclingCharacteristic: CrankRevolution] = [:]
   private var powerCrankMoved: [CyclingCharacteristic: Date] = [:]
@@ -41,6 +42,9 @@ struct CyclingSensorReadings: Sendable {
       if let rpm = measurement.cadence {
         cadence[characteristic] = Reading(value: rpm, date: date)
       }
+      if let kilometresPerHour = measurement.kilometresPerHour {
+        speed = (kilometresPerHour, date)
+      }
     }
   }
 
@@ -54,6 +58,11 @@ struct CyclingSensorReadings: Sendable {
       current(cadence, preference: Self.cadenceSourcesBestFirst, at: date, heardWithin: maxAge)
     case .heartRate: nil
     }
+  }
+
+  func kilometresPerHour(at date: Date) -> Double? {
+    guard let speed, date.timeIntervalSince(speed.date) <= Self.maxAge else { return nil }
+    return speed.kilometresPerHour
   }
 
   mutating func expire(at date: Date) {

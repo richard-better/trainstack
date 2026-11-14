@@ -10,6 +10,8 @@ struct SettingsPageView: View {
     case .ftpTests(let scope): FTPTestsView(scope: scope)
     case .rider: RiderPage()
     case .player: PlayerSettingsView()
+    case .rampTest: RampTestView()
+    case .spinDown: SpinDownView()
     case .devices: DevicesView()
     case .account: AccountSettingsView()
     }

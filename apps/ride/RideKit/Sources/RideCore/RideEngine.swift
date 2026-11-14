@@ -5,6 +5,8 @@ public struct RideEngine: Sendable {
   public private(set) var session: RideSession
   public private(set) var isPausedForTrainer = false
   public private(set) var powerMatch = PowerMatch()
+  public private(set) var rampEndedAt: TimeInterval?
+  private var secondsBelowRamp: TimeInterval = 0
   private var trainerWasConnected = false
 
   public init(session: RideSession) {
@@ -28,9 +30,11 @@ public struct RideEngine: Sendable {
     case .tick(let seconds, let reading, let trainerConnected):
       pauseIfTrainerDropped(trainerConnected: trainerConnected)
       let commanded = session.isPaused ? nil : commandedWatts
+      let rampTarget = session.isPaused ? nil : rampTargetWatts
       let recorded = session.samples.count
       session.advance(by: seconds, reading: reading)
       powerMatch.observe(reading.powerMatch, commanded: commanded, over: seconds)
+      endRampIfItIsBeyondTheRider(target: rampTarget, power: reading.power, over: seconds)
       return session.samples.count > recorded ? session.samples.last : nil
     case .togglePause:
       isPausedForTrainer = false
@@ -56,6 +60,36 @@ public struct RideEngine: Sendable {
     guard trainerWasConnected, !trainerConnected, !session.isPaused else { return }
     session.pause()
     isPausedForTrainer = true
+  }
+
+  private var rampTargetWatts: Int? {
+    guard let ramp = session.workout.rampSteps, let interval = session.currentInterval,
+      ramp.contains(interval.stepIndex),
+      let planned = interval.plannedPower(at: session.position)
+    else { return nil }
+    return session.adjusted(planned)
+  }
+
+  private mutating func endRampIfItIsBeyondTheRider(
+    target: Int?, power: Int?, over seconds: TimeInterval
+  ) {
+    guard let target else {
+      secondsBelowRamp = 0
+      return
+    }
+    if Double(power ?? 0) < Double(target) * RampTest.endsBelowShareOfTarget {
+      secondsBelowRamp += seconds
+    } else {
+      secondsBelowRamp = 0
+    }
+    guard secondsBelowRamp >= RampTest.endsAfterSecondsBelow,
+      let ramp = session.workout.rampSteps
+    else { return }
+    secondsBelowRamp = 0
+    rampEndedAt = session.elapsed
+    while let interval = session.currentInterval, ramp.contains(interval.stepIndex) {
+      session.skipInterval()
+    }
   }
 
   private var commandedWatts: Int? {

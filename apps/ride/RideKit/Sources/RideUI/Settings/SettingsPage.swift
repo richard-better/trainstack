@@ -6,6 +6,8 @@ enum SettingsPage: Hashable {
   case ftpTests(ZoneScope)
   case rider
   case player
+  case rampTest
+  case spinDown
   case devices
   case account
 }

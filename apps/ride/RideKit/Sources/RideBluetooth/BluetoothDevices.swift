@@ -14,6 +14,13 @@ public final class BluetoothDevices {
   public var heartRate: Int? { reading(for: .heartRate, at: now()) }
   public var power: Int? { reading(for: .power, at: now()) }
   public var cadence: Int? { reading(for: .cadence, at: now()) }
+  public private(set) var spinDown: SpinDown?
+  public var trainerKilometresPerHour: Double? {
+    paired(.trainer).flatMap { cyclingReadings[$0.id]?.kilometresPerHour(at: now()) }
+  }
+  public var trainerOffersSpinDown: Bool? {
+    paired(.trainer).flatMap { trainerControls[$0.id]?.features?.supportsSpinDown }
+  }
   @ObservationIgnored public var onHeartRate: ((Int) -> Void)?
   @ObservationIgnored public var onCyclingActivity: (() -> Void)?
 
@@ -32,6 +39,7 @@ public final class BluetoothDevices {
   @ObservationIgnored private var expiryTask: Task<Void, Never>?
   @ObservationIgnored private var trainerTarget: TrainerTarget?
   @ObservationIgnored private var trainerControls: [UUID: FitnessMachineControl] = [:]
+  @ObservationIgnored private var spinDownWatch: Task<Void, Never>?
 
   private static let pairedKey = "bluetooth.paired"
   private static let sourcePicksKey = "bluetooth.sourcePicks"
@@ -165,6 +173,32 @@ public final class BluetoothDevices {
     }
   }
 
+  public func startSpinDown(at date: Date = .now) {
+    guard let trainer = paired(.trainer), connectionState(of: trainer.id) == .connected,
+      trainerTarget == nil
+    else { return }
+    updateTrainerControl(trainer.id) { $0.startSpinDown(at: date) }
+    watchForAnUnansweredSpinDown(of: trainer.id)
+  }
+
+  private func watchForAnUnansweredSpinDown(of id: UUID) {
+    spinDownWatch?.cancel()
+    spinDownWatch = Task { [weak self] in
+      while !Task.isCancelled {
+        do { try await Task.sleep(for: .seconds(1)) } catch { break }
+        guard let self, spinDown == .starting else { break }
+        updateTrainerControl(id) { [now] in $0.checkForTimeouts(at: now()) }
+      }
+    }
+  }
+
+  public func endSpinDown(at date: Date = .now) {
+    spinDownWatch?.cancel()
+    spinDown = nil
+    guard let trainer = paired(.trainer) else { return }
+    updateTrainerControl(trainer.id) { $0.endSpinDown(at: date) }
+  }
+
   public func startRecording(to log: BluetoothLog) {
     transport.startRecording(to: log, paired: paired, picks: sourcePicks)
   }
@@ -209,7 +243,7 @@ public final class BluetoothDevices {
     batteryLevels[id] = nil
     lastHeard[id] = nil
     cyclingReadings[id] = nil
-    trainerControls[id] = nil
+    if trainerControls.removeValue(forKey: id) != nil { failSpinDownUnderway() }
     heartRateReadings[id] = nil
     transport.disconnect(id)
   }
@@ -285,6 +319,7 @@ public final class BluetoothDevices {
       lastHeard.removeAll()
       cyclingReadings.removeAll()
       trainerControls.removeAll()
+      failSpinDownUnderway()
       heartRateReadings.removeAll()
       transport.stopScan()
     }
@@ -303,7 +338,7 @@ public final class BluetoothDevices {
     batteryLevels[id] = nil
     lastHeard[id] = nil
     cyclingReadings[id] = nil
-    trainerControls[id] = nil
+    if trainerControls.removeValue(forKey: id) != nil { failSpinDownUnderway() }
     heartRateReadings[id] = nil
     guard isPaired(id) else { return }
     connections[id] = .disconnected
@@ -351,7 +386,12 @@ public final class BluetoothDevices {
     var control = trainerControls[id] ?? FitnessMachineControl(target: trainerTarget)
     let command = change(&control)
     trainerControls[id] = control
+    if spinDown != control.spinDown { spinDown = control.spinDown }
     if let command { transport.writeTrainerControl(command.data, to: id) }
+  }
+
+  private func failSpinDownUnderway() {
+    if spinDown?.isUnderway == true { spinDown = .failed }
   }
 
   private func startExpiringReadings() {

@@ -6,6 +6,14 @@ struct PlayerPresentation: ViewModifier {
   let namespace: Namespace.ID
 
   func body(content: Content) -> some View {
+    presentingThePlayer(content)
+      .sheet(item: $launcher.rampTestOutcome) { outcome in
+        RampTestResultView(outcome: outcome)
+      }
+  }
+
+  @ViewBuilder
+  private func presentingThePlayer(_ content: Content) -> some View {
     #if os(iOS)
       content
         .fullScreenCover(isPresented: $launcher.isPlayerPresented) {

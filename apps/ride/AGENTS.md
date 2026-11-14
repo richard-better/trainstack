@@ -299,6 +299,30 @@ Once the workout ends the ride carries on recording as a free ride, in whichever
 picks (ERG holds a flat road, as for any step without a target), until they end it; that stretch
 is a lap with no step.
 
+With a power meter and a trainer both paired, the meter is the power source (a dedicated sensor
+comes before a trainer that also offers its service), and Power match (`PowerMatch`, in the engine)
+holds the meter on the ERG target. It is feedforward on a measured ratio, not a loop on the error:
+the trainer's power over the meter's, learnt as a 20-second moving average only while both are
+steady, and the trainer is sent the target times that ratio, never more than 10% away. Since the
+command never feeds back into what is learnt, it cannot oscillate or wind up across intervals, and
+a ratio scales with the target where an offset would not. The meter and trainer readings come in
+the journalled tick, so a replay sends the same commands. `PowerMatchTests` holds it to overshoot
+and settling bounds on a simulated trainer (`ErgRig`); a real trainer's lag and how it reports power
+in ERG are what those tests assume, not what they prove. Power display only averages the number the
+player shows: what is recorded is every reading.
+
+The ramp test (`RampTest`) is a `PlannedWorkout` whose `rampSteps` mark the open-ended part: one-minute
+steps from half of FTP, up by 6% of FTP each (sized from FTP so every rider gets about the same
+number of steps). The engine ends the ramp once power has been under 80% of the step for ten seconds,
+skipping to the cool-down, and `RampTestResult` estimates FTP as 75% of the best minute. The result is
+only ever kept by the rider's tap, as a ramp FTP test dated that day through the settings ledger.
+
+Spin-down calibration uses the Fitness Machine Control Point: `FitnessMachineControl` reads the
+Fitness Machine Feature (target setting bit 15), writes Spin Down Control (0x13) when no ride holds
+the trainer, and follows the Spin Down Status (0x14) until the trainer reports success or error, then
+hands control back. FTMS gives no spin-down time or result value, and brand-specific calibrations
+(Wahoo's, Tacx's) are not implemented: those trainers are told to calibrate in their maker's app.
+
 Speed and distance come from power through `VirtualBike`, as in Zwift and TrainerRoad: many
 trainers report no speed, and in ERG mode what they report follows the gear, not the effort.
 Workouts are labelled with the fixed `PowerZone` bands, since their steps are shares of FTP

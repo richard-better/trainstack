@@ -13,10 +13,12 @@ struct FitnessMachineResponse: Equatable, Sendable {
 
   let requestOpCode: UInt8
   let result: Result
+  let parameter: Data
 
-  init(requestOpCode: UInt8, result: Result) {
+  init(requestOpCode: UInt8, result: Result, parameter: Data = Data()) {
     self.requestOpCode = requestOpCode
     self.result = result
+    self.parameter = parameter
   }
 
   init?(_ data: Data) {
@@ -26,5 +28,6 @@ struct FitnessMachineResponse: Equatable, Sendable {
     else { return nil }
     self.requestOpCode = requestOpCode
     result = Result(rawValue: code) ?? .failed
+    parameter = Data(data.dropFirst(3))
   }
 }

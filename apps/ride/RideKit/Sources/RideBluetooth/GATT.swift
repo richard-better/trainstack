@@ -19,4 +19,5 @@ enum GATT {
   static let supportedResistanceLevelRange = CBUUID(
     string: TrainerCharacteristic.resistanceRange.rawValue)
   static let supportedPowerRange = CBUUID(string: TrainerCharacteristic.powerRange.rawValue)
+  static let fitnessMachineFeature = CBUUID(string: TrainerCharacteristic.feature.rawValue)
 }
