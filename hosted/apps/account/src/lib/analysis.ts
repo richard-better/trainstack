@@ -23,6 +23,10 @@ import {
 export { durationLabel };
 
 export const ANALYSIS_POLL_MS = 10_000;
+export const ANALYSIS_REFRESH_MS = 60_000;
+
+export const analysisRefreshMs = (urgent: boolean) =>
+  urgent ? ANALYSIS_POLL_MS : ANALYSIS_REFRESH_MS;
 
 export type LoadSource = "power" | "pace" | "heart_rate";
 

@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { activityKey, api, queryClient } from "../api";
 import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
 import {
-  ANALYSIS_POLL_MS,
+  analysisRefreshMs,
   analysisErrorText,
   settingsScopeOf,
   analysisState,
@@ -56,9 +56,10 @@ export function ActivityPage({ id }: { id: string }) {
     enabled: valid,
     retry: (failures, error) => !refused(error) && failures < 2,
     refetchInterval: (query) =>
-      settling || (query.state.data && analysisState(query.state.data).kind === "pending")
-        ? ANALYSIS_POLL_MS
-        : false,
+      analysisRefreshMs(
+        settling ||
+          (query.state.data !== undefined && analysisState(query.state.data).kind === "pending"),
+      ),
   });
 
   if (

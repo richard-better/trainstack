@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 
 import { activitiesQueryKey, api } from "../api";
 import { ACTIVITIES_PER_PAGE } from "../lib/client";
-import { ANALYSIS_POLL_MS, analysisState } from "../lib/analysis";
+import { analysisRefreshMs, analysisState } from "../lib/analysis";
 import { activityWeeks, type WeekTotals } from "../lib/activity-weeks";
 import { activityDate, weekLabel } from "../lib/dates";
 import { localDay } from "../lib/settings";
@@ -23,12 +23,13 @@ export function ActivityList() {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     refetchInterval: (query) =>
-      settling ||
-      query.state.data?.pages.some((page) =>
-        page.activities.some((activity) => analysisState(activity).kind === "pending"),
-      )
-        ? ANALYSIS_POLL_MS
-        : false,
+      analysisRefreshMs(
+        settling ||
+          (query.state.data?.pages.some((page) =>
+            page.activities.some((activity) => analysisState(activity).kind === "pending"),
+          ) ??
+            false),
+      ),
   });
 
   return (
