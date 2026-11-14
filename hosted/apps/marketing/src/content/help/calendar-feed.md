@@ -1,12 +1,12 @@
 ---
 title: Your training in your calendar
-summary: Subscribe to your TrainStack calendar in Apple Calendar, Google Calendar or Outlook.
+summary: Subscribe to your Trainstack calendar in Apple Calendar, Google Calendar or Outlook.
 section: Plan
 order: 33
 ---
 
 The calendar feed puts your planned workouts, and if you like what you did, into the calendar app
-you already use. Your calendar app reads it from a private address; TrainStack gets no access to
+you already use. Your calendar app reads it from a private address; Trainstack gets no access to
 your calendar.
 
 ## Turning it on
@@ -44,5 +44,5 @@ calendar feed** stops it for good.
 
 ## Not supported yet
 
-TrainStack only publishes a feed. It cannot read your calendar to find time to train, or write
+Trainstack only publishes a feed. It cannot read your calendar to find time to train, or write
 real events into it.

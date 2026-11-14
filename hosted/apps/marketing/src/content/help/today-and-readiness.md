@@ -28,7 +28,7 @@ It reads two things, and lists every one it used:
   at least 7 check-ins; until then it is 3, "Normal". A rating above your usual is shown, but does
   not make up for strain elsewhere.
 - _Your training load_, as it stood last night: deep fatigue against your fitness, fitness
-  rising fast, and hard days in a row. It needs about 12 weeks of training in TrainStack before it
+  rising fast, and hard days in a row. It needs about 12 weeks of training in Trainstack before it
   says anything, and on its own it never takes readiness below **Fair**: how you feel decides
   whether a hard block is too much.
 
@@ -38,7 +38,7 @@ no better than **Low**.
 
 Readiness also says how sure it is. With no check-in today it comes from training alone and is
 low confidence; check in, and it reads your answers. It does not read measured sleep, resting
-heart rate or HRV: TrainStack does not have them yet.
+heart rate or HRV: Trainstack does not have them yet.
 
 The level is a rule of thumb from what you told it and what you did, not a diagnosis or medical
 advice.

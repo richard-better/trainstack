@@ -14,7 +14,7 @@ order: 30
 Press the + button on a day ("Plan a workout, note or rest day"). Then choose:
 
 - **Your workouts**: a workout from your library. Search by name or tag.
-- **Built-in**: one of TrainStack's own workouts.
+- **Built-in**: one of Trainstack's own workouts.
 - **Note**: a line of text for the day, such as "Race day" or "Travel".
 - **Rest day**: a planned day off, with a note if you want one.
 
@@ -53,7 +53,7 @@ Each planned workout shows its state:
 
 Activities that no planned workout was paired with show as **Unplanned**.
 
-TrainStack pairs an activity with a planned workout by itself when they are on the same day and
+Trainstack pairs an activity with a planned workout by itself when they are on the same day and
 the same sport, for rides, runs and swims: it picks the closest in time and load. The card's edge
 says how it was paired: **Matched automatically** or **Paired by you**.
 
@@ -83,7 +83,7 @@ it kept, with a way to put yours back.
 
 ## Not supported yet
 
-- _No training plans._ TrainStack does not build a plan from a goal or race, or change your
+- _No training plans._ Trainstack does not build a plan from a goal or race, or change your
   plan when you miss a session. You plan each workout yourself.
 - _No coach._ Nobody else can plan your calendar.
 - In Ride you can start, skip, move and unpair a planned workout, but you plan new ones on the web.

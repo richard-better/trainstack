@@ -55,7 +55,7 @@ that activity.
 ## When the chart is empty
 
 - **No activities yet**: [get your activities in](/help/add-activities).
-- **None of your activities has a load yet**: TrainStack needs your thresholds to score them.
+- **None of your activities has a load yet**: Trainstack needs your thresholds to score them.
   The page says which to set, or shows thresholds it found in your activities to accept. See
   [Thresholds and zones](/help/thresholds-and-zones).
 - **One of your recent activities has no load, so it is left out of fitness and fatigue.** It
@@ -66,4 +66,4 @@ that activity.
 Each day, fitness moves 1/42 of the way toward that day's load, and fatigue 1/7 of the way. This
 is the impulse-response model of Eric Banister as Andrew Coggan's Performance Manager uses it,
 the same model behind TrainingPeaks' CTL, ATL and TSB. Fitness and fatigue start from zero on your
-first activity, so they read low until you have a couple of months of history in TrainStack.
+first activity, so they read low until you have a couple of months of history in Trainstack.

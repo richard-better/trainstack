@@ -1,11 +1,11 @@
 ---
 title: Thresholds and zones
-summary: Set FTP, threshold pace and heart rate, choose zones per sport, and what TrainStack's suggestions mean.
+summary: Set FTP, threshold pace and heart rate, choose zones per sport, and what Trainstack's suggestions mean.
 section: Training
 order: 20
 ---
 
-Your thresholds are what TrainStack measures every activity against. Without them it can still
+Your thresholds are what Trainstack measures every activity against. Without them it can still
 show an activity's power, pace and heart rate, but not its load, intensity or time in zones, so it
 is left out of your [fitness chart](/help/fitness-and-form). Logged strength and bouldering
 sessions are the exception: their load comes from how hard you rate them. They live in **Settings**, under
@@ -37,7 +37,7 @@ day. So when you raise your FTP from today, last month's rides keep the FTP they
 and their load does not change.
 
 If a threshold was wrong in the past, set the right value **From** the day it became true, or use
-**Correct** on the entry under **History**, and TrainStack works out every activity since then
+**Correct** on the entry under **History**, and Trainstack works out every activity since then
 again within a minute or two. **Remove** takes an entry out of the history. Activities from
 before your earliest settings day, the first day any threshold, zone or sport setting holds from,
 use everything set for that day; weight follows the same rule on its own.
@@ -75,7 +75,7 @@ threshold works every zone out again, unless they are your own.
 
 ![A suggested max heart rate in Settings](/help-images/threshold-suggestion.png)
 
-TrainStack looks at your activities of the last 180 days and suggests a threshold when its
+Trainstack looks at your activities of the last 180 days and suggests a threshold when its
 estimate differs enough from what you have, or when you have none. It never changes a threshold
 by itself. A suggestion names the effort it comes from (open it to see the activity) and how sure
 it is.

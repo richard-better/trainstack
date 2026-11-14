@@ -14,7 +14,7 @@ phone between sets if you like. On **Activities**, open **Log session** and choo
 Search for an exercise, or type a name that is not in the list and choose to add it as your own
 exercise. For each exercise, **+ Add set** and enter the weight and reps, or the time for a hold.
 A set can be **Working**, **Warm-up**, **Drop** or **To failure**, and can note reps in reserve and
-the rest after it. Switch between **kg** and **lb** at the top; TrainStack keeps what you entered.
+the rest after it. Switch between **kg** and **lb** at the top; Trainstack keeps what you entered.
 Bodyweight exercises count your weight from **Settings**, plus any weight you add.
 
 **Superset with next** groups an exercise with the next one, done a set of each in turn.
@@ -41,7 +41,7 @@ counts no load toward your [fitness](/help/fitness-and-form). Heart rate is not 
 says little about how hard lifting and climbing are.
 
 The session shows in **Activities** and on the calendar like any other. If your watch recorded it
-too, upload the watch's file: TrainStack links the two as one workout, and the heart rate stays
+too, upload the watch's file: Trainstack links the two as one workout, and the heart rate stays
 with the watch's file.
 
 ## Progress

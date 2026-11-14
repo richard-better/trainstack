@@ -5,7 +5,7 @@ section: Plan
 order: 32
 ---
 
-**Workouts** holds your workout library, TrainStack's **Built-in** workouts, and your **Lists**.
+**Workouts** holds your workout library, Trainstack's **Built-in** workouts, and your **Lists**.
 
 ## Your library
 
@@ -40,7 +40,7 @@ Its profile and load use your thresholds today.
 
 ## Importing workouts
 
-Press **Import files**, or drop files on the page. TrainStack reads:
+Press **Import files**, or drop files on the page. Trainstack reads:
 
 | File   | From                                                                 |
 | ------ | -------------------------------------------------------------------- |
@@ -49,7 +49,7 @@ Press **Import files**, or drop files on the page. TrainStack reads:
 | `.mrc` | Power as a percentage of FTP, from the same apps                     |
 | `.fit` | Workouts from Garmin Connect, TrainingPeaks, Wahoo and other devices |
 
-Each file can be up to 1 MB. Before you add it, TrainStack shows the workout and lists anything
+Each file can be up to 1 MB. Before you add it, Trainstack shows the workout and lists anything
 it changed or left out, under "Trainstack will change or leave out". Press **Add to my workouts**
 to keep it.
 
@@ -68,7 +68,7 @@ Open a workout and use **Export**:
 Not every format can hold everything. `.erg` and `.mrc` hold only timed power targets, so a
 workout with pace or heart rate targets, or distance steps, cannot be written to them. Where a
 target or step has to change to fit, such as a ramp written as small steady steps in a FIT file,
-TrainStack tells you what it changed or left out before you download.
+Trainstack tells you what it changed or left out before you download.
 
 ## Lists
 
