@@ -651,7 +651,11 @@ function PlannedCard({
   const figures =
     content.kind === "workout"
       ? {
-          seconds: item.planned ? item.planned.seconds : (overview?.seconds ?? null),
+          seconds: item.planned
+            ? item.planned.seconds
+            : overview && overview.unknownLapSteps === 0
+              ? overview.seconds
+              : null,
           load: item.planned ? item.planned.load : (overview?.load?.score ?? null),
         }
       : null;

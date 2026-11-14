@@ -238,7 +238,7 @@ function PlannedWorkoutBody({ item, workout }: { item: PlannedWorkout; workout: 
   const overview = useMemo(() => overviewOf(workout, reference), [workout, reference]);
   const { highlight, setHighlight } = useHighlight();
   const known = item.planned;
-  const seconds = known ? known.seconds : overview.seconds;
+  const seconds = known ? known.seconds : overview.unknownLapSteps === 0 ? overview.seconds : null;
   const meters = known ? known.meters : overview.meters > 0 ? overview.meters : null;
   const load = known ? known.load : (overview.load?.score ?? null);
   const distanceSteps = overview.meters > 0;

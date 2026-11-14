@@ -22,7 +22,7 @@ import {
 import { mondayOf } from "../lib/dates";
 import { sportName } from "../lib/sports";
 import { shiftDay } from "../lib/training";
-import { formatMinutes, overviewOf, sportNames } from "../lib/workout-profile";
+import { formatMinutes, lapStepsText, overviewOf, sportNames } from "../lib/workout-profile";
 import { calendarWrites, useReferenceOn } from "./calendar-data";
 import { PeriodPicker } from "./period-picker";
 import { SportIcon } from "./sport-icon";
@@ -359,6 +359,9 @@ function PickRow({
         <span className="pick-name">{summary.name}</span>
         <span className="pick-meta">
           {sportNames[summary.sport]}, {formatMinutes(overview?.seconds ?? summary.totals.seconds)}
+          {overview &&
+            overview.unknownLapSteps > 0 &&
+            ` plus ${lapStepsText(overview.unknownLapSteps)}`}
           {overview?.load ? `, ${overview.load.score} load` : ""}
         </span>
       </span>
