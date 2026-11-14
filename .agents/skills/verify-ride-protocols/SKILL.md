@@ -90,7 +90,10 @@ used with temporal checking. Each model explores all schedules in its bounds.
   `RideLibrary.remove`, so `RideSync` queues the record's deletion and a `DeletedRide`. Its weak
   fairness assumes a device holding the ride is signed in and eventually syncs. Checked too:
   `DeletionOnTheServerReachesICloud`, which fails if that removal skips the `DeletedRide`. The
-  server's own sync is not modelled.
+  server's own sync is not modelled, and neither is a ride the rider opens by hand
+  (`RideLibrary.open`): it stays on that device in iCloud, and `ActivitySync` restores it on the
+  account with `activities.restore`, outside every transition here. `ActivitySyncTests` pins that
+  background sync never restores.
 - `TrainerPause`: `RideCore/RideEngine.swift` maps `.togglePause` to `Toggle`,
   and `pauseIfTrainerDropped` plus `session.advance` in `.tick` to atomic `Tick`.
   Connection changes, manual toggles and ticks interleave arbitrarily.

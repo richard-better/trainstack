@@ -50,7 +50,7 @@ stays the source of truth: a device that has not synced yet, or has just signed 
 ride. Deleting a ride leaves a `DeletedRide` record, which every device remembers, so a device that
 has not synced since cannot send the ride back: once it hears of the deletion it drops the ride,
 and a device that knows deletes the record again if a stale one sends it. Importing a deleted
-ride's file again keeps it on that device only. One more record holds the secret behind
+ride's file again keeps it on that device only in iCloud; the account brings it back (below). One more record holds the secret behind
 `RideClaim`; the first device to send it wins and
 the others adopt it. The Mac has no Health, so an
 iPhone saves the Mac's rides as they sync, and the Mac tells a relaying iPhone it records the
@@ -64,8 +64,11 @@ offline, relaunches and failures (it retries with backoff, and again when the ap
 active). It hears of rides and deletions from iCloud too (`RideLibrary.onChange`), so a ride
 deleted through either reaches the other. When the server answers that a ride was deleted
 (`410`), or a ride the account had is gone from it, the device drops the ride with
-`RideLibrary.remove`, which also leaves an iCloud `DeletedRide`, and a deleted ride imported
-again stays on that device. State is kept per account (`Application Support/ActivitySync`), and
+`RideLibrary.remove`, which also leaves an iCloud `DeletedRide`. Background sync never brings a
+deleted ride back: only a file the rider opens by hand in History (`RideLibrary.open`, which calls
+`onOpenedByHand`) is sent with `activities.restore` instead of an upload, before the next listing,
+and that clears the account's deletion. A restore owed is kept across relaunches, and forgotten if
+the ride is removed before it is sent. State is kept per account (`Application Support/ActivitySync`), and
 every request is bound to the session it started with, so signing out stops uploads and one
 account's deletions never reach another. A ride removed while signed out is deleted from the
 account this device last signed in to, when it signs in again.

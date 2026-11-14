@@ -8,6 +8,7 @@ final class RideLibrary {
   var storageProblem: String?
   @ObservationIgnored var onLocalChange: ((Change) -> Void)?
   @ObservationIgnored var onChange: ((Change) -> Void)?
+  @ObservationIgnored var onOpenedByHand: (([Ride.ID]) -> Void)?
   @ObservationIgnored private let directory: URL?
   @ObservationIgnored private var files: [Ride.ID: URL] = [:]
   private(set) var stravaActivities: [String: String]
@@ -48,15 +49,17 @@ final class RideLibrary {
   @discardableResult
   func open(_ urls: [URL]) -> [String] {
     var failures: [String] = []
+    var opened: [Ride.ID] = []
     for url in urls {
       let hasAccess = url.startAccessingSecurityScopedResource()
       defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
       do {
-        try add(Data(contentsOf: url))
+        opened.append(try add(Data(contentsOf: url)))
       } catch {
         failures.append("\(url.lastPathComponent) is not a readable FIT file.")
       }
     }
+    if !opened.isEmpty { onOpenedByHand?(opened) }
     return failures
   }
 
