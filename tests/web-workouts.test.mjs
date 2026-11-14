@@ -7,7 +7,9 @@ import { MAX_WORKOUT_FILE_BYTES } from "@trainstack/contract";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { profileOn } from "@trainstack/zones";
 import {
+  addListIn,
   appendedTo,
+  dropListIn,
   durationFilter,
   emptyLibrary,
   exportWorkout,
@@ -645,4 +647,56 @@ test("an answered rename holds while a later move to the same list still waits",
   assert.deepEqual(shown().workoutIds, [ids[1], ids[0]]);
   unsubscribe();
   queryClient.clear();
+});
+
+async function withStaleListsRead(webApp, act) {
+  const queryClient = new QueryClient();
+  const queryKey = ["lists"];
+  queryClient.setQueryData(queryKey, await webApp.workoutLists.list({}));
+  let release;
+  const held = new Promise((resolve) => {
+    release = resolve;
+  });
+  let reads = 0;
+  const observer = new QueryObserver(queryClient, {
+    queryKey,
+    staleTime: 0,
+    queryFn: async () => {
+      reads += 1;
+      const answer = await webApp.workoutLists.list({});
+      if (reads === 1) await held;
+      return answer;
+    },
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  while (reads === 0) await new Promise((resolve) => setTimeout(resolve, 5));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await act(queryClient, queryKey);
+  release();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const lists = queryClient.getQueryData(queryKey).lists;
+  unsubscribe();
+  queryClient.clear();
+  return lists;
+}
+
+test("a list created or deleted while the lists are being read stays so when the read lands", async () => {
+  const { webApp } = await signInOnTheWeb();
+  const created = await withStaleListsRead(webApp, async (queryClient, queryKey) => {
+    const list = await webApp.workoutLists.put({
+      id: randomUUID(),
+      name: "New",
+      updatedAt: new Date(),
+    });
+    await addListIn(queryClient, queryKey, list);
+  });
+  assert.deepEqual(
+    created.map((list) => list.name),
+    ["New"],
+  );
+  const deleted = await withStaleListsRead(webApp, async (queryClient, queryKey) => {
+    await webApp.workoutLists.delete({ id: created[0].id });
+    await dropListIn(queryClient, queryKey, created[0].id);
+  });
+  assert.deepEqual(deleted, []);
 });

@@ -11,6 +11,9 @@ import {
   emptyLibrary,
   isBehind,
   type Library,
+  addListIn,
+  dropListIn,
+  dropWorkoutFromListsIn,
   forgetIn,
   queueListWrite,
   refreshLibrary,
@@ -44,17 +47,10 @@ export async function rememberWorkout(workout: StoredWorkout) {
 
 export async function forgetWorkout(id: string) {
   void queryClient.invalidateQueries({ queryKey: searchKey });
-  queryClient.setQueryData<{ lists: WorkoutList[] }>(listsKey, (data) =>
-    data
-      ? {
-          lists: data.lists.map((list) => ({
-            ...list,
-            workoutIds: list.workoutIds.filter((workoutId) => workoutId !== id),
-          })),
-        }
-      : data,
-  );
-  await forgetIn(queryClient, libraryKey, id);
+  await Promise.all([
+    dropWorkoutFromListsIn(queryClient, listsKey, id),
+    forgetIn(queryClient, libraryKey, id),
+  ]);
 }
 
 export type Filters = {
@@ -127,15 +123,7 @@ export function useLists() {
   });
 }
 
-export function rememberList(list: WorkoutList) {
-  queryClient.setQueryData<{ lists: WorkoutList[] }>(listsKey, (data) => {
-    const lists = data?.lists ?? [];
-    const known = lists.some((held) => held.id === list.id);
-    return {
-      lists: known ? lists.map((held) => (held.id === list.id ? list : held)) : [...lists, list],
-    };
-  });
-}
+export const rememberList = (list: WorkoutList) => addListIn(queryClient, listsKey, list);
 
 export const writeList = (
   id: string,
@@ -148,11 +136,7 @@ export const latestList = (id: string) =>
     .getQueryData<{ lists: WorkoutList[] }>(listsKey)
     ?.lists.find((list) => list.id === id);
 
-export function forgetList(id: string) {
-  queryClient.setQueryData<{ lists: WorkoutList[] }>(listsKey, (data) =>
-    data ? { lists: data.lists.filter((list) => list.id !== id) } : data,
-  );
-}
+export const forgetList = (id: string) => dropListIn(queryClient, listsKey, id);
 
 export function useReference(sport: Sport): { reference: Reference; loaded: boolean } {
   const history = useSettingsHistory();

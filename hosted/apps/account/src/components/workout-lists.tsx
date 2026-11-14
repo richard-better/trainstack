@@ -58,7 +58,7 @@ export function ListsNav({ current }: { current: string }) {
               name,
               updatedAt: new Date(),
             });
-            rememberList(list);
+            await rememberList(list);
             setNaming(false);
             await navigate({ to: "/workouts/lists/$listId", params: { listId: list.id } });
           }}
@@ -219,7 +219,7 @@ function ListHead({ list }: { list: WorkoutList }) {
     mutationFn: () => api.workoutLists.delete({ id: list.id }),
     onSuccess: async () => {
       dialog.current?.close();
-      forgetList(list.id);
+      await forgetList(list.id);
       await navigate({ to: "/workouts", search: {} });
     },
   });
@@ -499,7 +499,7 @@ export function AddToList({ workoutId }: { workoutId: string }) {
                 name,
                 updatedAt: new Date(),
               });
-              rememberList(created);
+              await rememberList(created);
               await writeList(
                 created.id,
                 (held) => ({ ...held, workoutIds: [workoutId] }),

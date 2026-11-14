@@ -181,6 +181,42 @@ export function queueListWrite(
   return written;
 }
 
+async function writeLists(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  change: (lists: WorkoutList[]) => WorkoutList[],
+) {
+  await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
+  queryClient.setQueryData<Lists>(queryKey, (data) => ({ lists: change(data?.lists ?? []) }));
+  void queryClient.invalidateQueries({ queryKey, exact: true });
+}
+
+export const addListIn = (
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  list: WorkoutList,
+) =>
+  writeLists(queryClient, queryKey, (lists) =>
+    lists.some((held) => held.id === list.id)
+      ? lists.map((held) => (held.id === list.id ? list : held))
+      : [...lists, list],
+  );
+
+export const dropListIn = (queryClient: QueryClient, queryKey: readonly unknown[], id: string) =>
+  writeLists(queryClient, queryKey, (lists) => lists.filter((list) => list.id !== id));
+
+export const dropWorkoutFromListsIn = (
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  workoutId: string,
+) =>
+  writeLists(queryClient, queryKey, (lists) =>
+    lists.map((list) => ({
+      ...list,
+      workoutIds: list.workoutIds.filter((id) => id !== workoutId),
+    })),
+  );
+
 export const appendedTo = (list: WorkoutList, workoutId: string) => ({
   workoutId,
   after: list.workoutIds.filter((id) => id !== workoutId).at(-1) ?? null,
