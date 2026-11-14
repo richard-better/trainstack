@@ -5,6 +5,8 @@ import {
   type Sport,
   sportSchema,
   type Workout,
+  expandedLength,
+  maxExpandedSteps,
 } from "@trainstack/workout";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
@@ -128,7 +130,11 @@ function WorkoutEditor({
   const leaving = useRef(false);
   const draft = history.draft;
   const { reference } = useReference(draft.sport);
-  const overview = useMemo(() => overviewOf(draft, reference), [draft, reference]);
+  const drawable = expandedLength(draft.steps) <= maxExpandedSteps;
+  const overview = useMemo(
+    () => overviewOf(drawable ? draft : { steps: [] }, reference),
+    [draft, drawable, reference],
+  );
   const problems = useMemo(() => problemsOf(draft), [draft]);
   const byPath = useMemo(() => problemsByPath(problems), [problems]);
   const dirty = !sameWorkout(draft, saved.workout) || saved.base === null;
@@ -502,9 +508,11 @@ function WorkoutEditor({
             />
           </div>
           <p className="lede chart-note">
-            {narrow
-              ? "Edit the chart on a wider screen. Every step can be edited below."
-              : "Click a bar to edit its step. Drag its top to change the target and its right edge to change its length, or use the arrow keys: ↑↓ change the target, Alt with ←→ changes the length."}
+            {!drawable
+              ? `The repeats add up to more than ${maxExpandedSteps.toLocaleString("en-GB")} steps, too many to draw or save. Lower a repeat count.`
+              : narrow
+                ? "Edit the chart on a wider screen. Every step can be edited below."
+                : "Click a bar to edit its step. Drag its top to change the target and its right edge to change its length, or use the arrow keys: ↑↓ change the target, Alt with ←→ changes the length."}
           </p>
         </section>
 
