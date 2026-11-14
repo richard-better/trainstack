@@ -1,3 +1,3 @@
 enum AppDestination: Hashable {
-  case today, workouts, history, progress, settings
+  case today, calendar, workouts, history, progress, settings
 }

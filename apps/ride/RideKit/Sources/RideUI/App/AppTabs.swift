@@ -12,18 +12,33 @@ struct AppTabs: View {
   @Environment(RideLauncher.self) private var launcher
   @State private var todayPath = NavigationPath()
   @State private var workoutsPath = NavigationPath()
+  @State private var calendarPath = NavigationPath()
+  #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+  #endif
 
   var body: some View {
     TabView(selection: $destination) {
-      Tab("Today", systemImage: "calendar", value: .today) {
+      Tab("Today", systemImage: "sun.max", value: .today) {
         NavigationStack(path: $todayPath) {
           TodayView(state: $today, openSettings: openSettings)
             .navigationDestination(for: WorkoutTemplate.self, destination: WorkoutDetailView.init)
             .navigationDestination(for: PlannedItemRoute.self) { PlannedItemDetailView(id: $0.id) }
+            .navigationDestination(for: CalendarRoute.self) { _ in CalendarView() }
         }
         .environment(
           \.openWorkout,
           OpenWorkoutAction({ todayPath.append($0) }, planned: { todayPath.append($0) }))
+      }
+      if hasCalendarTab {
+        Tab("Calendar", systemImage: "calendar", value: .calendar) {
+          NavigationStack(path: $calendarPath) {
+            CalendarView()
+              .navigationDestination(for: PlannedItemRoute.self) {
+                PlannedItemDetailView(id: $0.id)
+              }
+          }
+        }
       }
       Tab("Workouts", systemImage: "chart.bar", value: .workouts) {
         NavigationStack(path: $workoutsPath) {
@@ -50,6 +65,9 @@ struct AppTabs: View {
       }
     }
     .tabViewStyle(.sidebarAdaptable)
+    .onChange(of: hasCalendarTab) { _, isAvailable in
+      if !isAvailable, destination == .calendar { destination = .today }
+    }
     #if os(iOS)
       .tabBarMinimizeBehavior(.onScrollDown)
       .tabViewBottomAccessory(isEnabled: launcher.ride != nil) {
@@ -58,6 +76,14 @@ struct AppTabs: View {
           .matchedTransitionSource(id: "player", in: player)
         }
       }
+    #endif
+  }
+
+  private var hasCalendarTab: Bool {
+    #if os(iOS)
+      sizeClass != .compact
+    #else
+      true
     #endif
   }
 

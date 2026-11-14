@@ -59,6 +59,7 @@ struct PlannedItemDetailView: View {
         .listRowBackground(Color.clear)
         .listRowInsets(.horizontal, 4)
       }
+      PlannedItemComplianceSection(item: item, done: pairedActivity(of: item))
       if let workout = item.workout {
         Section {
           LibraryWorkoutSteps(workout: workout, ftp: ftp)
@@ -94,12 +95,15 @@ struct PlannedItemDetailView: View {
     .sheet(isPresented: $isShowingDevices) { DevicesSheet() }
   }
 
+  private func pairedActivity(of item: PlannedItem) -> CalendarActivity? {
+    guard let day = calendar.day(item.day) else { return nil }
+    return CalendarDayPairs(day).planned.first { $0.id == item.id }?.done
+  }
+
   private func dayName(_ item: PlannedItem) -> String {
-    guard let today = calendar.today else { return item.day.text }
-    let name = TodayDayName.of(item.day, today: today)
-    return abs(today.days(until: item.day)) <= 1
-      ? "\(name), \(item.day.displayDate.formatted(.dateTime.weekday(.wide).day().month(.wide)))"
-      : name
+    let date = item.day.displayDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    guard let today = calendar.today, abs(today.days(until: item.day)) <= 1 else { return date }
+    return "\(TodayDayName.of(item.day, today: today)), \(date)"
   }
 
   private func startBar(_ item: PlannedItem) -> some View {

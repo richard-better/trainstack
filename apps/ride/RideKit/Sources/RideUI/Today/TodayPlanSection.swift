@@ -34,6 +34,7 @@ struct TodayPlanSection: View {
       ForEach(plan.upcoming, id: \.day) { day in
         TodayComingUpRow(day: day, today: plan.today)
       }
+      NavigationLink("Calendar", value: CalendarRoute())
     }
   }
 

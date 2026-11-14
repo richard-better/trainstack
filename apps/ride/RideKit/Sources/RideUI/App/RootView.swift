@@ -133,6 +133,7 @@ public struct RootView: View {
     if launcher.isPlayerPresented { return "the player" }
     return switch destination {
     case .today: "Today"
+    case .calendar: "Calendar"
     case .workouts: "Workouts"
     case .history: "History"
     case .progress: "Progress"
