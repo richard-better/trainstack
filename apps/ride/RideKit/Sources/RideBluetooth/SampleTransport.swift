@@ -14,6 +14,12 @@ final class SampleTransport: BluetoothTransport {
   var onTrainerValue: ((UUID, TrainerCharacteristic, Data) -> Void)?
   private var heartbeats: [UUID: Task<Void, Never>] = [:]
   private var ergWatts: Int?
+  private var spinDownSpeed: Double?
+  private var isCoasting = false
+  static let spinDownTargetKilometresPerHour = 30.0...35.0
+  static let spinDownAcceleration = 2.5
+  static let spinDownDeceleration = 3.0
+  static let spinDownStoppedBelow = 8.0
 
   isolated deinit {
     for heartbeat in heartbeats.values { heartbeat.cancel() }
@@ -52,13 +58,16 @@ final class SampleTransport: BluetoothTransport {
       if id == Self.trainer.id {
         self?.onTrainerValue?(id, .powerRange, Data([0, 0, 0xD0, 0x07, 1, 0]))
         self?.onTrainerValue?(id, .resistanceRange, Data([0, 0, 0xE8, 0x03, 10, 0]))
+        self?.onTrainerValue?(id, .feature, Data([0, 0, 0, 0, 0x0C, 0xA0, 0, 0]))
         self?.onTrainerControlReady?(id)
       } else {
         self?.onBatteryLevel?(id, Data([78]))
       }
       var beat = 0
       while !Task.isCancelled, self != nil {
-        if id == Self.trainer.id {
+        if id == Self.trainer.id, let speed = self?.spinDownSpeed {
+          self?.spinDown(speed, from: id)
+        } else if id == Self.trainer.id {
           let watts = UInt16(self?.ergWatts.map { $0 - 2 + beat % 5 } ?? 180 + beat % 25)
           let cadence = UInt16((85 + beat % 5) * 2)
           self?.onCyclingMeasurement?(
@@ -98,12 +107,49 @@ final class SampleTransport: BluetoothTransport {
     var reader = BluetoothValueReader(data.dropFirst())
     switch opCode {
     case 0x05: ergWatts = reader.uint16().map { Int(Int16(bitPattern: $0)) }
-    case 0x01, 0x04, 0x11: ergWatts = nil
+    case 0x01, 0x04, 0x11:
+      ergWatts = nil
+      spinDownSpeed = nil
+    case 0x13:
+      spinDownSpeed = 20
+      isCoasting = false
+      let low = UInt16(Self.spinDownTargetKilometresPerHour.lowerBound * 100)
+      let high = UInt16(Self.spinDownTargetKilometresPerHour.upperBound * 100)
+      Task {
+        onTrainerValue?(
+          id, .controlPoint,
+          Data([
+            0x80, opCode, 0x01, UInt8(low & 0xFF), UInt8(low >> 8), UInt8(high & 0xFF),
+            UInt8(high >> 8),
+          ]))
+      }
+      return
     default: break
     }
     Task {
       onTrainerValue?(id, .controlPoint, Data([0x80, opCode, 0x01]))
     }
+  }
+}
+
+extension SampleTransport {
+  private func spinDown(_ speed: Double, from id: UUID) {
+    let next =
+      isCoasting
+      ? speed - Self.spinDownDeceleration : speed + Self.spinDownAcceleration
+    let units = UInt16(max(0, next) * 100)
+    onCyclingMeasurement?(
+      id, .indoorBike,
+      Data([0x44, 0, UInt8(units & 0xFF), UInt8(units >> 8), isCoasting ? 0 : 180, 0, 0, 0]))
+    if !isCoasting, next > Self.spinDownTargetKilometresPerHour.upperBound {
+      isCoasting = true
+      onTrainerValue?(id, .status, Data([0x14, 0x04]))
+    } else if isCoasting, next < Self.spinDownStoppedBelow {
+      spinDownSpeed = nil
+      onTrainerValue?(id, .status, Data([0x14, 0x02]))
+      return
+    }
+    spinDownSpeed = next
   }
 }
 

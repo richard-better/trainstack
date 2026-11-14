@@ -28,16 +28,21 @@ struct IndoorBikeMeasurement: Equatable, Sendable {
   }
 
   static let cadenceUnitsPerRPM = 2.0
+  static let kilometresPerHourPerUnit = 0.01
 
   let watts: Int?
   let cadence: Int?
+  let kilometresPerHour: Double?
 
   init?(_ data: Data) {
     var reader = BluetoothValueReader(data)
     guard let rawFlags = reader.uint16() else { return nil }
     let flags = Flags(rawValue: rawFlags)
     if !flags.contains(.moreDataOmitsInstantaneousSpeed) {
-      guard reader.skip(2) else { return nil }
+      guard let speed = reader.uint16() else { return nil }
+      kilometresPerHour = Double(speed) * Self.kilometresPerHourPerUnit
+    } else {
+      kilometresPerHour = nil
     }
     if flags.contains(.averageSpeed) {
       guard reader.skip(2) else { return nil }

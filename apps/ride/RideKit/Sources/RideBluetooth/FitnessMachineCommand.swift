@@ -7,6 +7,9 @@ enum FitnessMachineCommand: Equatable, Sendable {
   case targetPower(watts: Int)
   case targetResistance(level: Int, wide: Bool)
   case simulation(gradePercent: Double)
+  case startSpinDown
+
+  static let spinDownStartParameter: UInt8 = 0x01
 
   static let stillAirMetresPerSecond = 0.0
   static let typicalRollingResistanceCoefficient = 0.004
@@ -20,6 +23,7 @@ enum FitnessMachineCommand: Equatable, Sendable {
     case .targetPower: 0x05
     case .start: 0x07
     case .simulation: 0x11
+    case .startSpinDown: 0x13
     }
   }
 
@@ -27,6 +31,7 @@ enum FitnessMachineCommand: Equatable, Sendable {
     var data = Data([opCode])
     switch self {
     case .requestControl, .reset, .start: break
+    case .startSpinDown: data.append(Self.spinDownStartParameter)
     case .targetPower(let watts): data.append(sint16: watts)
     case .targetResistance(let level, let wide):
       if wide {

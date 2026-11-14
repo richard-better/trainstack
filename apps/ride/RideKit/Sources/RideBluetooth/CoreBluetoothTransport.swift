@@ -123,6 +123,7 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
           [
             GATT.indoorBikeData, GATT.fitnessMachineControlPoint, GATT.fitnessMachineStatus,
             GATT.supportedResistanceLevelRange, GATT.supportedPowerRange,
+            GATT.fitnessMachineFeature,
           ], for: service)
       default: break
       }
@@ -145,7 +146,8 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
         GATT.cyclingSpeedCadenceMeasurement, GATT.indoorBikeData, GATT.fitnessMachineStatus,
         GATT.fitnessMachineControlPoint:
         peripheral.setNotifyValue(true, for: characteristic)
-      case GATT.supportedResistanceLevelRange, GATT.supportedPowerRange:
+      case GATT.supportedResistanceLevelRange, GATT.supportedPowerRange,
+        GATT.fitnessMachineFeature:
         peripheral.readValue(for: characteristic)
       default: break
       }

@@ -3,4 +3,5 @@ enum TrainerCharacteristic: String, CaseIterable, Codable, Sendable {
   case status = "2ADA"
   case resistanceRange = "2AD6"
   case powerRange = "2AD8"
+  case feature = "2ACC"
 }
