@@ -350,6 +350,35 @@ describe("lap-button steps in course files", () => {
     });
   }
 
+  test("approximate leaves out a cue that comes after the expected length, and says so", () => {
+    const cued: Workout = {
+      ...lapped,
+      steps: [
+        {
+          type: "step",
+          duration: { type: "open", expected: seconds(600) },
+          target: ftp(0.5),
+          cues: [
+            { at: seconds(60), text: "Settle in" },
+            { at: seconds(900), text: "Press lap" },
+          ],
+        },
+        { type: "step", duration: seconds(300), target: ftp(1) },
+      ],
+    };
+    const { value, warnings } = writeMrc(cued, { approximate: true });
+    assert.deepEqual(
+      warnings.filter((warning) => warning.code === "dropped").map((warning) => warning.message),
+      ['Cue "Press lap" comes after the step\'s expected length'],
+    );
+    assert.deepEqual(
+      parseMrc(value).value.steps.flatMap((step) =>
+        step.type === "step" ? (step.cues ?? []) : [],
+      ),
+      [{ at: seconds(60), text: "Settle in" }],
+    );
+  });
+
   test("approximate still fails for a lap-button step with no expected length", () => {
     const unknown: Workout = {
       ...lapped,

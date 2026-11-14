@@ -1,5 +1,5 @@
 import type { IssueLog } from "./issues.ts";
-import type { Block, Step } from "./model.ts";
+import type { Block, Cue, Step } from "./model.ts";
 import { describeLength } from "./numbers.ts";
 
 export function withOpenStepsTimed(
@@ -35,10 +35,25 @@ function timedStep(log: IssueLog, step: Step, approximate: boolean | undefined, 
     );
     return step;
   }
+  const expected = duration.expected;
   log.warn(
     "approximated",
-    `The lap-button step is written as a step of its expected length, ${describeLength(duration.expected)}`,
+    `The lap-button step is written as a step of its expected length, ${describeLength(expected)}`,
     at,
   );
-  return { ...step, duration: duration.expected };
+  const within = (cue: Cue) =>
+    cue.at.type !== expected.type ||
+    (cue.at.type === "time" ? cue.at.seconds : cue.at.meters) <=
+      (expected.type === "time" ? expected.seconds : expected.meters);
+  for (const cue of step.cues ?? []) {
+    if (!within(cue)) {
+      log.warn("dropped", `Cue "${cue.text}" comes after the step's expected length`, at);
+    }
+  }
+  const cues = step.cues?.filter(within);
+  return {
+    ...step,
+    duration: expected,
+    ...(cues === undefined ? {} : { cues: cues.length > 0 ? cues : undefined }),
+  };
 }
