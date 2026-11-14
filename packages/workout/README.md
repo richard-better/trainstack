@@ -109,6 +109,11 @@ name or note longer than FIT's 254 bytes is cut, reported as `dropped`.
 - A sport other than cycling, running or swimming, grade and resistance targets, repeats that do
   not form a nested run of steps, and repeats nested more than 32 deep (`maxRepeatDepth`).
 
+`fitAthlete(profile, sport, source)` and `athleteThresholds(profile, sport)` take an athlete's
+settings as `@trainstack/zones` replays them (`profileOn`) and give the reader's zones and max
+heart rate, and the writer's threshold heart rate and pace, so the API and the web app read and
+write a file the same way.
+
 The sub sport, pool length, swim stroke and equipment have nowhere to go and are reported as
 `dropped`, as is lap or short-window averaging on a power, heart rate or speed target.
 
