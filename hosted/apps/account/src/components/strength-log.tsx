@@ -61,7 +61,6 @@ export function StrengthEditor({
     setExercises(draft.exercises.map((entry) => (entry.key === key ? change(entry) : entry)));
 
   async function add(exerciseId: string) {
-    onAdding(true);
     const previous = await latestWith(exerciseId).catch(() => null);
     updateDraft((current) => ({
       ...current,
@@ -70,7 +69,6 @@ export function StrengthEditor({
         exerciseFromHistory(exerciseId, previous, current.unit, custom),
       ],
     }));
-    onAdding(false);
   }
 
   return (
@@ -132,6 +130,7 @@ export function StrengthEditor({
         custom={custom}
         used={exercises.data?.used ?? []}
         onPick={add}
+        onAdding={onAdding}
         first={draft.exercises.length === 0}
       />
     </>
@@ -392,11 +391,13 @@ function ExercisePicker({
   custom,
   used,
   onPick,
+  onAdding,
   first,
 }: {
   custom: CustomExercise[];
   used: { exerciseId: string }[];
   onPick: (exerciseId: string) => Promise<void>;
+  onAdding: (adding: boolean) => void;
   first: boolean;
 }) {
   const [query, setQuery] = useState("");
@@ -410,16 +411,22 @@ function ExercisePicker({
 
   async function pick(exerciseId: string) {
     setBusy(true);
-    await onPick(exerciseId);
-    setBusy(false);
-    setQuery("");
-    setOpen(false);
+    onAdding(true);
+    try {
+      await onPick(exerciseId);
+      setQuery("");
+      setOpen(false);
+    } finally {
+      setBusy(false);
+      onAdding(false);
+    }
   }
 
   async function createOwn() {
     const name = query.trim();
     const id = newKey();
     setBusy(true);
+    onAdding(true);
     setFailed(false);
     try {
       await api.logbook.putExercise({
@@ -434,13 +441,14 @@ function ExercisePicker({
         },
         editedAt: new Date(),
       });
+      await queryClient.invalidateQueries({ queryKey: exercisesKey });
+      await pick(id);
     } catch {
       setFailed(true);
+    } finally {
       setBusy(false);
-      return;
+      onAdding(false);
     }
-    await queryClient.invalidateQueries({ queryKey: exercisesKey });
-    await pick(id);
   }
 
   if (!open) {
