@@ -215,6 +215,10 @@ export function createUploads({
       for (const listener of listeners) listener();
     },
     clearFinished() {
+      for (const upload of uploads.filter(isFinished)) {
+        picked.delete(upload.key);
+        checked.delete(upload.key);
+      }
       uploads = uploads.filter((upload) => !isFinished(upload));
       for (const listener of listeners) listener();
     },
