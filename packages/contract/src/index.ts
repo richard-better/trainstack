@@ -7,10 +7,12 @@ import {
   analysisStatistics,
   zoneTimeStatisticDescription,
 } from "./statistics.ts";
+import { trainingContract } from "./training.ts";
 import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from "./workouts.ts";
 
 export * from "./settings.ts";
 export * from "./statistics.ts";
+export * from "./training.ts";
 export * from "./workouts.ts";
 
 export const MAX_ACTIVITY_FILE_BYTES = 25 * 1024 * 1024;
@@ -256,6 +258,7 @@ export const appContract = {
   healthCheck: oc.output(z.literal("OK")),
   activities: activitiesContract,
   settings: settingsContract,
+  training: trainingContract,
   workouts: workoutsContract,
   builtinWorkouts: builtinWorkoutsContract,
   workoutLists: workoutListsContract,
