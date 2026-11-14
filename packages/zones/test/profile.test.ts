@@ -53,6 +53,21 @@ describe("history agrees with Ride's ZoneHistoryTests", () => {
     assert.equal(ftpOn(history, "2026-01-01"), 200);
   });
 
+  test("before the first change to zones, a weight does not count as one", () => {
+    const history = [
+      ...on("2026-01-01", { kind: "weight", kg: 70 }),
+      ...on("2026-02-01", ftp(250)),
+    ];
+    assert.equal(ftpOn(history, "2026-01-15"), 250);
+    assert.equal(profileOn(history, "2026-01-15").weightKg, 70);
+  });
+
+  test("before the first change to zones, listing a sport counts as one, as in Ride", () => {
+    const history = [...on("2026-01-01", listed("cycling")), ...on("2026-02-01", ftp(250))];
+    assert.equal(ftpOn(history, "2026-01-15"), undefined);
+    assert.equal(ftpOn(history, "2026-02-01"), 250);
+  });
+
   test("carries a past change forward until the next one", () => {
     const history = [
       ...on("2026-03-01", ftp(200)),

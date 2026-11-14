@@ -34,7 +34,9 @@ set.
 A setting is a dated change (`SettingChange`): a threshold, how a metric's zones are drawn, a
 sport keeping its own zones, a sport being listed, weight, or a threshold test. `profileOn`
 applies every change up to a day, so an old activity is analysed with the settings that held
-on its day. Before the first day on which anything took effect, that first day's settings hold.
+on its day. Before the first day on which a change to zones took effect, that first day's
+settings hold. As in Ride's `ZoneHistory`, listing a sport counts as such a change and a weight
+does not, since Ride keeps weight outside its zone history. Weight follows the same rule on its own.
 Changes on the same day apply in a fixed order, whatever order they arrive in: sports listed,
 then defaults, then a sport keeping its own zones, then the sport's own settings.
 
