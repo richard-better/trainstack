@@ -8,6 +8,16 @@ export {
   type LoadSource,
   zoneSport,
 } from "./activity.ts";
+export {
+  type BestEffortHeartRate,
+  type BestGradeAdjustedSpeed,
+  effortHeartRateShare,
+  type EffortHeartRate,
+  gradeAdjustedSpeedDurations,
+  powerEffortHeartRateDurations,
+  sustainedHeartRateSeconds,
+  sustainedMaxHeartRate,
+} from "./effort-heart-rate.ts";
 export { type HeartRateThresholds, heartRateStressScore, trimpWeighting } from "./heart-rate.ts";
 export {
   type DailyLoad,
@@ -90,3 +100,30 @@ export {
   zoneTimeStatisticName,
 } from "./statistics.ts";
 export { combineZoneShares, timeInZones, type ZoneShare } from "./zones.ts";
+export {
+  criticalPowerDurations,
+  type DetectedThreshold,
+  detectedThresholds,
+  detectThresholds,
+  effortDecay,
+  ftpShareOfCriticalPower,
+  fullValueDays,
+  maxHeartRateOutlierBpm,
+  type NoEstimateReason,
+  type NoThresholdEstimate,
+  plausibleWPrimeJoules,
+  recentEffortDays,
+  riegelExponent,
+  riegelHourSpeed,
+  staleEffortDays,
+  type ThresholdActivity,
+  type ThresholdConfidence,
+  type ThresholdDetection,
+  type ThresholdDetectionOptions,
+  type ThresholdEstimate,
+  type ThresholdEvidence,
+  type ThresholdMethod,
+  type ThresholdSignal,
+  thresholdWindowDays,
+  twentyMinuteShare,
+} from "./thresholds.ts";

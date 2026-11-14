@@ -6,6 +6,15 @@ import {
   zonesFor,
 } from "@trainstack/zones";
 
+import {
+  type BestEffortHeartRate,
+  bestEffortHeartRates,
+  type BestGradeAdjustedSpeed,
+  bestGradeAdjustedSpeeds,
+  type EffortHeartRate,
+  powerEffortHeartRates,
+  sustainedMaxHeartRate,
+} from "./effort-heart-rate.ts";
 import { heartRateStressScore } from "./heart-rate.ts";
 import {
   heldKilojoules,
@@ -75,6 +84,10 @@ export interface ActivityAnalysis {
   readonly paceStressScore: number | null;
   readonly bestEfforts: readonly BestEffort[];
   readonly heartRateStressScore: number | null;
+  readonly sustainedMaxHeartRate: number | null;
+  readonly powerCurveHeartRates: readonly EffortHeartRate[];
+  readonly bestGradeAdjustedSpeeds: readonly BestGradeAdjustedSpeed[];
+  readonly bestEffortHeartRates: readonly BestEffortHeartRate[];
   readonly timeInZones: Partial<Record<ZoneMetric, readonly ZoneShare[]>>;
   readonly load: ActivityLoad | null;
   readonly laps: readonly LapAnalysis[];
@@ -185,8 +198,9 @@ export function analyzeActivity(activity: AnalysisActivity, profile: Profile): A
   const running = sport === "running";
   const gradeAdjusted = running ? gradeAdjustedSpeeds(samples) : null;
   const averageGradeAdjustedSpeed = gradeAdjusted && averageWhileHeld(samples, gradeAdjusted);
+  const gradeAdjustedPerSecond = gradeAdjusted && perSecond(samples, gradeAdjusted);
   const normalizedGradeAdjustedSpeed =
-    gradeAdjusted && normalizedAverage(perSecond(samples, gradeAdjusted));
+    gradeAdjustedPerSecond && normalizedAverage(gradeAdjustedPerSecond);
   const thresholdPace =
     sport === null ? undefined : metricSettings(profile, "pace", sport)?.thresholds.threshold_pace;
   const paceDistance = sport === null ? undefined : paceDistanceMetres(sport);
@@ -199,6 +213,7 @@ export function analyzeActivity(activity: AnalysisActivity, profile: Profile): A
 
   const heartRate = heartRateThresholds(profile, sport);
   const heartRateStress = heartRate ? heartRateStressScore(samples, heartRate) : null;
+  const efforts = running ? bestEfforts(samples) : [];
 
   return {
     sport,
@@ -211,8 +226,14 @@ export function analyzeActivity(activity: AnalysisActivity, profile: Profile): A
     normalizedGradeAdjustedSpeed,
     paceIntensity,
     paceStressScore,
-    bestEfforts: running ? bestEfforts(samples) : [],
+    bestEfforts: efforts,
     heartRateStressScore: heartRateStress,
+    sustainedMaxHeartRate: sustainedMaxHeartRate(samples),
+    powerCurveHeartRates: powerEffortHeartRates(samples, powerPerSecond),
+    bestGradeAdjustedSpeeds: gradeAdjustedPerSecond
+      ? bestGradeAdjustedSpeeds(samples, gradeAdjustedPerSecond)
+      : [],
+    bestEffortHeartRates: bestEffortHeartRates(samples, efforts),
     timeInZones: zoneTimes(samples, profile, sport),
     load: chooseLoad(sport, {
       power: powerStressScore,
