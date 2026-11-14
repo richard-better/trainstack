@@ -4,6 +4,7 @@ import { calendarFeedRouter } from "./calendar-feed/router";
 import { checkInsRouter } from "./check-ins/router";
 import { logbookRouter } from "./logbook/router";
 import { api } from "./procedures";
+import { readinessRouter } from "./readiness/router";
 import { settingsRouter } from "./settings/router";
 import { thresholdsRouter } from "./thresholds/router";
 import { trainingRouter } from "./training/router";
@@ -23,4 +24,5 @@ export const appRouter = api.router({
   calendarFeed: calendarFeedRouter,
   checkIns: checkInsRouter,
   logbook: logbookRouter,
+  readiness: readinessRouter,
 });
