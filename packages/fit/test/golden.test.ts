@@ -229,6 +229,32 @@ describe("Ride's own recordings in the trace goldens", () => {
         ],
       );
       assert.equal(ride.fileId!.manufacturer, 255);
+      assert.equal(ride.summary.utcOffsetSeconds, undefined);
     });
   }
+
+  test("decodes the laps a rider marked, paused through and skipped, and the ride's local time", () => {
+    const ride = decodeFit(trace("laps-marked-paused-and-skipped"));
+    assert.equal(ride.summary.utcOffsetSeconds, -5 * 60 * 60);
+    assert.equal(ride.summary.elapsedSeconds, 250);
+    assert.deepEqual(
+      ride.laps.map((lap) => [lap.elapsedSeconds, lap.trigger]),
+      [
+        [30, "time"],
+        [20, "manual"],
+        [1, "manual"],
+        [9, "time"],
+        [30, "time"],
+        [30, "time"],
+        [10, "manual"],
+        [30, "time"],
+        [10, "manual"],
+        [20, "time"],
+        [30, "time"],
+        [30, "time"],
+      ],
+    );
+    const lapSeconds = ride.laps.reduce((total, lap) => total + lap.elapsedSeconds!, 0);
+    assert.equal(lapSeconds, ride.summary.elapsedSeconds);
+  });
 });

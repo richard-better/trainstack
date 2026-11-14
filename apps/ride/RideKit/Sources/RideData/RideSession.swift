@@ -34,6 +34,7 @@ public struct RideSession: Sendable {
 
   public let workout: Workout
   public let startDate: Date
+  public let utcOffsetSeconds: Int?
   public private(set) var intervals: [Interval] = []
   private var current = 0
   private var laps: [Int: TimeInterval] = [:]
@@ -53,10 +54,12 @@ public struct RideSession: Sendable {
   private var bike: VirtualBike
 
   public init(
-    workout: Workout, startDate: Date = .now, riderWeight: Double = RiderSettings.defaultWeight
+    workout: Workout, startDate: Date = .now, utcOffsetSeconds: Int? = nil,
+    riderWeight: Double = RiderSettings.defaultWeight
   ) {
     self.workout = workout
     self.startDate = startDate
+    self.utcOffsetSeconds = utcOffsetSeconds
     bike = VirtualBike(riderWeight: riderWeight)
     hasLapSteps = workout.steps.contains(where: \.endsOnLap)
     layOut()
@@ -255,7 +258,7 @@ public struct RideSession: Sendable {
     let average = Self.average
     return RideRecording(
       startDate: startDate, workoutName: workout.name, sport: .cycling, samples: recorded,
-      laps: recordedLaps(recorded),
+      laps: recordedLaps(recorded), utcOffsetSeconds: utcOffsetSeconds,
       summary: .init(
         duration: elapsed, distanceMetres: distanceMetres > 0 ? distanceMetres : nil,
         averagePower: average(powers), maxPower: powers.max(),

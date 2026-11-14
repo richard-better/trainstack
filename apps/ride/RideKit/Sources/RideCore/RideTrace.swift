@@ -6,12 +6,17 @@ public struct RideTrace: Equatable, Sendable {
     public var workout: PlannedWorkout
     public var ftp: Int
     public var startDate: Date
+    public var utcOffsetSeconds: Int?
     public var riderWeight: Double
 
-    public init(workout: PlannedWorkout, ftp: Int, startDate: Date, riderWeight: Double) {
+    public init(
+      workout: PlannedWorkout, ftp: Int, startDate: Date, utcOffsetSeconds: Int? = nil,
+      riderWeight: Double
+    ) {
       self.workout = workout
       self.ftp = ftp
       self.startDate = startDate
+      self.utcOffsetSeconds = utcOffsetSeconds
       self.riderWeight = riderWeight
     }
 
@@ -20,7 +25,7 @@ public struct RideTrace: Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-      case workout, template, ftp, startDate, riderWeight
+      case workout, template, ftp, startDate, utcOffsetSeconds, riderWeight
     }
 
     public init(from decoder: any Decoder) throws {
@@ -30,6 +35,7 @@ public struct RideTrace: Equatable, Sendable {
         ?? container.decode(WorkoutTemplate.self, forKey: .template).planned
       ftp = try container.decode(Int.self, forKey: .ftp)
       startDate = try container.decode(Date.self, forKey: .startDate)
+      utcOffsetSeconds = try container.decodeIfPresent(Int.self, forKey: .utcOffsetSeconds)
       riderWeight = try container.decode(Double.self, forKey: .riderWeight)
     }
 
@@ -38,6 +44,7 @@ public struct RideTrace: Equatable, Sendable {
       try container.encode(workout, forKey: .workout)
       try container.encode(ftp, forKey: .ftp)
       try container.encode(startDate, forKey: .startDate)
+      try container.encodeIfPresent(utcOffsetSeconds, forKey: .utcOffsetSeconds)
       try container.encode(riderWeight, forKey: .riderWeight)
     }
   }
@@ -55,7 +62,7 @@ public struct RideTrace: Equatable, Sendable {
   public func freshSession() -> RideSession {
     RideSession(
       workout: header.workout.workout(ftp: header.ftp), startDate: header.startDate,
-      riderWeight: header.riderWeight)
+      utcOffsetSeconds: header.utcOffsetSeconds, riderWeight: header.riderWeight)
   }
 
   public func replay() -> RideEngine {

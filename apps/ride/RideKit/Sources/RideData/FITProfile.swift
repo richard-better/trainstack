@@ -6,6 +6,7 @@ enum FITProfile {
   static let protocolVersion: UInt8 = 0x20
   static let headerSize: UInt8 = 14
   static let longestStringFieldBytes = 255
+  static let longestUTCOffsetSeconds = 14 * 60 * 60
 
   enum MessageNumber {
     static let fileID = 0
@@ -110,6 +111,7 @@ enum FITProfile {
 
   enum ActivityField {
     static let totalTimerTime = 0
+    static let localTimestamp = 5
     static let sessionCount = 1
     static let type = 2
     static let event = 3

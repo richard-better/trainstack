@@ -13,6 +13,7 @@ struct RideTraceReplayTests {
   static let scenarios: [String: HeadlessRide] = [
     "laps-marked-paused-and-skipped": HeadlessRide(
       WorkoutTemplate.named("Recovery 30")!.fitted(to: 300), ftp: 220,
+      utcOffsetSeconds: -5 * 60 * 60,
       events: [
         50: [.rider(.markLap)], 51: [.rider(.markLap)], 90: [.rider(.togglePause)],
         110: [.rider(.markLap)], 120: [.rider(.togglePause)], 160: [.rider(.skipInterval)],

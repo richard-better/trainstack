@@ -6,18 +6,20 @@ public struct RideRecording: Equatable, Sendable {
   public var sport: Sport?
   public var samples: [Sample]
   public var laps: [RideLap]
+  public var utcOffsetSeconds: Int?
   public internal(set) var pauses: [Range<TimeInterval>] = []
   public var summary: Summary
 
   public init(
     startDate: Date, workoutName: String? = nil, sport: Sport? = nil, samples: [Sample],
-    laps: [RideLap] = [], summary: Summary
+    laps: [RideLap] = [], utcOffsetSeconds: Int? = nil, summary: Summary
   ) {
     self.startDate = startDate
     self.workoutName = workoutName
     self.sport = sport
     self.samples = samples
     self.laps = laps
+    self.utcOffsetSeconds = utcOffsetSeconds
     self.summary = summary
   }
 

@@ -141,9 +141,21 @@ public enum FITEncoder {
         .enumeration(Activity.type, FITProfile.ActivityType.manual),
         .enumeration(Activity.event, Event.activity),
         .enumeration(Activity.eventType, EventType.stop),
-      ])
+      ] + localTimestamp(at: end, offsetSeconds: recording.utcOffsetSeconds))
 
     return writer.file()
+  }
+
+  private static func localTimestamp(at timestamp: UInt32, offsetSeconds: Int?) -> [FITWriter.Field]
+  {
+    guard let offsetSeconds, abs(offsetSeconds) <= FITProfile.longestUTCOffsetSeconds else {
+      return []
+    }
+    return [
+      .uint32(
+        FITProfile.ActivityField.localTimestamp,
+        UInt32(clamping: Int(timestamp) + offsetSeconds))
+    ]
   }
 
   private static func lapFields(_ lap: RideLap, index: Int, start: UInt32) -> [FITWriter.Field] {

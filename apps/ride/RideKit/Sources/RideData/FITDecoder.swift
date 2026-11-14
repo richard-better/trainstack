@@ -7,6 +7,7 @@ public enum FITDecoder {
     var events: [Message] = []
     var laps: [Message] = []
     var session: Message?
+    var activity: Message?
     var workoutName: String?
     var targetPowerField: DeveloperField?
     while let message = try reader.next() {
@@ -14,6 +15,7 @@ public enum FITDecoder {
       case .record: records.append(message)
       case .event: events.append(message)
       case .lap: laps.append(message)
+      case .activity: activity = activity ?? message
       case .session: session = session ?? message
       case .workout: workoutName = workoutName ?? message.string(FITProfile.WorkoutField.name)
       case .fieldDescription:
@@ -30,12 +32,21 @@ public enum FITDecoder {
     guard !records.isEmpty else { throw FITError.noRecords }
     return recording(
       records: records, events: events, laps: laps, session: session, workoutName: workoutName,
-      targetPowerField: targetPowerField)
+      targetPowerField: targetPowerField, utcOffsetSeconds: activity.flatMap(utcOffset))
+  }
+
+  private static func utcOffset(of activity: Message) -> Int? {
+    guard let timestamp = activity.integer(FITProfile.CommonField.timestamp),
+      let local = activity.integer(FITProfile.ActivityField.localTimestamp)
+    else { return nil }
+    let minute = 60.0
+    let offset = Int((Double(local - timestamp) / minute).rounded()) * Int(minute)
+    return abs(offset) <= FITProfile.longestUTCOffsetSeconds ? offset : nil
   }
 
   private static func recording(
     records: [Message], events: [Message], laps: [Message], session: Message?,
-    workoutName: String?, targetPowerField: DeveloperField?
+    workoutName: String?, targetPowerField: DeveloperField?, utcOffsetSeconds: Int?
   ) -> RideRecording {
     typealias Record = FITProfile.RecordField
     typealias Session = FITProfile.SessionField
@@ -76,6 +87,7 @@ public enum FITDecoder {
         Sport(fitSport: $0, subSport: session?.integer(Session.subSport))
       },
       samples: samples, laps: laps.compactMap { lap(from: $0, startTimestamp: startTimestamp) },
+      utcOffsetSeconds: utcOffsetSeconds,
       summary: summary)
     recording.pauses = pauses(
       from: events, startTimestamp: startTimestamp, during: samples.map(\.elapsed))
@@ -145,7 +157,9 @@ public enum FITDecoder {
 }
 
 private struct Message {
-  enum Kind { case record, event, lap, session, workout, fieldDescription, developerDataID, other }
+  enum Kind {
+    case record, event, lap, session, activity, workout, fieldDescription, developerDataID, other
+  }
 
   let kind: Kind
   let fields: [Int: Field]
@@ -304,6 +318,7 @@ private struct MessageReader {
       case Number.record: .record
       case Number.event: .event
       case Number.lap: .lap
+      case Number.activity: .activity
       case Number.session: .session
       case Number.workout: .workout
       case Number.fieldDescription: .fieldDescription
