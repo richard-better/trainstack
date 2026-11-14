@@ -62,9 +62,11 @@ otherwise, and prints the addresses it chose. Choose them with `--api-port`, `--
 `--web-port`, or `TRAINSTACK_API_PORT`, `TRAINSTACK_APPLE_PORT` and `TRAINSTACK_WEB_PORT`, so
 several checkouts can run it at once. Sign in with Apple there and press Continue to reach a test
 athlete with two rides from `apps/ride` already uploaded. `<API>/__local/storage` shows
-everything in the database and the activity files bucket. Pass `-- --empty` to start with no
-activities, or `-- --api-only` to start the web app yourself. Nothing is kept when it stops, and it
-needs no Cloudflare or Apple credentials.
+everything in the database and the activity files bucket. Pass `-- --history` to add 30 weeks of
+rides and runs with thresholds, a raised FTP and one ride recorded twice, enough to make the
+training charts real; `-- --empty` to start with no activities; or `-- --api-only` to start the web
+app yourself. Activities are analysed every 20 seconds, as the deployed cron does every minute.
+Nothing is kept when it stops, and it needs no Cloudflare or Apple credentials.
 
 ## License
 
