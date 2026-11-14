@@ -582,3 +582,26 @@
     transition: none;
   }
 }
+
+.day-check-in {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 6px;
+  border-left: 2px solid var(--edge);
+  padding-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-decoration: none;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cal[data-view="week"] .day-check-in {
+  -webkit-line-clamp: 6;
+  font-size: 12px;
+}
+
+.day-check-in:hover {
+  color: var(--soft);
+}
