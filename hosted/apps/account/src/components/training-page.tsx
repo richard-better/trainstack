@@ -42,6 +42,7 @@ import {
   signed,
 } from "../lib/training";
 import { useBests } from "./activity-bests";
+import { CheckInPrompt } from "./check-in-prompt";
 import { LoadChart } from "./load-chart";
 import { PeriodPicker } from "./period-picker";
 import { PowerCurve } from "./power-curve";
@@ -90,6 +91,7 @@ export function TrainingPage({ range, period }: { range: LoadRangeKey; period: B
         <h1 className="page-title">Training</h1>
       </div>
       <TimeZoneOffer where="training" />
+      <CheckInPrompt />
       {(load.data?.analysesDue ?? 0) > 0 && <UpdatingNote />}
       {load.isPending ? (
         <div
