@@ -30,6 +30,8 @@ function columnsOf(records: readonly FitRecord[]): RecordColumns {
     speedMetresPerSecond: column((record) => record.speedMetresPerSecond),
     distanceMetres: column((record) => record.distanceMetres),
     altitudeMetres: column((record) => record.altitudeMetres),
+    latitude: column((record) => record.latitude),
+    longitude: column((record) => record.longitude),
   };
 }
 

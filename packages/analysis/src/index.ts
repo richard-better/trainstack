@@ -42,6 +42,17 @@ export {
   minettiCost,
 } from "./running.ts";
 export {
+  encodePolyline,
+  type Route,
+  type RouteBounds,
+  type RouteColumns,
+  routeGapSeconds,
+  routeMaxPoints,
+  routeMaxSpeedMetresPerSecond,
+  routeOf,
+  routeToleranceDegrees,
+} from "./route.ts";
+export {
   type AnalysisColumns,
   analysisColumnLimits,
   type AnalysisRecord,

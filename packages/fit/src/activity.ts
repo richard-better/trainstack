@@ -142,6 +142,8 @@ export interface RecordColumns {
   readonly speedMetresPerSecond: Float64Array;
   readonly distanceMetres: Float64Array;
   readonly altitudeMetres: Float64Array;
+  readonly latitude: Float64Array;
+  readonly longitude: Float64Array;
 }
 
 export interface StreamLimits {
@@ -563,6 +565,8 @@ function emptyStreams(capacity: number) {
     speedMetresPerSecond: new Float64Array(capacity),
     distanceMetres: new Float64Array(capacity),
     altitudeMetres: new Float64Array(capacity),
+    latitude: new Float64Array(capacity),
+    longitude: new Float64Array(capacity),
   };
 }
 
@@ -588,6 +592,8 @@ export function streamFit(
     columns.speedMetresPerSecond[count] = orNaN(speed(message));
     columns.distanceMetres[count] = orNaN(divided(message, RecordField.distance, Scale.distance));
     columns.altitudeMetres[count] = orNaN(altitude(message));
+    columns.latitude[count] = orNaN(degrees(message, RecordField.positionLat));
+    columns.longitude[count] = orNaN(degrees(message, RecordField.positionLong));
     count += 1;
   });
   return {
@@ -601,6 +607,8 @@ export function streamFit(
       speedMetresPerSecond: columns.speedMetresPerSecond.subarray(0, count),
       distanceMetres: columns.distanceMetres.subarray(0, count),
       altitudeMetres: columns.altitudeMetres.subarray(0, count),
+      latitude: columns.latitude.subarray(0, count),
+      longitude: columns.longitude.subarray(0, count),
     },
   };
 }

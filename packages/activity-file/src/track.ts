@@ -141,6 +141,8 @@ const columnNames = [
   "fileDistance",
   "travelled",
   "altitude",
+  "latitude",
+  "longitude",
 ] as const;
 
 type ColumnName = (typeof columnNames)[number];
@@ -175,6 +177,8 @@ class PointColumns {
     values.fileDistance[at] = point.distanceMetres ?? NaN;
     values.travelled[at] = travelled ?? NaN;
     values.altitude[at] = point.altitudeMetres ?? NaN;
+    values.latitude[at] = point.latitude ?? NaN;
+    values.longitude[at] = point.longitude ?? NaN;
   }
 
   columns(distanceFromFile: boolean): RecordColumns {
@@ -188,6 +192,8 @@ class PointColumns {
       speedMetresPerSecond: used(values.speed),
       distanceMetres: used(distanceFromFile ? values.fileDistance : values.travelled),
       altitudeMetres: used(values.altitude),
+      latitude: used(values.latitude),
+      longitude: used(values.longitude),
     };
   }
 }

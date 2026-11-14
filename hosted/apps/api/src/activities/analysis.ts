@@ -7,7 +7,10 @@ import {
   type ActivityAnalysis,
   analysisColumnLimits,
   analyzeActivity,
+  type Route,
+  routeOf,
   statisticsOf,
+  timerPauses,
 } from "@trainstack/analysis";
 import {
   type DatedChange,
@@ -34,7 +37,7 @@ import { isAnalysisStatistic } from "./analysis-statistics";
 import { fileKey, sha256Hex } from "./files";
 import { MAX_EVENTS_PER_ACTIVITY, SUMMARY_VERSION } from "./summary";
 
-export const ANALYSIS_VERSION = 2;
+export const ANALYSIS_VERSION = 3;
 export const MAX_ANALYSIS_ATTEMPTS = 3;
 export const ANALYSIS_CHECKS_PER_SCHEDULED_RUN = 200;
 export const ANALYSES_PER_SCHEDULED_RUN = 20;
@@ -58,6 +61,7 @@ type Outcome =
       statistics: Record<string, number>;
       laps: { sequence: number; data: Record<string, number | null> }[];
       missingThresholds: string[];
+      route: Route | null;
     }
   | { error: ActivityAnalysisError };
 
@@ -132,8 +136,10 @@ export function analysisOfFile(bytes: Uint8Array, profile: Profile): Outcome {
     if (!(error instanceof ActivityFileError)) throw error;
     return { error: error.code === "tooLarge" ? "too_large" : "failed" };
   }
+  const route = routeOf(file.records, timerPauses(file.events, file.summary.startTime));
   const analysis = analyzeActivity(file, profile);
   return {
+    route,
     analysis,
     statistics: statisticsOf(analysis),
     laps: lapData(file, analysis),
@@ -189,6 +195,7 @@ async function store(
         error: "error" in outcome ? outcome.error : null,
         profile: fingerprint,
         missingThresholds: analysed?.missingThresholds ?? [],
+        route: analysed?.route ?? null,
       })
       .where(ours(target, attempts)),
   ]);

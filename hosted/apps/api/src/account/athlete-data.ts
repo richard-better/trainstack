@@ -114,7 +114,7 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
   },
   activityAnalysis: {
     about:
-      "How each activity was analysed with the thresholds of its day: when, any error, and which thresholds were missing. The numbers it found are in activity_statistic.",
+      "How each activity was analysed with the thresholds of its day: when, any error, which thresholds were missing, and the simplified route of where it went. The numbers it found are in activity_statistic.",
     owner: (table) => table.userId,
   },
   athleteTimeZone: {

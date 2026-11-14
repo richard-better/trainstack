@@ -1,4 +1,4 @@
-import type { ActivityAnalysisError } from "@trainstack/contract";
+import type { ActivityAnalysisError, ActivityRoute } from "@trainstack/contract";
 import { sql } from "drizzle-orm";
 import { foreignKey, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -22,6 +22,7 @@ export const activityAnalysis = sqliteTable(
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'`),
+    route: text("route", { mode: "json" }).$type<ActivityRoute>(),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.activityId] }),
