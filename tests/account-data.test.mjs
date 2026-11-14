@@ -186,6 +186,30 @@ async function athleteWithEverything(identity) {
     content: { kind: "rest", notes: "Travel day" },
     updatedAt: at(4),
   });
+  const [firstRide] = athlete.rides;
+  const { localDay } = await webApp.activities.get({ id: firstRide.id });
+  const plannedRide = randomUUID();
+  await webApp.plannedWorkouts.put({
+    id: plannedRide,
+    day: localDay,
+    position: 1,
+    content: {
+      kind: "workout",
+      workout: {
+        name: "Ride",
+        sport: "cycling",
+        steps: [{ type: "step", duration: { type: "time", seconds: 1800 } }],
+      },
+      source: null,
+      notes: null,
+    },
+    updatedAt: at(5),
+  });
+  await webApp.plannedWorkouts.unpair({
+    id: plannedRide,
+    activityId: firstRide.id,
+    updatedAt: at(6),
+  });
   const session = await db
     .prepare("SELECT token FROM session WHERE user_id = ? LIMIT 1")
     .bind(athlete.userId)

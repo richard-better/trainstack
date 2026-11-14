@@ -154,6 +154,11 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
     owner: (table) => table.userId,
     readable: { content: parsedJson },
   },
+  plannedPairingChoice: {
+    about:
+      "Pairings of a planned workout with an activity that the athlete made or took apart by hand, which hold over the automatic pairing.",
+    owner: (table) => table.userId,
+  },
 };
 
 export type AthleteFiles = {

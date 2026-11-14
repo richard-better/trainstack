@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  foreignKey,
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
+
+import { activity } from "./activities";
 
 import { user } from "./auth";
 
@@ -37,5 +47,26 @@ export const plannedWorkout = sqliteTable(
     index("planned_workout_user_day_idx").on(table.userId, table.day, table.position, table.id),
     index("planned_workout_user_revision_idx").on(table.userId, table.revision),
     index("planned_workout_user_plan_idx").on(table.userId, table.planId),
+  ],
+);
+
+export const plannedPairingChoice = sqliteTable(
+  "planned_pairing_choice",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    plannedId: text("planned_id").notNull(),
+    activityId: text("activity_id").notNull(),
+    paired: integer("paired", { mode: "boolean" }).notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.plannedId, table.activityId] }),
+    foreignKey({
+      columns: [table.userId, table.activityId],
+      foreignColumns: [activity.userId, activity.id],
+    }).onDelete("cascade"),
+    index("planned_pairing_choice_user_activity_idx").on(table.userId, table.activityId),
   ],
 );
