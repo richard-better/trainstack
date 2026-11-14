@@ -150,6 +150,110 @@ test("a deleted activity stays deleted when a stale device uploads it again", as
   assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
 });
 
+test("restoring a deleted activity brings it back with its file, summary and analysis", async () => {
+  const { client, user } = await rider();
+  const uploaded = await client.activities.upload({ file: fitFile(), source: "trainstack" });
+  const { id } = uploaded;
+  await client.activities.delete({ id });
+
+  const restored = await client.activities.restore({ file: fitFile(), source: "upload" });
+  assert.equal(restored.id, id);
+  assert.equal(restored.source, "upload");
+  assert.ok(restored.summarizedAt instanceof Date);
+  assert.deepEqual(restored.statistics, uploaded.statistics);
+  assert.equal(restored.analysisDue, true);
+  assert.deepEqual(
+    (await client.activities.list({})).activities.map((activity) => activity.id),
+    [id],
+  );
+  const file = await client.activities.file({ id });
+  assert.deepEqual(Buffer.from(await file.arrayBuffer()), rideBytes);
+  assert.ok(await bucket.head(`activities/${user.id}/${id}`));
+  const tombstones = await db
+    .prepare("SELECT count(*) AS n FROM deleted_activity WHERE user_id = ? AND id = ?")
+    .bind(user.id, id)
+    .first();
+  assert.equal(tombstones.n, 0);
+});
+
+test("only restore brings a deleted activity back: an upload after a restore and a new delete is refused again", async () => {
+  const { client } = await rider();
+  const { id } = await client.activities.upload({ file: fitFile(), source: "trainstack" });
+  await client.activities.delete({ id });
+  await assert.rejects(client.activities.upload({ file: fitFile(), source: "trainstack" }), {
+    code: "ACTIVITY_DELETED",
+  });
+
+  await client.activities.restore({ file: fitFile(), source: "trainstack" });
+  assert.equal(
+    (await client.activities.upload({ file: fitFile(), source: "trainstack" })).id,
+    id,
+    "a background upload of a restored activity finds it there",
+  );
+
+  const deletedAgain = await client.activities.delete({ id });
+  await assert.rejects(client.activities.upload({ file: fitFile(), source: "trainstack" }), {
+    code: "ACTIVITY_DELETED",
+    data: deletedAgain,
+  });
+  assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
+});
+
+test("restoring an activity that is there, or was never deleted, adds it as an upload would", async () => {
+  const { client } = await rider();
+  const restored = await client.activities.restore({ file: fitFile(), source: "upload" });
+  assert.deepEqual(
+    await client.activities.restore({ file: fitFile(), source: "upload" }),
+    restored,
+  );
+  assert.deepEqual(await client.activities.upload({ file: fitFile(), source: "upload" }), restored);
+});
+
+test("restoring one account's deletion leaves another account's deletion standing", async () => {
+  const ada = await rider();
+  const bob = await rider();
+  const id = sha256(rideBytes);
+  await ada.client.activities.delete({ id });
+  await bob.client.activities.delete({ id });
+  await ada.client.activities.restore({ file: fitFile(), source: "upload" });
+  await assert.rejects(bob.client.activities.upload({ file: fitFile(), source: "upload" }), {
+    code: "ACTIVITY_DELETED",
+  });
+});
+
+test("a delete that overtakes a restore after it is stored wins, and leaves no file", async () => {
+  const { client, user } = await rider();
+  const id = sha256(rideBytes);
+  await client.activities.delete({ id });
+  await db
+    .prepare(
+      `CREATE TRIGGER delete_right_after_restore AFTER INSERT ON activity WHEN NEW.user_id = '${user.id}'
+       BEGIN
+         INSERT INTO deleted_activity (user_id, id) VALUES (NEW.user_id, NEW.id);
+         DELETE FROM activity WHERE user_id = NEW.user_id AND id = NEW.id;
+       END`,
+    )
+    .run();
+  try {
+    await assert.rejects(client.activities.restore({ file: fitFile(), source: "upload" }), {
+      code: "ACTIVITY_DELETED",
+      status: 410,
+    });
+  } finally {
+    await db.prepare("DROP TRIGGER delete_right_after_restore").run();
+  }
+  assert.equal(await bucket.head(`activities/${user.id}/${id}`), null);
+  assert.deepEqual(await client.activities.list({}), { activities: [], nextCursor: null });
+});
+
+test("restore refuses what is not an activity file", async () => {
+  const { client } = await rider();
+  await assert.rejects(
+    client.activities.restore({ file: new File(["not a file"], "x.txt"), source: "upload" }),
+    { code: "UNSUPPORTED_FILE", status: 415 },
+  );
+});
+
 test("deleting is idempotent and keeps the first deletion time", async () => {
   const { client } = await rider();
   const { id } = await client.activities.upload({ file: fitFile(), source: "trainstack" });
@@ -407,7 +511,7 @@ test("activities need a signed-in rider, and a cookie only counts from the web a
   assert.equal((await client.activities.list({})).activities.length, 1);
 });
 
-test("the app can use plain HTTP: multipart upload, JSON list, file download and DELETE", async () => {
+test("the app can use plain HTTP: multipart upload, JSON list, file download, DELETE and restore", async () => {
   const { token, client } = await rider();
   const auth = { Authorization: `Bearer ${token}` };
 
@@ -465,6 +569,17 @@ test("the app can use plain HTTP: multipart upload, JSON list, file download and
   const body = await refused.json();
   assert.equal(body.code, "ACTIVITY_DELETED");
   assert.equal(body.data.id, activity.id);
+
+  const restored = await send(
+    runtime,
+    new Request(`${api}/api-reference/activities/restore`, {
+      method: "POST",
+      headers: auth,
+      body: form,
+    }),
+  );
+  assert.equal(restored.status, 200, await restored.clone().text());
+  assert.equal((await restored.json()).id, activity.id);
 
   const preflight = await runtime.dispatchFetch(`${api}/api-reference/activities/${activity.id}`, {
     method: "OPTIONS",
