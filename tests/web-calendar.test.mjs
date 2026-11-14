@@ -869,6 +869,47 @@ test("a part that is not scored says why, a lap step first among them", () => {
   assert.match(words.unscored[1], /no targets to hold/, "its only step has no target");
 });
 
+test("intervals whose steps were all left unplaced say the laps did not name or match them", () => {
+  const unplaced = (index) => ({
+    index,
+    name: null,
+    placed: false,
+    metric: "power",
+    seconds: 0,
+    secondsWithData: 0,
+    secondsInTarget: 0,
+    low: 190,
+    high: 210,
+    average: null,
+  });
+  const words = complianceWords(
+    pairedWith({
+      score: null,
+      rating: null,
+      parts: {
+        duration: part(3600, 3600),
+        distance: null,
+        load: null,
+        intervals: {
+          secondsWithData: 0,
+          secondsInTarget: 0,
+          share: null,
+          score: null,
+          alignedBy: "time",
+          steps: [unplaced(0), unplaced(1)],
+        },
+      },
+      pending: false,
+    }),
+  );
+  assert.ok(
+    words.unscored.includes(
+      "Intervals are not scored: its steps could not be found in the activity, whose laps neither name the workout's steps nor give one lap per step, while a step's length was not known in advance.",
+    ),
+    JSON.stringify(words.unscored),
+  );
+});
+
 test("every scored part on target says so", () => {
   const words = complianceWords(
     pairedWith({

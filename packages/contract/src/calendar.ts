@@ -134,7 +134,7 @@ export const intervalStepSchema = z.object({
   placed: z
     .boolean()
     .describe(
-      "false when the step could not be found in the activity: steps are laid out by time, and this step or one before it has a length not known in advance, such as one that lasts until the athlete presses lap, while the activity has no lap per step; or a distance step's whole length fell inside a gap in the recorded distance. Its target is then not scored",
+      "false when the step could not be found in the activity: its laps name the workout's steps and none names this one, as when the athlete never reached it; or steps are laid out by time, and this step or one before it has a length not known in advance, such as one that lasts until the athlete presses lap, while the activity's laps neither name the steps nor give one per step; or a distance step's whole length fell inside a gap in the recorded distance. Its target is then not scored",
     ),
   metric: z
     .enum(["power", "speed", "heart_rate"])
@@ -180,7 +180,7 @@ export const plannedComplianceSchema = z
           alignedBy: z
             .enum(["laps", "time"])
             .describe(
-              "laps: the activity has a lap per step, each timed step's lap within 10 % or 5 s of its planned time (a step that lasts until the lap button may take any length), and each step is its lap. time: steps are laid end to end over the activity's moving time from its start, a distance step until its distance is covered",
+              "laps: the activity's laps name the workout step each rode (for a workout without repeats), and each step is placed on the laps that name it, however long they ran, while laps that name no step, such as riding on after the workout ended, count toward none; or the activity has a lap per step, each timed step's lap within 10 % or 5 s of its planned time (a step that lasts until the lap button may take any length), and each step is its lap. time: steps are laid end to end over the activity's moving time from its start, a distance step until its distance is covered",
             ),
           steps: z
             .array(intervalStepSchema)
