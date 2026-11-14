@@ -3,7 +3,7 @@ import SwiftUI
 
 struct FeedbackSheet: View {
   let context: FeedbackContext
-  @Environment(TrainStackAccount.self) private var account
+  @Environment(TrainstackAccount.self) private var account
   @Environment(\.dismiss) private var dismiss
   @State private var message = ""
   @State private var isSending = false
@@ -132,5 +132,5 @@ extension String {
 
 #Preview {
   FeedbackSheet(context: .current(screen: "History", window: nil))
-    .environment(TrainStackAccount.sample)
+    .environment(TrainstackAccount.sample)
 }

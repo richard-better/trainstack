@@ -58,9 +58,9 @@ final class SettingsSync {
     try checkStillSyncing(account)
     store.receive(history.writes, through: history.cursor)
     let unsent = store.settings.ledger.unsent.filter { !refusedThisLaunch.contains($0) }
-    for start in stride(from: 0, to: unsent.count, by: TrainStackClient.maxSettingWrites) {
+    for start in stride(from: 0, to: unsent.count, by: TrainstackClient.maxSettingWrites) {
       let batch = Array(
-        unsent[start..<min(start + TrainStackClient.maxSettingWrites, unsent.count)])
+        unsent[start..<min(start + TrainstackClient.maxSettingWrites, unsent.count)])
       let result = try await server.writeSettings(batch, for: account)
       try checkStillSyncing(account)
       switch result {

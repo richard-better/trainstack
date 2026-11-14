@@ -46,7 +46,7 @@ struct AppleWebSignInTests {
 
   @Test func readsHowTheWebFlowEnded() throws {
     func code(_ query: String) throws -> String {
-      try TrainStackClient.signInCode(from: URL(string: "trainstackride://signed-in?\(query)")!)
+      try TrainstackClient.signInCode(from: URL(string: "trainstackride://signed-in?\(query)")!)
     }
     #expect(try code("code=abc") == "abc")
     #expect(throws: StravaError.cancelled) { try code("error=user_cancelled_authorize") }
@@ -87,7 +87,7 @@ struct AppleWebSignInTests {
   }
 
   @Test func staysSignedOutWhenTheDeviceWillNotKeepTheSession() async {
-    let web = TrainStackClient(
+    let web = TrainstackClient(
       server: URL(string: "https://api.example.com")!, store: SessionStoreThatWillNotKeepAnything(),
       transport: ScriptedTransport([json(#"{"token":"t"}"#)]))
     let attempt = await web.startAppleWebSignIn()

@@ -3,7 +3,7 @@ import RideStyle
 import SwiftUI
 
 struct LibraryWorkoutSteps: View {
-  let workout: TrainStackWorkout
+  let workout: TrainstackWorkout
   let ftp: Int?
 
   var body: some View {
@@ -28,7 +28,7 @@ struct LibraryWorkoutSteps: View {
 
   private var rows: [Row] { Self.rows(of: workout.blocks, depth: 0, ftp: ftp) }
 
-  private static func rows(of blocks: [TrainStackWorkout.Block], depth: Int, ftp: Int?) -> [Row] {
+  private static func rows(of blocks: [TrainstackWorkout.Block], depth: Int, ftp: Int?) -> [Row] {
     blocks.flatMap { block -> [Row] in
       switch block {
       case .step(let step): [row(of: step, depth: depth, ftp: ftp)]
@@ -44,7 +44,7 @@ struct LibraryWorkoutSteps: View {
     }
   }
 
-  private static func row(of step: TrainStackWorkout.Step, depth: Int, ftp: Int?) -> Row {
+  private static func row(of step: TrainstackWorkout.Step, depth: Int, ftp: Int?) -> Row {
     let target = describe(step.target, ftp: ftp)
     let extras =
       [
@@ -57,7 +57,7 @@ struct LibraryWorkoutSteps: View {
       watts: target.watts, duration: duration(step.duration))
   }
 
-  private static func describe(_ target: TrainStackWorkout.Target?, ftp: Int?) -> (
+  private static func describe(_ target: TrainstackWorkout.Target?, ftp: Int?) -> (
     name: String, detail: String?, watts: String?, zone: PowerZone?
   ) {
     switch target {
@@ -83,7 +83,7 @@ struct LibraryWorkoutSteps: View {
     }
   }
 
-  private static func prefix(_ level: TrainStackWorkout.Level) -> String {
+  private static func prefix(_ level: TrainstackWorkout.Level) -> String {
     switch level {
     case .constant, .unknown: ""
     case .range: "Range "
@@ -91,7 +91,7 @@ struct LibraryWorkoutSteps: View {
     }
   }
 
-  private static func average(_ level: TrainStackWorkout.Level) -> Double {
+  private static func average(_ level: TrainstackWorkout.Level) -> Double {
     switch level {
     case .constant(let value): value
     case .range(let low, let high), .ramp(let low, let high): (low + high) / 2
@@ -99,7 +99,7 @@ struct LibraryWorkoutSteps: View {
     }
   }
 
-  private static func level(_ level: TrainStackWorkout.Level, scale: Double) -> String {
+  private static func level(_ level: TrainstackWorkout.Level, scale: Double) -> String {
     let format = { (value: Double) in
       (value * scale).rounded().formatted(.number.grouping(.never).precision(.fractionLength(0)))
     }
@@ -111,7 +111,7 @@ struct LibraryWorkoutSteps: View {
     }
   }
 
-  private static func duration(_ amount: TrainStackWorkout.Amount) -> String {
+  private static func duration(_ amount: TrainstackWorkout.Amount) -> String {
     switch amount {
     case .seconds(let seconds): seconds <= PlannedStep.longest ? seconds.clockString : "Over a day"
     case .meters(let meters):

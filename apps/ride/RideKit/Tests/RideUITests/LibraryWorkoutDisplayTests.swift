@@ -7,12 +7,12 @@ import Testing
 
 struct LibraryWorkoutDisplayTests {
   private func workout(
-    _ blocks: [TrainStackWorkout.Block], sport: TrainStackWorkout.Sport = .cycling
+    _ blocks: [TrainstackWorkout.Block], sport: TrainstackWorkout.Sport = .cycling
   )
     throws -> LibraryWorkout
   {
     try LibraryWorkout(
-      id: "w", workout: TrainStackWorkout(name: "W", sport: sport, blocks: blocks),
+      id: "w", workout: TrainstackWorkout(name: "W", sport: sport, blocks: blocks),
       copiedFromBuiltin: nil, updatedAt: .now)
   }
 

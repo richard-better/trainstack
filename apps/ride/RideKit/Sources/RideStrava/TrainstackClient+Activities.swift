@@ -1,6 +1,6 @@
 import Foundation
 
-extension TrainStackClient: ActivityServer {
+extension TrainstackClient: ActivityServer {
   static let activitiesPath = "api-reference/activities"
   static let activityPageSize = 200
 

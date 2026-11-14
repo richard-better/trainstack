@@ -6,7 +6,7 @@ private enum Field: String, CodingKey {
   case expected
 }
 
-extension TrainStackWorkout.Amount: Codable {
+extension TrainstackWorkout.Amount: Codable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: Field.self)
     switch try container.decode(String.self, forKey: .type) {
@@ -14,7 +14,7 @@ extension TrainStackWorkout.Amount: Codable {
     case "distance": self = .meters(try container.decode(Double.self, forKey: .meters))
     case "open":
       self = .untilLap(
-        expected: try container.decodeIfPresent(TrainStackWorkout.Amount.self, forKey: .expected))
+        expected: try container.decodeIfPresent(TrainstackWorkout.Amount.self, forKey: .expected))
     case let type: self = .unknown(type)
     }
   }
@@ -37,7 +37,7 @@ extension TrainStackWorkout.Amount: Codable {
   }
 }
 
-extension TrainStackWorkout.Level: Codable {
+extension TrainstackWorkout.Level: Codable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: Field.self)
     switch try container.decode(String.self, forKey: .kind) {
@@ -74,7 +74,7 @@ extension TrainStackWorkout.Level: Codable {
   }
 }
 
-extension TrainStackWorkout.Target: Codable {
+extension TrainstackWorkout.Target: Codable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: Field.self)
     let type = try container.decode(String.self, forKey: .type)
@@ -83,7 +83,7 @@ extension TrainStackWorkout.Target: Codable {
       return
     }
     let unit = try container.decode(String.self, forKey: .unit)
-    let level = try container.decode(TrainStackWorkout.Level.self, forKey: .level)
+    let level = try container.decode(TrainstackWorkout.Level.self, forKey: .level)
     switch type {
     case "power": self = .power(unit: unit, level: level)
     case "pace": self = .pace(unit: unit, level: level)
@@ -93,7 +93,7 @@ extension TrainStackWorkout.Target: Codable {
 
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: Field.self)
-    let (type, unit, level): (String, String?, TrainStackWorkout.Level?) =
+    let (type, unit, level): (String, String?, TrainstackWorkout.Level?) =
       switch self {
       case .power(let unit, let level): ("power", unit, level)
       case .pace(let unit, let level): ("pace", unit, level)
@@ -107,10 +107,10 @@ extension TrainStackWorkout.Target: Codable {
   }
 }
 
-extension TrainStackWorkout.Cue: Codable {
+extension TrainstackWorkout.Cue: Codable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: Field.self)
-    at = try container.decode(TrainStackWorkout.Amount.self, forKey: .at)
+    at = try container.decode(TrainstackWorkout.Amount.self, forKey: .at)
     text = try container.decode(String.self, forKey: .text)
     shownForSeconds = try container.decodeIfPresent(Double.self, forKey: .shownForSeconds)
   }
@@ -123,18 +123,18 @@ extension TrainStackWorkout.Cue: Codable {
   }
 }
 
-extension TrainStackWorkout.Block: Codable {
+extension TrainstackWorkout.Block: Codable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: Field.self)
-    let cues = try container.decodeIfPresent([TrainStackWorkout.Cue].self, forKey: .cues) ?? []
+    let cues = try container.decodeIfPresent([TrainstackWorkout.Cue].self, forKey: .cues) ?? []
     let name = try container.decodeIfPresent(String.self, forKey: .name)
     switch try container.decode(String.self, forKey: .type) {
     case "step":
       self = .step(
         .init(
-          duration: try container.decode(TrainStackWorkout.Amount.self, forKey: .duration),
-          target: try container.decodeIfPresent(TrainStackWorkout.Target.self, forKey: .target),
-          cadence: try container.decodeIfPresent(TrainStackWorkout.Level.self, forKey: .cadence),
+          duration: try container.decode(TrainstackWorkout.Amount.self, forKey: .duration),
+          target: try container.decodeIfPresent(TrainstackWorkout.Target.self, forKey: .target),
+          cadence: try container.decodeIfPresent(TrainstackWorkout.Level.self, forKey: .cadence),
           intensity: try container.decodeIfPresent(String.self, forKey: .intensity),
           name: name, notes: try container.decodeIfPresent(String.self, forKey: .notes),
           cues: cues))
@@ -142,7 +142,7 @@ extension TrainStackWorkout.Block: Codable {
       self = .repeat(
         .init(
           count: try container.decode(Int.self, forKey: .count),
-          blocks: try container.decode([TrainStackWorkout.Block].self, forKey: .steps),
+          blocks: try container.decode([TrainstackWorkout.Block].self, forKey: .steps),
           name: name, cues: cues))
     case let type: self = .unknown(type)
     }

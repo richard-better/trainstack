@@ -8,7 +8,7 @@ import Foundation
 
 enum AppSettingsSync {
   static let shared: SettingsSync = {
-    let account = TrainStackAccount.launched
+    let account = TrainstackAccount.launched
     let sync = SettingsSync(store: RiderSettingsStore.launched, server: account.client)
     account.observeSignInChanges { sync.accountChanged() }
     account.observeAccountDeletion { sync.accountDeleted($0) }

@@ -20,7 +20,7 @@ private final class CountingSessionStore: SessionStore {
   func save(_ session: AccountSession?) throws {}
 }
 
-struct TrainStackAccountTests {
+struct TrainstackAccountTests {
   @Test func signsInWithTheIdentityTokenAndKeepsTheSession() async throws {
     let (client, transport, store) = client(
       [
@@ -78,7 +78,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func staysSignedOutWhenTheDeviceWillNotKeepTheSession() async {
-    let client = TrainStackClient(
+    let client = TrainstackClient(
       store: SessionStoreThatWillNotKeepAnything(),
       transport: ScriptedTransport([Reply(body: #"{"token":"t"}"#)]))
     await #expect(throws: StravaError.sessionNotKept) {
@@ -89,7 +89,7 @@ struct TrainStackAccountTests {
 
   @Test func readsTheKeptSessionOnceWhenFirstNeeded() async {
     let store = CountingSessionStore(signedInSession)
-    let client = TrainStackClient(store: store, transport: ScriptedTransport([]))
+    let client = TrainstackClient(store: store, transport: ScriptedTransport([]))
     #expect(store.reads == 0)
     async let signedIn = client.isSignedIn
     async let name = client.accountName
@@ -100,7 +100,7 @@ struct TrainStackAccountTests {
 
   @Test func keepsANewSignInOverTheSessionKeptBeforeIt() async throws {
     let store = CountingSessionStore(AccountSession(token: "old", name: "Old Name"))
-    let client = TrainStackClient(
+    let client = TrainstackClient(
       store: store,
       transport: ScriptedTransport([Reply(body: #"{"token":"new"}"#)]))
     try await client.signInWithApple(identityToken: "jwt", nonce: "n", fullName: nil)

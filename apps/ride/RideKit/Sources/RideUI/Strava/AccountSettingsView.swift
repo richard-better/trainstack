@@ -3,7 +3,7 @@ import RideStrava
 import SwiftUI
 
 struct AccountSettingsView: View {
-  @Environment(TrainStackAccount.self) private var account
+  @Environment(TrainstackAccount.self) private var account
   @Environment(\.webAuthenticationSession) private var webAuthenticationSession
   @Environment(\.authorizationController) private var authorizationController
   @State private var nonce = AppleSignInNonce()
@@ -127,7 +127,7 @@ struct AccountSettingsView: View {
     run {
       try await account.signInThroughBrowser { url in
         try await webAuthenticationSession.authenticate(
-          using: url, callback: .customScheme(TrainStackClient.callbackScheme),
+          using: url, callback: .customScheme(TrainstackClient.callbackScheme),
           preferredBrowserSession: .ephemeral, additionalHeaderFields: [:])
       }
     }
@@ -153,7 +153,7 @@ struct AccountSettingsView: View {
     run {
       try await account.connectStrava { url in
         try await webAuthenticationSession.authenticate(
-          using: url, callback: .customScheme(TrainStackClient.callbackScheme),
+          using: url, callback: .customScheme(TrainstackClient.callbackScheme),
           additionalHeaderFields: [:])
       }
     }
@@ -181,12 +181,12 @@ struct AccountSettingsView: View {
 
 #Preview("Signed out") {
   NavigationStack { AccountSettingsView() }
-    .environment(TrainStackAccount.signedOut)
+    .environment(TrainstackAccount.signedOut)
     .frame(width: 500, height: 600)
 }
 
 #Preview("Signed in") {
   NavigationStack { AccountSettingsView() }
-    .environment(TrainStackAccount.sample)
+    .environment(TrainstackAccount.sample)
     .frame(width: 500, height: 600)
 }

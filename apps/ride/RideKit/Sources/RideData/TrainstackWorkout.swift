@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TrainStackWorkout: Hashable, Codable, Sendable {
+public struct TrainstackWorkout: Hashable, Codable, Sendable {
   public struct Sport: RawRepresentable, Hashable, Codable, Sendable {
     public let rawValue: String
 

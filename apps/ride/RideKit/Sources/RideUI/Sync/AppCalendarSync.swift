@@ -8,7 +8,7 @@ import Foundation
 
 enum AppCalendarSync {
   static let shared: CalendarSync = {
-    let account = TrainStackAccount.launched
+    let account = TrainstackAccount.launched
     let sync = CalendarSync(calendar: AccountCalendar.launched, server: account.client)
     account.observeSignInChanges { sync.accountChanged() }
     account.observeAccountDeletion { sync.accountDeleted($0) }

@@ -85,15 +85,15 @@ private let signInPath = "/api/auth/sign-in/social"
 private let appleAuthorizationPath = "/account/apple-authorization"
 private let deletePath = "/api/auth/delete-user"
 
-private func signedInAccount(_ transport: RoutedTransport) -> TrainStackAccount {
-  TrainStackAccount(
+private func signedInAccount(_ transport: RoutedTransport) -> TrainstackAccount {
+  TrainstackAccount(
     store: InMemorySessionStore(AccountSession(token: "t", name: "Ada", userID: "ada")),
     transport: transport)
 }
 
-struct TrainStackAccountTests {
+struct TrainstackAccountTests {
   @Test func tellsWhoListensWhichAccountWasDeletedAndThatSignInChanged() async throws {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(AccountSession(token: "t", name: "Ada", userID: "ada")),
       transport: FakeTransport([reply()]))
     var deleted: [String] = []
@@ -113,7 +113,7 @@ struct TrainStackAccountTests {
       appleAuthorizationPath: (204, ""),
       "/strava": (200, #"{"connected":false}"#),
     ])
-    let account = TrainStackAccount(store: InMemorySessionStore(), transport: transport)
+    let account = TrainstackAccount(store: InMemorySessionStore(), transport: transport)
     try await account.signIn(
       identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: "apple-code")
     await account.keepingAppleAuthorization?.value
@@ -139,7 +139,7 @@ struct TrainStackAccountTests {
       "/strava": (200, #"{"connected":false}"#),
     ])
     let store = InMemorySessionStore()
-    let account = TrainStackAccount(store: store, transport: transport)
+    let account = TrainstackAccount(store: store, transport: transport)
     try await account.signIn(
       identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: "apple-code")
     await account.keepingAppleAuthorization?.value
@@ -154,7 +154,7 @@ struct TrainStackAccountTests {
       signInPath: (200, #"{"token":"fresh","user":{"name":"Ada"}}"#),
       "/strava": (200, #"{"connected":false}"#),
     ])
-    let account = TrainStackAccount(store: InMemorySessionStore(), transport: transport)
+    let account = TrainstackAccount(store: InMemorySessionStore(), transport: transport)
     try await account.signIn(
       identityToken: "jwt", nonce: "n", fullName: nil, authorizationCode: nil)
     #expect(account.keepingAppleAuthorization == nil)
@@ -232,14 +232,14 @@ struct TrainStackAccountTests {
   }
 
   @Test func picksUpASessionKeptFromAnEarlierLaunch() async {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(session), transport: FakeTransport([]))
     await account.restore()
     #expect(!account.isRestoring)
     #expect(account.isSignedIn)
     #expect(account.name == "Ada Rider")
 
-    let signedOut = TrainStackAccount(store: InMemorySessionStore())
+    let signedOut = TrainstackAccount(store: InMemorySessionStore())
     await signedOut.restore()
     #expect(!signedOut.isRestoring)
     #expect(!signedOut.isSignedIn)
@@ -247,7 +247,7 @@ struct TrainStackAccountTests {
 
   @Test func startsRestoringWithoutReadingTheStore() {
     let store = HeldSessionStore()
-    let account = TrainStackAccount(store: store, transport: FakeTransport([]))
+    let account = TrainstackAccount(store: store, transport: FakeTransport([]))
     #expect(account.isRestoring)
     #expect(!account.isSignedIn)
     #expect(store.readCount == 0)
@@ -255,7 +255,7 @@ struct TrainStackAccountTests {
 
   @Test func staysRestoringWhileTheStoreKeepsTheSessionBack() async {
     let store = HeldSessionStore()
-    let account = TrainStackAccount(store: store, transport: FakeTransport([]))
+    let account = TrainstackAccount(store: store, transport: FakeTransport([]))
     let restoring = Task { await account.restore() }
     await store.waitUntilAReadStarts()
 
@@ -270,7 +270,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func signsInAndLearnsWhetherStravaIsConnected() async throws {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(),
       transport: FakeTransport([
         reply(#"{"user":{"name":"Ada Rider"}}"#, headers: ["set-auth-token": "t"]),
@@ -289,7 +289,7 @@ struct TrainStackAccountTests {
       reply(#"{"token":"t","user":{"name":"Ada Rider"}}"#),
       reply(#"{"connected":false}"#),
     ])
-    let account = TrainStackAccount(store: InMemorySessionStore(), transport: transport)
+    let account = TrainstackAccount(store: InMemorySessionStore(), transport: transport)
     await account.restore()
     #expect(!account.isSignedIn)
     var opened: URL?
@@ -305,7 +305,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func treatsBackingOutOfTheWebSignInAsCancelled() async {
-    let account = TrainStackAccount(store: InMemorySessionStore(), transport: FakeTransport([]))
+    let account = TrainstackAccount(store: InMemorySessionStore(), transport: FakeTransport([]))
     await #expect(throws: StravaError.cancelled) {
       try await account.signInThroughBrowser { _ in
         throw ASWebAuthenticationSessionError(.canceledLogin)
@@ -315,7 +315,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func aFailedStravaCheckLeavesTheConnectionAsShown() async {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(session),
       transport: FakeTransport([
         reply(#"{"connected":true,"athleteName":"Ada R"}"#), reply(status: 500),
@@ -328,7 +328,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func signingOutForgetsStravaToo() async {
-    let account = TrainStackAccount.sample
+    let account = TrainstackAccount.sample
     #expect(account.isStravaConnected)
     await account.signOut()
     #expect(!account.isSignedIn)
@@ -341,7 +341,7 @@ struct TrainStackAccountTests {
       reply(#"{"url":"https://www.strava.com/oauth/authorize?client_id=1"}"#),
       reply(#"{"connected":true,"athleteName":"Ada Rider"}"#),
     ])
-    let account = TrainStackAccount(store: InMemorySessionStore(session), transport: transport)
+    let account = TrainstackAccount(store: InMemorySessionStore(session), transport: transport)
     var opened: URL?
     try await account.connectStrava { url in
       opened = url
@@ -354,7 +354,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func treatsBackingOutOfTheWebSessionAsCancelled() async {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(session),
       transport: FakeTransport([reply(#"{"url":"https://www.strava.com/oauth/authorize"}"#)]))
     await #expect(throws: StravaError.cancelled) {
@@ -366,7 +366,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func disconnectsStrava() async throws {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(session), transport: FakeTransport([reply(status: 204)]))
     try await account.disconnectStrava()
     #expect(!account.isStravaConnected)
@@ -377,7 +377,7 @@ struct TrainStackAccountTests {
     let transport = FakeTransport([
       reply(#"{"id":7,"status":"ready","activityId":99}"#, status: 202)
     ])
-    let account = TrainStackAccount(store: InMemorySessionStore(session), transport: transport)
+    let account = TrainstackAccount(store: InMemorySessionStore(session), transport: transport)
 
     let upload = try await account.upload(ride)
 
@@ -390,7 +390,7 @@ struct TrainStackAccountTests {
 
   @Test func signsOutWhenTheServerNoLongerAcceptsTheSession() async throws {
     let ride = try #require(RideLibrary.sample().rides.first)
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(session), transport: FakeTransport([reply(status: 401)]))
     await #expect(throws: StravaError.signedOut) { try await account.upload(ride) }
     #expect(!account.isSignedIn)
@@ -398,7 +398,7 @@ struct TrainStackAccountTests {
 
   @Test func marksStravaDisconnectedWhenTheRiderRevokedRide() async throws {
     let ride = try #require(RideLibrary.sample().rides.first)
-    let revoked = TrainStackAccount(
+    let revoked = TrainstackAccount(
       store: InMemorySessionStore(session),
       transport: FakeTransport([reply(#"{"connected":true}"#), reply(status: 409)]))
     await revoked.refreshStrava()
@@ -409,9 +409,9 @@ struct TrainStackAccountTests {
 
   @Test func aSessionTheActivitiesAPIRejectsShowsAsSignedOut() async throws {
     let directory = FileManager.default.temporaryDirectory.appending(
-      path: "TrainStackAccountTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+      path: "TrainstackAccountTests-\(UUID().uuidString)", directoryHint: .isDirectory)
     defer { try? FileManager.default.removeItem(at: directory) }
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       store: InMemorySessionStore(AccountSession(token: "t", name: "Ada", userID: "ada")),
       transport: FakeTransport([reply(status: 401)]))
     await account.restore()
@@ -432,7 +432,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func tellsWhoListensWhenASessionAnotherSyncLostIsNoticed() async throws {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       server: URL(string: "https://api.example.com")!,
       store: InMemorySessionStore(AccountSession(token: "t", name: "Ada Rider", userID: "u")),
       transport: FakeTransport([reply(status: 401)]))
@@ -450,7 +450,7 @@ struct TrainStackAccountTests {
   }
 
   @Test func tellsWhoListensWhenAnyCallFindsTheSessionGone() async throws {
-    let account = TrainStackAccount(
+    let account = TrainstackAccount(
       server: URL(string: "https://api.example.com")!,
       store: InMemorySessionStore(AccountSession(token: "t", name: "Ada Rider", userID: "u")),
       transport: FakeTransport([reply(status: 401)]))

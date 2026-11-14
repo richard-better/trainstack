@@ -60,7 +60,7 @@ final class AccountWorkouts {
     let updatedAt = SettingStamp(now()).date
     guard
       let copy = try? LibraryWorkout(
-        id: id, workout: template.trainStackWorkout, copiedFromBuiltin: template.builtinID,
+        id: id, workout: template.trainstackWorkout, copiedFromBuiltin: template.builtinID,
         updatedAt: updatedAt)
     else { return nil }
     let changed = update { state in

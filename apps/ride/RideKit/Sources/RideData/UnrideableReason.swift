@@ -1,5 +1,5 @@
 public enum UnrideableReason: Error, Hashable, Sendable {
-  case sport(TrainStackWorkout.Sport)
+  case sport(TrainstackWorkout.Sport)
   case paceTargets
   case distanceSteps
   case rampOnALapStep
@@ -30,7 +30,7 @@ public enum UnrideableReason: Error, Hashable, Sendable {
     case .stepWithoutLength:
       "It has a step that lasts no time at all."
     case .tooManySteps:
-      "It has more than \(TrainStackWorkout.mostSteps) steps once its repeats are counted out."
+      "It has more than \(TrainstackWorkout.mostSteps) steps once its repeats are counted out."
     case .unknownUnit(let unit):
       "It uses a unit, \(unit), that this version of Ride does not know. Update Ride to ride it."
     case .unknownKind(let part, let name):

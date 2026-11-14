@@ -5,13 +5,13 @@ import RideStrava
 import os
 
 @Observable
-final class TrainStackAccount {
+final class TrainstackAccount {
   private(set) var isRestoring = true
   private(set) var isSignedIn = false
   private(set) var name: String?
   private(set) var isStravaConnected = false
   private(set) var stravaAthleteName: String?
-  @ObservationIgnored let client: TrainStackClient
+  @ObservationIgnored let client: TrainstackClient
   @ObservationIgnored private var signInObservers: [() -> Void] = []
   @ObservationIgnored private var deletionObservers: [(String) -> Void] = []
   @ObservationIgnored private(set) var keepingAppleAuthorization: Task<Void, Never>?
@@ -19,10 +19,10 @@ final class TrainStackAccount {
     subsystem: "com.trainstackhq.ride", category: "account")
 
   init(
-    server: URL = TrainStackClient.server, store: any SessionStore = KeychainSessionStore(),
+    server: URL = TrainstackClient.server, store: any SessionStore = KeychainSessionStore(),
     transport: any HTTPTransport = URLSession.shared
   ) {
-    client = TrainStackClient(server: server, store: store, transport: transport)
+    client = TrainstackClient(server: server, store: store, transport: transport)
   }
 
   func observeSignInChanges(_ observer: @escaping () -> Void) {
@@ -185,8 +185,8 @@ final class TrainStackAccount {
     stravaAthleteName = status.athleteName
   }
 
-  static var sample: TrainStackAccount {
-    let account = TrainStackAccount(
+  static var sample: TrainstackAccount {
+    let account = TrainstackAccount(
       store: InMemorySessionStore(AccountSession(token: "t", name: "Ada Rider")))
     account.isRestoring = false
     account.isSignedIn = true
@@ -196,8 +196,8 @@ final class TrainStackAccount {
     return account
   }
 
-  static var signedOut: TrainStackAccount {
-    let account = TrainStackAccount(store: InMemorySessionStore())
+  static var signedOut: TrainstackAccount {
+    let account = TrainstackAccount(store: InMemorySessionStore())
     account.isRestoring = false
     return account
   }

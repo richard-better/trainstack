@@ -1,7 +1,7 @@
 import Foundation
 import RideData
 
-extension TrainStackClient: SettingsServer {
+extension TrainstackClient: SettingsServer {
   static let settingsHistoryPath = "api-reference/settings/history"
   public static let maxSettingWrites = 100
 

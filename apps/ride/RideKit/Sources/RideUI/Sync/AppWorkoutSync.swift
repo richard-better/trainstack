@@ -8,7 +8,7 @@ import Foundation
 
 enum AppWorkoutSync {
   static let shared: WorkoutSync = {
-    let account = TrainStackAccount.launched
+    let account = TrainstackAccount.launched
     let sync = WorkoutSync(workouts: AccountWorkouts.launched, server: account.client)
     account.observeSignInChanges { sync.accountChanged() }
     account.observeAccountDeletion { sync.accountDeleted($0) }

@@ -7,7 +7,7 @@ import Testing
 struct LibraryWorkoutRideTests {
   private let ftp = 250
 
-  private let workout = TrainStackWorkout(
+  private let workout = TrainstackWorkout(
     name: "Ramps and nested repeats", sport: .cycling, focus: .threshold,
     blocks: [
       .step(

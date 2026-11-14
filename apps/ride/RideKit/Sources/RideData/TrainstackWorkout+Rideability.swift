@@ -1,6 +1,6 @@
 import Foundation
 
-extension TrainStackWorkout {
+extension TrainstackWorkout {
   public var rideability: Rideability {
     guard sport == .cycling else { return .unrideable(.sport(sport)) }
     if let unknown = Self.firstUnknown(in: blocks) { return .unrideable(unknown) }
@@ -108,7 +108,7 @@ extension TrainStackWorkout {
   }
 }
 
-extension TrainStackWorkout.Amount {
+extension TrainstackWorkout.Amount {
   fileprivate var amount: Double {
     switch self {
     case .seconds(let seconds): seconds
@@ -131,7 +131,7 @@ extension TrainStackWorkout.Amount {
   }
 }
 
-extension TrainStackWorkout.Focus {
+extension TrainstackWorkout.Focus {
   public var powerZone: PowerZone {
     switch self {
     case .recovery: .recovery
@@ -144,7 +144,7 @@ extension TrainStackWorkout.Focus {
   }
 }
 
-extension TrainStackWorkout.Level {
+extension TrainstackWorkout.Level {
   fileprivate var targetLevel: TargetLevel {
     switch self {
     case .constant(let value): .constant(value)
@@ -160,7 +160,7 @@ extension TrainStackWorkout.Level {
   }
 }
 
-extension TrainStackWorkout.Step {
+extension TrainstackWorkout.Step {
   fileprivate var unknownPart: UnrideableReason? {
     if let kind = duration.unknownKind { return .unknownKind(of: "duration", named: kind) }
     if let kind = cues.lazy.compactMap(\.at.unknownKind).first {

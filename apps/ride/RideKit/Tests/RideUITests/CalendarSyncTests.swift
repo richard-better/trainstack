@@ -65,9 +65,9 @@ struct CalendarSyncTests {
 
   static func workout(
     _ name: String, on day: SettingDay = saturday, position: Double = 0, minutes: Double = 60,
-    sport: TrainStackWorkout.Sport = .cycling, id: String = UUID().uuidString.lowercased()
+    sport: TrainstackWorkout.Sport = .cycling, id: String = UUID().uuidString.lowercased()
   ) throws -> PlannedItem {
-    let workout = TrainStackWorkout(
+    let workout = TrainstackWorkout(
       name: name, sport: sport,
       blocks: [
         .step(

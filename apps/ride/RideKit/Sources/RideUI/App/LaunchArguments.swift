@@ -79,10 +79,10 @@ extension BluetoothDevices {
   }
 }
 
-extension TrainStackAccount {
+extension TrainstackAccount {
   static let launched = launchAccount()
 
-  static func launchAccount(arguments: [String] = CommandLine.arguments) -> TrainStackAccount {
+  static func launchAccount(arguments: [String] = CommandLine.arguments) -> TrainstackAccount {
     #if DEBUG
       func value(_ flag: String) -> String? {
         guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else {
@@ -93,11 +93,11 @@ extension TrainStackAccount {
       if let server = value("-trainstack-server").flatMap(URL.init(string:)),
         let token = value("-trainstack-session")
       {
-        return TrainStackAccount(
+        return TrainstackAccount(
           server: server, store: InMemorySessionStore(AccountSession(token: token)))
       }
     #endif
-    return TrainStackAccount()
+    return TrainstackAccount()
   }
 }
 

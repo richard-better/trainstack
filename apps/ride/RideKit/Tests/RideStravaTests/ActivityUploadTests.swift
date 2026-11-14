@@ -10,12 +10,12 @@ struct ActivityUploadTests {
     sport: "indoor_cycling", name: "Sweet spot",
     startedAt: Date(timeIntervalSince1970: 1_780_290_000))
 
-  private func identifiedClient(_ replies: [Reply]) -> (TrainStackClient, ScriptedTransport) {
+  private func identifiedClient(_ replies: [Reply]) -> (TrainstackClient, ScriptedTransport) {
     let transport = ScriptedTransport(replies)
     let store = InMemorySessionStore(
       AccountSession(token: "session-token", name: "Ada Rider", userID: "user-1"))
     return (
-      TrainStackClient(
+      TrainstackClient(
         server: URL(string: "https://api.example.com")!, store: store, transport: transport),
       transport
     )

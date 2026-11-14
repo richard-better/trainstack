@@ -1,7 +1,7 @@
 import Foundation
 import RideData
 
-extension TrainStackClient: CalendarServer {
+extension TrainstackClient: CalendarServer {
   static let calendarPath = "api-reference/calendar"
   static let plannedPath = "api-reference/planned-workouts"
 

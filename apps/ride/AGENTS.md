@@ -183,7 +183,7 @@ back.
 
 The player runs a `PlannedWorkout`: a bundled `WorkoutTemplate` becomes one (`planned`), and so
 does a workout from the athlete's Trainstack library. That arrives in the model of
-`@trainstack/workout` as `TrainStackWorkout`, and `rideability` is the one place that maps it to
+`@trainstack/workout` as `TrainstackWorkout`, and `rideability` is the one place that maps it to
 what the player runs, or to the reason it cannot be ridden. It expands repeats as the package's
 `flatten` does, placing each repeat's cues on the step they fall in; `tests/ride-workouts.test.mjs`
 holds the steps Ride plays for `Tests/RideDataTests/Workouts/workouts.json` (recorded in
@@ -198,7 +198,7 @@ lap-button step or a repeat cue across one (neither has a length to work from), 
 level this version does not know, so a newer model never crashes it or plays silently changed.
 It also refuses what would crash the player rather than play: a target no rider or trainer can
 hold (`TargetLevel.most…`), a range whose low end is above its high end, a step longer than a day
-(`PlannedStep.longest`) and more than `TrainStackWorkout.mostSteps` steps once repeats are counted out. A ride's
+(`PlannedStep.longest`) and more than `TrainstackWorkout.mostSteps` steps once repeats are counted out. A ride's
 trace keeps the `PlannedWorkout` it started with, so a workout edited or deleted on the web during
 a ride does not change the ride. Traces written before kept a `template`, and still read.
 

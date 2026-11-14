@@ -3,7 +3,7 @@ import SwiftUI
 
 struct CalendarView: View {
   @Environment(AccountCalendar.self) private var calendar
-  @Environment(TrainStackAccount.self) private var account
+  @Environment(TrainstackAccount.self) private var account
   @Environment(\.syncCalendar) private var syncCalendar
   #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass

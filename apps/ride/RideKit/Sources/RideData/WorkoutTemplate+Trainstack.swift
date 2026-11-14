@@ -22,17 +22,17 @@ extension WorkoutTemplate {
     return slug
   }
 
-  public var trainStackWorkout: TrainStackWorkout {
-    TrainStackWorkout(
+  public var trainstackWorkout: TrainstackWorkout {
+    TrainstackWorkout(
       name: name, sport: .cycling, description: about.isEmpty ? nil : about,
-      focus: TrainStackWorkout.Focus(category),
+      focus: TrainstackWorkout.Focus(category),
       blocks: steps.enumerated().map { index, step in
         .step(
           .init(
             duration: .seconds(step.duration),
             target: .power(unit: "ftp", level: .constant(step.intensity)),
             cues: cues(onStep: index).map {
-              TrainStackWorkout.Cue(at: .seconds($0.at), text: $0.text)
+              TrainstackWorkout.Cue(at: .seconds($0.at), text: $0.text)
             }))
       })
   }
@@ -42,7 +42,7 @@ extension WorkoutTemplate {
   }
 }
 
-extension TrainStackWorkout.Focus {
+extension TrainstackWorkout.Focus {
   init(_ zone: PowerZone) {
     self =
       switch zone {

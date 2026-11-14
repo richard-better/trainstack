@@ -96,10 +96,10 @@ struct StravaConnectionTests {
   }
 
   @Test func readsHowConnectingStravaEnded() throws {
-    try TrainStackClient.checkConnectCallback(URL(string: "trainstackride://strava?connected=1")!)
+    try TrainstackClient.checkConnectCallback(URL(string: "trainstackride://strava?connected=1")!)
     func failure(_ query: String) -> StravaError? {
       do {
-        try TrainStackClient.checkConnectCallback(URL(string: "trainstackride://strava?\(query)")!)
+        try TrainstackClient.checkConnectCallback(URL(string: "trainstackride://strava?\(query)")!)
         return nil
       } catch {
         return error as? StravaError

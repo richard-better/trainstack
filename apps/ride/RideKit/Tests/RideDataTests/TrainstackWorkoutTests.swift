@@ -3,10 +3,10 @@ import Testing
 
 @testable import RideData
 
-struct TrainStackWorkoutTests {
+struct TrainstackWorkoutTests {
   struct Case: Decodable {
     let name: String
-    let workout: TrainStackWorkout
+    let workout: TrainstackWorkout
   }
 
   static let folder = URL(filePath: #filePath).deletingLastPathComponent().appending(
@@ -17,7 +17,7 @@ struct TrainStackWorkoutTests {
       [Case].self, from: Data(contentsOf: folder.appending(path: "workouts.json")))
   }
 
-  static func workout(named name: String) throws -> TrainStackWorkout {
+  static func workout(named name: String) throws -> TrainstackWorkout {
     try #require(try cases().first { $0.name == name }).workout
   }
 
@@ -84,15 +84,15 @@ struct TrainStackWorkoutTests {
       {"name":"Future","sport":"cycling","steps":[{"type":"step","duration":{"type":"time","seconds":60},
       "target":{"type":"power","unit":"kilowatts","level":{"kind":"constant","value":0.2}}}]}
       """
-    let workout = try JSONDecoder().decode(TrainStackWorkout.self, from: Data(json.utf8))
+    let workout = try JSONDecoder().decode(TrainstackWorkout.self, from: Data(json.utf8))
     #expect(workout.rideability == .unrideable(.unknownUnit("kilowatts")))
   }
 
   private static func workout(steps: String, sport: String = "cycling") throws
-    -> TrainStackWorkout
+    -> TrainstackWorkout
   {
     let json = #"{"name":"Future","sport":"\#(sport)","steps":[\#(steps)]}"#
-    return try JSONDecoder().decode(TrainStackWorkout.self, from: Data(json.utf8))
+    return try JSONDecoder().decode(TrainstackWorkout.self, from: Data(json.utf8))
   }
 
   @Test(arguments: [
@@ -211,7 +211,7 @@ struct TrainStackWorkoutTests {
   @Test func encodesTheWorkoutBackAsItCame() throws {
     for item in try Self.cases() {
       let again = try JSONDecoder().decode(
-        TrainStackWorkout.self, from: JSONEncoder().encode(item.workout))
+        TrainstackWorkout.self, from: JSONEncoder().encode(item.workout))
       #expect(again == item.workout)
     }
   }
@@ -219,7 +219,7 @@ struct TrainStackWorkoutTests {
   private struct Played: Encodable {
     let name: String
     let reason: String?
-    let steps: [TrainStackWorkout.Block]
+    let steps: [TrainstackWorkout.Block]
   }
 
   private static func played(_ cases: [Case]) throws -> Data {
@@ -238,13 +238,13 @@ struct TrainStackWorkoutTests {
 }
 
 extension PlannedStep {
-  fileprivate var asServerStep: TrainStackWorkout.Block {
+  fileprivate var asServerStep: TrainstackWorkout.Block {
     .step(
-      TrainStackWorkout.Step(
+      TrainstackWorkout.Step(
         duration: untilLap.map { lap in
           .untilLap(
-            expected: lap.expectedSeconds.map(TrainStackWorkout.Amount.seconds)
-              ?? lap.expectedMeters.map(TrainStackWorkout.Amount.meters))
+            expected: lap.expectedSeconds.map(TrainstackWorkout.Amount.seconds)
+              ?? lap.expectedMeters.map(TrainstackWorkout.Amount.meters))
         } ?? .seconds(duration), target: target?.asServerTarget,
         cadence: cadence?.asServerLevel, name: name, notes: notes,
         cues: cues.map { .init(at: .seconds($0.at), text: $0.text, shownForSeconds: $0.shownFor) }))
@@ -252,7 +252,7 @@ extension PlannedStep {
 }
 
 extension PlannedTarget {
-  fileprivate var asServerTarget: TrainStackWorkout.Target {
+  fileprivate var asServerTarget: TrainstackWorkout.Target {
     switch self {
     case .shareOfFTP(let level): .power(unit: "ftp", level: level.asServerLevel)
     case .watts(let level): .power(unit: "watts", level: level.asServerLevel)
@@ -265,7 +265,7 @@ extension PlannedTarget {
 }
 
 extension TargetLevel {
-  fileprivate var asServerLevel: TrainStackWorkout.Level {
+  fileprivate var asServerLevel: TrainstackWorkout.Level {
     switch self {
     case .constant(let value): .constant(value)
     case .range(let low, let high): .range(low: low, high: high)

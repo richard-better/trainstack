@@ -14,7 +14,7 @@ extension LibraryWorkout {
   }
 
   var zone: PowerZone? {
-    focus.flatMap(TrainStackWorkout.Focus.init(rawValue:))?.powerZone
+    focus.flatMap(TrainstackWorkout.Focus.init(rawValue:))?.powerZone
   }
 
   var duration: TimeInterval? {
@@ -26,7 +26,7 @@ extension LibraryWorkout {
       }
     }
     return total.flatMap {
-      $0 <= Double(TrainStackWorkout.mostSteps) * PlannedStep.longest ? $0 : nil
+      $0 <= Double(TrainstackWorkout.mostSteps) * PlannedStep.longest ? $0 : nil
     }
   }
 
@@ -46,7 +46,7 @@ extension LibraryWorkout {
     }
     if let stress = planned?.stressScore(ftp: ftp) { parts.append("\(stress) TSS") }
     if let zone { parts.append(zone.name) }
-    if planned == nil, sport != TrainStackWorkout.Sport.cycling.rawValue {
+    if planned == nil, sport != TrainstackWorkout.Sport.cycling.rawValue {
       parts.append(sport.capitalized)
     }
     return parts.joined(separator: " · ")

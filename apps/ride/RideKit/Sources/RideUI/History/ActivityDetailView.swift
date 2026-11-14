@@ -12,7 +12,7 @@ struct ActivityDetailView: View {
   @State private var stravaOutcome: StravaOutcome?
   @State private var isSendingToStrava = false
   @Environment(RiderSettingsStore.self) private var store
-  @Environment(TrainStackAccount.self) private var account
+  @Environment(TrainstackAccount.self) private var account
   @Environment(RideLauncher.self) private var launcher
   @Environment(\.openURL) private var openURL
 
@@ -185,7 +185,7 @@ struct ActivityDetailView: View {
     }
   }
   .environment(RiderSettingsStore.sample)
-  .environment(TrainStackAccount.sample)
+  .environment(TrainstackAccount.sample)
   .environment(RideLauncher(simulated: true))
   .frame(width: 800, height: 760)
 }

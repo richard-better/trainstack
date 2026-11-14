@@ -1,7 +1,7 @@
 import Foundation
 import RideData
 
-extension TrainStackClient: WorkoutServer {
+extension TrainstackClient: WorkoutServer {
   static let workoutsPath = "api-reference/workouts"
 
   public func workoutChanges(since cursor: String?, for account: ActivityAccount) async throws

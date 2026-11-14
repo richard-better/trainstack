@@ -52,7 +52,7 @@ struct WorkoutSyncTests {
   ) throws -> LibraryWorkout {
     try LibraryWorkout(
       id: id,
-      workout: TrainStackWorkout(
+      workout: TrainstackWorkout(
         name: name, sport: .cycling,
         blocks: [
           .step(

@@ -25,7 +25,7 @@ public struct LibraryWorkout: Hashable, Codable, Identifiable, Sendable {
     self.body = body
   }
 
-  public init(id: String, workout: TrainStackWorkout, copiedFromBuiltin: String?, updatedAt: Date)
+  public init(id: String, workout: TrainstackWorkout, copiedFromBuiltin: String?, updatedAt: Date)
     throws
   {
     self.init(
@@ -34,8 +34,8 @@ public struct LibraryWorkout: Hashable, Codable, Identifiable, Sendable {
       updatedAt: updatedAt, body: try JSONEncoder().encode(workout))
   }
 
-  public var workout: TrainStackWorkout? {
-    try? JSONDecoder().decode(TrainStackWorkout.self, from: body)
+  public var workout: TrainstackWorkout? {
+    try? JSONDecoder().decode(TrainstackWorkout.self, from: body)
   }
 
   public var rideability: Rideability? { workout?.rideability }

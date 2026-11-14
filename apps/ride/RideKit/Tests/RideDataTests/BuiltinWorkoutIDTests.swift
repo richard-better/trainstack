@@ -15,7 +15,7 @@ struct BuiltinWorkoutIDTests {
 
   @Test func copiesABuiltInAsTheServerDoes() throws {
     let template = try #require(WorkoutTemplate.named("Recovery 30"))
-    let copy = template.trainStackWorkout
+    let copy = template.trainstackWorkout
     #expect(copy.focus == .endurance)
     #expect(copy.description == template.about)
     #expect(copy.rideability.planned?.workout(ftp: 230) == template.workout(ftp: 230))

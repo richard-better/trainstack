@@ -145,7 +145,7 @@ native sign-in keeps working. A key that does not parse is logged and treated as
 
 ## 2. App
 
-- `TrainStackClient` gets `startAppleWebSignIn() -> WebSignInAttempt` (URL and verifier, the
+- `TrainstackClient` gets `startAppleWebSignIn() -> WebSignInAttempt` (URL and verifier, the
   same shape as `ConnectAttempt`) and `finishAppleWebSignIn(_:callback:)`. That parses
   `code` or `error` from the callback, posts to `app-handoff/token`, and saves the session
   exactly as `signInWithApple` does. PKCE helpers move out of the Strava section and are shared.
