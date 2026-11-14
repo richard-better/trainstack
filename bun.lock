@@ -182,6 +182,17 @@
         "typescript": "catalog:",
       },
     },
+    "packages/logbook": {
+      "name": "@trainstack/logbook",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@trainstack/config": "workspace:*",
+        "@types/node": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/workout": {
       "name": "@trainstack/workout",
       "dependencies": {
@@ -894,6 +905,8 @@
     "@trainstack/hosted-api": ["@trainstack/hosted-api@workspace:hosted/apps/api"],
 
     "@trainstack/hosted-infra": ["@trainstack/hosted-infra@workspace:hosted/infra"],
+
+    "@trainstack/logbook": ["@trainstack/logbook@workspace:packages/logbook"],
 
     "@trainstack/marketing": ["@trainstack/marketing@workspace:hosted/apps/marketing"],
 
