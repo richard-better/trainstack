@@ -128,7 +128,7 @@ final class AccountHistory {
 
   func loadDetailIfNeeded(of activity: AccountActivity, forLaps: Bool = false) async {
     guard activity.indoor != true || forLaps, detail(of: activity.id) == nil else { return }
-    try? await loadDetail(of: activity.id)
+    _ = try? await loadDetail(of: activity.id)
   }
 
   private func currentAccount() async throws -> ActivityAccount {
