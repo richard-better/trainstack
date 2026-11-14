@@ -299,6 +299,44 @@ test("a move sent late loses to a later move from another browser, and can then 
   assert.deepEqual(laptop.writes.notices(), []);
 });
 
+test("a refused move rolls back in every range, also under a skip queued after it", async () => {
+  const { client } = await athlete();
+  await planDay(
+    client,
+    "2030-03-11",
+    Array.from({ length: 20 }, (_, index) => `Session ${index + 1}`),
+  );
+  const [spin] = await planDay(client, "2030-03-04", ["Spin"]);
+  let release;
+  const skipHeld = new Promise((resolve) => (release = resolve));
+  const laptop = device(client, {
+    skip: async (input) => {
+      await skipHeld;
+      return client.plannedWorkouts.skip(input);
+    },
+  });
+  await laptop.load();
+  const next = rangeKey("2030-03-11", "2030-03-17");
+  await laptop.queryClient.fetchQuery({
+    queryKey: next,
+    queryFn: () => client.calendar.range({ from: "2030-03-11", through: "2030-03-17" }),
+  });
+  const nextWeek = () => laptop.writes.view(laptop.queryClient.getQueryData(next));
+
+  const moving = laptop.writes.move(spin, { day: "2030-03-11", position: 99 });
+  const movedCard = laptop.writes.viewItem(null, spin.id, "2030-03-01");
+  assert.equal(movedCard.day, "2030-03-11");
+  const skipping = laptop.writes.skip(movedCard, { reason: null });
+  await moving;
+
+  assert.deepEqual(namesOn(laptop.shown(), "2030-03-04"), ["Spin"]);
+  assert.equal(laptop.shown().days[0].planned[0].state, "skipped");
+  assert.equal(nextWeek().days[0].planned.length, 20, "the refused move leaves no copy behind");
+  release();
+  await skipping;
+  assert.equal(laptop.writes.notices()[0].kind, "refused");
+});
+
 test("a skip queued behind a lost move follows the item to the day the other browser chose", async () => {
   const { client } = await athlete();
   const [spin] = await planDay(client, "2030-03-04", ["Spin"]);

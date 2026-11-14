@@ -229,6 +229,8 @@ export function createCalendarWrites({
         if (write.kind !== "delete")
           notify({ kind: "deleted", name: plannedName(write.base.content) });
       } else {
+        if (write.kind === "plan") answered.set(entry.id, null);
+        else if (!answered.has(entry.id)) answered.set(entry.id, write.base);
         notify({
           kind: "refused",
           name: plannedName(write.base.content),
