@@ -308,3 +308,22 @@ test("a range gives each day what readiness on that day gives", () => {
   assert.equal(days.length, 7);
   for (const day of days) assert.deepEqual(day, readinessOn(input, day.day));
 });
+
+test("a check-in with nothing rated and no illness or injury counts as no check-in", () => {
+  const unrated = {
+    ...checkIn(today),
+    ratings: { sleep: null, energy: null, soreness: null, stress: null, mood: null },
+  };
+  const readiness = readinessOn(
+    athlete({
+      stress: trainedFor(10, shift(today, -1)),
+      checkIns: [...checkedInFor(3, today), unrated],
+      planned: [keySession],
+    }),
+    today,
+  );
+  assert.equal(readiness.level, null);
+  assert.deepEqual(readiness.suggestions, []);
+  assert.equal(readiness.basis.checkIn, false);
+  assert.deepEqual(readiness.gaps[0], { kind: "no_check_in" });
+});

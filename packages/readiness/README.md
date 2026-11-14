@@ -22,7 +22,7 @@ const month = readinessRange({ checkIns, stress, planned }, "2026-10-15", "2026-
 ```
 
 - `checkIns`: the athlete's check-ins, any order. Readiness reads the day's own and the 28 days
-  before it.
+  before it. A check-in with no rating, illness or injury, such as only a note, counts as none.
 - `stress`: daily training stress by day (`stressByDay` of the activities' `load_tss`), all of it.
   Fitness, fatigue and form are worked out from the first day, exactly as `training.load` does.
 - `planned`: each day's planned items with their state and planned seconds and load, as the

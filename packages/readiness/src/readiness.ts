@@ -132,13 +132,19 @@ interface Prepared<Area extends string> {
   readonly planned: ReadonlyMap<string, readonly ReadinessPlanned[]>;
 }
 
+const isAnswered = (checkIn: ReadinessCheckIn<string>) =>
+  checkIn.illness !== null ||
+  checkIn.injury !== null ||
+  Object.values(checkIn.ratings).some((rating) => rating !== null);
+
 function prepare<Area extends string>(
   input: ReadinessInput<Area>,
   through: string,
 ): Prepared<Area> {
+  const checkIns = input.checkIns.filter(isAnswered);
   return {
-    checkIns: input.checkIns,
-    byDay: new Map(input.checkIns.map((checkIn) => [checkIn.day, checkIn])),
+    checkIns,
+    byDay: new Map(checkIns.map((checkIn) => [checkIn.day, checkIn])),
     series: loadSeries(input.stress, shiftDay(through, -1)),
     planned: input.planned,
   };
