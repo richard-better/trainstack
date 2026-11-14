@@ -1,4 +1,6 @@
 import type { ActivityRecord } from "@trainstack/activity-file";
+import { type Span, routeGapSeconds, routeMaxSpeedMetresPerSecond } from "@trainstack/analysis";
+import type { Activity } from "@trainstack/contract";
 
 type Positioned = Pick<ActivityRecord, "elapsedSeconds" | "latitude" | "longitude">;
 
@@ -17,8 +19,6 @@ export interface Route {
   readonly bounds: readonly [west: number, south: number, east: number, north: number];
 }
 
-export const BREAK_AFTER_SECONDS = 60;
-export const BREAK_AFTER_METRES = 250;
 const EARTH_RADIUS_METRES = 6_371_008.8;
 const MAX_MERCATOR_LATITUDE = 85.051129;
 
@@ -56,35 +56,40 @@ const usable = (latitude: number | undefined, longitude: number | undefined) =>
   Math.abs(longitude) <= 180 &&
   !(latitude === 0 && longitude === 0);
 
-export function routeOf(records: readonly Positioned[]): Route | null {
+export function routeOf(
+  records: readonly Positioned[],
+  pauses: readonly Span[] = [],
+): Route | null {
   const points: RoutePoint[] = [];
   const segments: RoutePoint[][] = [];
   let current: RoutePoint[] = [];
-  let lostPosition = false;
+  let pause = 0;
+  let previousPause = 0;
   records.forEach((record, index) => {
     const { latitude, longitude } = record;
-    if (!usable(latitude, longitude)) {
-      lostPosition = true;
-      return;
-    }
+    if (!usable(latitude, longitude)) return;
+    const second = record.elapsedSeconds;
+    while (pause < pauses.length && pauses[pause]!.to <= second) pause++;
+    const within = pauses[pause];
+    if (within && within.from < second && second < within.to) return;
     const point = {
       record: index,
-      second: record.elapsedSeconds,
+      second,
       latitude: latitude!,
       longitude: longitude!,
       ...mercator(latitude!, longitude!),
     };
     const previous = current.at(-1);
-    if (
-      previous &&
-      (lostPosition ||
-        point.second - previous.second > BREAK_AFTER_SECONDS ||
-        metresBetween(previous, point) > BREAK_AFTER_METRES)
-    ) {
-      segments.push(current);
-      current = [];
+    if (previous) {
+      const gap = point.second - previous.second;
+      const jumped =
+        metresBetween(previous, point) > routeMaxSpeedMetresPerSecond * Math.max(gap, 1);
+      if (pause !== previousPause || gap > routeGapSeconds || jumped) {
+        segments.push(current);
+        current = [];
+      }
     }
-    lostPosition = false;
+    previousPause = pause;
     current.push(point);
     points.push(point);
   });
@@ -116,7 +121,7 @@ export function pointAtSecond(route: Route, second: number): RoutePoint | null {
   const before = low > 0 ? points[low - 1]! : after;
   const nearest =
     Math.abs(before.second - second) <= Math.abs(after.second - second) ? before : after;
-  return Math.abs(nearest.second - second) <= BREAK_AFTER_SECONDS / 2 ? nearest : null;
+  return Math.abs(nearest.second - second) <= routeGapSeconds / 2 ? nearest : null;
 }
 
 export function nearestPoint(
@@ -148,12 +153,19 @@ export function nearestPoint(
   return best;
 }
 
-export function routePath(route: Route, width: number, height: number, padding = 0) {
+type Plotted = Pick<RoutePoint, "x" | "y">;
+
+export function routePath(
+  segments: readonly (readonly Plotted[])[],
+  width: number,
+  height: number,
+  padding = 0,
+) {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  for (const point of route.points) {
+  for (const point of segments.flat()) {
     minX = Math.min(minX, point.x);
     maxX = Math.max(maxX, point.x);
     minY = Math.min(minY, point.y);
@@ -168,9 +180,9 @@ export function routePath(route: Route, width: number, height: number, padding =
   const fitted = Number.isFinite(scale) ? scale : 0;
   const offsetX = (width - spanX * fitted) / 2;
   const offsetY = (height - spanY * fitted) / 2;
-  const at = (point: RoutePoint) =>
+  const at = (point: Plotted) =>
     [offsetX + (point.x - minX) * fitted, offsetY + (point.y - minY) * fitted] as const;
-  return route.segments
+  return segments
     .map((segment) => {
       let path = "";
       let last: readonly [number, number] | null = null;
@@ -185,3 +197,32 @@ export function routePath(route: Route, width: number, height: number, padding =
     })
     .join("");
 }
+
+export function decodePolyline(encoded: string) {
+  const points: { latitude: number; longitude: number }[] = [];
+  let index = 0;
+  let latitude = 0;
+  let longitude = 0;
+  const next = () => {
+    let result = 0;
+    let shift = 0;
+    let byte = 0x20;
+    while (byte >= 0x20 && index < encoded.length) {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    }
+    return result & 1 ? ~(result >> 1) : result >> 1;
+  };
+  while (index < encoded.length) {
+    latitude += next();
+    longitude += next();
+    points.push({ latitude: latitude / 1e5, longitude: longitude / 1e5 });
+  }
+  return points;
+}
+
+export const storedRouteSegments = (route: NonNullable<Activity["route"]>) =>
+  route.segments.map((segment) =>
+    decodePolyline(segment).map(({ latitude, longitude }) => mercator(latitude, longitude)),
+  );

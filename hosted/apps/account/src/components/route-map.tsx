@@ -222,7 +222,7 @@ function RouteMap({
         aria-label={state === "failed" ? `The shape of the route of ${title}` : undefined}
         aria-hidden={state === "failed" ? undefined : true}
       >
-        <path d={routePath(route, PREVIEW_WIDTH, PREVIEW_HEIGHT, 40)} />
+        <path d={routePath(route.segments, PREVIEW_WIDTH, PREVIEW_HEIGHT, 40)} />
       </svg>
       <div ref={container} className="route-canvas" />
       {state === "failed" && (

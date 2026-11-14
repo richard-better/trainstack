@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/client";
 import { type DecodedActivity, activitySport } from "@trainstack/activity-file";
+import { timerPauses } from "@trainstack/analysis";
 import {
   type ActivityDetail,
   type ActivitySummaryError,
@@ -415,7 +416,13 @@ function Recorded({
   day: string;
 }) {
   const trace = useMemo(() => traceOf(decoded), [decoded]);
-  const route = useMemo(() => (indoor ? null : routeOf(decoded.records)), [decoded, indoor]);
+  const route = useMemo(
+    () =>
+      indoor
+        ? null
+        : routeOf(decoded.records, timerPauses(decoded.events, decoded.summary.startTime)),
+    [decoded, indoor],
+  );
   const elevation = indoor ? null : trace.elevation;
   const measures = useMemo(
     () => (route ? routeMeasures(trace, elevation, speed) : []),
