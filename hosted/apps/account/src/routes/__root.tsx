@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { queryClient } from "../api";
 import analysisStyles from "../styles/analysis.css?url";
 import styles from "../styles/app.css?url";
+import routeStyles from "../styles/route.css?url";
 import trainingStyles from "../styles/training.css?url";
 import workoutStyles from "../styles/workouts.css?url";
 
@@ -27,6 +28,7 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: workoutStyles },
       { rel: "stylesheet", href: analysisStyles },
       { rel: "stylesheet", href: trainingStyles },
+      { rel: "stylesheet", href: routeStyles },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
   }),

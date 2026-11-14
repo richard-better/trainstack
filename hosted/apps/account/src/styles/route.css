@@ -1,0 +1,253 @@
+.route-map {
+  position: relative;
+  height: clamp(300px, 46vw, 440px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--ink);
+}
+
+.route-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.route-preview path {
+  fill: none;
+  stroke: var(--soft);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.route-map .route-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+.route-map[data-state="ready"] .route-canvas {
+  opacity: 1;
+}
+
+.route-map[data-state="ready"] .route-preview {
+  visibility: hidden;
+}
+
+.route-map[data-state="failed"] .route-canvas {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .route-canvas {
+    transition: opacity 400ms ease-out;
+  }
+
+  .route-map[data-state="loading"] .route-preview {
+    animation: breathe 1.6s ease-in-out infinite;
+  }
+}
+
+.route-failed {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  margin: 0;
+  color: var(--soft);
+  font-size: 13px;
+}
+
+.route-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.route-readout {
+  margin: 0;
+  color: var(--mist);
+  font-variant-numeric: tabular-nums;
+}
+
+.route-readout strong {
+  font-weight: 500;
+}
+
+.route-key {
+  display: flex;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  color: var(--soft);
+  list-style: none;
+}
+
+.route-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.end-mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.end-mark.start {
+  border: 3px solid var(--paper);
+  background: var(--night);
+}
+
+.end-mark.finish {
+  border: 2px solid var(--night);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--edge);
+}
+
+.route-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.route-legend figcaption {
+  font-weight: 500;
+  line-height: 10px;
+}
+
+.legend-scale {
+  width: min(320px, 70vw);
+}
+
+.legend-bands {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.legend-bands span {
+  flex: 1;
+}
+
+.legend-bands span:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.legend-bands span:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.legend-edges {
+  position: relative;
+  height: 18px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.legend-edges span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.legend-missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--soft);
+  line-height: 10px;
+}
+
+.legend-swatch {
+  width: 16px;
+  height: 10px;
+  border-radius: 4px;
+  background: #5a5c61;
+}
+
+.trace-elevation {
+  --series: var(--soft);
+}
+
+.route-map .maplibregl-ctrl-group {
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--graphite);
+  box-shadow: none;
+}
+
+.route-map .maplibregl-ctrl-group button {
+  width: 32px;
+  height: 32px;
+}
+
+.route-map .maplibregl-ctrl-group button + button {
+  border-top-color: var(--edge);
+}
+
+.route-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(0.9);
+}
+
+.route-map .maplibregl-ctrl-group button:focus-visible {
+  outline: 2px solid var(--power);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.route-map .fit-route {
+  display: grid;
+  place-items: center;
+  color: var(--mist);
+}
+
+.route-map .maplibregl-ctrl-attrib {
+  background: rgb(15 16 17 / 75%);
+  color: var(--soft);
+  font-size: 11px;
+}
+
+.route-map .maplibregl-ctrl-attrib a {
+  color: var(--mist);
+}
+
+.route-map .maplibregl-ctrl-scale {
+  border-color: var(--soft);
+  background: rgb(15 16 17 / 75%);
+  color: var(--soft);
+}
+
+.route-map .maplibregl-cooperative-gesture-screen {
+  background: rgb(15 16 17 / 70%);
+  color: var(--mist);
+  font-size: 15px;
+}
+
+.route-map .maplibregl-canvas:focus-visible {
+  outline: 2px solid var(--power);
+  outline-offset: -2px;
+}
+
+@media (max-width: 640px) {
+  .route-map {
+    height: 300px;
+  }
+
+  .route-map .maplibregl-ctrl-bottom-left {
+    bottom: 22px;
+  }
+}

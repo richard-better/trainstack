@@ -1,5 +1,7 @@
 import type { ActivityLap, ActivityRecord, DecodedActivity } from "@trainstack/activity-file";
 
+import { type Elevation, distancesOf, elevationOf } from "./terrain.ts";
+
 type Decoded = Pick<DecodedActivity, "summary" | "laps" | "records">;
 
 export type ChannelKey = "power" | "heartRate" | "cadence" | "speed";
@@ -18,7 +20,9 @@ export interface Channel {
 export interface Trace {
   readonly seconds: readonly number[];
   readonly duration: number;
+  readonly distances: readonly number[] | null;
   readonly channels: readonly Channel[];
+  readonly elevation: Elevation | null;
 }
 
 const channelSpecs: readonly {
@@ -105,7 +109,13 @@ export function traceOf(activity: Decoded): Trace {
       },
     ];
   });
-  return { seconds, duration: seconds.at(-1) ?? 0, channels };
+  return {
+    seconds,
+    duration: seconds.at(-1) ?? 0,
+    distances: distancesOf(records),
+    channels,
+    elevation: elevationOf(records),
+  };
 }
 
 export function indexAt(seconds: readonly number[], at: number) {
@@ -121,17 +131,17 @@ export function indexAt(seconds: readonly number[], at: number) {
 }
 
 export interface Bucket {
-  readonly second: number;
+  readonly at: number;
   readonly value: number | null;
 }
 
 export function bucketed(
-  seconds: readonly number[],
+  positions: readonly number[],
   values: readonly (number | null)[],
   count: number,
 ): Bucket[] {
   if (values.length <= count) {
-    return values.map((value, index) => ({ second: seconds[index]!, value }));
+    return values.map((value, index) => ({ at: positions[index]!, value }));
   }
   const buckets: Bucket[] = [];
   for (let bucket = 0; bucket < count; bucket++) {
@@ -146,7 +156,7 @@ export function bucketed(
       present += 1;
     }
     buckets.push({
-      second: (seconds[start]! + seconds[end - 1]!) / 2,
+      at: (positions[start]! + positions[end - 1]!) / 2,
       value: present === 0 ? null : sum / present,
     });
   }
@@ -191,4 +201,66 @@ export function lapsOf(activity: Decoded): LapRow[] {
     averageSpeed: lap.averageSpeedMetresPerSecond,
   }));
   return rows.length > 1 ? rows : [];
+}
+
+export type Axis = "time" | "distance";
+
+export function axisPositions(trace: Pick<Trace, "seconds" | "distances">, axis: Axis) {
+  return axis === "distance" && trace.distances ? trace.distances : trace.seconds;
+}
+
+export function secondAt(
+  trace: Pick<Trace, "seconds" | "distances">,
+  axis: Axis,
+  position: number,
+) {
+  return trace.seconds[indexAt(axisPositions(trace, axis), position)] ?? 0;
+}
+
+export function positionAt(
+  trace: Pick<Trace, "seconds" | "distances">,
+  axis: Axis,
+  second: number,
+) {
+  return axisPositions(trace, axis)[indexAt(trace.seconds, second)] ?? 0;
+}
+
+export function steppedSecond(
+  trace: Pick<Trace, "seconds" | "distances">,
+  axis: Axis,
+  cursor: number | null,
+  direction: 1 | -1,
+) {
+  const positions = axisPositions(trace, axis);
+  const last = positions.length - 1;
+  if (cursor === null) return trace.seconds[direction > 0 ? 0 : last] ?? 0;
+  const stride = Math.max(1, (positions[last] ?? 0) / 100);
+  const current = indexAt(trace.seconds, cursor);
+  let index = indexAt(positions, positions[current]! + direction * stride);
+  if (direction > 0 && index <= current) index = Math.min(last, current + 1);
+  if (direction < 0 && index >= current) index = Math.max(0, current - 1);
+  return trace.seconds[index] ?? 0;
+}
+
+export const PAUSE_SECONDS = 60;
+
+export function bucketedAcrossPauses(
+  seconds: readonly number[],
+  positions: readonly number[],
+  values: readonly (number | null)[],
+  count: number,
+): Bucket[] {
+  const starts = [0];
+  for (let index = 1; index < seconds.length; index++) {
+    if (seconds[index]! - seconds[index - 1]! > PAUSE_SECONDS) starts.push(index);
+  }
+  if (starts.length === 1) return bucketed(positions, values, count);
+  return starts.flatMap((start, part) => {
+    const end = starts[part + 1] ?? seconds.length;
+    const share = Math.max(2, Math.round((count * (end - start)) / seconds.length));
+    const buckets = bucketed(positions.slice(start, end), values.slice(start, end), share);
+    return part === starts.length - 1
+      ? buckets
+      : [...buckets, { at: positions[end - 1]!, value: null }];
+  });
 }
