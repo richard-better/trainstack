@@ -111,7 +111,46 @@ function perSecondOrNaN(samples: Samples, values: Float64Array, length: number) 
 
 type Placed = { from: number; to: number; seconds: number[]; progress?: number[] };
 
+function movingSeconds(span: { from: number; to: number }, moving: Uint8Array) {
+  const seconds: number[] = [];
+  for (let second = Math.floor(span.from); second < Math.min(span.to, moving.length); second++) {
+    if (second >= 0 && moving[second]) seconds.push(second);
+  }
+  return seconds;
+}
+
+function placedByStepLaps(
+  activity: AnalysisActivity,
+  steps: readonly Step[],
+  moving: Uint8Array,
+): (Placed | null)[] | undefined {
+  const placedLaps = (activity.laps ?? []).filter(
+    (lap) => lap.startTime !== undefined && Number.isFinite(lap.startTime.getTime()),
+  );
+  if (!placedLaps.some((lap) => lap.workoutStepIndex !== undefined)) return undefined;
+  const spans = lapSpans(activity);
+  const placed: (Placed | null)[] = steps.map(() => null);
+  for (const [index, span] of spans.entries()) {
+    const step = placedLaps[index]?.workoutStepIndex;
+    if (step === undefined) continue;
+    if (!Number.isInteger(step) || step < 0 || step >= steps.length) return undefined;
+    const earlier = placed[step];
+    const seconds = movingSeconds(span, moving);
+    const last = earlier?.seconds.at(-1) ?? -1;
+    placed[step] = earlier
+      ? {
+          from: earlier.from,
+          to: span.to,
+          seconds: [...earlier.seconds, ...seconds.filter((second) => second > last)],
+        }
+      : { from: span.from, to: span.to, seconds };
+  }
+  return placed;
+}
+
 function placedByLaps(activity: AnalysisActivity, steps: readonly Step[], moving: Uint8Array) {
+  const byStep = placedByStepLaps(activity, steps, moving);
+  if (byStep) return byStep;
   const spans = lapSpans(activity);
   if (spans.length !== steps.length) return undefined;
   if (steps.length < 2 && plannedLength(steps[0]!) !== null) return undefined;
@@ -122,13 +161,11 @@ function placedByLaps(activity: AnalysisActivity, steps: readonly Step[], moving
     return Math.abs(span.to - span.from - length.seconds) <= tolerance;
   });
   if (!fitsThePlan) return undefined;
-  return spans.map((span): Placed => {
-    const seconds: number[] = [];
-    for (let second = Math.floor(span.from); second < Math.min(span.to, moving.length); second++) {
-      if (second >= 0 && moving[second]) seconds.push(second);
-    }
-    return { from: span.from, to: span.to, seconds };
-  });
+  return spans.map((span): Placed => ({
+    from: span.from,
+    to: span.to,
+    seconds: movingSeconds(span, moving),
+  }));
 }
 
 function placedByTime(steps: readonly Step[], moving: Uint8Array, distance: Float64Array) {
