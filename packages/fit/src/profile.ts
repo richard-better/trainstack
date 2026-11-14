@@ -7,7 +7,14 @@ export const MessageNumber = {
   record: 20,
   event: 21,
   workout: 26,
+  activity: 34,
 } as const;
+
+export const ActivityField = {
+  localTimestamp: 5,
+} as const;
+
+export const maxUtcOffsetSeconds = 14 * 60 * 60;
 
 export const CommonField = {
   timestamp: 253,

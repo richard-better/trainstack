@@ -27,6 +27,9 @@ file's messages, for files too large to decode in full in a Worker. `FitDecodeEr
 `truncated`, `badChecksum`, `malformed`, `noActivity` or `tooLarge`, the last for a file with
 more than 10,000 laps or sessions.
 
+- `summary.utcOffsetSeconds` is the activity's local time minus UTC, from the activity message's
+  local timestamp, rounded to the minute; it is `undefined` when the file has none or it is more
+  than 14 hours. GPX and TCX carry no local time, so theirs is always `undefined`.
 - `summary` comes from the file's sessions, summed across them for a multisport activity, and
   falls back to the records for any total the sessions leave out.
 - `records` are the streams: time, seconds since the start, power, heart rate, cadence, speed,

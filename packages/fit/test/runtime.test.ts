@@ -62,6 +62,7 @@ test("decodes a FIT file inside the Workers runtime", async () => {
     assert.deepEqual(await decoded.json(), {
       summary: {
         startTime: "2026-10-06T14:21:15.000Z",
+        utcOffsetSeconds: 7200,
         sport: "cycling",
         subSport: "generic",
         elapsedSeconds: 1800,
