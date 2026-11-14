@@ -5,6 +5,8 @@ import SwiftUI
 struct ActivityDetailView: View {
   let ride: Ride
   let library: RideLibrary
+  var activity: AccountActivity?
+  var isOnlyOnTheAccount = false
   var onRemove: () -> Void
   @State private var isExporting = false
   @State private var isConfirmingRemove = false
@@ -15,8 +17,11 @@ struct ActivityDetailView: View {
   @Environment(TrainstackAccount.self) private var account
   @Environment(RideLauncher.self) private var launcher
   @Environment(\.openURL) private var openURL
+  @Environment(AccountHistory.self) private var history
 
   private var recording: RideRecording { ride.recording }
+
+  private var title: String { activity?.title ?? ride.title }
 
   var body: some View {
     ScrollView {
@@ -26,7 +31,7 @@ struct ActivityDetailView: View {
             "\(recording.startDate, format: .dateTime.weekday(.wide).day().month(.wide).year()) · \(recording.startDate, format: .dateTime.hour().minute())"
           )
           .foregroundStyle(.secondary)
-          Text(ride.title).font(.largeTitle).bold()
+          Text(title).font(.largeTitle).bold()
           stravaStatus
         }
         if let template = recording.workoutName.flatMap(WorkoutTemplate.named) {
@@ -36,13 +41,14 @@ struct ActivityDetailView: View {
         if recording.hasPower || recording.hasHeartRate {
           ActivityChart(recording: recording, ftp: store.ftp(for: recording))
         }
+        if let activity { RouteSection(activity: activity) }
         RideBreakdownSection(recording: recording)
       }
       .pageLayout(maxWidth: Design.ridePageWidth, alignment: .center)
     }
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
-        ShareLink(item: ride, preview: SharePreview(ride.title))
+        ShareLink(item: ride, preview: SharePreview(title))
       }
       #if os(iOS)
         ToolbarOverflowMenu { moreActions }
@@ -52,10 +58,20 @@ struct ActivityDetailView: View {
         }
       #endif
     }
-    .confirmationDialog("Remove this ride from History?", isPresented: $isConfirmingRemove) {
-      Button("Remove Ride", role: .destructive, action: onRemove)
+    .task(id: activity?.id) {
+      if let activity { await history.loadDetailIfNeeded(of: activity) }
+    }
+    .confirmationDialog(
+      isOnlyOnTheAccount ? "Delete this activity?" : "Remove this ride from History?",
+      isPresented: $isConfirmingRemove
+    ) {
+      Button(
+        isOnlyOnTheAccount ? "Delete Activity" : "Remove Ride", role: .destructive,
+        action: onRemove)
     } message: {
-      Text("To get it back, open its FIT file again.")
+      Text(
+        isOnlyOnTheAccount
+          ? AccountActivityDetailView.deletionMessage : "To get it back, open its FIT file again.")
     }
     .fileExporter(
       isPresented: $isExporting, document: FITDocument(data: ride.fileData),
@@ -114,7 +130,9 @@ struct ActivityDetailView: View {
       }
     }
     Divider()
-    Button("Remove from History", systemImage: "trash", role: .destructive, action: confirmRemove)
+    Button(
+      isOnlyOnTheAccount ? "Delete Activity" : "Remove from History", systemImage: "trash",
+      role: .destructive, action: confirmRemove)
   }
 
   private func export() { isExporting = true }
@@ -187,5 +205,6 @@ struct ActivityDetailView: View {
   .environment(RiderSettingsStore.sample)
   .environment(TrainstackAccount.sample)
   .environment(RideLauncher(simulated: true))
+  .environment(AccountHistory.preview)
   .frame(width: 800, height: 760)
 }
