@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { profileOn } from "@trainstack/zones";
 
 import { analyzeActivity } from "../src/index.ts";
-import { growth } from "./measure.ts";
+import { growthExponent } from "./measure.ts";
 
 const heapMegabytes = 24;
 
@@ -48,6 +48,6 @@ test("analyzes a lap per record in time that grows with the records, not records
       assert.equal(analyzeActivity(activity, profileOn([], null)).laps.length, count);
     };
   };
-  const ratio = growth(lapPerRecord, 5_000, 40_000);
-  assert.ok(ratio < 24, `eight times the laps took ${ratio.toFixed(1)} times the CPU`);
+  const exponent = growthExponent(lapPerRecord, [5_000, 10_000, 20_000, 40_000]);
+  assert.ok(exponent < 1.5, `the CPU grew as the laps to the power ${exponent.toFixed(2)}`);
 });
