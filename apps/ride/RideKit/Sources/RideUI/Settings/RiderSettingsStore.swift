@@ -8,6 +8,9 @@ final class RiderSettingsStore {
   var powerDisplay: PowerDisplay {
     didSet { if let defaults { powerDisplay.save(to: defaults) } }
   }
+  var matchesPowerMeter: Bool {
+    didSet { defaults?.set(matchesPowerMeter, forKey: Self.matchesPowerMeterKey) }
+  }
   @ObservationIgnored private let defaults: UserDefaults?
   @ObservationIgnored private let now: () -> Date
   @ObservationIgnored var onEdit: (() -> Void)?
@@ -17,13 +20,17 @@ final class RiderSettingsStore {
     self.now = now
     settings = RiderSettings.load(from: defaults)
     powerDisplay = PowerDisplay.load(from: defaults)
+    matchesPowerMeter = defaults.object(forKey: Self.matchesPowerMeterKey) as? Bool ?? true
   }
+
+  static let matchesPowerMeterKey = "powerMatch"
 
   init(settings: RiderSettings, now: @escaping () -> Date = { .now }) {
     self.defaults = nil
     self.now = now
     self.settings = settings
     powerDisplay = .standard
+    matchesPowerMeter = true
   }
 
   var isStored: Bool { defaults != nil }

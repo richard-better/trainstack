@@ -73,7 +73,9 @@ extension RideLibrary {
 extension BluetoothDevices {
   static func launchDevices() -> BluetoothDevices {
     #if DEBUG
-      if CommandLine.arguments.contains("-sample-devices") { return .sample() }
+      if CommandLine.arguments.contains("-sample-devices") {
+        return .sample(pairPowerMeter: CommandLine.arguments.contains("-sample-power-meter"))
+      }
     #endif
     return BluetoothDevices()
   }

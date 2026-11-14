@@ -4,6 +4,7 @@ import RideData
 public struct RideEngine: Sendable {
   public private(set) var session: RideSession
   public private(set) var isPausedForTrainer = false
+  public private(set) var powerMatch = PowerMatch()
   private var trainerWasConnected = false
 
   public init(session: RideSession) {
@@ -26,8 +27,10 @@ public struct RideEngine: Sendable {
       session.pause()
     case .tick(let seconds, let reading, let trainerConnected):
       pauseIfTrainerDropped(trainerConnected: trainerConnected)
+      let commanded = session.isPaused ? nil : commandedWatts
       let recorded = session.samples.count
       session.advance(by: seconds, reading: reading)
+      powerMatch.observe(reading.powerMatch, commanded: commanded, over: seconds)
       return session.samples.count > recorded ? session.samples.last : nil
     case .togglePause:
       isPausedForTrainer = false
@@ -55,9 +58,15 @@ public struct RideEngine: Sendable {
     isPausedForTrainer = true
   }
 
+  private var commandedWatts: Int? {
+    guard case .power(let watts) = trainerCommand else { return nil }
+    return watts
+  }
+
   public var trainerCommand: TrainerCommand {
     switch session.mode {
-    case .erg: session.targetPower.map(TrainerCommand.power(watts:)) ?? .grade(percent: 0)
+    case .erg:
+      session.targetPower.map { .power(watts: powerMatch.watts(for: $0)) } ?? .grade(percent: 0)
     case .slope: .grade(percent: session.slopeGradePercent)
     case .level:
       .resistance(

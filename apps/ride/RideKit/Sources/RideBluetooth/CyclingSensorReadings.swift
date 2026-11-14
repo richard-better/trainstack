@@ -15,12 +15,20 @@ struct CyclingSensorReadings: Sendable {
   private var power: [CyclingCharacteristic: Reading] = [:]
   private var cadence: [CyclingCharacteristic: Reading] = [:]
   private var cranks: [CyclingCharacteristic: CrankCadence] = [:]
+  private var powerCranks: [CyclingCharacteristic: CrankRevolution] = [:]
+  private var powerCrankMoved: [CyclingCharacteristic: Date] = [:]
 
   mutating func receive(_ data: Data, from characteristic: CyclingCharacteristic, at date: Date) {
     switch characteristic {
     case .power:
       guard let measurement = CyclingPowerMeasurement(data) else { return }
-      power[characteristic] = Reading(value: measurement.watts, date: date)
+      let crankMoved =
+        measurement.crank == nil || measurement.watts == 0
+        || measurement.crank != powerCranks[characteristic]
+      powerCranks[characteristic] = measurement.crank
+      if crankMoved { powerCrankMoved[characteristic] = date }
+      power[characteristic] = Reading(
+        value: measurement.watts, date: powerCrankMoved[characteristic] ?? date)
       if let crank = measurement.crank { receive(crank, from: characteristic, at: date) }
     case .speedAndCadence:
       guard let measurement = CyclingSpeedCadenceMeasurement(data) else { return }
@@ -36,10 +44,14 @@ struct CyclingSensorReadings: Sendable {
     }
   }
 
-  func reading(for metric: RideMetric, at date: Date) -> Int? {
+  func reading(
+    for metric: RideMetric, at date: Date, heardWithin maxAge: TimeInterval = maxAge
+  ) -> Int? {
     switch metric {
-    case .power: current(power, preference: Self.powerSourcesBestFirst, at: date)
-    case .cadence: current(cadence, preference: Self.cadenceSourcesBestFirst, at: date)
+    case .power:
+      current(power, preference: Self.powerSourcesBestFirst, at: date, heardWithin: maxAge)
+    case .cadence:
+      current(cadence, preference: Self.cadenceSourcesBestFirst, at: date, heardWithin: maxAge)
     case .heartRate: nil
     }
   }
@@ -57,9 +69,10 @@ struct CyclingSensorReadings: Sendable {
   }
 
   private func current(
-    _ readings: [CyclingCharacteristic: Reading], preference: [CyclingCharacteristic], at date: Date
+    _ readings: [CyclingCharacteristic: Reading], preference: [CyclingCharacteristic],
+    at date: Date, heardWithin maxAge: TimeInterval
   ) -> Int? {
     preference.lazy.compactMap { readings[$0] }
-      .first { date.timeIntervalSince($0.date) <= Self.maxAge }?.value
+      .first { date.timeIntervalSince($0.date) <= maxAge }?.value
   }
 }

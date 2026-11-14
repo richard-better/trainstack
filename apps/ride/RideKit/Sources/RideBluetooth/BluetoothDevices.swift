@@ -96,7 +96,10 @@ public final class BluetoothDevices {
     return reading(for: metric, from: source.id, at: date)
   }
 
-  public func reading(for metric: RideMetric, from id: UUID, at date: Date = .now) -> Int? {
+  public func reading(
+    for metric: RideMetric, from id: UUID, at date: Date = .now,
+    heardWithin maxAge: TimeInterval? = nil
+  ) -> Int? {
     guard connectionState(of: id) == .connected else { return nil }
     if metric == .heartRate {
       guard let reading = heartRateReadings[id],
@@ -104,12 +107,25 @@ public final class BluetoothDevices {
       else { return nil }
       return reading.bpm
     }
-    return cyclingReadings[id]?.reading(for: metric, at: date)
+    return cyclingReadings[id]?.reading(
+      for: metric, at: date, heardWithin: maxAge ?? CyclingSensorReadings.maxAge)
   }
 
   public func paired(_ kind: FitnessService) -> DiscoveredDevice? {
     paired.first { $0.kind == kind }
   }
+
+  public func powerMatchReading(at date: Date = .now) -> PowerMatchPair? {
+    guard let trainer = paired(.trainer), connectionState(of: trainer.id) == .connected,
+      let meter = source(of: .power), meter.id != trainer.id
+    else { return nil }
+    return PowerMatchPair(
+      meter: reading(for: .power, from: meter.id, at: date, heardWithin: Self.powerMatchMaxAge),
+      trainer: reading(
+        for: .power, from: trainer.id, at: date, heardWithin: Self.powerMatchMaxAge))
+  }
+
+  public static let powerMatchMaxAge: TimeInterval = 2
 
   public func source(of metric: RideMetric) -> DiscoveredDevice? {
     let connected = connectedSensors(of: metric)
@@ -124,7 +140,8 @@ public final class BluetoothDevices {
   public func sensors(of metric: RideMetric) -> [DiscoveredDevice] {
     var seen: Set<UUID> = []
     return metric.servicesBestFirst.flatMap { service in
-      paired.filter { $0.services.contains(service) }
+      let offering = paired.filter { $0.services.contains(service) }
+      return offering.filter { $0.kind == service } + offering.filter { $0.kind != service }
     }
     .filter { seen.insert($0.id).inserted }
   }

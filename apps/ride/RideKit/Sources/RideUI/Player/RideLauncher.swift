@@ -14,6 +14,9 @@ final class RideLauncher {
   var powerDisplay = PowerDisplay.standard {
     didSet { ride?.powerDisplay = powerDisplay }
   }
+  var matchesPowerMeter = true {
+    didSet { ride?.matchesPowerMeter = matchesPowerMeter }
+  }
   @ObservationIgnored private let simulated: Bool
   @ObservationIgnored private var planned: PlannedRide?
   @ObservationIgnored var onPlannedRideSaved:
@@ -63,6 +66,7 @@ final class RideLauncher {
 
   private func begin(_ ride: RideController) {
     ride.powerDisplay = powerDisplay
+    ride.matchesPowerMeter = matchesPowerMeter
     #if os(iOS)
       let watch = WatchLink.shared
       watch.onHeartRate = { [heartRate] bpm in heartRate.record(bpm, from: .watch) }

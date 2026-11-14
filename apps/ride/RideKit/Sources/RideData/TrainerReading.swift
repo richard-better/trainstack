@@ -3,14 +3,16 @@ public struct TrainerReading: Equatable, Codable, Sendable {
   public var cadence: Int?
   public var heartRate: Int?
   public var heartRateSource: HeartRateSource?
+  public var powerMatch: PowerMatchReading?
 
   public init(
     power: Int? = nil, cadence: Int? = nil, heartRate: Int? = nil,
-    heartRateSource: HeartRateSource? = nil
+    heartRateSource: HeartRateSource? = nil, powerMatch: PowerMatchReading? = nil
   ) {
     self.power = power
     self.cadence = cadence
     self.heartRate = heartRate
     self.heartRateSource = heartRateSource
+    self.powerMatch = powerMatch
   }
 }

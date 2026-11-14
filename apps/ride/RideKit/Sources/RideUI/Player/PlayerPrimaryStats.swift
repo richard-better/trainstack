@@ -97,6 +97,12 @@ struct PlayerPrimaryStats: View {
   }
 
   private var powerDetail: String {
+    let match = controller.powerMatchCorrection.map(PowerMatchText.detail)
+    return [comparedWithTarget, match].compactMap(\.self).filter { !$0.isEmpty }
+      .joined(separator: " · ")
+  }
+
+  private var comparedWithTarget: String {
     let session = controller.session
     guard session.mode == .erg else { return "Free power in \(session.mode.rawValue)" }
     guard !session.isPaused, let target = session.targetPower, let power = controller.power

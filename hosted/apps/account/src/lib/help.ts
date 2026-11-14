@@ -8,6 +8,7 @@ export const helpTopics = [
   "thresholds-and-zones",
   "activity-analysis",
   "fitness-and-form",
+  "riding-indoors",
   "plan-your-week",
   "compliance",
   "workouts",

@@ -182,6 +182,21 @@ struct BluetoothDevicesTests {
     #expect(devices.source(of: .power) == meter)
   }
 
+  @Test func aPowerMeterIsTheSourceOverATrainerThatAlsoBroadcastsPowerWhicheverWasPairedFirst() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(
+      id: UUID(), name: "KICKR CORE", services: [.trainer, .power, .speedAndCadence])
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    let cadence = DiscoveredDevice(id: UUID(), name: "Wahoo RPM", services: [.speedAndCadence])
+    devices.pair(trainer)
+    devices.pair(meter)
+    devices.pair(cadence)
+    for device in [trainer, meter, cadence] { transport.onConnect?(device.id) }
+    #expect(devices.sensors(of: .power) == [meter, trainer])
+    #expect(devices.source(of: .power) == meter)
+    #expect(devices.source(of: .cadence) == cadence)
+  }
+
   @Test func listsEverySensorForAMetricWhetherOrNotConnected() {
     let (devices, transport) = scanningDevices()
     let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
@@ -326,6 +341,30 @@ struct BluetoothDevicesTests {
       trainer.id, HeartRateMeasurement(beatsPerMinute: 140, hasContact: false).data)
     #expect(devices.heartRate == nil)
     #expect(devices.reading(for: .heartRate, from: strap.id) == 128)
+  }
+
+  @Test func pairsTheMetersPowerWithTheTrainersOnlyWhileBothAreSeparateAndConnected() {
+    let (devices, transport) = scanningDevices()
+    let trainer = DiscoveredDevice(id: UUID(), name: "KICKR", services: [.trainer, .power])
+    let meter = DiscoveredDevice(id: UUID(), name: "Assioma", services: [.power])
+    devices.pair(trainer)
+    transport.onConnect?(trainer.id)
+    let now = Date.now
+    devices.receiveCycling(
+      Data([0x45, 0, 180, 0, 200, 0]), from: trainer.id, characteristic: .indoorBike, at: now)
+    #expect(devices.powerMatchReading(at: now) == nil)
+    devices.pair(meter)
+    transport.onConnect?(meter.id)
+    devices.receiveCycling(Data([0, 0, 190, 0]), from: meter.id, characteristic: .power, at: now)
+    #expect(devices.powerMatchReading(at: now) == PowerMatchPair(meter: 190, trainer: 200))
+    #expect(
+      devices.powerMatchReading(at: now.addingTimeInterval(3))
+        == PowerMatchPair(meter: nil, trainer: nil))
+    devices.select(trainer, for: .power)
+    #expect(devices.powerMatchReading(at: now) == nil)
+    devices.select(meter, for: .power)
+    transport.onDisconnect?(meter.id)
+    #expect(devices.powerMatchReading(at: now) == nil)
   }
 
   @Test func readsEachCyclingSensorAndSwitchesTheSelectedMetricImmediately() {

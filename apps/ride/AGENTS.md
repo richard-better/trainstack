@@ -357,7 +357,8 @@ Debug builds take launch arguments to try the app without hardware:
 
 - `-ride "<workout name>"` opens straight into that ride (needs an FTP).
 - `-simulated-trainer` rides with a pretend trainer, and `-sample-devices` shows pretend
-  Bluetooth devices, since the simulator has none.
+  Bluetooth devices, since the simulator has none. Add `-sample-power-meter` to pair a pretend
+  power meter reading 5% below the pretend trainer, to see Power match.
 - `-sample-rides` uses a sample profile, the sample ride in History and a pretend trainer.
 - `-trainstack-server <url> -trainstack-session <token>` signs in to that API with that session
   token, kept in memory, to try account features such as Send Feedback against a local API
