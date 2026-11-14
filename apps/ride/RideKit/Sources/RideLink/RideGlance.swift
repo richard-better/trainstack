@@ -76,12 +76,14 @@ public struct RideGlance: Codable, Equatable, Sendable {
   public var heartRate: Int?
   public var heartRateSource: HeartRateSource?
   public var heartRateZone: HeartRateZone?
+  public var cue: String?
 
   public init(
     workoutName: String, interval: Interval? = nil, next: NextInterval? = nil,
     mode: TrainerMode = .erg,
     isPaused: Bool = false, power: Int? = nil, heartRate: Int? = nil,
-    heartRateSource: HeartRateSource? = nil, heartRateZone: HeartRateZone? = nil
+    heartRateSource: HeartRateSource? = nil, heartRateZone: HeartRateZone? = nil,
+    cue: String? = nil
   ) {
     self.workoutName = workoutName
     self.interval = interval
@@ -92,18 +94,20 @@ public struct RideGlance: Codable, Equatable, Sendable {
     self.heartRate = heartRate
     self.heartRateSource = heartRateSource
     self.heartRateZone = heartRateZone
+    self.cue = cue
   }
 }
 
 extension RideGlance {
   public static let freeRideTitle = "Free ride"
+  public static let longestCue = 48
 
   public init(
     session: RideSession, ftp: Int, heartRateZones: ZoneSet?,
     powerDisplay: PowerDisplay = .standard
   ) {
     let zones = session.intervals.map { $0.zone(ftp: ftp) }
-    let labels = session.intervals.map { Self.label(of: $0.step.target) }
+    let labels = session.intervals.map { $0.step.name ?? Self.label(of: $0.step.target) }
     let ergTarget = { (interval: RideSession.Interval, position: TimeInterval) in
       session.mode == .erg ? interval.plannedPower(at: position).map(session.adjusted) : nil
     }
@@ -135,7 +139,7 @@ extension RideGlance {
           let zone = zones.zone(containing: bpm)
           return HeartRateZone(label: zone.label, index: zone.index, zoneCount: zone.zoneCount)
         }
-      })
+      }, cue: session.cue.map(\.text).flatMap { $0.count <= Self.longestCue ? $0 : nil })
   }
 
   static func label(of target: StepTarget?) -> String? {

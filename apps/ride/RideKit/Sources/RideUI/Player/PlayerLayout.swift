@@ -20,12 +20,10 @@ struct PlayerLayout: View {
           }
         }
         .overlay(alignment: .top) {
-          if controller.trainerNotice == nil, !session.isPaused {
-            if let lap = session.justMarkedLap {
-              PlayerCue(text: "Lap \(lap)", systemImage: "flag.fill")
-            } else if let cue = session.cue {
-              PlayerCue(text: cue.text)
-            }
+          if controller.trainerNotice == nil, !session.isPaused,
+            let banner = PlayerBanner(session: session, ftp: controller.ftp)
+          {
+            PlayerCue(banner: banner)
           }
         }
       }
