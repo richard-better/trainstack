@@ -34,7 +34,7 @@ struct AccountSettingsView: View {
       Button("Delete Account", role: .destructive, action: deleteAccount)
     } message: {
       Text(
-        "This deletes your TrainStack account and its Strava connection. Your rides stay on this device and on Strava."
+        "This permanently deletes your TrainStack account and everything it holds: your rides and their files, your settings and their history, your workouts and your Strava connection. Rides and settings on this device stay, and so do rides you sent to Strava."
       )
     }
   }
@@ -61,8 +61,8 @@ struct AccountSettingsView: View {
     } footer: {
       Text(
         account.isSignedIn
-          ? "Your account holds your Strava connection and nothing else. Your rides stay on this device."
-          : "Ride works without an account. You only need one to send rides to Strava."
+          ? "Your account holds your rides and their files, your settings and their history, your workouts and your Strava connection. Ride sends your rides to it, so you can see them on the TrainStack website, and keeps your settings the same on every device you sign in on."
+          : "Ride works without an account. Sign in to see your rides on the TrainStack website, keep your settings the same on all your devices, and send rides to Strava."
       )
     }
   }
