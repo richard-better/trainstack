@@ -82,6 +82,7 @@ test("a rider uploads a ride's FIT file and reads it back by its SHA-256", async
       statistics: undefined,
       analyzedAt: null,
       analysisError: null,
+      analysisDue: true,
       missingThresholds: [],
       createdAt: undefined,
       primary: true,

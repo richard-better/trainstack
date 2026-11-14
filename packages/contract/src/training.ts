@@ -51,6 +51,14 @@ export const bestEffortSchema = z.object({
   day: settingDaySchema,
 });
 
+const analysesDue = z
+  .number()
+  .int()
+  .min(0)
+  .describe(
+    "How many of the athlete's activities that can change these numbers have analysisDue set: new uploads, and after a settings change every activity until the server has checked it. While it is above 0 the numbers may still change; 0 means they are final until the athlete's settings or activities change",
+  );
+
 const unauthorized = { UNAUTHORIZED: {} };
 
 export const trainingContract = {
@@ -76,6 +84,7 @@ export const trainingContract = {
       z.object({
         today: settingDaySchema.describe("Today in the athlete's time zone"),
         days: z.array(trainingDaySchema).describe("One for every day from from through through"),
+        analysesDue,
       }),
     ),
   bests: oc
@@ -103,6 +112,7 @@ export const trainingContract = {
       z.object({
         powerCurve: z.array(bestPowerSchema).describe("Shortest duration first"),
         bestEfforts: z.array(bestEffortSchema).describe("Shortest distance first"),
+        analysesDue,
       }),
     ),
 };

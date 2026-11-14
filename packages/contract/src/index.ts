@@ -100,6 +100,11 @@ export const activitySchema = z.object({
       "When the server last analysed the file with the athlete's settings of the activity's day; null while it has not. It analyses again by itself when those settings change",
     ),
   analysisError: activityAnalysisErrorSchema.nullable(),
+  analysisDue: z
+    .boolean()
+    .describe(
+      "Whether the server has yet to analyse the activity as it stands: from when it arrives, after any change to the athlete's settings until it has checked whether the change touches this activity's day, and after the analysis itself improves. The scheduled job clears it, usually within minutes. While it is true, statistics from the analysis may be missing or out of date; once it is false they are final until the athlete's settings or the file change",
+    ),
   missingThresholds: z
     .array(z.string())
     .describe(

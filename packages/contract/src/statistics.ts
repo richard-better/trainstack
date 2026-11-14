@@ -12,15 +12,15 @@ export type ActivityStatisticUnit =
 
 type Statistic = { name: string; unit: ActivityStatisticUnit; description: string };
 
-const bestPower = (seconds: number, label: string) =>
+const bestPower = <const Seconds extends number>(seconds: Seconds, label: string) =>
   ({
-    name: `best_power_${seconds}s_w`,
+    name: `best_power_${seconds}s_w` as const,
     unit: "W",
     description: `Best average power over ${label}`,
   }) as const;
 
-const bestTime = (name: string, label: string) =>
-  ({ name: `best_time_${name}_s`, unit: "s", description: `Fastest ${label}` }) as const;
+const bestTime = <const Name extends string>(name: Name, label: string) =>
+  ({ name: `best_time_${name}_s` as const, unit: "s", description: `Fastest ${label}` }) as const;
 
 export const activityStatistics = [
   { name: "elapsed_s", unit: "s", description: "Time from start to finish, pauses included" },

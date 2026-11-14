@@ -170,7 +170,59 @@ test("bests come from the best activity of the period, one per workout, by sport
     through: "2026-06-30",
     sport: "running",
   });
-  assert.deepEqual(running, { powerCurve: [], bestEfforts: [] });
+  assert.deepEqual(running, { powerCurve: [], bestEfforts: [], analysesDue: 0 });
+});
+
+test("the load and bests say how many of the activities that shape them are still to be analysed", async () => {
+  const { client } = await athlete();
+  await client.settings.write({ writes: [put("2026-01-01", ftp(200))] });
+  await client.activities.upload({ file: ride("2026-07-01"), source: "upload" });
+  const august = await client.activities.upload({ file: ride("2026-08-01"), source: "upload" });
+  const due = async () => ({
+    load: (await client.training.load({ from: "2026-07-01", through: "2026-08-31" })).analysesDue,
+    july: (await client.training.load({ from: "2026-07-01", through: "2026-07-31" })).analysesDue,
+    julyBests: (await client.training.bests({ from: "2026-07-01", through: "2026-07-31" }))
+      .analysesDue,
+    augustBests: (await client.training.bests({ from: "2026-08-01", through: "2026-08-31" }))
+      .analysesDue,
+    runningBests: (
+      await client.training.bests({ from: "2026-07-01", through: "2026-08-31", sport: "running" })
+    ).analysesDue,
+  });
+
+  assert.deepEqual(await due(), {
+    load: 2,
+    july: 1,
+    julyBests: 1,
+    augustBests: 1,
+    runningBests: 0,
+  });
+  await runCronUntilAnalysed();
+  assert.deepEqual(await due(), {
+    load: 0,
+    july: 0,
+    julyBests: 0,
+    augustBests: 0,
+    runningBests: 0,
+  });
+
+  await client.settings.write({ writes: [put("2026-07-15", ftp(250))] });
+  assert.deepEqual(await due(), {
+    load: 2,
+    july: 1,
+    julyBests: 1,
+    augustBests: 1,
+    runningBests: 0,
+  });
+  assert.equal((await client.activities.get({ id: august.id })).analysisDue, true);
+  await runCronUntilAnalysed();
+  assert.deepEqual(await due(), {
+    load: 0,
+    july: 0,
+    julyBests: 0,
+    augustBests: 0,
+    runningBests: 0,
+  });
 });
 
 test("today ends where the athlete's time zone says, and long or reversed ranges are refused", async () => {
