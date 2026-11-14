@@ -56,6 +56,7 @@ import {
 } from "../lib/settings";
 import { AccountData } from "./account-data";
 import { SaveStatus, SettingsWriter, useSettingsHistory, useWriter } from "./settings-data";
+import { TimeZoneSetting } from "./time-zone";
 import { ZoneScale, ZoneSwatch, zoneRange } from "./zones";
 
 export function SettingsPage({
@@ -191,6 +192,7 @@ function Weight({
           }
         />
       )}
+      <TimeZoneSetting />
     </section>
   );
 }
