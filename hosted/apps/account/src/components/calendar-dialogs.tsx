@@ -31,7 +31,7 @@ import { builtinsKey, useBuiltin, useBuiltins, useWorkoutSearch } from "./workou
 
 export type DialogRequest =
   | { readonly kind: "plan"; readonly day: CalendarDay }
-  | { readonly kind: "copy" | "skip" | "delete"; readonly item: PlannedWorkout }
+  | { readonly kind: "copy" | "move" | "skip" | "delete"; readonly item: PlannedWorkout }
   | { readonly kind: "copy-week"; readonly start: string };
 
 export function CalendarDialog({
@@ -47,7 +47,10 @@ export function CalendarDialog({
     case "plan":
       return <PlanDialog day={request.day} today={range.today} onClose={onClose} />;
     case "copy":
-      return <CopyDialog item={request.item} today={range.today} onClose={onClose} />;
+    case "move":
+      return (
+        <CopyDialog item={request.item} today={range.today} mode={request.kind} onClose={onClose} />
+      );
     case "copy-week":
       return <CopyWeekDialog start={request.start} range={range} onClose={onClose} />;
     case "skip":
@@ -85,6 +88,17 @@ export function Modal({
       {children(titleId)}
     </dialog>
   );
+}
+
+function useOpen() {
+  const open = useRef(true);
+  useEffect(() => {
+    open.current = true;
+    return () => {
+      open.current = false;
+    };
+  }, []);
+  return open;
 }
 
 async function rangeOf(from: string, through: string) {
@@ -125,7 +139,9 @@ function PlanDialog({
 }) {
   const [tab, setTab] = useState<Tab>("mine");
   const [failed, setFailed] = useState(false);
+  const open = useOpen();
   const plan = (content: PlannedContent) => {
+    if (!open.current) return;
     void calendarWrites.plan(
       { id: crypto.randomUUID(), day: day.day, position: endOfDay(day.planned), content },
       today,
@@ -461,57 +477,70 @@ function DayField({
 export function CopyDialog({
   item,
   today,
+  mode,
   onClose,
 }: {
   item: PlannedWorkout;
   today: string;
+  mode: "copy" | "move";
   onClose: () => void;
 }) {
   const [day, setDay] = useState(() => shiftDay(item.day, 7));
+  const open = useOpen();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const copying = mode === "copy";
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!isDay(day)) return;
+    if (!isDay(day) || (!copying && day === item.day)) return;
     setBusy(true);
     setFailed(false);
     try {
       const target = await rangeOf(day, day);
-      void calendarWrites.plan(
-        {
-          id: crypto.randomUUID(),
-          day,
-          position: endOfDay(target.days[0]?.planned ?? []),
-          content: structuredClone(item.content),
-        },
-        today,
-      );
+      if (!open.current) return;
+      const position = endOfDay(target.days[0]?.planned ?? []);
+      if (copying) {
+        void calendarWrites.plan(
+          { id: crypto.randomUUID(), day, position, content: structuredClone(item.content) },
+          today,
+        );
+      } else {
+        void calendarWrites.move(item, { day, position });
+      }
       onClose();
     } catch {
       setFailed(true);
       setBusy(false);
     }
   }
+  const verb = copying ? "Copy" : "Move";
   return (
-    <Modal title={`Copy ${plannedName(item.content)}`} onClose={onClose}>
+    <Modal title={`${verb} ${plannedName(item.content)}`} onClose={onClose}>
       {() => (
         <form onSubmit={submit} className="plan-form">
           <p className="lede">
-            The copy goes after anything already planned that day. It starts as planned, not
-            skipped.
+            {copying
+              ? "The copy goes after anything already planned that day. It starts as planned, not skipped."
+              : "It goes after anything already planned that day."}
           </p>
-          <DayField label="Copy to" value={day} onChange={setDay} />
+          <DayField label={`${verb} to`} value={day} onChange={setDay} />
           {failed && (
             <p role="alert" className="notice">
-              It was not copied. Check your connection and try again.
+              It was not {copying ? "copied" : "moved"}. Check your connection and try again.
             </p>
           )}
           <div className="confirm-actions">
             <button type="button" className="secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="primary" disabled={busy || !isDay(day)}>
-              {busy ? "Copying…" : `Copy to ${isDay(day) ? dayInShort(day) : "that day"}`}
+            <button
+              type="submit"
+              className="primary"
+              disabled={busy || !isDay(day) || (!copying && day === item.day)}
+            >
+              {busy
+                ? `${copying ? "Copying" : "Moving"}…`
+                : `${verb} to ${isDay(day) ? dayInShort(day) : "that day"}`}
             </button>
           </div>
         </form>
@@ -530,6 +559,7 @@ function CopyWeekDialog({
   onClose: () => void;
 }) {
   const [day, setDay] = useState(() => shiftDay(start, 7));
+  const open = useOpen();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const source = range.days.filter((entry) => mondayOf(entry.day) === start);
@@ -542,6 +572,7 @@ function CopyWeekDialog({
     setFailed(false);
     try {
       const into = await rangeOf(target, shiftDay(target, 6));
+      if (!open.current) return;
       for (const copy of weekCopies(source, into.days, () => crypto.randomUUID())) {
         void calendarWrites.plan(copy, range.today);
       }

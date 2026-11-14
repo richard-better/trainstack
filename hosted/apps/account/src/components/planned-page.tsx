@@ -132,7 +132,7 @@ function sourceLink(content: PlannedContent) {
 
 function PlannedView({ item }: { item: PlannedWorkout }) {
   const navigate = useNavigate();
-  const [dialog, setDialog] = useState<"copy" | "skip" | "delete" | null>(null);
+  const [dialog, setDialog] = useState<"copy" | "move" | "skip" | "delete" | null>(null);
   const settings = useAthleteSettings();
   const today = todayIn(settings.data?.timeZone ?? null);
   const name = plannedName(item.content);
@@ -191,6 +191,9 @@ function PlannedView({ item }: { item: PlannedWorkout }) {
                 Skip
               </button>
             ))}
+          <button type="button" className="secondary" onClick={() => setDialog("move")}>
+            Move to another day
+          </button>
           <button type="button" className="secondary" onClick={() => setDialog("copy")}>
             Copy to another day
           </button>
@@ -210,10 +213,10 @@ function PlannedView({ item }: { item: PlannedWorkout }) {
         <PlannedWorkoutBody item={item} workout={item.content.workout} />
       )}
 
-      <NotesForm key={`${item.id}-${item.updatedAt.getTime()}`} item={item} />
+      <NotesForm key={item.id} item={item} />
 
-      {dialog === "copy" && (
-        <CopyDialog item={item} today={today} onClose={() => setDialog(null)} />
+      {(dialog === "copy" || dialog === "move") && (
+        <CopyDialog item={item} today={today} mode={dialog} onClose={() => setDialog(null)} />
       )}
       {dialog === "skip" && <SkipDialog item={item} onClose={() => setDialog(null)} />}
       {dialog === "delete" && (
@@ -288,10 +291,17 @@ function PlannedWorkoutBody({ item, workout }: { item: PlannedWorkout; workout: 
 
 function NotesForm({ item }: { item: PlannedWorkout }) {
   const { content } = item;
-  const [title, setTitle] = useState(content.kind === "note" ? content.title : "");
-  const [notes, setNotes] = useState(content.notes ?? "");
-  const changed =
-    (content.notes ?? "") !== notes || (content.kind === "note" && content.title !== title);
+  const savedTitle = content.kind === "note" ? content.title : "";
+  const savedNotes = content.notes ?? "";
+  const [baseline, setBaseline] = useState({ title: savedTitle, notes: savedNotes });
+  const [title, setTitle] = useState(savedTitle);
+  const [notes, setNotes] = useState(savedNotes);
+  if (baseline.title !== savedTitle || baseline.notes !== savedNotes) {
+    if (title === baseline.title) setTitle(savedTitle);
+    if (notes === baseline.notes) setNotes(savedNotes);
+    setBaseline({ title: savedTitle, notes: savedNotes });
+  }
+  const changed = notes !== savedNotes || (content.kind === "note" && title !== savedTitle);
   function submit(event: FormEvent) {
     event.preventDefault();
     const trimmed = notes.trim() || null;
@@ -362,7 +372,7 @@ export function PlannedEditPage({ id }: { id: string }) {
     () => (opened ? plannedTarget(opened.planned, navigate) : null),
     [opened, navigate],
   );
-  if (opened && target) {
+  if (opened && opened.planned.id === id && target) {
     return (
       <WorkoutEditor key={id} id={id} initial={opened.workout} base={opened} target={target} />
     );

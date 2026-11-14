@@ -151,7 +151,7 @@ export function CalendarPage({ view, at }: { view: CalendarView; at: string | un
     if (!moving || !showing) return;
     const onKey = (event: KeyboardEvent) => {
       if (anyDialogOpen()) return;
-      const nudge = NUDGES[event.key];
+      const nudge = view === "week" && event.key.startsWith("Page") ? undefined : NUDGES[event.key];
       if (nudge) {
         event.preventDefault();
         setMoving({ id: moving.id, spot: nudged(showing, moving.id, moving.spot, nudge) });
@@ -251,7 +251,7 @@ export function CalendarPage({ view, at }: { view: CalendarView; at: string | un
       <Legend />
       <Notices />
       {movingItem && moving && shown && (
-        <MoveBanner item={movingItem} spot={moving.spot} range={shown} />
+        <MoveBanner item={movingItem} spot={moving.spot} range={shown} view={view} />
       )}
       {shown ? (
         <CalendarGrid
@@ -282,7 +282,7 @@ export function CalendarPage({ view, at }: { view: CalendarView; at: string | un
 
 interface Actions {
   readonly plan: (day: CalendarDay) => void;
-  readonly open: (item: PlannedWorkout, kind: "copy" | "skip" | "delete") => void;
+  readonly open: (item: PlannedWorkout, kind: "copy" | "move" | "skip" | "delete") => void;
   readonly copyWeek: (start: string) => void;
   readonly unskip: (item: PlannedWorkout) => void;
   readonly startMove: (item: PlannedWorkout) => void;
@@ -391,10 +391,12 @@ function MoveBanner({
   item,
   spot,
   range,
+  view,
 }: {
   item: PlannedWorkout;
   spot: Spot;
   range: CalendarRange;
+  view: CalendarView;
 }) {
   const day = range.days.find((entry) => entry.day === spot.day);
   const count = day?.planned.length ?? 1;
@@ -404,8 +406,8 @@ function MoveBanner({
       <p>
         Moving {plannedName(item.content)} to {dayInFull(spot.day)}, {spot.index + 1} of {count}.{" "}
         <span className="muted">
-          ← → change the day, ↑ ↓ the order, Page Up and Down the week. Enter puts it here, Escape
-          leaves it where it was.
+          ← → change the day, ↑ ↓ the order{view === "month" ? ", Page Up and Down the week" : ""}.
+          Enter puts it here, Escape leaves it where it was. To go further, use Move to another day.
         </span>
       </p>
     </div>
@@ -795,6 +797,16 @@ function PlannedMenu({
             }}
           >
             Move with the keyboard
+          </button>
+          <button
+            type="button"
+            className="quiet menu-item"
+            onClick={() => {
+              close();
+              actions.open(item, "move");
+            }}
+          >
+            Move to another day
           </button>
           <button
             type="button"
