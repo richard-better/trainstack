@@ -294,8 +294,10 @@ The settings in `hosted/infra/.env` persist between upgrades. Keep `BETTER_AUTH_
 
 D1 and R2 hold everything: the database has the accounts, settings, plans and every number
 derived from activities, and the bucket has each activity's original file, under
-`activities/<user id>/<activity id>`. Back up both, at the same time, so every activity in the
-database has its file.
+`activities/<user id>/<activity id>`. Back up both, one after the other, the database first. The
+two copies are not one snapshot: an activity uploaded or deleted between them can leave a row
+without its file. Take them while nobody is uploading or deleting, which on an instance of your
+own is easy to arrange.
 
 The commands use Wrangler, Cloudflare's CLI, through `bunx`. It reads `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN` from the environment; the token above is enough. Set `DB` to the database
@@ -360,16 +362,24 @@ rclone config create r2 s3 provider=Cloudflare \
 Set `BUCKET` to the bucket name the deploy printed. Back up with
 
 ```bash
-rclone sync "r2:$BUCKET" ./backup/activity-files
+rclone sync "r2:$BUCKET" ./backup/activity-files --backup-dir "./backup/deleted/$(date +%F)"
+find ./backup/deleted -mindepth 1 -maxdepth 1 -mtime +30 -exec rm -rf {} +
 ```
 
-and restore with
+`sync` makes `./backup/activity-files` match the bucket, and `--backup-dir` moves the files of
+activities deleted since the last run into a folder for the day instead of dropping them. Keep
+those folders as long as D1 Time Travel can go back, 30 days, so a database restored to before a
+deletion can have its files back too; the `find` line removes older ones.
+
+To restore, put back the files and those deleted since the database's restore point:
 
 ```bash
 rclone copy ./backup/activity-files "r2:$BUCKET"
+for day in ./backup/deleted/*/; do rclone copy "$day" "r2:$BUCKET"; done
 ```
 
-Files never change once stored, so a restore only puts back what is missing.
+Files never change once stored, so a restore only puts back what is missing. A file whose
+activity the restored database does not have is never read, and does no harm.
 
 ### One athlete's copy
 
@@ -430,4 +440,5 @@ a URL, an empty domain), the token and profile handling up to the first call to 
 build, and the database backup and restore against Wrangler's local D1 with a real athlete's
 data. These steps have not been run against a real account: the plan and deploy themselves, the
 custom domains and certificates, Sign in with Apple with your own identifiers, the remote
-Wrangler and rclone commands, and the teardown.
+Wrangler and rclone commands (rclone's `sync --backup-dir` and the restore loop were tested between
+local folders), and the teardown.
