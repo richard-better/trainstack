@@ -25,6 +25,7 @@ import {
   bucketedAcrossPauses,
   positionAt,
   secondAt,
+  steppedSecond,
   traceOf,
 } from "../hosted/apps/account/src/lib/series.ts";
 import { distancesOf, elevationOf, gradesOf } from "../hosted/apps/account/src/lib/terrain.ts";
@@ -253,4 +254,29 @@ test("charts break their lines at a pause instead of drawing across it", () => {
   );
   const steady = bucketedAcrossPauses([0, 1, 2, 3], [0, 1, 2, 3], [1, 2, 3, 4], 10);
   assert.ok(steady.every((bucket) => bucket.value !== null));
+});
+
+test("the arrow keys step across a pause instead of sticking at its edge", () => {
+  const trace = traceOf(decoded(named("Coffee ride")));
+  const lastBefore = trace.seconds.findLast((second) => second < 4500);
+  const firstAfter = trace.seconds.find((second) => second > lastBefore + 60);
+  assert.equal(steppedSecond(trace, "time", lastBefore, 1), firstAfter);
+  assert.equal(steppedSecond(trace, "time", firstAfter, -1), lastBefore);
+  assert.equal(steppedSecond(trace, "time", null, 1), 0);
+  assert.equal(steppedSecond(trace, "time", null, -1), trace.seconds.at(-1));
+  assert.equal(steppedSecond(trace, "time", trace.seconds.at(-1), 1), trace.seconds.at(-1));
+});
+
+test("pointing anywhere on the drawn line picks the route, not only near its recorded points", () => {
+  const route = routeOf([record(0, 47.5, 19.04), record(1, 47.5, 19.041), record(2, 47.5, 19.042)]);
+  const between = mercator(47.5, 19.0404);
+  const tight = 16 / (512 * 2 ** 20);
+  assert.equal(nearestPoint(route, between.x, between.y, tight).second, 0);
+  const later = mercator(47.5, 19.0407);
+  assert.equal(nearestPoint(route, later.x, later.y, tight).second, 1);
+  const gapped = routeOf([record(0, 47.5, 19.04), record(1), record(2, 47.5, 19.042)]);
+  assert.equal(
+    nearestPoint(gapped, mercator(47.5, 19.041).x, mercator(47.5, 19.041).y, tight),
+    null,
+  );
 });

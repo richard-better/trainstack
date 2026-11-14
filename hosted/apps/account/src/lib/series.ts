@@ -225,6 +225,23 @@ export function positionAt(
   return axisPositions(trace, axis)[indexAt(trace.seconds, second)] ?? 0;
 }
 
+export function steppedSecond(
+  trace: Pick<Trace, "seconds" | "distances">,
+  axis: Axis,
+  cursor: number | null,
+  direction: 1 | -1,
+) {
+  const positions = axisPositions(trace, axis);
+  const last = positions.length - 1;
+  if (cursor === null) return trace.seconds[direction > 0 ? 0 : last] ?? 0;
+  const stride = Math.max(1, (positions[last] ?? 0) / 100);
+  const current = indexAt(trace.seconds, cursor);
+  let index = indexAt(positions, positions[current]! + direction * stride);
+  if (direction > 0 && index <= current) index = Math.min(last, current + 1);
+  if (direction < 0 && index >= current) index = Math.max(0, current - 1);
+  return trace.seconds[index] ?? 0;
+}
+
 export const PAUSE_SECONDS = 60;
 
 export function bucketedAcrossPauses(

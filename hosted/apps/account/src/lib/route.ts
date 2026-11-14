@@ -127,11 +127,22 @@ export function nearestPoint(
 ): RoutePoint | null {
   let best: RoutePoint | null = null;
   let bestDistance = within * within;
-  for (const point of route.points) {
-    const distance = (point.x - x) ** 2 + (point.y - y) ** 2;
+  const consider = (from: RoutePoint, to: RoutePoint) => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = dx * dx + dy * dy;
+    const share =
+      length === 0 ? 0 : Math.max(0, Math.min(1, ((x - from.x) * dx + (y - from.y) * dy) / length));
+    const distance = (from.x + share * dx - x) ** 2 + (from.y + share * dy - y) ** 2;
     if (distance <= bestDistance) {
-      best = point;
+      best = share < 0.5 ? from : to;
       bestDistance = distance;
+    }
+  };
+  for (const segment of route.segments) {
+    if (segment.length === 1) consider(segment[0]!, segment[0]!);
+    for (let index = 1; index < segment.length; index++) {
+      consider(segment[index - 1]!, segment[index]!);
     }
   }
   return best;

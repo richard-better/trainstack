@@ -12,6 +12,7 @@ import {
   niceCeiling,
   positionAt,
   secondAt,
+  steppedSecond,
 } from "../lib/series";
 import { formatDistance, formatDuration } from "../lib/statistics";
 import type { Elevation } from "../lib/terrain";
@@ -221,19 +222,17 @@ export function Traces({
   }
 
   function step(event: KeyboardEvent<HTMLDivElement>) {
-    const stride = Math.max(1, extent / 100);
-    const here = cursor === null ? null : positionAt(trace, axis, cursor);
-    const moves: Record<string, number | null> = {
-      ArrowRight: Math.min(extent, (here ?? -stride) + stride),
-      ArrowLeft: Math.max(0, (here ?? extent + stride) - stride),
-      Home: 0,
-      End: extent,
-      Escape: null,
+    const moves: Record<string, () => number | null> = {
+      ArrowRight: () => steppedSecond(trace, axis, cursor, 1),
+      ArrowLeft: () => steppedSecond(trace, axis, cursor, -1),
+      Home: () => trace.seconds[0] ?? 0,
+      End: () => trace.seconds.at(-1) ?? 0,
+      Escape: () => null,
     };
-    if (!(event.key in moves)) return;
+    const move = moves[event.key];
+    if (!move) return;
     event.preventDefault();
-    const target = moves[event.key]!;
-    onCursor(target === null ? null : secondAt(trace, axis, target));
+    onCursor(move());
   }
 
   return (
