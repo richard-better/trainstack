@@ -54,10 +54,19 @@ import {
   thresholdsOf,
   unitOf,
 } from "../lib/settings";
+import { AccountData } from "./account-data";
 import { SaveStatus, SettingsWriter, useSettingsHistory, useWriter } from "./settings-data";
 import { ZoneScale, ZoneSwatch, zoneRange } from "./zones";
 
-export function SettingsPage({ sport, metric }: { sport?: string; metric?: ZoneMetric }) {
+export function SettingsPage({
+  sport,
+  metric,
+  confirmDeleting,
+}: {
+  sport?: string;
+  metric?: ZoneMetric;
+  confirmDeleting?: boolean;
+}) {
   const history = useSettingsHistory();
   return (
     <main className="content settings">
@@ -83,6 +92,7 @@ export function SettingsPage({ sport, metric }: { sport?: string; metric?: ZoneM
           <Settings entries={history.data.entries} sport={sport} metric={metric} />
         </SettingsWriter>
       )}
+      <AccountData confirmDeleting={confirmDeleting} />
     </main>
   );
 }
