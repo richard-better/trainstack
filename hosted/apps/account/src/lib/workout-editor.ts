@@ -3,6 +3,7 @@ import {
   type Cadence,
   CuePlacementError,
   type Level,
+  type MeasuredDuration,
   type Repeat,
   type Sport,
   type Step,
@@ -11,6 +12,8 @@ import {
   flatten,
   workoutSchema,
 } from "@trainstack/workout";
+
+import { measuredLength, unknownOpenSeconds } from "./workout-profile.ts";
 
 export type Path = readonly number[];
 
@@ -335,27 +338,23 @@ export function withDurationType(
   secondsPerMeter: number,
 ): Step {
   if (step.duration.type === type) return step;
-  if (type === "time") {
-    const seconds = Math.max(
-      1,
-      Math.round((step.duration.type === "distance" ? step.duration.meters : 0) * secondsPerMeter),
-    );
-    return {
-      ...step,
-      duration: { type: "time", seconds },
-      cues: step.cues?.filter((cue) => cue.at.type === "time"),
-    };
-  }
-  const meters = Math.max(
-    1,
-    Math.round((step.duration.type === "time" ? step.duration.seconds : 0) / secondsPerMeter / 10) *
-      10,
-  );
-  return {
-    ...step,
-    duration: { type: "distance", meters },
-    cues: step.cues?.filter((cue) => cue.at.type === "distance"),
-  };
+  const length = measuredLength(step);
+  const seconds =
+    length === undefined
+      ? unknownOpenSeconds
+      : length.type === "time"
+        ? length.seconds
+        : length.meters * secondsPerMeter;
+  const duration: MeasuredDuration =
+    length?.type === type
+      ? length
+      : type === "time"
+        ? { type: "time", seconds: Math.max(1, Math.round(seconds)) }
+        : {
+            type: "distance",
+            meters: Math.max(1, Math.round(seconds / secondsPerMeter / 10) * 10),
+          };
+  return { ...step, duration, cues: step.cues?.filter((cue) => cue.at.type === type) };
 }
 
 export function withCadence(

@@ -23,6 +23,7 @@ import {
 import {
   durationText,
   intensityNames,
+  measuredLength,
   type Overview,
   type Reference,
   stepTitle,
@@ -273,16 +274,19 @@ function StepForm({
   return (
     <div className="step-form">
       <div className="form-row">
-        <Segmented
+        <Segmented<Step["duration"]["type"]>
           label="Lasts"
           value={step.duration.type}
           options={[
             ["time", "Time"],
             ["distance", "Distance"],
+            ...(step.duration.type === "open" ? [["open", "Until lap"] as const] : []),
           ]}
-          onChange={(type) => set(withDurationType(step, type, secondsPerMeter), "duration-type")}
+          onChange={(type) =>
+            type !== "open" && set(withDurationType(step, type, secondsPerMeter), "duration-type")
+          }
         />
-        {step.duration.type === "time" ? (
+        {step.duration.type === "open" ? null : step.duration.type === "time" ? (
           <TextField
             label="Time"
             value={step.duration.seconds}
@@ -385,7 +389,7 @@ function StepForm({
       <NotesField value={step.notes} onChange={(notes) => set({ ...step, notes }, "notes")} />
       <CueList
         cues={step.cues ?? []}
-        unit={step.duration.type}
+        unit={cueUnit(step)}
         problem={problemAt(problems, "cues")}
         onChange={(cues, field) =>
           set({ ...step, cues: cues.length > 0 ? cues : undefined }, field)
@@ -605,6 +609,8 @@ function NotesField({
     </label>
   );
 }
+
+const cueUnit = (step: Step) => measuredLength(step)?.type ?? "time";
 
 function CueList({
   cues,
@@ -826,7 +832,7 @@ function RepeatCues({
       <summary className="quiet compact link-button">Cues over the repeat</summary>
       <CueList
         cues={repeat.cues ?? []}
-        unit={first?.duration.type ?? "time"}
+        unit={first ? cueUnit(first) : "time"}
         problem={undefined}
         onChange={(cues, field) =>
           set({ ...repeat, cues: cues.length > 0 ? cues : undefined }, field)

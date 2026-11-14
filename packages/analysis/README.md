@@ -144,7 +144,10 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
   3600 × 100, so an hour at threshold is 100 whatever the target, as the heart rate stress
   score is scaled. A distance step takes the time its speed needs, which is the share times
   threshold speed. The distance counts only for a workout with distance steps. A number is null
-  when a target needs a threshold the day lacks.
+  when a target needs a threshold the day lacks. A lap-button step (`open`) counts at its
+  expected length, a time or a distance like any other step, and `includesExpected` says the
+  figures rest on such an estimate. A lap-button step with no expected length makes all three
+  numbers null: its length is unknown, not zero.
 
 ## Sampling rules
 

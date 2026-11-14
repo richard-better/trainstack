@@ -25,6 +25,7 @@ export {
   maxCues,
   maxExpandedSteps,
   totals,
+  type OpenTotals,
   type Totals,
 } from "./timeline.ts";
 export {
@@ -57,7 +58,7 @@ export type { CourseParseOptions as ErgParseOptions, CourseWriteOptions as ErgWr
 export type { CourseParseOptions as MrcParseOptions, CourseWriteOptions as MrcWriteOptions };
 
 export type ParseOptions = { name?: string };
-export type WriteOptions = { ftp?: number };
+export type WriteOptions = { ftp?: number; approximate?: boolean };
 
 export function parseErg(text: string, options?: CourseParseOptions): Converted<Workout> {
   return parseCourse("erg", text, options);

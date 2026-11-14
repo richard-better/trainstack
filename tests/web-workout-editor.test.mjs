@@ -254,6 +254,20 @@ test("changing a target's kind, unit and level keeps what can be kept", () => {
   assert.deepEqual(distance.duration, { type: "distance", meters: 900 });
   assert.equal(distance.cues.length, 0, "a cue by time cannot stay on a step by distance");
   assert.deepEqual(newStep("swimming").duration, { type: "distance", meters: 100 });
+  const lap = {
+    ...at(300, 0.5),
+    duration: { type: "open", expected: { type: "time", seconds: 600 } },
+  };
+  assert.deepEqual(withDurationType(lap, "time", 1 / 3).duration, { type: "time", seconds: 600 });
+  assert.deepEqual(withDurationType(lap, "distance", 1 / 3).duration, {
+    type: "distance",
+    meters: 1800,
+  });
+  assert.deepEqual(
+    withDurationType({ ...lap, duration: { type: "open" } }, "time", 1 / 3).duration,
+    { type: "time", seconds: 300 },
+    "a lap-button step with no expected length becomes five minutes",
+  );
 });
 
 test("dragging and the arrow keys on the chart change a step's level and length", () => {
@@ -294,6 +308,9 @@ test("dragging and the arrow keys on the chart change a step's level and length"
   assert.deepEqual(nudgeLength(steady, 1).duration, { type: "time", seconds: 315 });
   const metres = { ...steady, duration: { type: "distance", meters: 400 } };
   assert.deepEqual(withLength(metres, 100, 4.04).duration, { type: "distance", meters: 400 });
+  const lap = { ...steady, duration: { type: "open" } };
+  assert.equal(withLength(lap, 431, 0), lap, "a lap-button step has no length to drag");
+  assert.equal(nudgeLength(lap, 1), lap);
 });
 
 test("a save writes the workout, and a later edit from another device is offered before overwriting", async () => {

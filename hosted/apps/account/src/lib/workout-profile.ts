@@ -1,4 +1,13 @@
-import type { Block, Cadence, Level, Sport, Step, Target, Workout } from "@trainstack/workout";
+import type {
+  Block,
+  Cadence,
+  Level,
+  MeasuredDuration,
+  Sport,
+  Step,
+  Target,
+  Workout,
+} from "@trainstack/workout";
 import {
   metricSettings,
   paceDistanceMetres,
@@ -115,9 +124,18 @@ function speedOf(step: Step, reference: Reference): number {
   return cruisingSpeed[reference.sport];
 }
 
+export const measuredLength = (step: Step): MeasuredDuration | undefined =>
+  step.duration.type === "open" ? step.duration.expected : step.duration;
+
+export const unknownOpenSeconds = 300;
+
 export function stepSeconds(step: Step, reference: Reference) {
-  if (step.duration.type === "time") return { seconds: step.duration.seconds, estimated: false };
-  return { seconds: step.duration.meters / speedOf(step, reference), estimated: true };
+  const length = measuredLength(step);
+  if (!length) return { seconds: unknownOpenSeconds, estimated: true };
+  if (length.type === "time") {
+    return { seconds: length.seconds, estimated: step.duration.type === "open" };
+  }
+  return { seconds: length.meters / speedOf(step, reference), estimated: true };
 }
 
 export type ZoneMark = { readonly index: number; readonly count: number; readonly label: string };
@@ -340,10 +358,14 @@ export function formatMeters(meters: number) {
   return `${Number((meters / 1000).toFixed(2))} km`;
 }
 
-export const durationText = (step: Step) =>
-  step.duration.type === "time"
-    ? formatSpan(step.duration.seconds)
-    : formatMeters(step.duration.meters);
+const lengthText = (length: MeasuredDuration) =>
+  length.type === "time" ? formatSpan(length.seconds) : formatMeters(length.meters);
+
+export const durationText = (step: Step) => {
+  if (step.duration.type !== "open") return lengthText(step.duration);
+  const expected = step.duration.expected;
+  return expected ? `Until lap, about ${lengthText(expected)}` : "Until lap";
+};
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 

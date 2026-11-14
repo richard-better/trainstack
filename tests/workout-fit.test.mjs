@@ -157,19 +157,16 @@ test("a FIT activity dropped on the workouts import is told apart from a workout
   });
 });
 
-test("a lap-button step is refused by name", async () => {
+test("a file with lap-button steps imports them as open steps", async () => {
   const client = await athlete();
-  const refused = await definedError(
-    client.workouts.import({
-      file: reference("garmin-connect-lap-button.fit"),
-      id: randomUUID(),
-      updatedAt: at(0),
-    }),
-    "WORKOUT_FORMAT_ERROR",
-  );
-  assert.equal(
-    refused.data.issues[0].message,
-    "Step 1 lasts until the lap button is pressed, and TrainStack does not support lap-button steps yet",
+  const imported = await client.workouts.import({
+    file: reference("trainingpeaks-lap-heart-rate.fit"),
+    id: randomUUID(),
+    updatedAt: at(0),
+  });
+  assert.deepEqual(
+    imported.workout.workout.steps.map((step) => step.duration),
+    [{ type: "time", seconds: 600 }, { type: "open" }],
   );
 });
 

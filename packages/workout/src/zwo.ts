@@ -12,13 +12,14 @@ import type {
   Workout,
 } from "./model.ts";
 import { formatNumber } from "./numbers.ts";
+import { withOpenStepsTimed } from "./open.ts";
 import { powerLevel } from "./power.ts";
 import { CuePlacementError, flatten, repeatsWithin } from "./timeline.ts";
 import { checkedInput, validated } from "./validate.ts";
 import { parseXml, renderXml, type XmlElement, type XmlNode, XmlSyntaxError } from "./xml.ts";
 
 export type ZwoParseOptions = { name?: string };
-export type ZwoWriteOptions = { ftp?: number };
+export type ZwoWriteOptions = { ftp?: number; approximate?: boolean };
 
 type DurationType = Duration["type"];
 
@@ -326,6 +327,7 @@ class ZwoWriter {
   }
 
   private amount(duration: Duration): number {
+    if (duration.type === "open") return 0;
     return duration.type === "time" ? duration.seconds : duration.meters;
   }
 
@@ -499,13 +501,15 @@ export function writeZwo(workout: Workout, options: ZwoWriteOptions = {}): Conve
   const input = checkedInput(log, workout);
   if (!input) return log.result("");
   if (input.sport === "swimming") log.abort("unsupported", "Zwift workouts cannot hold swims");
-  const types = durationTypes(input.steps);
+  const blocks = withOpenStepsTimed(log, input.steps, options.approximate);
+  if (log.errors.length > 0) return log.result("");
+  const types = durationTypes(blocks);
   if (types.size > 1) {
     log.abort("unsupported", "A .zwo file measures every step in time or every step in distance");
   }
   if (input.focus) log.warn("dropped", `Focus "${input.focus}" has no place in a .zwo file`);
   const writer = new ZwoWriter(log, input.sport, options);
-  const steps = writer.blocks(input.steps, "steps");
+  const steps = writer.blocks(blocks, "steps");
   const text = (name: string, value: string | undefined): XmlNode[] =>
     value === undefined ? [] : [{ name, text: value }];
   const document: XmlNode = {

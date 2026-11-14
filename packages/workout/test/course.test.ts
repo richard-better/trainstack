@@ -305,6 +305,63 @@ describe("writing course files", () => {
   }
 });
 
+describe("lap-button steps in course files", () => {
+  const lapped: Workout = {
+    name: "Lapped",
+    sport: "cycling",
+    steps: [
+      {
+        type: "step",
+        duration: { type: "open", expected: { type: "time", seconds: 600 } },
+        target: ftp(0.5),
+      },
+      { type: "step", duration: seconds(300), target: ftp(1) },
+    ],
+  };
+
+  for (const [format, write] of [
+    ["erg", writeErg],
+    ["mrc", writeMrc],
+  ] as const) {
+    test(`a .${format} file cannot hold a lap-button step, so writing one fails`, () => {
+      assert.deepEqual(failure(() => write(lapped, { ftp: 200 })).issues, [
+        {
+          code: "unsupported",
+          message: `A lap-button step has no place in a .${format} file`,
+          at: "steps.0",
+        },
+      ]);
+    });
+
+    test(`approximate writes a lap-button step to .${format} as a step of its expected length`, () => {
+      const { value, warnings } = write(lapped, { ftp: 200, approximate: true });
+      assert.deepEqual(warnings, [
+        {
+          code: "approximated",
+          message: "The lap-button step is written as a step of its expected length, 600 s",
+          at: "steps.0",
+        },
+      ]);
+      const read = format === "erg" ? parseErg(value) : parseMrc(value);
+      assert.deepEqual(
+        flatten(read.value.steps).map((step) => step.duration),
+        [seconds(600), seconds(300)],
+      );
+    });
+  }
+
+  test("approximate still fails for a lap-button step with no expected length", () => {
+    const unknown: Workout = {
+      ...lapped,
+      steps: [{ type: "step", duration: { type: "open" }, target: ftp(0.5) }],
+    };
+    assert.deepEqual(
+      failure(() => writeMrc(unknown, { approximate: true })).issues.map((issue) => issue.message),
+      ["A lap-button step with no expected length cannot be written as a timed step"],
+    );
+  });
+});
+
 describe("parseWorkoutFile", () => {
   test("picks the format from the extension and names the workout after the file", () => {
     const text =

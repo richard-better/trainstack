@@ -436,6 +436,62 @@ then sprints. Keep cadence above 90 in the efforts.</description>
   });
 });
 
+describe("lap-button steps in .zwo files", () => {
+  const lapped: Workout = {
+    name: "Lapped",
+    sport: "cycling",
+    steps: [
+      { type: "step", duration: { type: "open", expected: { type: "time", seconds: 600 } } },
+      {
+        type: "repeat",
+        count: 2,
+        steps: [
+          { type: "step", duration: { type: "time", seconds: 60 }, target: ftp(1.1) },
+          {
+            type: "step",
+            duration: { type: "open", expected: { type: "time", seconds: 120 } },
+            target: ftp(0.5),
+          },
+        ],
+      },
+    ],
+  };
+
+  test("Zwift's free ride always lasts a set time, so a lap-button step fails without approximate", () => {
+    assert.deepEqual(
+      failure(() => writeZwo(lapped)).issues.map((issue) => `${issue.at}: ${issue.message}`),
+      [
+        "steps.0: A lap-button step has no place in a .zwo file",
+        "steps.1.steps.1: A lap-button step has no place in a .zwo file",
+      ],
+    );
+  });
+
+  test("approximate writes each lap-button step as a timed step of its expected length", () => {
+    const { value, warnings } = writeZwo(lapped, { approximate: true });
+    assert.deepEqual(
+      warnings.filter((warning) => warning.code === "approximated").map((warning) => warning.at),
+      ["steps.0", "steps.1.steps.1"],
+    );
+    assert.match(value, /<FreeRide Duration="600"\/>/);
+    assert.match(value, /<IntervalsT Repeat="2" OnDuration="60" OffDuration="120"/);
+  });
+
+  test("a lap-button step expected to cover a distance makes a timed workout fail, as mixed steps do", () => {
+    const mixed: Workout = {
+      ...lapped,
+      steps: [
+        { type: "step", duration: { type: "open", expected: { type: "distance", meters: 2000 } } },
+        { type: "step", duration: { type: "time", seconds: 60 }, target: ftp(1.1) },
+      ],
+    };
+    assert.match(
+      failure(() => writeZwo(mixed, { approximate: true })).message,
+      /every step in time or every step in distance/,
+    );
+  });
+});
+
 test("rejects a file with a repeat's text event after the repeat ends", () => {
   const error = failure(() =>
     parseZwo(

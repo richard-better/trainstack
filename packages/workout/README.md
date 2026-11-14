@@ -12,8 +12,9 @@ in Cloudflare Workers and the browser, and `test/runtime.test.ts` runs it in wor
 
 Each block in `steps` is either:
 
-- a `step`, which lasts a `duration` of `{ type: "time", seconds }` or
-  `{ type: "distance", meters }`, or
+- a `step`, which lasts a `duration` of `{ type: "time", seconds }`,
+  `{ type: "distance", meters }` or `{ type: "open", expected? }` (see
+  [Lap-button steps](#lap-button-steps)), or
 - a `repeat`, which runs its own `steps` `count` times. Repeats nest.
 
 A step's `target` is one of:
@@ -45,6 +46,26 @@ from the repeat's start.
 `flatten` expands repeats into the plain sequence of steps a player runs, placing each repeat
 cue on the step it falls in. `totals` adds up a workout's time and distance.
 
+### Lap-button steps
+
+A step with `duration: { type: "open" }` lasts until the athlete presses the lap button, as
+coaches write warm-ups, recoveries and cool-downs for outdoor use. `expected`, a time or a
+distance, is the author's or importer's estimate of how long it takes. It is for planning only:
+it never ends the step, and a step without it has an unknown length, never zero.
+
+- A player runs the step until the athlete presses lap, holding its target as for any step and
+  counting time and distance up. It may show `expected` as a hint, never as a countdown.
+- An open step takes any target but a ramp, which needs a known length, so the schema refuses a
+  ramp on an open step.
+- A cue on an open step shows at its offset from the step's start, if the athlete gets that far.
+  `flatten` places a repeat cue that falls at or after an open step's start in that step, since
+  the step has no known end.
+- `totals` keeps what is certain apart from what is estimated: `seconds` and `meters` count only
+  steps measured in time and distance, and `open` gives the number of open `steps` (repeats
+  counted out), how many are `withoutExpected`, and the `expectedSeconds` and `expectedMeters`
+  of those that have an estimate.
+- Workouts stored before open steps existed parse unchanged.
+
 ## Files
 
 `parseZwo`, `parseErg` and `parseMrc` read a file into a workout, and `writeZwo`, `writeErg` and
@@ -57,7 +78,13 @@ Every conversion returns `{ value, warnings }`. It throws a `WorkoutFormatError`
 issue it found, when the file is malformed or the target format cannot express what the workout
 asks the athlete to do: a target type, a range, a distance step. What does not change the effort
 but has nowhere to go (names, notes, intensity, cadence in `.erg`, tags, repeat structure) is left
-out and reported in `warnings`. Converting a workout to a format and back keeps its `flatten`ed
+out and reported in `warnings`.
+
+Only FIT has lap-button steps. Zwift's `FreeRide` is a step with no target that still lasts a
+set `Duration`, so it reads as a timed step without a target, and `.zwo`, `.erg` and `.mrc` have
+no step that waits for the athlete. Their writers throw on an open step, unless `approximate` is
+set: then an open step is written as a step of its `expected` length, reported as
+`approximated`, and one without an expected length still throws. Converting a workout to a format and back keeps its `flatten`ed
 timeline.
 
 Power in watts and power as a share of FTP convert into each other only when the writer is given
@@ -68,7 +95,7 @@ an `ftp`. Readers keep targets as the file states them.
 | `.zwo` | Zwift workouts for bike (power as a share of FTP) and run (pace as a share of threshold), timed or by distance, with ramps, ranges, `IntervalsT` repeats, free ride, max efforts, cadence and text events. Other repeats are written out step by step. |
 | `.erg` | Timed power in watts, constant or ramped, with course text.                                                                                                                                                                                            |
 | `.mrc` | Timed power as a percentage of FTP, constant or ramped, with course text.                                                                                                                                                                              |
-| `.fit` | Workouts for Garmin, Wahoo and COROS devices: timed or by distance, power, heart rate, speed and cadence, constant or ranged, repeats, names, notes and intensity. See [FIT](#fit).                                                                    |
+| `.fit` | Workouts for Garmin, Wahoo and COROS devices: timed, by distance or until the lap button, power, heart rate, speed and cadence, constant or ranged, repeats, names, notes and intensity. See [FIT](#fit).                                              |
 
 Zwift's `pace` attribute picks a reference pace for run workouts (one mile, 5 km and so on).
 The model has one threshold pace, so a run file's reference pace is read as threshold and
@@ -79,7 +106,7 @@ reported. Zwift writes `pace="0"` on bike steps too, where it means nothing and 
 FIT is how a workout reaches a Garmin, Wahoo or COROS device. `@trainstack/fit` reads and writes
 the messages; this package maps them to the model.
 
-`writeFit(workout, options)` writes time and distance steps, power as a percentage of FTP or in
+`writeFit(workout, options)` writes time, distance and lap-button (`open`) steps, power as a percentage of FTP or in
 watts, heart rate in bpm, pace as speed, cadence (as the secondary target beside another),
 constant levels and ranges, repeats, names, notes, intensity and sport. FIT repeats point back to
 a step and cannot nest, so a repeat inside a repeat is written out, choosing which level to write
@@ -95,12 +122,15 @@ out so the file has the fewest steps. It throws when FIT cannot say what the wor
 - Power above 1000% of FTP, or a value too large for its field.
 
 Values are rounded to FIT's precision, with an `approximated` warning when that changes one. A
-name or note longer than FIT's 254 bytes is cut, reported as `dropped`.
+name or note longer than FIT's 254 bytes is cut, reported as `dropped`. FIT has no field for an
+open step's `expected` length, so it is reported as `dropped`.
 
-`parseFit(bytes, options)` reads a FIT workout file. `options.athlete` holds the athlete's `maxHeartRate` and `zones`, or is a function from the workout's sport to them, since the sport is known only once the file is read. It throws for what the model cannot hold:
+`parseFit(bytes, options)` reads a FIT workout file. A lap-button step reads as an open step
+with no `expected` length, whether the file leaves its duration value out, invalid or zero, as
+Garmin Connect, TrainingPeaks, TrainerRoad and ZWO converters write them. `options.athlete` holds the athlete's `maxHeartRate` and `zones`, or is a function from the workout's sport to them, since the sport is known only once the file is read. It throws for what the model cannot hold:
 
-- A step that lasts until the lap button is pressed (`open`), or until a heart rate, power,
-  calories or anything but a time or distance. The error names the step.
+- A step that lasts until a heart rate, power, calories or anything but a time, a distance or
+  a lap-button press. The error names the step.
 - A zone target, unless `zones` gives the athlete's `heartRate`, `power` or `speed` zones as
   `{ low, high }` in bpm, watts or metres per second, numbered from 1. A zone then becomes its
   range, reported as `converted` with the zones' `source`. A zone with no upper limit is refused.
