@@ -291,4 +291,31 @@ struct RiderSettingsTests {
       ])
     #expect(settings.ledger.live.count == 3)
   }
+
+  @Test func bringingSettingsOverKeepsASportsCopyOfTheDefaultAsItWasSaved() throws {
+    let defaults = try freshDefaults()
+    let entries: [[String: Any]] = try [
+      (day(3, 1), [ZoneChange.threshold(.ftp, scope: .all, value: 200)]),
+      (
+        day(6, 1),
+        [
+          .listed(.running, true), .ownZones(.power, sport: .running, true),
+          .threshold(.ftp, scope: .all, value: 250),
+        ]
+      ),
+    ].map { date, changes in
+      [
+        "id": UUID().uuidString,
+        "day": calendar.startOfDay(for: date).timeIntervalSinceReferenceDate,
+        "changes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(changes)),
+      ]
+    }
+    defaults.set(
+      try JSONSerialization.data(withJSONObject: [
+        "history": ["entries": entries], "ftpTests": [Any](),
+      ]), forKey: "riderSettings")
+    let current = RiderSettings.load(from: defaults).history.current
+    #expect(current.value(of: .ftp, in: .all) == 250)
+    #expect(current.value(of: .ftp, in: .sport(.running)) == 200)
+  }
 }

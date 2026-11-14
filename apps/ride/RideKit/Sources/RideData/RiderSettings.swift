@@ -50,6 +50,7 @@ public struct RiderSettings: Codable, Equatable, Sendable {
     history: ZoneHistory, ftpTests: [FTPTest], weight: Double, calendar: Calendar
   ) -> SettingsLedger {
     var ledger = SettingsLedger()
+    let history = appliedInTheServersOrder(history, calendar: calendar)
     for (address, change) in history.settings(calendar: calendar) {
       ledger.migrate(address, to: change)
     }
@@ -64,6 +65,36 @@ public struct RiderSettings: Codable, Equatable, Sendable {
         to: .weight(kg: weight))
     }
     return ledger
+  }
+
+  private static func appliedInTheServersOrder(_ saved: ZoneHistory, calendar: Calendar)
+    -> ZoneHistory
+  {
+    var asSaved = ZoneProfile()
+    var history = ZoneHistory()
+    for entry in saved.entries {
+      for change in entry.changes { asSaved.apply(change) }
+      history.record(entry.changes, on: entry.day, calendar: calendar)
+      let inOrder = history.profile(on: entry.day, calendar: calendar)
+      var keepingWhatWasSaved: [ZoneChange] = []
+      for (sport, metrics) in asSaved.sports {
+        for (metric, saved) in metrics {
+          guard let own = inOrder.sports[sport]?[metric], own != saved else { continue }
+          for threshold in Threshold.allCases
+          where threshold.metric == metric
+            && own.thresholds[threshold] != saved.thresholds[threshold]
+          {
+            keepingWhatWasSaved.append(
+              .threshold(threshold, scope: .sport(sport), value: saved.thresholds[threshold]))
+          }
+          if own.choice != saved.choice {
+            keepingWhatWasSaved.append(.choice(metric, scope: .sport(sport), saved.choice))
+          }
+        }
+      }
+      history.record(keepingWhatWasSaved, on: entry.day, calendar: calendar)
+    }
+    return history
   }
 
   private mutating func derive() {
