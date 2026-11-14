@@ -45,6 +45,7 @@ import {
 } from "../lib/statistics";
 import { deletingSource } from "../lib/workouts";
 import { ActivityBests } from "./activity-bests";
+import { LoggedActivity } from "./logged-activity";
 import { useCalendar } from "./calendar-data";
 import { ComplianceDetail } from "./compliance";
 import { useSettingsHistory } from "./settings-data";
@@ -111,10 +112,14 @@ export function ActivityPage({ id }: { id: string }) {
       </Shell>
     );
   }
-  return <Activity activity={detail.data} />;
+  return detail.data.logged ? (
+    <LoggedActivity activity={detail.data} sessionId={detail.data.logged.sessionId} />
+  ) : (
+    <Activity activity={detail.data} />
+  );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="content detail">
       <Link to="/" className="back">
@@ -254,7 +259,7 @@ function summaryProblem(error: ActivitySummaryError, readHere: boolean) {
     : `${because}, so it has no numbers in your activity list.`;
 }
 
-function Figures({
+export function Figures({
   figures,
   details = {},
 }: {

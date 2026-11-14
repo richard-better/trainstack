@@ -18,6 +18,7 @@ import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
 import { CheckInPrompt } from "./check-in-prompt";
+import { loggedFigures } from "../lib/logbook";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
 
@@ -39,7 +40,10 @@ export function ActivityList() {
       <DropTarget />
       <div className="page-head">
         <h1 className="page-title">Activities</h1>
-        <UploadButton />
+        <div className="page-actions">
+          <LogMenu />
+          <UploadButton />
+        </div>
       </div>
       <CheckInPrompt />
       <UploadList />
@@ -156,7 +160,10 @@ function RouteThumbnail({ route }: { route: Activity["route"] }) {
 
 function ActivityRow({ activity }: { activity: Activity }) {
   const sport = sportName(activity.sport, activity.indoor);
-  const figures = headlineFigures(activity.statistics);
+  const figures = [
+    ...headlineFigures(activity.statistics),
+    ...(activity.logged ? loggedFigures(activity.logged.summary) : []),
+  ];
   const load = activity.statistics.load_tss;
   const analysing = analysisState(activity).kind === "pending";
   const updating = analysisUpdating(activity);
@@ -211,6 +218,22 @@ function ActivityRow({ activity }: { activity: Activity }) {
       )}
       <RouteThumbnail route={activity.route} />
     </Link>
+  );
+}
+
+function LogMenu() {
+  return (
+    <details className="log-menu">
+      <summary className="secondary link-button">Log session</summary>
+      <div className="log-menu-items">
+        <Link to="/log/strength" className="log-menu-item">
+          Strength
+        </Link>
+        <Link to="/log/bouldering" className="log-menu-item">
+          Bouldering
+        </Link>
+      </div>
+    </details>
   );
 }
 

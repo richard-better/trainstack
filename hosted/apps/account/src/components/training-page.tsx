@@ -16,6 +16,7 @@ import {
 } from "../lib/analysis";
 import { datedChanges, formatDay, localDay } from "../lib/settings";
 import { activityTitle } from "../lib/sports";
+import { LogbookProgress } from "./logbook-progress";
 import {
   effortLabel,
   effortDistances,
@@ -124,6 +125,7 @@ export function TrainingPage({ range, period }: { range: LoadRangeKey; period: B
         period={period}
         onPeriod={(next) => navigate({ search: (s) => ({ ...s, period: next }), replace: true })}
       />
+      <LogbookProgress today={today} />
     </main>
   );
 }

@@ -3,7 +3,9 @@ import { type ReactNode, useState } from "react";
 
 import { queryClient, uploads } from "../api";
 import { authClient } from "../auth";
+import { forgetLogDrafts } from "../lib/logbook";
 import { calendarWrites } from "./calendar-data";
+
 import { TimeZoneFromBrowser } from "./time-zone";
 
 type SignedInUser = { name: string; email: string };
@@ -46,6 +48,7 @@ function AppHeader({ user }: { user: SignedInUser }) {
   async function signOut() {
     setSigningOut(true);
     calendarWrites.clear();
+    forgetLogDrafts();
     await authClient.signOut();
     uploads.clear();
     queryClient.clear();
