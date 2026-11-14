@@ -404,6 +404,162 @@
     ]
   },
   {
+    "name" : "Lap-button steps inside a repeat, from a Garmin import",
+    "steps" : [
+      {
+        "duration" : {
+          "seconds" : 600,
+          "type" : "time"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 0.6
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "cues" : [
+          {
+            "at" : {
+              "seconds" : 60,
+              "type" : "time"
+            },
+            "text" : "Hold it"
+          }
+        ],
+        "duration" : {
+          "expected" : {
+            "seconds" : 300,
+            "type" : "time"
+          },
+          "type" : "open"
+        },
+        "target" : {
+          "level" : {
+            "high" : 1,
+            "kind" : "range",
+            "low" : 0.95
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "type" : "open"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 120
+          },
+          "type" : "heartRate",
+          "unit" : "bpm"
+        },
+        "type" : "step"
+      },
+      {
+        "cues" : [
+          {
+            "at" : {
+              "seconds" : 60,
+              "type" : "time"
+            },
+            "text" : "Hold it"
+          }
+        ],
+        "duration" : {
+          "expected" : {
+            "seconds" : 300,
+            "type" : "time"
+          },
+          "type" : "open"
+        },
+        "target" : {
+          "level" : {
+            "high" : 1,
+            "kind" : "range",
+            "low" : 0.95
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "type" : "open"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 120
+          },
+          "type" : "heartRate",
+          "unit" : "bpm"
+        },
+        "type" : "step"
+      },
+      {
+        "cues" : [
+          {
+            "at" : {
+              "seconds" : 60,
+              "type" : "time"
+            },
+            "text" : "Hold it"
+          }
+        ],
+        "duration" : {
+          "expected" : {
+            "seconds" : 300,
+            "type" : "time"
+          },
+          "type" : "open"
+        },
+        "target" : {
+          "level" : {
+            "high" : 1,
+            "kind" : "range",
+            "low" : 0.95
+          },
+          "type" : "power",
+          "unit" : "ftp"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "type" : "open"
+        },
+        "target" : {
+          "level" : {
+            "kind" : "constant",
+            "value" : 120
+          },
+          "type" : "heartRate",
+          "unit" : "bpm"
+        },
+        "type" : "step"
+      },
+      {
+        "duration" : {
+          "expected" : {
+            "meters" : 2000,
+            "type" : "distance"
+          },
+          "type" : "open"
+        },
+        "type" : "step"
+      }
+    ]
+  },
+  {
     "name" : "A running workout",
     "reason" : "A running workout. Ride plays cycling workouts on a trainer.",
     "steps" : [

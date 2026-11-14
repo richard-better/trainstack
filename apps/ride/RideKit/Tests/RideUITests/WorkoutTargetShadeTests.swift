@@ -45,4 +45,23 @@ struct WorkoutTargetShadeTests {
     #expect(opacity(300) < opacity(1200))
     #expect(opacity(1200) < opacity(700))
   }
+
+  @Test func shadesALapButtonStepAsCurrentUntilTheRiderLaps() {
+    var session = RideSession(
+      workout: PlannedWorkout(
+        name: "Lap", category: nil,
+        steps: [
+          PlannedStep(duration: 0, target: .watts(.constant(200)), untilLap: UntilLap()),
+          PlannedStep(duration: 60, target: .watts(.constant(100))),
+        ]
+      ).workout(ftp: 200))
+    for _ in 0..<30 { session.advance(by: 1, reading: .init(power: 200)) }
+    let stages = session.intervals.map {
+      WorkoutTargetShade(
+        interval: $0, position: session.position, ftp: 200,
+        awaitingLapAt: session.currentInterval?.index
+      ).stage
+    }
+    #expect(stages == [.current, .upcoming])
+  }
 }

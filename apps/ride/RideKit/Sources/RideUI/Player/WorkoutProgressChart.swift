@@ -15,7 +15,8 @@ struct WorkoutProgressChart: View {
     Chart {
       ForEach(bars) { bar in
         let shade = WorkoutTargetShade(
-          interval: bar.interval, position: session.position, ftp: ftp)
+          interval: bar.interval, position: session.position, ftp: ftp,
+          awaitingLapAt: session.awaitsLap ? session.currentInterval?.index : nil)
         RectangleMark(
           xStart: .value("Start", bar.start), xEnd: .value("End", bar.end),
           yStart: .value("Floor", 0),

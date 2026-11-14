@@ -3,7 +3,8 @@ import RideLink
 
 extension RideGlance.Interval {
   func remainingClock(minutesOnly: Bool) -> String {
-    let clock = Duration.seconds(remaining.rounded(.up)).formatted(.time(pattern: .minuteSecond))
+    let seconds = elapsedUntilLap.map { $0.rounded(.down) } ?? remaining.rounded(.up)
+    let clock = Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
     guard minutesOnly, let separator = clock.lastIndex(where: { !$0.isNumber }) else {
       return clock
     }

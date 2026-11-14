@@ -147,14 +147,24 @@ or ramped (ERG follows the ramp each second), cadence, cues and nested repeats. 
 target is a free ride and a max effort is all out; in ERG mode the trainer gets a flat road for
 both, as it does once a workout ends. A heart rate target is shown for the rider to hold, also on a
 flat road. Ride refuses, and says why: another sport, pace targets (a trainer holds power, not
-pace), steps or cues measured in distance (Ride has no speed model to time them by), lap-button
-steps (until the player can wait for the rider's next), and, by name, any kind of step, target or
+pace), steps or cues measured in distance (Ride has no speed model to time them by), a ramp on a
+lap-button step or a repeat cue across one (neither has a length to work from), and, by name, any kind of step, target or
 level this version does not know, so a newer model never crashes it or plays silently changed.
 It also refuses what would crash the player rather than play: a target no rider or trainer can
 hold (`TargetLevel.most…`), a range whose low end is above its high end, a step longer than a day
 (`PlannedStep.longest`) and more than `TrainStackWorkout.mostSteps` steps once repeats are counted out. A ride's
 trace keeps the `PlannedWorkout` it started with, so a workout edited or deleted on the web during
 a ride does not change the ride. Traces written before kept a `template`, and still read.
+
+A lap-button step (`UntilLap`) lasts until the rider presses lap, the same control and journalled
+input (`skipInterval`) that skips a timed step, so a replay ends it where the ride did. It never
+ends on time, distance or its expected length; the player holds its target meanwhile and counts the
+step up, showing the expected length only as a hint. `RideSession` therefore keeps the current
+interval as an index rather than deriving it from the position: a timed step ends when the
+position reaches its end, a lap-button step when the rider laps, and the timeline is laid out again
+then (a lapped step keeps the length ridden, the current one grows, and later ones are drawn at
+their expected length). A cue on a lap-button step shows only if the rider reaches it before
+lapping. While lap-button steps remain, the time left is the known part, said as such.
 
 Speed and distance come from power through `VirtualBike`, as in Zwift and TrainerRoad: many
 trainers report no speed, and in ERG mode what they report follows the gear, not the effort.

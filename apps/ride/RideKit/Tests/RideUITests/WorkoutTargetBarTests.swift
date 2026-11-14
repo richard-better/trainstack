@@ -33,4 +33,18 @@ struct WorkoutTargetBarTests {
     #expect(free?.watts == nil)
     #expect(free?.range == nil)
   }
+
+  @Test func everyBarHasItsOwnIdentityEvenWithoutLength() {
+    let session = RideSession(
+      workout: PlannedWorkout(
+        name: "Laps", category: nil,
+        steps: [
+          PlannedStep(duration: 0, target: nil, untilLap: UntilLap()),
+          PlannedStep(duration: 0, target: nil, untilLap: UntilLap()),
+          PlannedStep(duration: 60, target: .shareOfFTP(.ramp(from: 0.5, to: 1))),
+        ]
+      ).workout(ftp: 200))
+    let ids = WorkoutTargetBar.bars(of: session).map(\.id)
+    #expect(Set(ids).count == ids.count)
+  }
 }

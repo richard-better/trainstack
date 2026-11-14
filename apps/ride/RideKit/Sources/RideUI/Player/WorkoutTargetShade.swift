@@ -10,8 +10,13 @@ struct WorkoutTargetShade: Equatable {
   let stage: Stage
   let zone: PowerZone?
 
-  init(interval: RideSession.Interval, position: TimeInterval, ftp: Int?) {
-    if interval.end <= position {
+  init(
+    interval: RideSession.Interval, position: TimeInterval, ftp: Int?,
+    awaitingLapAt lapIndex: Int? = nil
+  ) {
+    if let lapIndex, interval.index >= lapIndex {
+      stage = interval.index == lapIndex ? .current : .upcoming
+    } else if interval.end <= position {
       stage = .ridden
     } else {
       stage = interval.start <= position ? .current : .upcoming

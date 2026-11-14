@@ -2,7 +2,8 @@ public enum UnrideableReason: Error, Hashable, Sendable {
   case sport(TrainStackWorkout.Sport)
   case paceTargets
   case distanceSteps
-  case lapButtonSteps
+  case rampOnALapStep
+  case repeatCueAcrossALapStep
   case targetOutOfReach
   case tooManySteps
   case stepTooLong
@@ -18,8 +19,10 @@ public enum UnrideableReason: Error, Hashable, Sendable {
       "It sets pace targets, and a trainer holds power, not pace."
     case .distanceSteps:
       "It has steps measured in distance, and Ride plays steps measured in time."
-    case .lapButtonSteps:
-      "It has a lap-button step, which Ride cannot play yet."
+    case .rampOnALapStep:
+      "It ramps over a lap-button step, which has no length to ramp across."
+    case .repeatCueAcrossALapStep:
+      "It has a cue over a repeat with a lap-button step, so its time in the repeat is unknown."
     case .targetOutOfReach:
       "It has a target no rider or trainer can hold, or a range whose low end is above its high end."
     case .stepTooLong:

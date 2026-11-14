@@ -9,13 +9,24 @@
       "steps": [
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 600 },
+          "duration": {
+            "type": "time",
+            "seconds": 600
+          },
           "target": {
             "type": "power",
             "unit": "ftp",
-            "level": { "kind": "ramp", "from": 0.5, "to": 0.75 }
+            "level": {
+              "kind": "ramp",
+              "from": 0.5,
+              "to": 0.75
+            }
           },
-          "cadence": { "kind": "range", "low": 85, "high": 95 },
+          "cadence": {
+            "kind": "range",
+            "low": 85,
+            "high": 95
+          },
           "intensity": "warmUp",
           "name": "Warm up"
         },
@@ -24,21 +35,48 @@
           "count": 3,
           "name": "Main set",
           "cues": [
-            { "at": { "type": "time", "seconds": 0 }, "text": "Here we go" },
-            { "at": { "type": "time", "seconds": 330 }, "text": "Sprint now", "shownForSeconds": 5 }
+            {
+              "at": {
+                "type": "time",
+                "seconds": 0
+              },
+              "text": "Here we go"
+            },
+            {
+              "at": {
+                "type": "time",
+                "seconds": 330
+              },
+              "text": "Sprint now",
+              "shownForSeconds": 5
+            }
           ],
           "steps": [
             {
               "type": "step",
-              "duration": { "type": "time", "seconds": 300 },
+              "duration": {
+                "type": "time",
+                "seconds": 300
+              },
               "target": {
                 "type": "power",
                 "unit": "ftp",
-                "level": { "kind": "constant", "value": 0.95 }
+                "level": {
+                  "kind": "constant",
+                  "value": 0.95
+                }
               },
               "name": "Over",
               "notes": "Stay seated",
-              "cues": [{ "at": { "type": "time", "seconds": 10 }, "text": "Settle in" }]
+              "cues": [
+                {
+                  "at": {
+                    "type": "time",
+                    "seconds": 10
+                  },
+                  "text": "Settle in"
+                }
+              ]
             },
             {
               "type": "repeat",
@@ -46,24 +84,46 @@
               "steps": [
                 {
                   "type": "step",
-                  "duration": { "type": "time", "seconds": 30 },
+                  "duration": {
+                    "type": "time",
+                    "seconds": 30
+                  },
                   "target": {
                     "type": "power",
                     "unit": "watts",
-                    "level": { "kind": "constant", "value": 400 }
+                    "level": {
+                      "kind": "constant",
+                      "value": 400
+                    }
                   },
-                  "cadence": { "kind": "constant", "value": 110 }
+                  "cadence": {
+                    "kind": "constant",
+                    "value": 110
+                  }
                 },
-                { "type": "step", "duration": { "type": "time", "seconds": 30 } }
+                {
+                  "type": "step",
+                  "duration": {
+                    "type": "time",
+                    "seconds": 30
+                  }
+                }
               ]
             },
             {
               "type": "step",
-              "duration": { "type": "time", "seconds": 120 },
+              "duration": {
+                "type": "time",
+                "seconds": 120
+              },
               "target": {
                 "type": "power",
                 "unit": "ftp",
-                "level": { "kind": "range", "low": 0.55, "high": 0.65 }
+                "level": {
+                  "kind": "range",
+                  "low": 0.55,
+                  "high": 0.65
+                }
               },
               "intensity": "recovery"
             }
@@ -71,11 +131,18 @@
         },
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 300 },
+          "duration": {
+            "type": "time",
+            "seconds": 300
+          },
           "target": {
             "type": "power",
             "unit": "ftp",
-            "level": { "kind": "ramp", "from": 0.6, "to": 0.4 }
+            "level": {
+              "kind": "ramp",
+              "from": 0.6,
+              "to": 0.4
+            }
           },
           "intensity": "coolDown"
         }
@@ -90,34 +157,141 @@
       "steps": [
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 600 },
+          "duration": {
+            "type": "time",
+            "seconds": 600
+          },
           "target": {
             "type": "heartRate",
             "unit": "bpm",
-            "level": { "kind": "range", "low": 130, "high": 140 }
+            "level": {
+              "kind": "range",
+              "low": 130,
+              "high": 140
+            }
           }
         },
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 300 },
+          "duration": {
+            "type": "time",
+            "seconds": 300
+          },
           "target": {
             "type": "heartRate",
             "unit": "threshold",
-            "level": { "kind": "constant", "value": 0.85 }
+            "level": {
+              "kind": "constant",
+              "value": 0.85
+            }
           }
         },
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 20 },
-          "target": { "type": "maxEffort" }
+          "duration": {
+            "type": "time",
+            "seconds": 20
+          },
+          "target": {
+            "type": "maxEffort"
+          }
         },
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 240 },
+          "duration": {
+            "type": "time",
+            "seconds": 240
+          },
           "target": {
             "type": "power",
             "unit": "watts",
-            "level": { "kind": "ramp", "from": 200, "to": 300 }
+            "level": {
+              "kind": "ramp",
+              "from": 200,
+              "to": 300
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Lap-button steps inside a repeat, from a Garmin import",
+    "workout": {
+      "name": "Lap intervals",
+      "sport": "cycling",
+      "steps": [
+        {
+          "type": "step",
+          "duration": {
+            "type": "time",
+            "seconds": 600
+          },
+          "target": {
+            "type": "power",
+            "unit": "ftp",
+            "level": {
+              "kind": "constant",
+              "value": 0.6
+            }
+          }
+        },
+        {
+          "type": "repeat",
+          "count": 3,
+          "steps": [
+            {
+              "type": "step",
+              "duration": {
+                "type": "open",
+                "expected": {
+                  "type": "time",
+                  "seconds": 300
+                }
+              },
+              "target": {
+                "type": "power",
+                "unit": "ftp",
+                "level": {
+                  "kind": "range",
+                  "low": 0.95,
+                  "high": 1.0
+                }
+              },
+              "cues": [
+                {
+                  "at": {
+                    "type": "time",
+                    "seconds": 60
+                  },
+                  "text": "Hold it"
+                }
+              ]
+            },
+            {
+              "type": "step",
+              "duration": {
+                "type": "open"
+              },
+              "target": {
+                "type": "heartRate",
+                "unit": "bpm",
+                "level": {
+                  "kind": "constant",
+                  "value": 120
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "step",
+          "duration": {
+            "type": "open",
+            "expected": {
+              "type": "distance",
+              "meters": 2000
+            }
           }
         }
       ]
@@ -131,11 +305,17 @@
       "steps": [
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 1800 },
+          "duration": {
+            "type": "time",
+            "seconds": 1800
+          },
           "target": {
             "type": "pace",
             "unit": "threshold",
-            "level": { "kind": "constant", "value": 0.8 }
+            "level": {
+              "kind": "constant",
+              "value": 0.8
+            }
           }
         }
       ]
@@ -149,11 +329,17 @@
       "steps": [
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 600 },
+          "duration": {
+            "type": "time",
+            "seconds": 600
+          },
           "target": {
             "type": "pace",
             "unit": "metersPerSecond",
-            "level": { "kind": "constant", "value": 9 }
+            "level": {
+              "kind": "constant",
+              "value": 9
+            }
           }
         }
       ]
@@ -167,20 +353,32 @@
       "steps": [
         {
           "type": "step",
-          "duration": { "type": "time", "seconds": 300 },
+          "duration": {
+            "type": "time",
+            "seconds": 300
+          },
           "target": {
             "type": "power",
             "unit": "ftp",
-            "level": { "kind": "constant", "value": 0.6 }
+            "level": {
+              "kind": "constant",
+              "value": 0.6
+            }
           }
         },
         {
           "type": "step",
-          "duration": { "type": "distance", "meters": 10000 },
+          "duration": {
+            "type": "distance",
+            "meters": 10000
+          },
           "target": {
             "type": "power",
             "unit": "ftp",
-            "level": { "kind": "constant", "value": 0.75 }
+            "level": {
+              "kind": "constant",
+              "value": 0.75
+            }
           }
         }
       ]

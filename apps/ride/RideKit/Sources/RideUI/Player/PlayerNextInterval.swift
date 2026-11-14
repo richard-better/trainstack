@@ -8,11 +8,16 @@ struct PlayerNextInterval: View {
 
   var body: some View {
     let session = controller.session
-    if let remaining = session.intervalRemaining {
-      let isNear = !session.isPaused && remaining <= IntervalCountdown.warning
-      let label = Text(isNear ? "Next in \(remaining.clockString)" : "Next")
-        .font(.caption)
-        .foregroundStyle(isNear ? .primary : .secondary)
+    if session.currentInterval != nil {
+      let remaining = session.intervalRemaining
+      let isNear = !session.isPaused && remaining.map { $0 <= IntervalCountdown.warning } == true
+      let label = Text(
+        session.awaitsLap
+          ? "Next, when you press lap"
+          : isNear ? "Next in \((remaining ?? 0).clockString)" : "Next"
+      )
+      .font(.caption)
+      .foregroundStyle(isNear ? .primary : .secondary)
       ViewThatFits(in: .horizontal) {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
           label
@@ -41,9 +46,11 @@ struct PlayerNextInterval: View {
         let text = StepTargetText.heartRate(heartRate)
         target(value: text.value, unit: text.unit)
       }
-      Text("for \((next.end - next.start).clockString)")
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
+      Text(
+        next.step.endsOnLap ? "until you press lap" : "for \((next.end - next.start).clockString)"
+      )
+      .font(.subheadline)
+      .foregroundStyle(.secondary)
     } else {
       Label("Finish", systemImage: "flag.checkered")
         .font(Design.statValueFont)

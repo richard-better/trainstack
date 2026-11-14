@@ -8,10 +8,12 @@ public struct Workout: Equatable, Sendable {
     public var name: String?
     public var notes: String?
     public var cues: [PlannedCue]
+    public var untilLap: UntilLap?
 
     public init(
       duration: TimeInterval, target: StepTarget?, cadence: TargetLevel? = nil,
-      name: String? = nil, notes: String? = nil, cues: [PlannedCue] = []
+      name: String? = nil, notes: String? = nil, cues: [PlannedCue] = [],
+      untilLap: UntilLap? = nil
     ) {
       self.duration = duration
       self.target = target
@@ -19,7 +21,10 @@ public struct Workout: Equatable, Sendable {
       self.name = name
       self.notes = notes
       self.cues = cues
+      self.untilLap = untilLap
     }
+
+    public var endsOnLap: Bool { untilLap != nil }
 
     public init(duration: TimeInterval, targetPower: Int) {
       self.init(duration: duration, target: .power(.constant(Double(targetPower))))

@@ -15,12 +15,18 @@ struct PlayerControls: View {
       .buttonStyle(.glass)
       .keyboardShortcut(pause)
       .help(session.isPaused ? "Resume the ride" : "Pause the ride", shortcut: pause)
-      Button("Skip interval", systemImage: "forward.end.fill", action: controller.skipInterval)
-        .labelStyle(.iconOnly)
-        .buttonStyle(.glass)
-        .disabled(session.isComplete)
-        .keyboardShortcut(skip)
-        .help("Skip to the next interval", shortcut: skip)
+      Button(
+        session.awaitsLap ? "Lap" : "Skip interval",
+        systemImage: session.awaitsLap ? "flag.fill" : "forward.end.fill",
+        action: controller.skipInterval
+      )
+      .labelStyle(.iconOnly)
+      .buttonStyle(.glass)
+      .disabled(session.isComplete)
+      .keyboardShortcut(skip)
+      .help(
+        session.awaitsLap ? "End this step and start the next" : "Skip to the next interval",
+        shortcut: skip)
     }
     .controlSize(.large)
     #if os(macOS)
