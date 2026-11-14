@@ -21,6 +21,7 @@ const serverUrl = import.meta.env.VITE_SERVER_URL;
 function useFeedChange<Input>(change: (input: Input) => Promise<CalendarFeed | null>) {
   return useMutation({
     mutationFn: change,
+    scope: { id: "calendar-feed" },
     onSuccess: (feed) => queryClient.setQueryData(calendarFeedQueryKey, { feed }),
   });
 }
