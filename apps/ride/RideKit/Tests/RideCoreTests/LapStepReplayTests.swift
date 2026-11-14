@@ -1,5 +1,6 @@
 import Foundation
 import RideData
+import RideTestSupport
 import Testing
 
 @testable import RideCore
@@ -42,7 +43,7 @@ struct LapStepReplayTests {
   }
 
   @Test func aHeadlessRideRidesOnForAllTheTimeItWasGiven() {
-    let outcome = HeadlessRide(.named("Quick test 45s")!, ftp: 250, ridingOnFor: 120)
+    let outcome = HeadlessRide(WorkoutTemplate.quickTest, ftp: 250, ridingOnFor: 120)
       .run(with: SimulatedRider(.typical(ftp: 250)))
     #expect(outcome.engine.session.elapsed == 165)
     #expect(outcome.engine.session.freeRideElapsed == 120)
@@ -53,7 +54,7 @@ struct LapStepReplayTests {
     let data = try Data(
       contentsOf: traces.appending(path: "simulator-lap-extend-back-ride-on.jsonl"))
     let trace = try #require(RideTrace(jsonLines: data))
-    #expect(trace.header.workout == WorkoutTemplate.named("Quick test 45s")!.planned)
+    #expect(trace.header.workout == WorkoutTemplate.quickTest.planned)
     let decoded = try FITDecoder.decode(FITEncoder.encode(trace.replay().session.recording()))
     #expect(decoded.laps.map(\.stepIndex) == [0, 1, 1, 2, 1, 2, nil])
     #expect(

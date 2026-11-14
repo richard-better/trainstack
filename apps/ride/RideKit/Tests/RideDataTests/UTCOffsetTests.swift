@@ -1,4 +1,5 @@
 import Foundation
+import RideTestSupport
 import Testing
 
 @testable import RideData
@@ -6,7 +7,7 @@ import Testing
 struct UTCOffsetTests {
   private func recording(utcOffsetSeconds: Int?) -> RideRecording {
     var session = RideSession(
-      workout: WorkoutTemplate.named("Quick test 45s")!.workout(ftp: 200),
+      workout: WorkoutTemplate.quickTest.workout(ftp: 200),
       startDate: Date(timeIntervalSince1970: 1_800_000_000), utcOffsetSeconds: utcOffsetSeconds)
     for _ in 0..<45 { session.advance(by: 1, reading: .init(power: 150)) }
     return session.recording()

@@ -265,6 +265,7 @@ export function WorkoutEditor<Saved extends EditorSaved>({
   });
 
   const canSave = !invalid && !save.isPending && dirty;
+  const settled = !dirty && saved.base !== null && !save.isPending && !invalid;
   const firstSave = save.isPending && saved.base === null;
   const travel = useCallback((step: (history: History) => History) => {
     setChecked(new Set());
@@ -417,14 +418,16 @@ export function WorkoutEditor<Saved extends EditorSaved>({
               Redo
             </button>
           </div>
-          <p className="editor-status" role="status">
+          <p className={settled ? "editor-status visually-hidden" : "editor-status"} role="status">
             {save.isPending
               ? "Saving…"
               : invalid
                 ? `Fix ${problems.length + fieldErrors.invalid.size === 1 ? "1 problem" : `${problems.length + fieldErrors.invalid.size} problems`} to save`
                 : dirty
                   ? "Unsaved changes"
-                  : "Saved"}
+                  : saved.base
+                    ? "Saved"
+                    : "Not saved yet"}
           </p>
           <button
             type="button"
@@ -433,7 +436,7 @@ export function WorkoutEditor<Saved extends EditorSaved>({
             disabled={!canSave}
             title="Save (⌘S)"
           >
-            {saved.base ? "Save" : target.firstSave}
+            {saved.base ? (settled ? "Saved" : "Save") : target.firstSave}
           </button>
         </div>
 

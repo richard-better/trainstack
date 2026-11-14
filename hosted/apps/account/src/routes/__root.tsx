@@ -2,6 +2,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import { NotFoundPage } from "../components/not-found-page";
+
 import { queryClient } from "../api";
 import analysisStyles from "../styles/analysis.css?url";
 import styles from "../styles/app.css?url";
@@ -14,6 +16,7 @@ import readinessStyles from "../styles/readiness.css?url";
 import workoutStyles from "../styles/workouts.css?url";
 
 export const Route = createRootRoute({
+  notFoundComponent: NotFoundPage,
   head: () => ({
     meta: [
       { charSet: "utf-8" },

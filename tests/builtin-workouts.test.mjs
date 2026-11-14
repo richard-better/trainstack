@@ -29,7 +29,7 @@ async function athlete() {
 
 const at = (minute) => new Date(Date.UTC(2026, 10, 13, 9, minute));
 
-test("every athlete reads Ride's eleven bundled workouts, in the app's order", async () => {
+test("every athlete reads Ride's ten bundled workouts, in the app's order", async () => {
   const { client } = await athlete();
   const { workouts } = await client.builtinWorkouts.list({});
   assert.deepEqual(
@@ -45,7 +45,6 @@ test("every athlete reads Ride's eleven bundled workouts, in the app's order", a
       ["recovery-30", "Recovery 30", "endurance", 1800],
       ["threshold-classic-60", "Threshold classic 60", "threshold", 3600],
       ["pixel-sprints-30", "Pixel sprints 30", "endurance", 1800],
-      ["quick-test-45s", "Quick test 45s", "vo2Max", 45],
     ],
   );
   assert.ok(workouts.every((workout) => workout.sport === "cycling" && workout.description));
@@ -89,7 +88,7 @@ test("built-in workouts are searched and sorted the same way as the athlete's ow
   );
   assert.deepEqual(await ids({ focus: "anaerobic" }), ["tabata-4x40-20"]);
   assert.deepEqual(await ids({ sport: "running" }), []);
-  assert.deepEqual(await ids({ maxSeconds: 1799 }), ["quick-test-45s"]);
+  assert.deepEqual(await ids({ maxSeconds: 1799 }), []);
   assert.deepEqual(await ids({ minSeconds: 3601 }), ["over-unders-2x10", "long-endurance-90"]);
   assert.deepEqual((await ids({ sort: "name" })).slice(0, 3), [
     "long-endurance-90",
@@ -97,8 +96,8 @@ test("built-in workouts are searched and sorted the same way as the athlete's ow
     "pixel-sprints-30",
   ]);
   assert.deepEqual((await ids({ sort: "duration" })).slice(0, 2), [
-    "quick-test-45s",
     "pixel-sprints-30",
+    "ramp-openers-30",
   ]);
 
   const own = await client.workouts.put({

@@ -19,12 +19,8 @@ import {
   stepTitle,
   targetText,
 } from "../lib/workout-profile";
+import { cueText } from "../lib/workout-cues";
 import { pathKey, zoneClass } from "./workout-chart";
-
-export function cueText(cue: Cue) {
-  const at = cue.at.type === "time" ? formatSpan(cue.at.seconds) : formatMeters(cue.at.meters);
-  return `${at} in: ${cue.text}`;
-}
 
 export function WorkoutSteps({
   workout,

@@ -10,7 +10,7 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 
-import { MAP_STYLE_URL } from "../lib/map-tiles";
+import { MAP_STYLE_URL, routeMapStyle } from "../lib/map-tiles";
 import { type Route, mercator, nearestPoint, pointAtSecond } from "../lib/route";
 import type { ColouredRun } from "../lib/route-colours";
 
@@ -87,6 +87,7 @@ export function mountRouteMap(
   const map = new MapLibre({
     container,
     style: MAP_STYLE_URL,
+    transformStyle: (_previous, next) => routeMapStyle(next),
     bounds,
     fitBoundsOptions: { padding: FIT_PADDING },
     cooperativeGestures: true,

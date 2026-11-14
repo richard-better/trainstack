@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import RideData
+import RideTestSupport
 import Testing
 
 @testable import RideUI
@@ -18,7 +19,7 @@ struct RideLibraryTests {
   }
 
   private func quickTest(startDate: Date = .now) throws -> RideRecording {
-    let template = try #require(WorkoutTemplate.named("Quick test 45s"))
+    let template = WorkoutTemplate.quickTest
     var session = RideSession(workout: template.workout(ftp: 200), startDate: startDate)
     for _ in 0..<45 {
       session.advance(by: 1, reading: .init(power: 150, cadence: 90, heartRate: 130))

@@ -14,6 +14,7 @@ import { dayInFull, findPlanned, pairsOf, plannedName } from "../lib/calendar";
 import { savePlannedWorkout } from "../lib/calendar-writes";
 import type { IntervalStep } from "../lib/compliance";
 import { mondayOf } from "../lib/dates";
+import { canSkip, pairingChoices } from "../lib/planned-actions";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad } from "../lib/statistics";
 import { todayIn } from "../lib/time-zone";
@@ -197,7 +198,7 @@ function PlannedView({
               Edit this copy
             </Link>
           )}
-          {item.content.kind === "workout" &&
+          {canSkip(item) &&
             (item.skipped ? (
               <button
                 type="button"
@@ -505,7 +506,7 @@ function DoneAs({
   }
   const { planned } = pairsOf(day);
   const done = planned.find((entry) => entry.item.id === item.id)?.done ?? null;
-  const others = day.activities.filter((activity) => activity.id !== done?.id);
+  const others = pairingChoices(item.content, day.activities, done?.id ?? null);
   return (
     <section aria-labelledby="done-as-title" className="workout-section done-as">
       <h2 id="done-as-title" className="section-title">
@@ -580,8 +581,8 @@ function DoneAs({
         </>
       ) : (
         <p className="lede">
-          {day.activities.length === 0
-            ? "No activity on this day yet."
+          {others.length === 0
+            ? "No matching activity on this day yet."
             : "Not paired with an activity. Pair it with one done that day:"}
         </p>
       )}

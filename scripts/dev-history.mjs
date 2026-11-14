@@ -399,14 +399,25 @@ export async function seedPlan(
 ) {
   const todayDay = dayIso(today.getTime());
   const thisMonday = Date.parse(`${todayDay}T00:00:00Z`) - ((today.getUTCDay() + 6) % 7) * DAY_MS;
-  const builtin = async (id) => {
-    const { workout } = await client.builtinWorkouts.get({ id });
-    return { kind: "workout", workout, source: { kind: "builtin", id }, notes: null };
-  };
+  const plannedRide = (kind, name, focus) => ({
+    kind: "workout",
+    workout: {
+      name,
+      sport: "cycling",
+      focus,
+      steps: rideBlocks(kind, 1).map(({ seconds, watts }) => ({
+        type: "step",
+        duration: { type: "time", seconds },
+        target: { type: "power", unit: "ftp", level: { kind: "constant", value: watts } },
+      })),
+    },
+    source: null,
+    notes: null,
+  });
   const ride = {
-    threshold: await builtin("threshold-classic-60"),
-    vo2: await builtin("vo2-max-booster"),
-    long: await builtin("long-endurance-90"),
+    threshold: plannedRide("threshold", "Threshold intervals, 3 × 10 min", "threshold"),
+    vo2: plannedRide("vo2", "VO2 max, 5 × 4 min", "vo2Max"),
+    long: plannedRide("endurance", "Long endurance 150", "endurance"),
   };
   const run = (key, notes = null) => ({ kind: "workout", workout: runs[key], source: null, notes });
   let clock = Date.now() - 60_000;

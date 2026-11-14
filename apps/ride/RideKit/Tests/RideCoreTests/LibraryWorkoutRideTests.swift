@@ -1,5 +1,6 @@
 import Foundation
 import RideData
+import RideTestSupport
 import Testing
 
 @testable import RideCore
@@ -65,7 +66,7 @@ struct LibraryWorkoutRideTests {
   }
 
   @Test func readsATraceRecordedBeforeWorkoutsCameFromTheLibrary() throws {
-    let template = try #require(WorkoutTemplate.named("Quick test 45s"))
+    let template = WorkoutTemplate.quickTest
     let header = """
       {"ftp":200,"riderWeight":75,"startDate":0,"template":\
       \(String(decoding: try JSONEncoder().encode(template), as: UTF8.self))}

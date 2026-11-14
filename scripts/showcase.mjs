@@ -31,16 +31,18 @@ const { values: options } = parseArgs({
     screenshots: { type: "boolean", default: false },
     "no-record": { type: "boolean", default: false },
     only: { type: "string" },
+    locale: { type: "string", default: "en-GB" },
     "web-port": { type: "string" },
   },
 });
 
+const LOCALE = Intl.getCanonicalLocales(options.locale)[0];
+
 const APP = resolve("hosted/apps/account");
 const RECORDINGS = join(APP, ".showcase", "recordings");
-const SCREENSHOTS = join(APP, ".showcase", "screenshots");
+const SCREENSHOTS = join(APP, ".showcase", "screenshots", LOCALE);
 const SERVER = "http://api.showcase.localhost";
 const TIME_ZONE = "Europe/Budapest";
-const LOCALE = "en-GB";
 const RETRIES_GIVE_UP_MS = 15_000;
 const HEIGHTS = { phone: 844, desktop: 900 };
 const PIXEL_RATIOS = { phone: 2, desktop: 1 };
@@ -201,7 +203,10 @@ async function startWebApp() {
       detached: true,
     },
   );
+  let stopped = false;
   const stop = () => {
+    if (stopped) return;
+    stopped = true;
     try {
       process.kill(-web.pid);
     } catch (error) {
@@ -376,6 +381,13 @@ async function screenshot(browser, files) {
       if (!recording) throw new Error(`Nothing is recorded for ${entry.world}`);
       const page = await context.newPage();
       page.on("console", (message) => {
+        if (
+          entry.route === "__root__" &&
+          message.text().includes("the server responded with a status of 404")
+        )
+          return;
+        if (message.type() === "warning" && message.text().includes("could not be loaded"))
+          problems.push(`${entry.id} at ${width}: ${message.text()}`);
         if (message.type() === "error") problems.push(`${entry.id} at ${width}: ${message.text()}`);
       });
       page.on("pageerror", (error) => problems.push(`${entry.id} at ${width}: ${error.message}`));

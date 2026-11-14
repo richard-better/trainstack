@@ -27,10 +27,13 @@ let package = Package(
       dependencies: ["RideData", "RideLink", "RideStyle"],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
+    .target(name: "RideTestSupport", dependencies: ["RideData"], path: "Tests/RideTestSupport"),
     .testTarget(name: "RideBluetoothTests", dependencies: ["RideBluetooth"]),
-    .testTarget(name: "RideCoreTests", dependencies: ["RideCore"], exclude: ["Traces"]),
     .testTarget(
-      name: "RideDataTests", dependencies: ["RideData"], exclude: ["Fixtures", "Workouts", "Zones"]),
+      name: "RideCoreTests", dependencies: ["RideCore", "RideTestSupport"], exclude: ["Traces"]),
+    .testTarget(
+      name: "RideDataTests", dependencies: ["RideData", "RideTestSupport"],
+      exclude: ["Fixtures", "Workouts", "Zones"]),
     .testTarget(name: "RideLinkTests", dependencies: ["RideLink"]),
     .testTarget(name: "RideStravaTests", dependencies: ["RideStrava", "RideData"]),
     .testTarget(name: "RideStyleTests", dependencies: ["RideStyle", "RideData"]),
@@ -41,7 +44,7 @@ let package = Package(
     ),
     .testTarget(
       name: "RideUITests",
-      dependencies: ["RideUI", "RideCore", "RideLink", "RideStrava"],
+      dependencies: ["RideUI", "RideCore", "RideLink", "RideStrava", "RideTestSupport"],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
   ]
