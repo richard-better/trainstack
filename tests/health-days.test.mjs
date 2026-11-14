@@ -134,8 +134,7 @@ test("a bad night lowers readiness, and readiness says what it measured", async 
   );
 });
 
-test("measured values never reach the logs", async () => {
-  const { client } = await athlete();
+async function logsOf(work) {
   const written = [];
   const write = process.stdout.write.bind(process.stdout);
   const writeError = process.stderr.write.bind(process.stderr);
@@ -148,18 +147,73 @@ test("measured values never reach the logs", async () => {
     return writeError(chunk, ...rest);
   };
   try {
-    await client.healthDays.put({
-      days: [
-        measured("2026-04-01", { sleepSeconds: 27_183, restingHeartRateBpm: 47.31, hrvMs: 83.77 }),
-      ],
-    });
-    await client.healthDays.range({ from: "2026-04-01", through: "2026-04-01" });
+    await work();
     await new Promise((resolve) => setTimeout(resolve, 200));
   } finally {
     process.stdout.write = write;
     process.stderr.write = writeError;
   }
-  const logs = written.join("");
-  assert.match(logs, /healthDays\/put/, "the request itself is logged");
+  return written.join("");
+}
+
+const telling = measured("2026-04-01", {
+  sleepSeconds: 27_183,
+  restingHeartRateBpm: 47.31,
+  hrvMs: 83.77,
+});
+
+const assertNoValues = (logs) => {
   for (const value of ["27183", "47.31", "83.77"]) assert.ok(!logs.includes(value), value);
+};
+
+test("measured values never reach the logs", async () => {
+  const { client } = await athlete();
+  const logs = await logsOf(async () => {
+    await client.healthDays.put({ days: [telling] });
+    await client.healthDays.range({ from: "2026-04-01", through: "2026-04-01" });
+  });
+  assert.match(logs, /healthDays\/put/, "the request itself is logged");
+  assertNoValues(logs);
+});
+
+test("a write that fails in the database is logged without the values it wrote", async () => {
+  const { client } = await athlete();
+  const db = await runtime.getD1Database("DB");
+  await db.prepare("ALTER TABLE health_day RENAME TO health_day_away").run();
+  try {
+    const logs = await logsOf(async () => {
+      const [error] = await safe(client.healthDays.put({ days: [telling] }));
+      assert.equal(error?.status, 500);
+    });
+    assert.match(logs, /no such table: health_day/, "the failure is logged");
+    assertNoValues(logs);
+  } finally {
+    await db.prepare("ALTER TABLE health_day_away RENAME TO health_day").run();
+  }
+});
+
+test("a single statement that fails logs its query, never its bound values", async () => {
+  const { client, today } = await athlete();
+  const db = await runtime.getD1Database("DB");
+  const note = "Telling note 7f3a";
+  await db.prepare("ALTER TABLE check_in RENAME TO check_in_away").run();
+  try {
+    const logs = await logsOf(async () => {
+      const [error] = await safe(
+        client.checkIns.put({
+          day: today,
+          ratings: { sleep: 3, energy: 3, soreness: 3, stress: 3, mood: 3 },
+          illness: null,
+          injury: null,
+          note,
+          updatedAt: at(0),
+        }),
+      );
+      assert.equal(error?.status, 500);
+    });
+    assert.match(logs, /insert into "check_in"/, "the failure is logged, with its query");
+    assert.ok(!logs.includes(note));
+  } finally {
+    await db.prepare("ALTER TABLE check_in_away RENAME TO check_in").run();
+  }
 });
