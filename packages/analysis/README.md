@@ -157,7 +157,8 @@ and `tss` (stress scores, which all use the TSS scale, so an hour at threshold s
   target gets a band in watts, metres per second or beats per minute: a set value or a ramp
   ±5 %, a range widened by 2.5 % at each end, a share of threshold against the day's FTP,
   threshold speed or lactate threshold heart rate. Steps are placed by laps when the activity
-  has exactly one lap per step, as a watch running a structured workout records. Otherwise
+  has exactly one lap per step, as a watch running a structured workout records, and each timed
+  step's lap is within 10 % or 5 s of its planned time, so automatic laps do not count. Otherwise
   they are laid end to end over the activity's moving seconds from its start, a time step for
   its seconds and a distance step until its distance is covered. Each moving second of a step
   with data counts in target when the value is in the band, with power averaged over the

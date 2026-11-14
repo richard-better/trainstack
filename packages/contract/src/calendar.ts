@@ -129,6 +129,11 @@ const compliancePart = (what: string) =>
 export const intervalStepSchema = z.object({
   index: z.number().int().describe("The step's place in the workout with its repeats written out"),
   name: z.string().nullable(),
+  placed: z
+    .boolean()
+    .describe(
+      "false when the step could not be found in the activity: steps are laid out by time, and this step or one before it has a length not known in advance, such as one that lasts until the athlete presses lap, while the activity has no lap per step; or a distance step's whole length fell inside a gap in the recorded distance. Its target is then not scored",
+    ),
   metric: z
     .enum(["power", "speed", "heart_rate"])
     .describe("W, m/s or bpm, the unit of low, high and average"),
@@ -160,12 +165,20 @@ export const plannedComplianceSchema = z
         .object({
           secondsWithData: z.number(),
           secondsInTarget: z.number(),
-          share: z.number().describe("secondsInTarget ÷ secondsWithData"),
-          score: z.number().describe("The share itself"),
+          share: z
+            .number()
+            .nullable()
+            .describe(
+              "secondsInTarget ÷ secondsWithData; null when no targeted step had data, such as power targets on a ride without power or steps that could not be placed, and the steps say which",
+            ),
+          score: z
+            .number()
+            .nullable()
+            .describe("The share itself; null leaves it out of the score"),
           alignedBy: z
             .enum(["laps", "time"])
             .describe(
-              "laps: the activity has a lap per step, and each step is its lap. time: steps are laid end to end over the activity's moving time from its start, a distance step until its distance is covered",
+              "laps: the activity has a lap per step, each timed step's lap within 10 % or 5 s of its planned time (a step that lasts until the lap button may take any length), and each step is its lap. time: steps are laid end to end over the activity's moving time from its start, a distance step until its distance is covered",
             ),
           steps: z
             .array(intervalStepSchema)
@@ -176,7 +189,7 @@ export const plannedComplianceSchema = z
         })
         .nullable()
         .describe(
-          "How closely the steps' targets were held, from the activity's records: each moving second of a step with a power, pace or heart rate target counts in target when the value is inside the target, widened by 5 % either side of a set value or ramp and 2.5 % outside a range, with power averaged over 3 s and speed over 10 s. A share of FTP, threshold pace or lactate threshold heart rate uses the thresholds of the day. Null when the workout has no such targets, the activity has no data for them, or the activity has no file",
+          "How closely the steps' targets were held, from the activity's records: each moving second of a step with a power, pace or heart rate target counts in target when the value is inside the target, widened by 5 % either side of a set value or ramp and 2.5 % outside a range, with power averaged over 3 s and speed over 10 s. A share of FTP, threshold pace or lactate threshold heart rate uses the thresholds of the day. Null when the workout has no such targets or the activity has no file. When targeted steps had no data, it is there with a null share, and its steps say why",
         ),
     }),
     pending: z

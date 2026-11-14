@@ -162,20 +162,25 @@ export function complianceOf({
     duration: part(planned.seconds, done.seconds),
     distance: part(planned.meters, done.meters),
     load: part(planned.load, done.load),
-    intervals:
-      intervals && intervals.secondsWithData > 0
-        ? {
-            secondsWithData: intervals.secondsWithData,
-            secondsInTarget: intervals.secondsInTarget,
-            share: intervals.secondsInTarget / intervals.secondsWithData,
-            score: intervals.secondsInTarget / intervals.secondsWithData,
-            alignedBy: intervals.alignedBy,
-            steps: withSteps ? [...intervals.steps] : null,
-          }
-        : null,
+    intervals: intervals
+      ? {
+          secondsWithData: intervals.secondsWithData,
+          secondsInTarget: intervals.secondsInTarget,
+          share:
+            intervals.secondsWithData > 0
+              ? intervals.secondsInTarget / intervals.secondsWithData
+              : null,
+          score:
+            intervals.secondsWithData > 0
+              ? intervals.secondsInTarget / intervals.secondsWithData
+              : null,
+          alignedBy: intervals.alignedBy,
+          steps: withSteps ? [...intervals.steps] : null,
+        }
+      : null,
   };
   const scores = [parts.duration, parts.distance, parts.load, parts.intervals].flatMap((entry) =>
-    entry ? [entry.score] : [],
+    entry && entry.score !== null ? [entry.score] : [],
   );
   const score =
     scores.length === 0

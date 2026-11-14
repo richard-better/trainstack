@@ -1,6 +1,7 @@
 import type { Block, Level, Step, Workout } from "@trainstack/workout";
 
 import { type AnalysisActivity, lapSpans, zoneSport } from "./activity.ts";
+import { plannedLength } from "./durations.ts";
 import type { PlanThresholds } from "./planned.ts";
 import { samplesOf, type Samples } from "./samples.ts";
 import { timerPauses } from "./sampling.ts";
@@ -10,6 +11,7 @@ export type IntervalMetric = "power" | "speed" | "heart_rate";
 export interface IntervalStep {
   readonly index: number;
   readonly name: string | null;
+  readonly placed: boolean;
   readonly metric: IntervalMetric;
   readonly seconds: number;
   readonly secondsWithData: number;
@@ -35,6 +37,8 @@ export const smoothingSeconds: Readonly<Record<IntervalMetric, number>> = {
   heart_rate: 1,
 };
 export const maxReportedSteps = 200;
+export const lapToleranceShare = 0.1;
+export const lapToleranceSeconds = 5;
 
 type Band = { metric: IntervalMetric; at: (fraction: number) => [number, number] };
 
@@ -105,32 +109,19 @@ function perSecondOrNaN(samples: Samples, values: Float64Array, length: number) 
   return result;
 }
 
-function trailingAverage(values: Float64Array, window: number) {
-  if (window <= 1) return values;
-  const result = new Float64Array(values.length);
-  let sum = 0;
-  let count = 0;
-  for (let index = 0; index < values.length; index++) {
-    const value = values[index]!;
-    if (!Number.isNaN(value)) {
-      sum += value;
-      count += 1;
-    }
-    const leaving = index - window;
-    if (leaving >= 0 && !Number.isNaN(values[leaving]!)) {
-      sum -= values[leaving]!;
-      count -= 1;
-    }
-    result[index] = Number.isNaN(value) || count === 0 ? NaN : sum / count;
-  }
-  return result;
-}
-
-type Placed = { from: number; to: number; seconds: number[] };
+type Placed = { from: number; to: number; seconds: number[]; progress?: number[] };
 
 function placedByLaps(activity: AnalysisActivity, steps: readonly Step[], moving: Uint8Array) {
   const spans = lapSpans(activity);
-  if (steps.length < 2 || spans.length !== steps.length) return undefined;
+  if (spans.length !== steps.length) return undefined;
+  if (steps.length < 2 && plannedLength(steps[0]!) !== null) return undefined;
+  const fitsThePlan = spans.every((span, index) => {
+    const length = plannedLength(steps[index]!);
+    if (length?.kind !== "time") return true;
+    const tolerance = Math.max(lapToleranceSeconds, lapToleranceShare * length.seconds);
+    return Math.abs(span.to - span.from - length.seconds) <= tolerance;
+  });
+  if (!fitsThePlan) return undefined;
   return spans.map((span): Placed => {
     const seconds: number[] = [];
     for (let second = Math.floor(span.from); second < Math.min(span.to, moving.length); second++) {
@@ -141,29 +132,61 @@ function placedByLaps(activity: AnalysisActivity, steps: readonly Step[], moving
 }
 
 function placedByTime(steps: readonly Step[], moving: Uint8Array, distance: Float64Array) {
-  const placed: Placed[] = [];
+  const placed: (Placed | null)[] = [];
   let second = 0;
+  let known = true;
+  let boundary = NaN;
   for (const step of steps) {
+    const length = known ? plannedLength(step) : null;
+    if (length === null) {
+      known = false;
+      placed.push(null);
+      continue;
+    }
     const seconds: number[] = [];
+    const progress: number[] = [];
     const from = second;
-    if (step.duration.type === "time") {
-      while (second < moving.length && seconds.length < step.duration.seconds) {
-        if (moving[second]) seconds.push(second);
-        second++;
-      }
-    } else {
-      let start = NaN;
-      while (second < moving.length) {
+    if (length.kind === "time") {
+      while (second < moving.length && seconds.length < length.seconds) {
         if (moving[second]) {
-          const covered = distance[second]!;
-          if (Number.isNaN(start) && !Number.isNaN(covered)) start = covered;
-          if (!Number.isNaN(covered) && covered - start >= step.duration.meters) break;
+          progress.push(
+            length.seconds > 1 ? Math.min(1, seconds.length / (length.seconds - 1)) : 0,
+          );
           seconds.push(second);
         }
         second++;
       }
+      boundary = NaN;
+    } else {
+      if (!distance.subarray(second).some((covered) => !Number.isNaN(covered))) {
+        known = false;
+        placed.push(null);
+        continue;
+      }
+      let start = boundary;
+      let lastCovered = 0;
+      let reached = false;
+      while (second < moving.length) {
+        if (moving[second]) {
+          const covered = distance[second]!;
+          if (Number.isNaN(start) && !Number.isNaN(covered)) start = covered;
+          if (!Number.isNaN(covered)) lastCovered = covered - start;
+          if (!Number.isNaN(covered) && covered - start >= length.meters) {
+            reached = true;
+            break;
+          }
+          progress.push(Math.min(1, Math.max(0, lastCovered / length.meters)));
+          seconds.push(second);
+        }
+        second++;
+      }
+      boundary = reached ? start + length.meters : NaN;
+      if (seconds.length === 0) {
+        placed.push(null);
+        continue;
+      }
     }
-    placed.push({ from, to: second, seconds });
+    placed.push({ from, to: second, seconds, progress });
   }
   return placed;
 }
@@ -181,40 +204,72 @@ export function intervalCompliance(
   const samples = samplesOf(activity.records, sport, { pauses });
   if (samples.count === 0) return null;
   const length = Math.max(Math.trunc(samples.elapsed[samples.count - 1]!) + 1, 0);
-  const moving = new Uint8Array(length);
-  for (let segment = 0; segment < samples.held.count; segment++) {
-    const first = Math.max(0, Math.trunc(samples.held.start[segment]!));
-    const last = Math.min(length, Math.max(Math.trunc(samples.held.end[segment]!), first + 1));
-    moving.fill(1, first, last);
+  const timerRunning = new Uint8Array(length).fill(1);
+  for (const { from, to } of pauses) {
+    const first = Math.max(0, Math.ceil(from));
+    const last = Math.min(length, Number.isFinite(to) ? Math.floor(to) : length);
+    if (last > first) timerRunning.fill(0, first, last);
   }
   const series: Record<IntervalMetric, Float64Array> = {
-    power: trailingAverage(perSecondOrNaN(samples, samples.power, length), smoothingSeconds.power),
-    speed: trailingAverage(perSecondOrNaN(samples, samples.speed, length), smoothingSeconds.speed),
+    power: perSecondOrNaN(samples, samples.power, length),
+    speed: perSecondOrNaN(samples, samples.speed, length),
     heart_rate: perSecondOrNaN(samples, samples.heartRate, length),
   };
-  const byLaps = placedByLaps(activity, steps, moving);
+  const byLaps = placedByLaps(activity, steps, timerRunning);
   const placed =
-    byLaps ?? placedByTime(steps, moving, perSecondOrNaN(samples, samples.distance, length));
+    byLaps ?? placedByTime(steps, timerRunning, perSecondOrNaN(samples, samples.distance, length));
   let secondsWithData = 0;
   let secondsInTarget = 0;
   const reported: IntervalStep[] = [];
   steps.forEach((step, index) => {
     const stepBand = bands[index];
-    const place = placed[index];
-    if (!stepBand || !place) return;
-    const values = series[stepBand.metric];
+    if (!stepBand) return;
+    const place = placed[index] ?? null;
+    if (place === null) {
+      if (reported.length < maxReportedSteps) {
+        const [low, high] = stepBand.at(0.5);
+        reported.push({
+          index,
+          name: step.name ?? null,
+          placed: false,
+          metric: stepBand.metric,
+          seconds: 0,
+          secondsWithData: 0,
+          secondsInTarget: 0,
+          low,
+          high,
+          average: null,
+        });
+      }
+      return;
+    }
+    const raw = place.seconds.map((second) => series[stepBand.metric][second]!);
+    const span = place.seconds.length;
+    const bandAt = (position: number) =>
+      stepBand.at(place.progress?.[position] ?? (span > 1 ? position / (span - 1) : 0));
+    const window = smoothingSeconds[stepBand.metric];
     let withData = 0;
     let inTarget = 0;
     let sum = 0;
-    place.seconds.forEach((second, position) => {
-      const value = values[second]!;
-      if (Number.isNaN(value)) return;
-      const span =
-        !byLaps && step.duration.type === "time" ? step.duration.seconds : place.seconds.length;
-      const [low, high] = stepBand.at(span > 1 ? Math.min(1, position / (span - 1)) : 0);
+    raw.forEach((reading, position) => {
+      if (Number.isNaN(reading)) return;
+      let value = 0;
+      let low = 0;
+      let high = 0;
+      let count = 0;
+      for (let back = Math.max(0, position - window + 1); back <= position; back++) {
+        const earlier = raw[back]!;
+        if (Number.isNaN(earlier)) continue;
+        const [bandLow, bandHigh] = bandAt(back);
+        value += earlier;
+        low += bandLow;
+        high += bandHigh;
+        count += 1;
+      }
+      value /= count;
       withData += 1;
-      sum += value;
-      if (value >= low && value <= high) inTarget += 1;
+      sum += reading;
+      if (value >= low / count && value <= high / count) inTarget += 1;
     });
     secondsWithData += withData;
     secondsInTarget += inTarget;
@@ -223,6 +278,7 @@ export function intervalCompliance(
       reported.push({
         index,
         name: step.name ?? null,
+        placed: true,
         metric: stepBand.metric,
         seconds: place.seconds.length,
         secondsWithData: withData,

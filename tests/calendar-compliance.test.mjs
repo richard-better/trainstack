@@ -273,3 +273,35 @@ test("the calendar's activities carry their route and whether their analysis is 
   assert.deepEqual(byId[outdoor.id].route, (await client.activities.get({ id: outdoor.id })).route);
   assert.equal(byId[indoor.id].route, null);
 });
+
+test("power targets on a ride without power keep the intervals part, with no share and steps that say so", async () => {
+  const { client } = await athlete();
+  const day = "2026-07-14";
+  const { id } = await plan(client, day, powerWorkout(150, 250));
+  const points = Array.from({ length: minutes * 60 + 1 }, (_, second) => {
+    const time = new Date(Date.parse(`${day}T06:00:00Z`) + second * 1000).toISOString();
+    return `<trkpt lat="${(47.5 + second * 0.00005).toFixed(6)}" lon="19.04"><time>${time}</time></trkpt>`;
+  }).join("");
+  await client.activities.upload({
+    file: new File(
+      [
+        `<?xml version="1.0"?><gpx version="1.1"><trk><type>cycling</type><trkseg>${points}</trkseg></trk></gpx>`,
+      ],
+      "ride.gpx",
+    ),
+    source: "upload",
+  });
+  await runCronUntilAnalysed();
+  const { compliance } = await client.plannedWorkouts.get({ id });
+  assert.equal(compliance.parts.intervals.share, null);
+  assert.equal(compliance.parts.intervals.score, null);
+  assert.deepEqual(
+    compliance.parts.intervals.steps.map(({ placed, secondsWithData }) => [
+      placed,
+      secondsWithData,
+    ]),
+    [[true, 0]],
+  );
+  assert.equal(compliance.parts.duration.score, 1);
+  assert.equal(compliance.score, 100);
+});

@@ -34,6 +34,8 @@ export {
   intervalCompliance,
   type IntervalMetric,
   type IntervalStep,
+  lapToleranceSeconds,
+  lapToleranceShare,
   maxReportedSteps,
   rangeTolerance,
   smoothingSeconds,

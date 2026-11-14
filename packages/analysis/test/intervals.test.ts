@@ -202,10 +202,10 @@ test("a ramp placed by its lap runs over that lap", () => {
     watts(300, 150),
   ]);
   const result = intervalCompliance(
-    activity((second) => (second < 300 ? 100 + (100 * second) / 299 : 150), 600, {
+    activity((second) => (second < 560 ? 100 + (100 * second) / 559 : 150), 860, {
       laps: [
-        { startTime: start, elapsedSeconds: 300 },
-        { startTime: new Date(start.getTime() + 300_000), elapsedSeconds: 300 },
+        { startTime: start, elapsedSeconds: 560 },
+        { startTime: new Date(start.getTime() + 560_000), elapsedSeconds: 300 },
       ],
     }),
     ramp,
@@ -213,4 +213,301 @@ test("a ramp placed by its lap runs over that lap", () => {
   );
   assert.equal(result?.alignedBy, "laps");
   assert.ok(share(result)! > 0.95, `${share(result)}`);
+});
+
+const untilLap = (value: number) =>
+  ({
+    type: "step",
+    duration: { type: "open" },
+    target: { type: "power", unit: "watts", level: { kind: "constant", value } },
+  }) as unknown as Workout["steps"][number];
+
+test("a step whose length is not known in advance stops the layout by time, and says which steps it could not place", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 300 ? 200 : 250), 900),
+    ride([watts(300, 200), untilLap(250), watts(300, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "time");
+  assert.deepEqual(
+    result?.steps.map(({ index, placed, secondsWithData }) => [index, placed, secondsWithData > 0]),
+    [
+      [0, true, true],
+      [1, false, false],
+      [2, false, false],
+    ],
+  );
+  assert.ok(share(result)! > 0.95);
+});
+
+test("laps place a step whose length is not known in advance, and its target is scored", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 300 ? 200 : 250), 700, {
+      laps: [
+        { startTime: start, elapsedSeconds: 300 },
+        { startTime: new Date(start.getTime() + 300_000), elapsedSeconds: 400 },
+      ],
+    }),
+    ride([watts(300, 200), untilLap(250)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.ok(result?.steps.every(({ placed }) => placed));
+  assert.ok(share(result)! > 0.95);
+});
+
+test("a workout of one step that lasts until lap is placed by the activity's one lap", () => {
+  const result = intervalCompliance(
+    activity(() => 250, 400, { laps: [{ startTime: start, elapsedSeconds: 400 }] }),
+    ride([untilLap(250)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "laps");
+  assert.ok(share(result)! > 0.95);
+});
+
+test("a distance step on an activity without distance is not placed, and leaves the steps after it unplaced", () => {
+  const result = intervalCompliance(
+    activity(() => 200, 900),
+    ride([
+      {
+        type: "step",
+        duration: { type: "distance", meters: 5000 },
+        target: { type: "power", unit: "watts", level: { kind: "constant", value: 200 } },
+      },
+      watts(300, 200),
+    ]),
+    {},
+  );
+  assert.deepEqual(
+    result?.steps.map(({ placed }) => placed),
+    [false, false],
+  );
+});
+
+test("a distance ramp stopped halfway is held against the ramp by the distance covered", () => {
+  const ramp: Workout = {
+    name: "Ramp",
+    sport: "running",
+    steps: [
+      {
+        type: "step",
+        duration: { type: "distance", meters: 1000 },
+        target: { type: "pace", unit: "metersPerSecond", level: { kind: "ramp", from: 2, to: 4 } },
+      },
+    ],
+  };
+  const records = [];
+  let covered = 0;
+  for (let second = 0; covered < 500; second++) {
+    const speed = 2 + (2 * covered) / 1000;
+    records.push({ elapsedSeconds: second, speedMetresPerSecond: speed, distanceMetres: covered });
+    covered += speed;
+  }
+  const result = intervalCompliance(
+    {
+      summary: {
+        startTime: start,
+        sport: "running",
+        subSport: undefined,
+        elapsedSeconds: records.length - 1,
+      },
+      records,
+    },
+    ramp,
+    {},
+  );
+  assert.ok(share(result)! > 0.9, `${share(result)}`);
+});
+
+test("a recording gap inside a step still uses up the step's planned time, so the next step starts on time", () => {
+  const records = Array.from({ length: 121 }, (_, second) => second)
+    .filter((second) => second < 30 || second >= 60)
+    .map((second) => ({ elapsedSeconds: second, power: second < 60 ? 200 : 300 }));
+  const result = intervalCompliance(
+    {
+      summary: { startTime: start, sport: "cycling", subSport: undefined, elapsedSeconds: 120 },
+      records,
+    },
+    ride([watts(60, 200), watts(60, 300)]),
+    {},
+  );
+  assert.equal(result?.steps[1]?.secondsInTarget, 60);
+  assert.ok(share(result)! > 0.95, `${share(result)}`);
+});
+
+test("short intervals held exactly are in target from their first second, with smoothing kept inside each step", () => {
+  const pace = (value: number) => ({
+    type: "step" as const,
+    duration: { type: "time" as const, seconds: 10 },
+    target: {
+      type: "pace" as const,
+      unit: "metersPerSecond" as const,
+      level: { kind: "constant" as const, value },
+    },
+  });
+  const run: Workout = {
+    name: "Strides",
+    sport: "running",
+    steps: [{ type: "repeat", count: 5, steps: [pace(4), pace(2)] }],
+  };
+  const speedAt = (second: number) => (Math.floor(second / 10) % 2 === 0 ? 4 : 2);
+  let covered = 0;
+  const records = Array.from({ length: 101 }, (_, second) => {
+    const record = {
+      elapsedSeconds: second,
+      speedMetresPerSecond: speedAt(second),
+      distanceMetres: covered,
+    };
+    covered += speedAt(second);
+    return record;
+  });
+  const result = intervalCompliance(
+    {
+      summary: { startTime: start, sport: "running", subSport: undefined, elapsedSeconds: 100 },
+      records,
+    },
+    run,
+    {},
+  );
+  assert.ok(share(result)! > 0.95, `${share(result)}`);
+});
+
+test("a timer pause takes exactly its own seconds out of the planned time", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 80 ? 200 : 300), 140, {
+      events: [
+        { time: new Date(start.getTime() + 30_000), event: "timer", type: "stopAll" },
+        { time: new Date(start.getTime() + 50_000), event: "timer", type: "start" },
+      ],
+    }),
+    ride([watts(60, 200), watts(60, 300)]),
+    {},
+  );
+  assert.deepEqual(
+    result?.steps.map(({ seconds, secondsInTarget }) => [seconds, secondsInTarget]),
+    [
+      [60, 60],
+      [60, 60],
+    ],
+  );
+});
+
+test("a ramp followed exactly is in target, its band averaged over the same window as the value", () => {
+  const ramp: Workout = {
+    name: "Ramp",
+    sport: "running",
+    steps: [
+      {
+        type: "step",
+        duration: { type: "time", seconds: 20 },
+        target: { type: "pace", unit: "metersPerSecond", level: { kind: "ramp", from: 2, to: 6 } },
+      },
+    ],
+  };
+  let covered = 0;
+  const records = Array.from({ length: 21 }, (_, second) => {
+    const speed = 2 + (4 * Math.min(second, 19)) / 19;
+    const record = { elapsedSeconds: second, speedMetresPerSecond: speed, distanceMetres: covered };
+    covered += speed;
+    return record;
+  });
+  const result = intervalCompliance(
+    {
+      summary: { startTime: start, sport: "running", subSport: undefined, elapsedSeconds: 20 },
+      records,
+    },
+    ramp,
+    {},
+  );
+  assert.ok(share(result)! > 0.95, `${share(result)}`);
+});
+
+test("laps that do not fit the planned steps, such as automatic laps, do not place them", () => {
+  const result = intervalCompliance(
+    activity((second) => (second < 60 ? 200 : 300), 120, {
+      laps: [
+        { startTime: start, elapsedSeconds: 90 },
+        { startTime: new Date(start.getTime() + 90_000), elapsedSeconds: 30 },
+      ],
+    }),
+    ride([watts(60, 200), watts(60, 300)]),
+    {},
+  );
+  assert.equal(result?.alignedBy, "time");
+  assert.ok(share(result)! > 0.95, `${share(result)}`);
+});
+
+test("consecutive distance steps start where the plan says the last one ended, so overshoot does not add up", () => {
+  const strides: Workout = {
+    name: "Strides",
+    sport: "running",
+    steps: [
+      {
+        type: "repeat",
+        count: 6,
+        steps: [
+          {
+            type: "step",
+            duration: { type: "distance", meters: 100 },
+            target: {
+              type: "pace",
+              unit: "metersPerSecond",
+              level: { kind: "constant", value: 12 },
+            },
+          },
+        ],
+      },
+    ],
+  };
+  const records = Array.from({ length: 52 }, (_, second) => ({
+    elapsedSeconds: second,
+    speedMetresPerSecond: 12,
+    distanceMetres: second * 12,
+  }));
+  const result = intervalCompliance(
+    {
+      summary: { startTime: start, sport: "running", subSport: undefined, elapsedSeconds: 51 },
+      records,
+    },
+    strides,
+    {},
+  );
+  assert.deepEqual(
+    result?.steps.map(({ seconds }) => seconds),
+    [9, 8, 8, 9, 8, 8],
+  );
+});
+
+test("a gap in the recorded distance that jumps past a whole distance step leaves that step unplaced", () => {
+  const step = (value: number) => ({
+    type: "step" as const,
+    duration: { type: "distance" as const, meters: 100 },
+    target: {
+      type: "pace" as const,
+      unit: "metersPerSecond" as const,
+      level: { kind: "constant" as const, value },
+    },
+  });
+  const records = Array.from({ length: 30 }, (_, second) => ({
+    elapsedSeconds: second,
+    speedMetresPerSecond: 10,
+    distanceMetres: second < 10 ? second * 10 : 250 + (second - 10) * 10,
+  }));
+  const result = intervalCompliance(
+    {
+      summary: { startTime: start, sport: "running", subSport: undefined, elapsedSeconds: 29 },
+      records,
+    },
+    { name: "Gap", sport: "running", steps: [step(10), step(10), step(10)] },
+    {},
+  );
+  assert.deepEqual(
+    result?.steps.map(({ placed, seconds }) => [placed, seconds]),
+    [
+      [true, 10],
+      [false, 0],
+      [true, 5],
+    ],
+  );
 });
