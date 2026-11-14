@@ -9,6 +9,7 @@ import {
   type DayReadiness,
   easySwapFor,
   intensityWords,
+  isAnswered,
   type ReadinessSuggestion,
   restFrom,
   swapForEasy,
@@ -53,15 +54,23 @@ export function TodayPage() {
           )}
         </div>
         {ready && <PlannedToday today={today} readiness={day} />}
+        {ready && checkIn.isError && checkIn.checkIn === undefined && (
+          <section className="today-check-in state" role="alert">
+            <p className="state-title">Today's check-in did not load.</p>
+            <button type="button" className="secondary" onClick={() => checkIn.refetch()}>
+              Try again
+            </button>
+          </section>
+        )}
         {ready && checkIn.checkIn !== undefined && (
           <section className="today-check-in" aria-labelledby="today-check-in-title">
-            {checkIn.checkIn === null ? (
+            {checkIn.checkIn === null || !isAnswered(checkIn.checkIn) ? (
               <>
                 <h2 id="today-check-in-title" className="today-heading">
                   How do you feel today?
                 </h2>
                 <p className="lede">Your answers sharpen today's readiness.</p>
-                <CheckInForm day={today} held={null} />
+                <CheckInForm day={today} held={checkIn.checkIn} />
               </>
             ) : (
               <div className="today-checked-in">
@@ -157,7 +166,7 @@ function Session({
         : null;
   const pending = calendarWrites.isPending(item.id);
 
-  async function act(write: () => Promise<void>) {
+  async function act(write: () => Promise<unknown>) {
     setBusy(true);
     try {
       await write();
@@ -185,7 +194,7 @@ function Session({
         {figures.length > 0 && <p className="today-session-figures muted">{figures.join(", ")}</p>}
         {state && <p className="today-session-state">{state}</p>}
       </div>
-      {action && suggestion && (
+      {action && suggestion && item.state === "planned" && (
         <div className="today-suggestion">
           <p className="today-suggestion-title">
             <span className="visually-hidden">Suggestion: </span>
