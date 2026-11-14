@@ -12,6 +12,7 @@ import {
   settingsQueryKey,
   withAnswer,
 } from "../lib/settings";
+import { suggestionsQueryKey } from "../lib/thresholds";
 
 export function useSettingsHistory() {
   return useQuery({
@@ -28,6 +29,7 @@ export async function refreshAnalysis() {
     queryClient.invalidateQueries({ queryKey: activitiesQueryKey }),
     queryClient.invalidateQueries({ queryKey: ["training"] }),
     queryClient.invalidateQueries({ queryKey: ["settings", "zones"] }),
+    queryClient.invalidateQueries({ queryKey: suggestionsQueryKey }),
   ]);
 }
 

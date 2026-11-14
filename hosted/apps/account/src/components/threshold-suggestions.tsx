@@ -14,12 +14,12 @@ export function useThresholdSuggestions() {
     queryKey: suggestionsQueryKey,
     queryFn: () => api.thresholds.suggestions({}),
     staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
 
 async function refreshAfterAnswer() {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: suggestionsQueryKey }),
     queryClient.invalidateQueries({ queryKey: settingsQueryKey }),
     refreshAnalysis(),
   ]);
