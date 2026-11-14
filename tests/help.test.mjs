@@ -92,6 +92,13 @@ test("every screen, button and setting a help page names in bold is still in the
   assert.deepEqual(missing, []);
 });
 
+test("help pages write bold only as **, so the label check sees every one", async () => {
+  const underscored = (await helpPages()).flatMap((page) =>
+    [...bodyOf(page.text).matchAll(/__([\s\S]+?)__/g)].map(([, label]) => `${page.slug}: ${label}`),
+  );
+  assert.deepEqual(underscored, []);
+});
+
 test("links between help pages and to their images resolve", async () => {
   const pages = await helpPages();
   const slugs = new Set(pages.map((page) => page.slug));
