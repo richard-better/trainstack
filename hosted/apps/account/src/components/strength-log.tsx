@@ -41,10 +41,12 @@ export function StrengthEditor({
   draft,
   onChange,
   updateDraft,
+  onAdding,
   editing,
 }: {
   draft: StrengthDraft;
   onChange: (draft: StrengthDraft) => void;
+  onAdding: (adding: boolean) => void;
   updateDraft: (change: (draft: StrengthDraft) => StrengthDraft) => void;
   editing: boolean;
 }) {
@@ -59,6 +61,7 @@ export function StrengthEditor({
     setExercises(draft.exercises.map((entry) => (entry.key === key ? change(entry) : entry)));
 
   async function add(exerciseId: string) {
+    onAdding(true);
     const previous = await latestWith(exerciseId).catch(() => null);
     updateDraft((current) => ({
       ...current,
@@ -67,6 +70,7 @@ export function StrengthEditor({
         exerciseFromHistory(exerciseId, previous, current.unit, custom),
       ],
     }));
+    onAdding(false);
   }
 
   return (

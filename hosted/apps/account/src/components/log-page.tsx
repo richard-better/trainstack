@@ -124,6 +124,7 @@ function LogForm({
   const [draft, setDraft] = useState<Draft>(initial);
   const [startedFrom] = useState(base);
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
   const navigate = useNavigate();
@@ -166,6 +167,7 @@ function LogForm({
           <StrengthEditor
             draft={draft}
             onChange={(next: StrengthDraft) => setDraft(next)}
+            onAdding={setAdding}
             updateDraft={(change) =>
               setDraft((current) => (current.sport === "strength" ? change(current) : current))
             }
@@ -186,7 +188,12 @@ function LogForm({
             {refusal ?? checked.problem}
           </p>
         )}
-        <button type="button" className="primary" onClick={save} disabled={saving || empty}>
+        <button
+          type="button"
+          className="primary"
+          onClick={save}
+          disabled={saving || adding || empty}
+        >
           {saving ? "Saving…" : existing ? "Save changes" : "Save session"}
         </button>
       </div>
