@@ -44,6 +44,9 @@ import { overviewOf, type Reference } from "../lib/workout-profile";
 import { CalendarIcon } from "./calendar-icons";
 import { ComplianceBadge } from "./compliance";
 import { calendarWrites, useCalendar, useReferenceOn, useWritesVersion } from "./calendar-data";
+import type { CheckIn } from "../lib/check-in";
+import { CheckInOnDay } from "./check-in-calendar";
+import { useCheckIns } from "./check-in-data";
 import { CalendarDialog, type DialogRequest } from "./calendar-dialogs";
 import { PeriodPicker } from "./period-picker";
 import { SportIcon } from "./sport-icon";
@@ -94,6 +97,7 @@ export function CalendarPage({ view, at }: { view: CalendarView; at: string | un
   const period = periodOf(view, at, today);
   const { query, range } = useCalendar(period);
   const referenceOn = useReferenceOn();
+  const checkIns = useCheckIns(period.from, period.through, { enabled: !settings.isPending });
   const [dialog, setDialog] = useState<DialogRequest | null>(null);
   const [moving, setMoving] = useState<Moving | null>(null);
   const [drag, setDrag] = useState<{ id: string; spot: Spot | null } | null>(null);
@@ -261,6 +265,7 @@ export function CalendarPage({ view, at }: { view: CalendarView; at: string | un
           referenceOn={referenceOn}
           movingId={moving?.id ?? null}
           actions={actions}
+          checkIns={checkIns.data?.checkIns ?? []}
         />
       ) : query.isError ? (
         <div className="state" role="alert">
@@ -453,14 +458,17 @@ function CalendarGrid({
   referenceOn,
   movingId,
   actions,
+  checkIns,
 }: {
   range: CalendarRange;
   period: Period;
   referenceOn: ReferenceOn;
   movingId: string | null;
   actions: Actions;
+  checkIns: readonly CheckIn[];
 }) {
   const weeks = weeksOf(range);
+  const checkInOn = new Map(checkIns.map((checkIn) => [checkIn.day, checkIn]));
   return (
     <div
       className="cal"
@@ -489,6 +497,7 @@ function CalendarGrid({
                 movingId={movingId}
                 actions={actions}
                 detailed={period.view === "week"}
+                checkIn={checkInOn.get(day.day) ?? null}
               />
             ))}
           </ol>
@@ -533,6 +542,7 @@ function DayCell({
   movingId,
   actions,
   detailed,
+  checkIn,
 }: {
   day: CalendarDay;
   today: string;
@@ -541,6 +551,7 @@ function DayCell({
   movingId: string | null;
   actions: Actions;
   detailed: boolean;
+  checkIn: CheckIn | null;
 }) {
   const isToday = day.day === today;
   const drag = actions.drag.state;
@@ -630,6 +641,7 @@ function DayCell({
           ))}
         </ul>
       )}
+      {checkIn && <CheckInOnDay checkIn={checkIn} today={today} />}
     </li>
   );
 }

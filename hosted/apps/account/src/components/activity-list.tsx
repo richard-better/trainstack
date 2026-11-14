@@ -17,6 +17,7 @@ import { routePath, storedRouteSegments } from "../lib/route";
 import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
+import { CheckInPrompt } from "./check-in-prompt";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
 
@@ -40,6 +41,7 @@ export function ActivityList() {
         <h1 className="page-title">Activities</h1>
         <UploadButton />
       </div>
+      <CheckInPrompt />
       <UploadList />
       {activities.isPending ? (
         <ListSkeleton />

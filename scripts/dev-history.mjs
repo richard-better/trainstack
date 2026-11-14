@@ -440,3 +440,39 @@ export async function seedPlan(
   }
   return planned;
 }
+
+export async function seedCheckIns(client, { today = new Date(), days = 56 } = {}) {
+  const yesterday = Date.parse(`${dayIso(today.getTime())}T00:00:00Z`) - DAY_MS;
+  const near = (value) => Math.max(1, Math.min(5, Math.round(value)));
+  let written = 0;
+  for (let back = days - 1; back >= 0; back--) {
+    if (back % 9 === 4) continue;
+    const time = yesterday - back * DAY_MS;
+    const weekday = new Date(time).getUTCDay();
+    const hardDayAfter = weekday === 3 || weekday === 0;
+    const cold = back >= 24 && back <= 27;
+    const knee = back >= 10 && back <= 14;
+    const wobble = Math.sin(back * 1.7);
+    await client.checkIns.put({
+      day: dayIso(time),
+      ratings: {
+        sleep: near(3.4 + wobble - (cold ? 1.3 : 0)),
+        energy: near(3.2 + wobble * 0.8 - (hardDayAfter ? 1 : 0) - (cold ? 1.5 : 0)),
+        soreness: near(3.3 - (hardDayAfter ? 1.4 : 0) - (knee ? 0.8 : 0) + wobble * 0.5),
+        stress: near(3 - (weekday === 1 ? 1 : 0) + wobble * 0.6),
+        mood: near(3.5 + wobble * 0.7 - (cold ? 1 : 0)),
+      },
+      illness: cold ? { kind: "respiratory" } : null,
+      injury: knee ? { area: "knee", training: back > 12 ? "reduced" : "full" } : null,
+      note:
+        back === 26
+          ? "Blocked nose, skipped the tempo run"
+          : back === 13
+            ? "Knee sore on the stairs after the long run"
+            : null,
+      updatedAt: new Date(Date.now() - back * 1000),
+    });
+    written += 1;
+  }
+  return written;
+}

@@ -1,4 +1,5 @@
-.training {
+.training,
+.check-in-page {
   --fitness: #3987e5;
   --fatigue: #d55fa0;
 }

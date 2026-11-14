@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { parseArgs } from "node:util";
 
 import { mockApple } from "../tests/helpers/apple.mjs";
-import { seedHistory, seedPlan } from "./dev-history.mjs";
+import { seedCheckIns, seedHistory, seedPlan } from "./dev-history.mjs";
 import { migrate, rpcClient, startWorker } from "../tests/helpers/worker.mjs";
 
 const { values: options } = parseArgs({
@@ -236,6 +236,7 @@ if (!options.empty) {
   if (options.history) {
     await seedHistory(ride);
     await seedPlan(ride);
+    await seedCheckIns(ride);
   }
 }
 
