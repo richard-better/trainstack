@@ -84,7 +84,12 @@ export async function disconnectStrava(deps: StravaDisconnectDeps, userId: strin
     accessToken &&
     (await spendBudget(deps.database, budgetOf.athlete(row.athleteId), CALLS_PER_ATHLETE))
   ) {
-    await strava.deauthorize(deps.fetcher, accessToken).catch(() => undefined);
+    await strava
+      .deauthorize(deps.fetcher, accessToken)
+      .then((response) => {
+        if (!response.ok) console.error(`Strava refused to deauthorize: ${response.status}`);
+      })
+      .catch((error: unknown) => console.error(error));
   }
   await deps.database.delete(stravaConnection).where(eq(stravaConnection.userId, userId));
   return row.athleteId;

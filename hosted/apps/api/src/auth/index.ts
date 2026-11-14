@@ -6,7 +6,12 @@ import { betterAuth } from "better-auth";
 import { bearer } from "better-auth/plugins";
 
 import { APPLE_APP_BUNDLE_ID, APPLE_SERVICES_ID, revokeAppleToken } from "./apple";
-import { deleteAthleteFiles, disconnectStravaForGood } from "../account/deletion";
+import {
+  deleteAthleteFiles,
+  disconnectStravaForGood,
+  promiseToSweepFilesAfterDeleting,
+  sweepFilesOfDeletedAccount,
+} from "../account/deletion";
 import { appHandoff } from "./app-handoff";
 
 export { APPLE_APP_BUNDLE_ID } from "./apple";
@@ -73,8 +78,10 @@ export function createAuth(env: AuthConfig, database: Database, appleWebFlowClie
           await deleteAthleteFiles(env, user.id);
           await revokeWhatAppleWebFlowGranted(user.id);
           await disconnectStravaForGood(database, env.BETTER_AUTH_SECRET, user.id);
+          await promiseToSweepFilesAfterDeleting(database, user.id);
         },
-        afterDelete: async (user) => deleteAthleteFiles(env, user.id),
+        afterDelete: async (user) =>
+          sweepFilesOfDeletedAccount(env, database, user.id).catch(logWithoutStoppingTheDeletion),
       },
     },
     account: { accountLinking: { enabled: false } },

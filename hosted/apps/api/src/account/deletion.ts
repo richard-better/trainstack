@@ -1,7 +1,7 @@
-import { inArray, lte } from "drizzle-orm";
+import { asc, eq, inArray, lte, notExists } from "drizzle-orm";
 
 import type { Database } from "../db";
-import { stravaBudget } from "../db/schema";
+import { accountFileSweep, stravaBudget, user } from "../db/schema";
 import { BUDGET_WINDOW_SECONDS, budgetOf, disconnectStrava } from "../strava";
 import { createVault } from "../strava/crypto";
 import { athleteFiles } from "./athlete-data";
@@ -42,4 +42,42 @@ export async function forgetSpentStravaBudgets(database: Database) {
   await database
     .delete(stravaBudget)
     .where(lte(stravaBudget.windowStart, windowStartOfAnyLiveBudget));
+}
+
+const SWEEPS_PER_RUN = 20;
+
+export async function promiseToSweepFilesAfterDeleting(database: Database, userId: string) {
+  await database
+    .insert(accountFileSweep)
+    .values({ userId, deletedAt: new Date() })
+    .onConflictDoNothing();
+}
+
+export async function sweepFilesOfDeletedAccount(
+  buckets: AthleteBuckets,
+  database: Database,
+  userId: string,
+) {
+  await deleteAthleteFiles(buckets, userId);
+  await database.delete(accountFileSweep).where(eq(accountFileSweep.userId, userId));
+}
+
+export async function sweepFilesOfDeletedAccounts(buckets: AthleteBuckets, database: Database) {
+  const due = await database
+    .select({ userId: accountFileSweep.userId })
+    .from(accountFileSweep)
+    .where(
+      notExists(
+        database.select({ id: user.id }).from(user).where(eq(user.id, accountFileSweep.userId)),
+      ),
+    )
+    .orderBy(asc(accountFileSweep.deletedAt))
+    .limit(SWEEPS_PER_RUN);
+  const failures: unknown[] = [];
+  for (const { userId } of due) {
+    await sweepFilesOfDeletedAccount(buckets, database, userId).catch((error: unknown) =>
+      failures.push(error),
+    );
+  }
+  return { failures };
 }

@@ -12,7 +12,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { exportRoutes } from "./account/export";
-import { forgetSpentStravaBudgets } from "./account/deletion";
+import { forgetSpentStravaBudgets, sweepFilesOfDeletedAccounts } from "./account/deletion";
 import { analyzeDueActivities } from "./activities/analysis";
 import { summarizeDueActivities } from "./activities/summary";
 import { matchDueActivities } from "./activities/workouts";
@@ -150,8 +150,14 @@ async function summarizeWhatIsDue() {
   const summaries = await summarizeDueActivities(db, ENV.ACTIVITY_FILES);
   const matches = await matchDueActivities(db);
   const analyses = await analyzeDueActivities(db, ENV.ACTIVITY_FILES);
+  const sweeps = await sweepFilesOfDeletedAccounts(ENV, db);
   await forgetSpentStravaBudgets(db);
-  for (const failure of [...summaries.failures, ...matches.failures, ...analyses.failures]) {
+  for (const failure of [
+    ...summaries.failures,
+    ...matches.failures,
+    ...analyses.failures,
+    ...sweeps.failures,
+  ]) {
     console.error(failure);
   }
 }

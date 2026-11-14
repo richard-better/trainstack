@@ -23,6 +23,9 @@ export type NotExported = { notExported: string };
 
 export type Handling<T extends TableKey> = Exported<T> | NotExported;
 
+const fromUnixSeconds = (value: unknown) =>
+  typeof value === "number" ? new Date(value * 1000).toISOString() : value;
+
 const parsedJson = (value: unknown) =>
   typeof value === "string" && value !== "" ? JSON.parse(value) : null;
 
@@ -64,6 +67,7 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
       columns: ["accessToken", "refreshToken"],
       why: "they are Strava's credentials for the athlete's Strava account",
     },
+    readable: { expiresAt: fromUnixSeconds },
   },
   stravaLink: {
     notExported:
@@ -76,6 +80,7 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
   feedback: {
     about: "Feedback the athlete sent, with the GitHub issue it became.",
     owner: (table) => table.userId,
+    readable: { createdAt: fromUnixSeconds },
   },
   activity: {
     about:
@@ -126,6 +131,10 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
   workoutList: {
     about: "The athlete's lists of workouts.",
     owner: (table) => table.userId,
+  },
+  accountFileSweep: {
+    notExported:
+      "A note that a deleted account's files still need a last sweep, which the scheduled run finishes. It is written as the account is deleted and goes once the sweep is done.",
   },
   workoutListEntry: {
     about: "Which workouts are in which list, and in what order.",

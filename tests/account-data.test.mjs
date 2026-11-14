@@ -309,6 +309,9 @@ test("an athlete's export holds every row of theirs, every original file, and no
     "updatedAt",
     "userId",
   ]);
+  assert.equal(connection.expiresAt, "2100-01-01T00:00:00.000Z");
+  const [feedback] = jsonLines(entries, `${folder}/data/feedback`);
+  assert.match(feedback.createdAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/);
   const [identity] = jsonLines(entries, `${folder}/data/account`);
   assert.equal(identity.providerId, "apple");
   assert.equal(identity.accountId, athlete.subject);
@@ -536,4 +539,34 @@ test("Strava budgets past their window are forgotten by the scheduled run", asyn
     await db.prepare("SELECT key FROM strava_budget WHERE key IN ('athlete:1', 'athlete:2')").all()
   ).results.map(({ key }) => key);
   assert.deepEqual(keys, ["athlete:2"]);
+});
+
+test("a deleted account's files that the last sweep missed are swept by the scheduled run, and a live account's never are", async () => {
+  const gone = randomUUID();
+  const live = await signInOnTheWeb(runtime, apple);
+  const { id: liveId } = await db
+    .prepare('SELECT id FROM "user" WHERE email = ?')
+    .bind(live.email)
+    .first();
+  await bucket.put(`activities/${gone}/${"a".repeat(64)}`, "landed during deletion");
+  await bucket.put(`activities/${liveId}/${"b".repeat(64)}`, "still wanted");
+  await db.batch([
+    db
+      .prepare("INSERT INTO account_file_sweep (user_id, deleted_at) VALUES (?, ?)")
+      .bind(gone, Date.now()),
+    db
+      .prepare("INSERT INTO account_file_sweep (user_id, deleted_at) VALUES (?, ?)")
+      .bind(liveId, Date.now()),
+  ]);
+
+  const { outcome } = await (await runtime.getWorker()).scheduled({ cron: "* * * * *" });
+  assert.equal(outcome, "ok");
+
+  assert.deepEqual((await bucket.list({ prefix: `activities/${gone}/` })).objects, []);
+  assert.ok(await bucket.head(`activities/${liveId}/${"b".repeat(64)}`));
+  const left = (await db.prepare("SELECT user_id FROM account_file_sweep").all()).results.map(
+    ({ user_id }) => user_id,
+  );
+  assert.ok(!left.includes(gone));
+  assert.ok(left.includes(liveId), "an account whose deletion did not go through is left alone");
 });
