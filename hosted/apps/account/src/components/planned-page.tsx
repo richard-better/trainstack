@@ -107,6 +107,8 @@ function stateText(item: PlannedWorkout) {
       return "Skipped";
     case "missed":
       return "Missed";
+    case "completed":
+      return "Done";
     default:
       return item.content.kind === "workout" ? "Planned" : null;
   }
@@ -155,6 +157,7 @@ function PlannedView({ item }: { item: PlannedWorkout }) {
             <span className="planned-state" data-state={item.state}>
               {item.state === "skipped" && <CalendarIcon name="skipped" size={12} />}
               {item.state === "missed" && <CalendarIcon name="missed" size={12} />}
+              {item.state === "completed" && <CalendarIcon name="done" size={12} />}
               {state}
             </span>
           )}
@@ -228,25 +231,27 @@ function PlannedWorkoutBody({ item, workout }: { item: PlannedWorkout; workout: 
   const reference = referenceOn(item.day, workout.sport);
   const overview = useMemo(() => overviewOf(workout, reference), [workout, reference]);
   const { highlight, setHighlight } = useHighlight();
-  const seconds = item.planned?.seconds ?? overview.seconds;
-  const meters = item.planned?.meters ?? (overview.meters > 0 ? overview.meters : null);
-  const load = item.planned?.load ?? overview.load?.score ?? null;
+  const known = item.planned;
+  const seconds = known ? known.seconds : overview.seconds;
+  const meters = known ? known.meters : overview.meters > 0 ? overview.meters : null;
+  const load = known ? known.load : (overview.load?.score ?? null);
+  const distanceSteps = overview.meters > 0;
   return (
     <>
       <dl className="figures">
         <div className="figure">
           <dt>Duration</dt>
-          <dd>{formatHours(seconds)}</dd>
+          <dd>{seconds === null ? "Unknown" : formatHours(seconds)}</dd>
         </div>
-        {meters !== null && (
+        {(meters !== null || distanceSteps) && (
           <div className="figure">
             <dt>Distance</dt>
-            <dd>{formatMeters(meters)}</dd>
+            <dd>{meters === null ? "Unknown" : formatMeters(meters)}</dd>
           </div>
         )}
         <div className="figure">
           <dt>Load</dt>
-          <dd>{load === null ? "-" : formatLoad(load)}</dd>
+          <dd>{load === null ? "Unknown" : formatLoad(load)}</dd>
         </div>
       </dl>
       <section aria-labelledby="profile-title" className="workout-section">

@@ -621,6 +621,8 @@ function stateWords(item: PlannedWorkout) {
       return item.skipped?.reason ? `Skipped: ${item.skipped.reason}` : "Skipped";
     case "missed":
       return "Missed";
+    case "completed":
+      return "Done";
     default:
       return null;
   }
@@ -644,8 +646,13 @@ function PlannedCard({
   const { content } = item;
   const overview =
     content.kind === "workout" && reference ? overviewOf(content.workout, reference) : null;
-  const seconds = item.planned?.seconds ?? overview?.seconds ?? null;
-  const load = item.planned?.load ?? overview?.load?.score ?? null;
+  const figures =
+    content.kind === "workout"
+      ? {
+          seconds: item.planned ? item.planned.seconds : (overview?.seconds ?? null),
+          load: item.planned ? item.planned.load : (overview?.load?.score ?? null),
+        }
+      : null;
   const name = plannedName(content);
   const words = stateWords(item);
   const pending = calendarWrites.isPending(item.id);
@@ -685,15 +692,13 @@ function PlannedCard({
           {content.kind === "rest" && <CalendarIcon name="rest" />}
           <span className="plan-name">{name}</span>
         </span>
-        {(seconds !== null || load !== null) && (
+        {figures && (
           <span className="plan-meta">
-            {seconds !== null && <span>{formatHours(seconds)}</span>}
-            {load !== null && (
-              <span>
-                {formatLoad(load)}
-                <span className="unit"> load</span>
-              </span>
-            )}
+            <span>{figures.seconds === null ? "time unknown" : formatHours(figures.seconds)}</span>
+            <span>
+              {figures.load === null ? "load unknown" : formatLoad(figures.load)}
+              {figures.load !== null && <span className="unit"> load</span>}
+            </span>
           </span>
         )}
         {content.kind !== "workout" && content.notes && (
@@ -701,7 +706,16 @@ function PlannedCard({
         )}
         {words && (
           <span className="plan-state">
-            <CalendarIcon name={item.state === "skipped" ? "skipped" : "missed"} size={12} />
+            <CalendarIcon
+              name={
+                item.state === "skipped"
+                  ? "skipped"
+                  : item.state === "completed"
+                    ? "done"
+                    : "missed"
+              }
+              size={12}
+            />
             {words}
           </span>
         )}

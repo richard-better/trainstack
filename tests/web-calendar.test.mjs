@@ -5,6 +5,7 @@ import { QueryClient } from "@tanstack/react-query";
 import {
   anchorOf,
   meterOf,
+  moved,
   nudged,
   periodOf,
   placementFor,
@@ -173,6 +174,27 @@ test("a drop lands between its neighbours, and a drop back on its own spot chang
     day: "2030-03-04",
     index: 2,
   });
+});
+
+test("a paired workout shows done, and moving it to another day lets go of its activity", () => {
+  const paired = {
+    id: "a",
+    day: "2030-03-04",
+    position: 0,
+    content: ride("Spin"),
+    skipped: { reason: null },
+    pairing: { activityId: "f".repeat(64), by: "auto" },
+    state: "completed",
+  };
+  assert.equal(moved(paired, { day: "2030-03-04", position: 5 }, "2030-03-10").state, "completed");
+  const away = moved(paired, { day: "2030-03-05", position: 0 }, "2030-03-10");
+  assert.deepEqual([away.pairing, away.state], [null, "skipped"]);
+  const unskipped = moved(
+    { ...paired, skipped: null },
+    { day: "2030-03-05", position: 0 },
+    "2030-03-10",
+  );
+  assert.equal(unskipped.state, "missed");
 });
 
 test("a week meter fills by what was done, and marks the plan when done passes it", () => {

@@ -301,6 +301,19 @@
   background: transparent;
 }
 
+.plan-card[data-state="completed"] {
+  border-style: solid;
+  border-color: #2c5a49;
+}
+
+.plan-card[data-state="completed"] .plan-state {
+  color: var(--soft);
+}
+
+.plan-card[data-state="completed"] .plan-state svg {
+  color: var(--cadence);
+}
+
 .plan-card[data-state="missed"] {
   border-color: var(--cal-missed);
 }

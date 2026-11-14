@@ -101,10 +101,11 @@ export const plannedName = (content: PlannedContent) =>
       : "Rest day";
 
 export function stateOn(
-  item: Pick<PlannedWorkout, "content" | "skipped" | "state">,
+  item: Pick<PlannedWorkout, "content" | "skipped" | "pairing">,
   day: string,
   today: string,
 ): PlannedWorkout["state"] {
+  if (item.pairing) return "completed";
   if (item.skipped) return "skipped";
   if (item.content.kind === "workout" && day < today) return "missed";
   return "planned";
@@ -265,11 +266,8 @@ export function withPlanned(range: CalendarRange, item: PlannedWorkout): Calenda
 }
 
 export function moved(item: PlannedWorkout, placement: Placement, today: string): PlannedWorkout {
-  return {
-    ...item,
-    ...placement,
-    state: stateOn(item, placement.day, today),
-  };
+  const next = { ...item, ...placement, pairing: placement.day === item.day ? item.pairing : null };
+  return { ...next, state: stateOn(next, placement.day, today) };
 }
 
 export function skippedAs(
@@ -291,6 +289,7 @@ export function draftPlanned(
     planId: null,
     planned: null,
     skipped: null,
+    pairing: null,
     createdAt: now,
     updatedAt: now,
     state: "planned" as const,
