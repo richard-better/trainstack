@@ -31,16 +31,18 @@ const { values: options } = parseArgs({
     screenshots: { type: "boolean", default: false },
     "no-record": { type: "boolean", default: false },
     only: { type: "string" },
+    locale: { type: "string", default: "en-GB" },
     "web-port": { type: "string" },
   },
 });
 
+const LOCALE = Intl.getCanonicalLocales(options.locale)[0];
+
 const APP = resolve("hosted/apps/account");
 const RECORDINGS = join(APP, ".showcase", "recordings");
-const SCREENSHOTS = join(APP, ".showcase", "screenshots");
+const SCREENSHOTS = join(APP, ".showcase", "screenshots", LOCALE);
 const SERVER = "http://api.showcase.localhost";
 const TIME_ZONE = "Europe/Budapest";
-const LOCALE = "en-GB";
 const RETRIES_GIVE_UP_MS = 15_000;
 const HEIGHTS = { phone: 844, desktop: 900 };
 const PIXEL_RATIOS = { phone: 2, desktop: 1 };

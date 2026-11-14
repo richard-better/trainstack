@@ -288,7 +288,7 @@
 .log-fields {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 2fr);
+  grid-template-columns: minmax(180px, 1.5fr) repeat(2, minmax(0, 1fr)) minmax(0, 2fr);
   margin-bottom: 16px;
 }
 
@@ -761,7 +761,11 @@
 
 @media (max-width: 640px) {
   .log-fields {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .log-fields .field:has(input[type="date"]) {
+    grid-column: 1 / -1;
   }
 
   .log-fields .log-name {
