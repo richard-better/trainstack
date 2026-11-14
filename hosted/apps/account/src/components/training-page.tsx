@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { activityKey, api, queryClient } from "../api";
 import {
-  ANALYSIS_POLL_MS,
+  analysisRefreshMs,
   analysisState,
   durationLabel,
   sourceWords,
@@ -55,9 +55,10 @@ function useRecentActivities(settling: boolean) {
     queryKey: recentKey,
     queryFn: () => api.activities.list({ limit: 50, onePerWorkout: true }),
     refetchInterval: (query) =>
-      settling || query.state.data?.activities.some((a) => analysisState(a).kind === "pending")
-        ? ANALYSIS_POLL_MS
-        : false,
+      analysisRefreshMs(
+        settling ||
+          (query.state.data?.activities.some((a) => analysisState(a).kind === "pending") ?? false),
+      ),
   });
 }
 
@@ -86,7 +87,7 @@ export function TrainingPage({ range, period }: { range: LoadRangeKey; period: B
     queryKey: loadQueryKey(from, today),
     queryFn: () => api.training.load({ from, through: today }),
     enabled: !settings.isPending,
-    refetchInterval: updating ? ANALYSIS_POLL_MS : false,
+    refetchInterval: analysisRefreshMs(updating),
   });
 
   return (
