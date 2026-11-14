@@ -1,4 +1,5 @@
 import Foundation
+import RideTestSupport
 import Testing
 
 @testable import RideData
@@ -48,7 +49,7 @@ struct WorkoutTemplateTests {
   }
 
   @Test func quickTestRunsEasyMediumAndHardForFifteenSecondsEach() throws {
-    let test = try #require(WorkoutTemplate.named("Quick test 45s"))
+    let test = WorkoutTemplate.quickTest
     #expect(test.duration == 45)
     #expect(test.workout(ftp: 200).steps.map(\.duration) == [15, 15, 15])
     #expect(test.workout(ftp: 200).steps.map { $0.targetPower(atOffset: 0) } == [100, 150, 240])

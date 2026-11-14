@@ -69,7 +69,7 @@ const normalised = (library) =>
 
 test("the server's built-in library is Ride's WorkoutTemplate.library, read from the Swift source", () => {
   const fromSwift = swiftLibrary();
-  assert.equal(fromSwift.length, 11);
+  assert.equal(fromSwift.length, 10);
   assert.ok(
     fromSwift.every((template) => template.cues.length > 0),
     "every bundled workout's text is read from the Swift source",

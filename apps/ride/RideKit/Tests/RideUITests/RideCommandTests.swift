@@ -1,5 +1,6 @@
 import Foundation
 import RideData
+import RideTestSupport
 import SwiftUI
 import Testing
 
@@ -18,7 +19,7 @@ struct RideCommandTests {
   private func riding() -> RideLauncher {
     let launcher = launcher()
     launcher.start(
-      WorkoutTemplate.named("Quick test 45s")!.planned, ftp: 200, heartRateZones: nil,
+      WorkoutTemplate.quickTest.planned, ftp: 200, heartRateZones: nil,
       riderWeight: 75)
     return launcher
   }

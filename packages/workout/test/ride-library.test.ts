@@ -111,7 +111,6 @@ test("the fixture holds every workout Ride bundles", () => {
       "Recovery 30",
       "Threshold classic 60",
       "Pixel sprints 30",
-      "Quick test 45s",
     ],
   );
 });

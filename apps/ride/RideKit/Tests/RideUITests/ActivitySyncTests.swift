@@ -1,6 +1,7 @@
 import Foundation
 import RideData
 import RideStrava
+import RideTestSupport
 import Testing
 
 @testable import RideUI
@@ -49,7 +50,7 @@ struct ActivitySyncTests {
   }
 
   private static func rideFile(startingAt seconds: TimeInterval) throws -> Data {
-    let template = try #require(WorkoutTemplate.named("Quick test 45s"))
+    let template = WorkoutTemplate.quickTest
     var session = RideSession(
       workout: template.workout(ftp: 200),
       startDate: Date(timeIntervalSince1970: 1_800_000_000 + seconds))

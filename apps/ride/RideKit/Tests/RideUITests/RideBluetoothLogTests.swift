@@ -1,6 +1,7 @@
 import Foundation
 import RideCore
 import RideData
+import RideTestSupport
 import Testing
 
 @testable import RideBluetooth
@@ -20,7 +21,7 @@ struct RideBluetoothLogTests {
       .map { String($0.dropLast(bluetoothSuffix.count)) }.sorted()
   }
 
-  private let template = WorkoutTemplate.named("Quick test 45s")!
+  private let template = WorkoutTemplate.quickTest
   private let trainer = DiscoveredDevice(id: UUID(), name: "KICKR CORE", services: [.trainer])
   private let strap = DiscoveredDevice(id: UUID(), name: "Polar H10", services: [.heartRate])
 

@@ -9,7 +9,7 @@ struct BuiltinWorkoutIDTests {
       WorkoutTemplate.library.map(\.builtinID) == [
         "zone-3-3x10", "threshold-waves-3x12", "ramp-openers-30", "over-unders-2x10",
         "long-endurance-90", "vo2-max-booster", "tabata-4x40-20", "recovery-30",
-        "threshold-classic-60", "pixel-sprints-30", "quick-test-45s",
+        "threshold-classic-60", "pixel-sprints-30",
       ])
   }
 

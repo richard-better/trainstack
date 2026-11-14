@@ -1,5 +1,6 @@
 import Foundation
 import RideData
+import RideTestSupport
 import Testing
 
 @testable import RideCore
@@ -29,7 +30,7 @@ struct RideTraceReplayTests {
         200: [.rider(.markLap)],
       ]),
     "quick-test-trainer-drop": HeadlessRide(
-      .named("Quick test 45s")!, ftp: 250, events: [20: [.trainerDrops(forSeconds: 8)]]),
+      WorkoutTemplate.quickTest, ftp: 250, events: [20: [.trainerDrops(forSeconds: 8)]]),
     "recovery-every-control": HeadlessRide(
       WorkoutTemplate.named("Recovery 30")!.fitted(to: 600), ftp: 210,
       events: [

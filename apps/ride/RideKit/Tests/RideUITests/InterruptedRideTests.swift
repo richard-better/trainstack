@@ -1,13 +1,14 @@
 import Foundation
 import RideCore
 import RideData
+import RideTestSupport
 import Testing
 
 @testable import RideBluetooth
 @testable import RideUI
 
 struct InterruptedRideTests {
-  private let template = WorkoutTemplate.named("Quick test 45s")!
+  private let template = WorkoutTemplate.quickTest
 
   private func withDirectory(_ body: (URL) throws -> Void) throws {
     let parent = FileManager.default.temporaryDirectory.appending(

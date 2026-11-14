@@ -259,17 +259,6 @@ extension WorkoutTemplate {
         .cue(18, "Cool down"),
       ]
     ),
-    .init(
-      name: "Quick test 45s", category: .vo2Max,
-      steps: minutes([(0.25, 50), (0.25, 75), (0.25, 120)]),
-      about:
-        "Fifteen seconds each at easy, medium and hard. Too short to train anything; it is here to check a trainer and the ride from start to finish.",
-      cues: [
-        .cue(0, "Easy"),
-        .cue(1, "Medium"),
-        .cue(2, "Hard"),
-      ]
-    ),
   ]
 
   public static func named(_ name: String) -> WorkoutTemplate? {
