@@ -35,7 +35,7 @@ jobs:
     timeout-minutes: 30
     environment:
       name: production
-      url: https://trainstackhq.com
+      url: https://${{ vars.TRAINSTACK_DOMAIN || 'trainstackhq.com' }}
     concurrency:
       group: trainstack-production
       cancel-in-progress: false
@@ -74,6 +74,7 @@ jobs:
         env:
           CI: "true"
           NODE_ENV: production
+          TRAINSTACK_DOMAIN: ${{ vars.TRAINSTACK_DOMAIN || 'trainstackhq.com' }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
@@ -86,14 +87,16 @@ jobs:
           AXIOM_ORG_ID: ${{ vars.AXIOM_ORG_ID }}
       - name: Verify production
         if: steps.revision.outputs.current == 'true'
+        env:
+          DOMAIN: ${{ vars.TRAINSTACK_DOMAIN || 'trainstackhq.com' }}
         run: |
           curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 \
-            https://api.trainstackhq.com/health | jq --exit-status '.status == "ok"'
+            "https://api.$DOMAIN/health" | jq --exit-status '.status == "ok"'
           curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 \
-            https://trainstackhq.com/ --output /dev/null
+            "https://$DOMAIN/" --output /dev/null
           curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 \
-            https://account.trainstackhq.com/ | grep --fixed-strings '<title>Trainstack</title>'
+            "https://account.$DOMAIN/" | grep --fixed-strings '<title>Trainstack</title>'
           curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 \
-            --header 'Origin: https://account.trainstackhq.com' --dump-header - --output /dev/null \
-            https://api.trainstackhq.com/api/auth/get-session \
-            | tr -d '\r' | grep --ignore-case --fixed-strings 'access-control-allow-origin: https://account.trainstackhq.com'
+            --header "Origin: https://account.$DOMAIN" --dump-header - --output /dev/null \
+            "https://api.$DOMAIN/api/auth/get-session" \
+            | tr -d '\r' | grep --ignore-case --fixed-strings "access-control-allow-origin: https://account.$DOMAIN"
