@@ -50,6 +50,7 @@ final class ActivitySync {
     guard let account = lastAccountID else { return }
     update(account) { state in
       for id in ids where library[id] != nil {
+        state.onServer.remove(id)
         state.deleted.remove(id)
         state.deletionsToSend.remove(id)
         state.restoresToSend.insert(id)
