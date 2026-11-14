@@ -127,6 +127,28 @@ test("a season's test ride suggests an FTP with its evidence, and accepting it f
   );
 });
 
+test("accepting from the effort's day sets up the sport there when it was set up later", async () => {
+  const { client } = await athlete();
+  const today = daysAgo(0);
+  await client.settings.write({
+    writes: [
+      put("2026-01-01", threshold("max_heart_rate", 190)),
+      put(today, { kind: "sport", sport: "cycling", listed: true }),
+      put(today, { kind: "own_zones", sport: "cycling", metric: "power", own: true }),
+    ],
+  });
+  const day = daysAgo(10);
+  await client.activities.upload({ file: testRide(day), source: "upload" });
+  await runCronUntilDetected();
+  const [ftp] = (await client.thresholds.suggestions({})).suggestions;
+  assert.equal(ftp.sport, "cycling");
+  await client.thresholds.accept({ id: ftp.id, from: "effort" });
+  const onTheDay = await client.settings.get({ day });
+  assert.equal(onTheDay.sports.cycling.power.thresholds.ftp, 259);
+  assert.equal(onTheDay.sports.cycling.power.usesDefault, false);
+  assert.equal((await client.settings.get({})).sports.cycling.power.thresholds.ftp, 259);
+});
+
 test("accepting from today dates the threshold today", async () => {
   const { client } = await athlete();
   await withMaxHeartRate(client);

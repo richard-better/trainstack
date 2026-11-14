@@ -28,7 +28,7 @@ async function athleteNow(db: Database, userId: string) {
     timeZoneOf(db, userId),
   ]);
   const today = dayIn(zone ?? DEFAULT_TIME_ZONE, new Date());
-  return { today, profile: profileOn(history, today) };
+  return { today, history, profile: profileOn(history, today) };
 }
 
 async function suggestionById(db: Database, userId: string, id: string) {
@@ -59,7 +59,7 @@ export const thresholdsRouter = {
   accept: signedIn.thresholds.accept.handler(async ({ context, input, errors }) => {
     const db = getDb();
     const userId = context.session.user.id;
-    const [row, { today, profile }] = await Promise.all([
+    const [row, { today, history }] = await Promise.all([
       suggestionById(db, userId, input.id),
       athleteNow(db, userId),
     ]);
@@ -69,8 +69,15 @@ export const thresholdsRouter = {
     const testId = crypto.randomUUID();
     const updatedAt = new Date();
     const writes: SettingWrite[] = [];
-    if (sport !== null && profile.sports[sport] === undefined) {
-      writes.push({ day, change: { kind: "sport", sport, listed: true }, updatedAt });
+    if (sport !== null) {
+      const onDay = profileOn(history, day).sports[sport];
+      const metric = thresholds[row.threshold].metric;
+      if (onDay === undefined) {
+        writes.push({ day, change: { kind: "sport", sport, listed: true }, updatedAt });
+      }
+      if (metric !== "pace" && onDay?.[metric] === undefined) {
+        writes.push({ day, change: { kind: "own_zones", sport, metric, own: true }, updatedAt });
+      }
     }
     writes.push(
       {
