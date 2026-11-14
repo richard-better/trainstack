@@ -104,7 +104,7 @@ function stepLabel(index: number, step: FitWorkoutStep): string {
   return step.name ? `Step ${index + 1} ("${step.name}")` : `Step ${index + 1}`;
 }
 
-type Placed = { start: number; depth: number; block: Block };
+type Placed = { start: number; depth: number; block: Block | undefined };
 
 function level(low: number, high: number): Cadence {
   const [bottom, top] = low <= high ? [low, high] : [high, low];
@@ -135,7 +135,7 @@ class FitReader {
         return;
       }
       const converted = this.step(step, index, at);
-      if (converted) placed.push({ start: index, depth: 0, block: converted });
+      placed.push({ start: index, depth: 0, block: converted });
     });
     const fileName = file.name ?? this.options.name;
     if (!fileName) {
@@ -145,7 +145,7 @@ class FitReader {
     const workout: Workout = {
       name: fileName ?? untitled,
       sport,
-      steps: placed.map(({ block }) => block),
+      steps: placed.flatMap(({ block }) => (block ? [block] : [])),
     };
     return this.log.result(validated(this.log, workout));
   }
@@ -231,7 +231,7 @@ class FitReader {
       block: {
         type: "repeat",
         count,
-        steps: inside.map(({ block }) => block),
+        steps: inside.flatMap(({ block }) => (block ? [block] : [])),
         ...(step.name ? { name: step.name } : {}),
       },
     });
@@ -403,7 +403,7 @@ class FitReader {
         }
         const [low, high] = this.sameUnit(target.low, target.high, "percentMaxHeartRate", at);
         if (!low || !high) return undefined;
-        if (low.unit === "bpm") {
+        if (low.unit === "bpm" || high.value === 0) {
           return { type: "heartRate", unit: "bpm", level: level(low.value, high.value) };
         }
         const max = this.athlete.maxHeartRate;

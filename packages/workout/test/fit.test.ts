@@ -394,6 +394,21 @@ describe("parseFit on files it cannot take", () => {
     ]);
   });
 
+  test("a refused step inside a repeat does not also make the repeat malformed", () => {
+    const bytes = encodeFitWorkout({
+      name: "Lap",
+      sport: "cycling",
+      steps: [
+        { duration: { type: "time", seconds: 60 } },
+        { duration: { type: "open" } },
+        { duration: { type: "repeat", fromStep: 1, count: 3 } },
+      ],
+    });
+    assert.deepEqual(messages(failure(() => parseFit(bytes))), [
+      "unsupported step 2: Step 2 lasts until the lap button is pressed, and TrainStack does not support lap-button steps yet",
+    ]);
+  });
+
   test("repeats that multiply past the model's limit fail fast", () => {
     const steps: FitWorkout["steps"][number][] = [{ duration: { type: "time", seconds: 1 } }];
     for (let index = 0; index < 20; index++) {
@@ -669,6 +684,29 @@ describe("writeFit", () => {
       "unsupported steps.0: Power in watts is too large for a .fit file",
       "unsupported steps.1: Heart rate in bpm is too large for a .fit file",
     ]);
+  });
+
+  test("writes a constant zero bpm so it reads back without a max heart rate", () => {
+    const workout: Workout = {
+      name: "Zero",
+      sport: "running",
+      steps: [
+        {
+          type: "step",
+          duration: { type: "time", seconds: 60 },
+          target: { type: "heartRate", unit: "bpm", level: { kind: "constant", value: 0 } },
+        },
+      ],
+    };
+    assert.deepEqual(parseFit(writeFit(workout).value).value, workout);
+  });
+
+  test("a name cut at a NUL character is reported like any other cut", () => {
+    const written = writeFit({ ...sample, name: "A\u0000B" });
+    assert.deepEqual(
+      written.warnings.map((warning) => warning.message),
+      ["Only the first 1 characters of the name fit in a .fit file"],
+    );
   });
 
   test("writes zero watts and zero bpm so they read back as zero", () => {

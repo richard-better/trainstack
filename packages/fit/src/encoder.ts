@@ -26,6 +26,7 @@ export function fitText(text: string): string {
   let length = 0;
   let kept = "";
   for (const character of text) {
+    if (character === "\0") break;
     const size = utf8.encode(character).length;
     if (length + size + 1 > longestStringBytes) break;
     length += size;
