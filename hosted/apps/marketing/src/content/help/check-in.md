@@ -58,6 +58,6 @@ them.
 ## Not supported yet
 
 - _No check-in in Ride._ Check in on the web, including from your phone's browser.
-- _No sleep, resting heart rate or HRV_ from Apple Health, Whoop, Oura or a watch.
-- _No measured readiness._ Readiness reads your check-in and training, not sleep or heart rate
-  from a device.
+- _Measured sleep only from Apple Health._ Ride sends sleep, resting heart rate and HRV from
+  Apple Health, and readiness reads them beside your check-in; see
+  [Today and readiness](/help/today-and-readiness). Whoop and Oura are not connected directly.

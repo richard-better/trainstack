@@ -24,6 +24,7 @@ archive, `trainstack-export-<day>.tar`, with:
 
 - The original file of every activity, exactly as it arrived.
 - Your activities, settings with their history, workouts, lists, planned workouts, check-ins,
+  sleep, resting heart rate and HRV from Apple Health,
   logged sessions and account, as JSON, with a `README.md` that explains every file.
 
 It is built as it downloads, so a large account takes a while. If the download breaks, start it

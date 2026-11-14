@@ -33,9 +33,10 @@ same Apple ID. Ride uploads its rides by itself, including the ones you rode bef
 
 Ride on iPhone can bring every workout in Apple Health into your account: runs, rides, swims,
 strength sessions and the rest, from your Apple Watch or any app that saves to Health, such as
-Garmin Connect. In Ride, open Settings, then Account, and turn on Import Workouts from Health. Ride
+Garmin Connect. In Ride, open Settings, then Account, and turn on Import from Health. Ride
 asks Health for your workouts with their routes, heart rate, power, cadence, speed, distance and
-energy, and reads nothing else. Health lets you choose how far back Ride may read; to bring in
+energy, and for your sleep, resting heart rate and HRV, which readiness reads (see
+[Today and readiness](/help/today-and-readiness)), and reads nothing else. Health lets you choose how far back Ride may read; to bring in
 your history, allow all recorded data.
 
 Ride then adds every workout Health holds, the ones from before too, newest first, and each new one
@@ -47,8 +48,10 @@ such as dance or tennis, still comes in, without a sport, and counts toward your
 Each Health workout is one activity, however often Ride reads it and on however many of your
 devices. If you delete one, it stays deleted: Ride does not bring it back.
 
-Turning Import Workouts from Health off stops new workouts coming in. The ones already imported stay
-in your account until you delete them here. To stop Ride reading Health altogether, also turn its
+Turning Import from Health off stops new workouts, sleep, resting heart rate and HRV coming in.
+The workouts already imported stay in your account until you delete them here, and the sleep,
+resting heart rate and HRV already sent stay until you delete your account. Both are in your
+[account export](/help/your-data). To stop Ride reading Health altogether, also turn its
 access off in the Health app, under your profile, then Apps.
 
 ## When a file is refused

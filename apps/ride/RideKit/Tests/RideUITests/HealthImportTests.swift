@@ -137,4 +137,56 @@ struct HealthImportTests {
         ])
     }
   }
+
+  private static func night(_ text: String, sleepHours: Double = 7.5, hrv: Double? = 62)
+    -> MeasuredDay
+  {
+    MeasuredDay(
+      day: SettingDay(text)!, sleepSeconds: Int(sleepHours * 3600), restingHeartRateBpm: 50,
+      hrvMs: hrv)
+  }
+
+  @Test func sendsEachMeasuredDayOnceAndADayAgainOnlyWhenHealthChangedIt() async throws {
+    try await withDevice { device in
+      let calendar = Calendar.current
+      let today = SettingDay(Self.now, calendar: calendar)
+      let yesterday = SettingDay(Self.now.addingTimeInterval(-86_400), calendar: calendar)
+      device.store.measured = [
+        today: Self.night(today.text), yesterday: Self.night(yesterday.text),
+      ]
+      try await device.health.sync()
+      try await device.health.sync()
+      var writes = await device.server.healthDayWrites
+      #expect(writes.count == 1, "empty days and unchanged days are not sent")
+      #expect(writes[0].days.map(\.day) == [yesterday, today])
+
+      device.store.measured[today] = Self.night(today.text, sleepHours: 4.3, hrv: 31)
+      try await device.health.sync()
+      writes = await device.server.healthDayWrites
+      #expect(writes.count == 2)
+      #expect(writes[1].days == [Self.night(today.text, sleepHours: 4.3, hrv: 31)])
+      #expect(writes[1].stamp > writes[0].stamp, "a later read always carries a later stamp")
+    }
+  }
+
+  @Test func aDayHealthNoLongerHasIsSentEmptySoTheAccountForgetsIt() async throws {
+    try await withDevice { device in
+      let today = SettingDay(Self.now, calendar: .current)
+      device.store.measured = [today: Self.night(today.text)]
+      try await device.health.sync()
+      device.store.measured = [:]
+      try await device.health.sync()
+      let writes = await device.server.healthDayWrites
+      #expect(writes.last?.days.map(\.isEmpty) == [true])
+    }
+  }
+
+  @Test func sendsNoMeasuredDayWhileOff() async throws {
+    try await withDevice(on: false) { device in
+      let today = SettingDay(Self.now, calendar: .current)
+      device.store.measured = [today: Self.night(today.text)]
+      try await device.health.sync()
+      #expect(await device.server.healthDayWrites.isEmpty)
+    }
+  }
 }

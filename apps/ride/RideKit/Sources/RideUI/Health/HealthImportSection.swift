@@ -8,15 +8,15 @@
 
     var body: some View {
       Section {
-        Toggle("Import Workouts from Health", isOn: toggle)
+        Toggle("Import from Health", isOn: toggle)
           .disabled(isAsking)
       } header: {
         Text("Apple Health")
       } footer: {
         Text(
           isOn
-            ? "Ride adds every workout in Health to your Trainstack account, the ones from before too, each a few minutes after it ends. If you turn this off, Ride stops adding them, and the workouts it added stay in your account until you delete them on the Trainstack website."
-            : "Ride reads your workouts from Health, with their routes, heart rate, power, cadence, speed and distance, and adds them to your Trainstack account. It never adds the rides it saved to Health itself."
+            ? "Ride adds every workout in Health to your Trainstack account, the ones from before too, each a few minutes after it ends, and sends your sleep, resting heart rate and HRV of the last 90 days for readiness. If you turn this off, Ride stops sending them, and what it sent stays in your account: delete workouts on the Trainstack website, or delete the account to remove everything."
+            : "Ride reads your workouts from Health, with their routes, heart rate, power, cadence, speed and distance, and your sleep, resting heart rate and HRV, and adds them to your Trainstack account. It never adds the rides it saved to Health itself."
         )
       }
       .alert("Health Not Connected", isPresented: errorShown) {

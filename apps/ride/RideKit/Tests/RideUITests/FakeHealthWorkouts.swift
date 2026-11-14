@@ -3,13 +3,14 @@ import RideData
 
 @testable import RideUI
 
-final class FakeHealthWorkouts: HealthWorkoutStore {
+final class FakeHealthWorkouts: HealthStore {
   struct Workout {
     let entry: HealthWorkoutEntry
     let activity: HealthActivity
   }
 
   var workouts: [Workout] = []
+  var measured: [SettingDay: MeasuredDay] = [:]
   private(set) var read: [String] = []
 
   func add(
@@ -32,6 +33,13 @@ final class FakeHealthWorkouts: HealthWorkoutStore {
   }
 
   func workouts() async throws -> [HealthWorkoutEntry] { workouts.map(\.entry) }
+
+  func measuredDays(_ days: [SettingDay], calendar: Calendar) async throws -> [MeasuredDay] {
+    days.map {
+      measured[$0]
+        ?? MeasuredDay(day: $0, sleepSeconds: nil, restingHeartRateBpm: nil, hrvMs: nil)
+    }
+  }
 
   func activity(of id: String) async throws -> HealthActivity? {
     read.append(id)

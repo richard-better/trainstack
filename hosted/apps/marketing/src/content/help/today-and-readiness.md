@@ -21,12 +21,20 @@ Readiness says how ready you are on four levels:
 | **Low**   | Run down. Keep today easy.                |
 | **Poor**  | Rest today.                               |
 
-It reads two things, and lists every one it used:
+It reads up to three things, and lists every one it used:
 
 - _Your check-in_, against your own usual: each rating one point below what you usually answer
   over the last 28 days counts against readiness, two points below counts double. Your usual needs
   at least 7 check-ins; until then it is 3, "Normal". A rating above your usual is shown, but does
   not make up for strain elsewhere.
+- _Your sleep, resting heart rate and HRV_, if Ride sends them from Apple Health, each against
+  your own usual: sleep an hour short of your average over the last 28 days counts against
+  readiness, two hours short counts double; a resting heart rate 5 beats above your 28-day average
+  counts, 10 above counts double; HRV well below its range over the last 60 days counts, far below
+  counts double. Each needs a few weeks of nights before it counts (7 for sleep and resting heart
+  rate, 14 for HRV). Together they never take readiness below **Fair** on their own, so a bad
+  night eases a hard session; a bad night and a check-in that says so too can take it further.
+  Each line says the night's value and your usual, such as "Slept 4 h 18 min, usually 7 h 34 min".
 - _Your training load_, as it stood last night: deep fatigue against your fitness, fitness
   rising fast, and hard days in a row. It needs about 12 weeks of training in Trainstack before it
   says anything, and on its own it never takes readiness below **Fair**: how you feel decides
@@ -36,9 +44,11 @@ Illness and injury come first. Ill today, or injured so you cannot train, is **P
 session is rest. Ill in the last week, it is no better than **Fair**; injured and training less,
 no better than **Low**.
 
-Readiness also says how sure it is. With no check-in today it comes from training alone and is
-low confidence; check in, and it reads your answers. It does not read measured sleep, resting
-heart rate or HRV: Trainstack does not have them yet.
+Readiness also says how sure it is. With no check-in today it comes from training and what your
+devices measured, and is low confidence; check in, and it reads your answers. A day without
+measured sleep, resting heart rate or HRV says which it did not have. To have them measured, turn
+on Import from Health in Ride (Settings, then Account); see
+[Getting activities in](/help/add-activities#apple-health).
 
 The level is a rule of thumb from what you told it and what you did, not a diagnosis or medical
 advice.
@@ -75,5 +85,6 @@ updates as soon as you save. See [The daily check-in](/help/check-in).
 ## Not supported yet
 
 - Readiness does not change your plan by itself, and there are no training plans that adapt.
-- No sleep, resting heart rate or HRV from Apple Health, Whoop, Oura or a watch.
+- No sleep, resting heart rate or HRV from Whoop, Oura or Garmin directly. A watch or ring whose
+  app saves them to Apple Health reaches readiness through Ride.
 - No readiness in Ride.

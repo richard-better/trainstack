@@ -4,7 +4,7 @@ import RideStrava
 
 @testable import RideUI
 
-actor FakeActivityServer: ActivityServer {
+actor FakeActivityServer: ActivityServer, HealthDayServer {
   enum Request { case list, upload, restore }
 
   enum Call: Equatable {
@@ -16,6 +16,8 @@ actor FakeActivityServer: ActivityServer {
 
   private(set) var calls: [Call] = []
   private(set) var files: [ActivityFile] = []
+  private(set) var healthDayWrites: [(days: [MeasuredDay], stamp: SettingStamp, account: String)] =
+    []
   private var activities: [String: Set<String>] = [:]
   private var tombstones: [String: Set<String>] = [:]
   private var signedIn: ActivityAccount?
@@ -113,6 +115,13 @@ actor FakeActivityServer: ActivityServer {
     store(id, for: account.id)
     await replyWhenReleased(to: .restore)
     return .stored
+  }
+
+  func writeHealthDays(
+    _ days: [MeasuredDay], at stamp: SettingStamp, for account: ActivityAccount
+  ) async throws {
+    try check(account)
+    healthDayWrites.append((days, stamp, account.id))
   }
 
   func deleteActivity(_ id: String, for account: ActivityAccount) async throws {

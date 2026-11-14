@@ -74,7 +74,7 @@ account's deletions never reach another. A ride removed while signed out is dele
 account this device last signed in to, when it signs in again.
 
 On iPhone, `HealthImport` brings the athlete's Apple Health workouts into the account once they
-turn on Import Workouts from Health (Settings, Account), which asks Health only then and only for
+turn on Import from Health (Settings, Account), which asks Health only then and only for
 what it reads (`HealthKitWorkouts.readTypes`). A Health workout has no file, so Ride writes one:
 `FITEncoder.encode(HealthActivity)` turns the workout's samples, route, pauses and totals into a FIT
 file, so the server summarises, analyses and matches it like any upload. The file is a function of
@@ -93,6 +93,14 @@ Ride runs, and after the settle time. State is kept per account (`Application Su
 which workouts were imported and which the server answered as deleted. Turning the import off stops
 it and leaves what was imported on the account. There is no background delivery, which would need
 the HealthKit background delivery entitlement.
+
+The same switch and pass send the athlete's sleep, resting heart rate and HRV to `healthDays`, for
+readiness. `MeasuredDay.days` works out each of the last 90 days in the device's calendar: sleep is
+the time asleep from noon the day before to noon, every source's samples merged so no minute counts
+twice; resting heart rate the mean of the day's samples; HRV the mean of the readings taken asleep
+that night, or from noon to noon without sleep. A day is sent only when it differs from what this
+device last sent the account (`HealthImportState.sentDays`), stamped after every earlier send, so the
+server keeps the latest read; a day Health no longer has is sent empty.
 
 Rider settings (thresholds, zone models, a sport's own zones, weight and FTP tests) are kept
 as a `SettingsLedger`, the same registers the settings API keeps (`docs/deployment.md`): one
