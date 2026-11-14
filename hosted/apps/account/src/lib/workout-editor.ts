@@ -332,29 +332,53 @@ export function withUnit(target: LevelTarget, unit: string, thresholds: Threshol
   return { ...target, unit, level } as LevelTarget;
 }
 
-export function withDurationType(
-  step: Step,
-  type: "time" | "distance",
+function withoutRamp(target: Target | undefined): Target | undefined {
+  if (!target || target.type === "maxEffort" || target.level.kind !== "ramp") return target;
+  return { ...target, level: withLevelKind(target.level, "range") } as LevelTarget;
+}
+
+export function lengthAs(
+  length: MeasuredDuration | undefined,
+  type: MeasuredDuration["type"],
   secondsPerMeter: number,
-): Step {
-  if (step.duration.type === type) return step;
-  const length = measuredLength(step);
+): MeasuredDuration {
+  if (length?.type === type) return length;
   const seconds =
     length === undefined
       ? unknownOpenSeconds
       : length.type === "time"
         ? length.seconds
         : length.meters * secondsPerMeter;
-  const duration: MeasuredDuration =
-    length?.type === type
-      ? length
-      : type === "time"
-        ? { type: "time", seconds: Math.max(1, Math.round(seconds)) }
-        : {
-            type: "distance",
-            meters: Math.max(1, Math.round(seconds / secondsPerMeter / 10) * 10),
-          };
-  return { ...step, duration, cues: step.cues?.filter((cue) => cue.at.type === type) };
+  return type === "time"
+    ? { type: "time", seconds: Math.max(1, Math.round(seconds)) }
+    : { type: "distance", meters: Math.max(1, Math.round(seconds / secondsPerMeter / 10) * 10) };
+}
+
+export function withDurationType(
+  step: Step,
+  type: Step["duration"]["type"],
+  secondsPerMeter: number,
+): Step {
+  if (step.duration.type === type) return step;
+  const length = measuredLength(step);
+  if (type === "open") {
+    const target = withoutRamp(step.target);
+    return {
+      ...step,
+      duration: length ? { type: "open", expected: length } : { type: "open" },
+      ...(target ? { target } : {}),
+    };
+  }
+  return {
+    ...step,
+    duration: lengthAs(length, type, secondsPerMeter),
+    cues: step.cues?.filter((cue) => cue.at.type === type),
+  };
+}
+
+export function withExpected(step: Step, expected: MeasuredDuration | undefined): Step {
+  if (step.duration.type !== "open") return step;
+  return { ...step, duration: expected ? { type: "open", expected } : { type: "open" } };
 }
 
 export function withCadence(

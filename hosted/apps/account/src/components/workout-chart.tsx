@@ -80,7 +80,63 @@ function roundedTop(x0: number, x1: number, top: number, base: number, radius: n
   return `M${x0},${base}V${top + r}Q${x0},${top} ${x0 + r},${top}H${x1 - r}Q${x1},${top} ${x1},${top + r}V${base}Z`;
 }
 
+export const fadeIdOf = (id: string) => `lap-fade-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+
+export function LapFade({ id }: { id: string }) {
+  return (
+    <defs>
+      <linearGradient id={`${id}-gradient`} x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0.4" stopColor="white" />
+        <stop offset="1" stopColor="white" stopOpacity="0.1" />
+      </linearGradient>
+      <mask id={id} maskContentUnits="objectBoundingBox">
+        <rect width="1" height="1" fill={`url(#${id}-gradient)`} />
+      </mask>
+    </defs>
+  );
+}
+
 export function SegmentShape({
+  segment,
+  geometry,
+  gap,
+  radius,
+  className,
+  fade,
+}: {
+  segment: Segment;
+  geometry: Geometry;
+  gap: number;
+  radius: number;
+  className?: string;
+  fade?: string;
+}) {
+  const shape = (
+    <BarShape
+      segment={segment}
+      geometry={geometry}
+      gap={gap}
+      radius={radius}
+      className={className}
+    />
+  );
+  if (segment.lap === null) return shape;
+  const end = xOf(geometry, segment.start + segment.seconds);
+  return (
+    <g className={`lap lap-${segment.lap}`}>
+      <g mask={fade ? `url(#${fade})` : undefined}>{shape}</g>
+      <line
+        className="lap-end"
+        x1={end - gap / 2}
+        x2={end - gap / 2}
+        y1={geometry.top}
+        y2={geometry.top + geometry.height}
+      />
+    </g>
+  );
+}
+
+function BarShape({
   segment,
   geometry,
   gap,
@@ -91,7 +147,7 @@ export function SegmentShape({
   geometry: Geometry;
   gap: number;
   radius: number;
-  className?: string;
+  className?: string | undefined;
 }) {
   const start = xOf(geometry, segment.start);
   const end = xOf(geometry, segment.start + segment.seconds);
@@ -130,13 +186,14 @@ export function SegmentShape({
 
 export function WorkoutThumb({ overview, label }: { overview: Overview; label?: string }) {
   const [ref, width] = useWidth<HTMLDivElement>();
+  const fade = fadeIdOf(useId());
   const height = 36;
   const geometry: Geometry = {
     left: 0,
     top: 0,
     width,
     height,
-    total: overview.seconds,
+    total: overview.drawnSeconds,
     yMax: ceilingOf(overview.segments),
   };
   return (
@@ -149,6 +206,7 @@ export function WorkoutThumb({ overview, label }: { overview: Overview; label?: 
     >
       {width > 0 && (
         <svg width={width} height={height} aria-hidden="true" focusable="false">
+          {overview.lapSteps > 0 && <LapFade id={fade} />}
           {overview.segments.map((segment) => (
             <SegmentShape
               key={segment.key}
@@ -156,6 +214,7 @@ export function WorkoutThumb({ overview, label }: { overview: Overview; label?: 
               geometry={geometry}
               gap={1}
               radius={1.5}
+              fade={fade}
             />
           ))}
         </svg>
@@ -233,6 +292,7 @@ export function WorkoutChart({
   const [grip, setGrip] = useState<Grip | null>(null);
   const drag = useRef<Drag | null>(null);
   const describedBy = useId();
+  const fade = fadeIdOf(useId());
   const narrow = width < 520;
   const height = narrow ? 200 : 260;
   const geometry: Geometry = {
@@ -240,23 +300,25 @@ export function WorkoutChart({
     top: 12,
     width: Math.max(0, width - 40 - (narrow ? 8 : 64)),
     height: height - 12 - 24,
-    total: overview.seconds,
+    total: overview.drawnSeconds,
     yMax: drag.current?.yMax ?? ceilingOf(overview.segments),
   };
   const lines = zoneLines(overview, reference).filter((line) => line.share < geometry.yMax);
   const labelled = (line: Line) =>
     !narrow &&
     (line.kind === "threshold" || Math.abs(yOf(geometry, line.share) - yOf(geometry, 1)) >= 12);
+  const knownUntil =
+    overview.segments.find((segment) => segment.lap === "unknown")?.start ?? overview.drawnSeconds;
   const ticks = Array.from(
-    { length: Math.floor(overview.seconds / tickStep(overview.seconds)) + 1 },
-    (_, index) => index * tickStep(overview.seconds),
-  );
+    { length: Math.floor(overview.drawnSeconds / tickStep(overview.drawnSeconds)) + 1 },
+    (_, index) => index * tickStep(overview.drawnSeconds),
+  ).filter((seconds) => seconds <= knownUntil);
   const shares = [0.5, 1, 1.5, 2, 2.5].filter((share) => share < geometry.yMax);
   const active = overview.segments.find((segment) => segment.key === hovered) ?? null;
 
   function segmentAt(clientX: number, element: Element) {
     const x = clientX - element.getBoundingClientRect().left;
-    const seconds = ((x - geometry.left) / Math.max(geometry.width, 1)) * overview.seconds;
+    const seconds = ((x - geometry.left) / Math.max(geometry.width, 1)) * overview.drawnSeconds;
     return (
       overview.segments.find(
         (segment) => seconds >= segment.start && seconds < segment.start + segment.seconds,
@@ -278,7 +340,7 @@ export function WorkoutChart({
     const end = xOf(geometry, segment.start + segment.seconds);
     const start = xOf(geometry, segment.start);
     const nearEnd = Math.abs(x - end) <= 6 || (end - x >= 0 && end - x <= 6 && end - start > 12);
-    if (nearEnd) return { segment, kind: "length" as const, x, y };
+    if (nearEnd && segment.lap === null) return { segment, kind: "length" as const, x, y };
     const fraction = (x - start) / Math.max(end - start, 1);
     const level =
       segment.shape === "ramp"
@@ -447,6 +509,7 @@ export function WorkoutChart({
       >
         {width > 0 && (
           <svg width={width} height={height} aria-hidden="true" focusable="false">
+            {overview.lapSteps > 0 && <LapFade id={fade} />}
             {shares.map((share) => (
               <g key={share}>
                 <line
@@ -484,6 +547,7 @@ export function WorkoutChart({
                 geometry={geometry}
                 gap={2}
                 radius={3}
+                fade={fade}
                 className={
                   editing?.selected === pathKey(segment.path)
                     ? "selected"
@@ -601,14 +665,16 @@ function Handles({
         ) : (
           <rect className="drag-handle" x={middle - 8} y={top - 2} width={16} height={4} rx={2} />
         ))}
-      <rect
-        className="drag-handle"
-        x={end - 2}
-        y={(top + base) / 2 - 8}
-        width={4}
-        height={16}
-        rx={2}
-      />
+      {segment.lap === null && (
+        <rect
+          className="drag-handle"
+          x={end - 2}
+          y={(top + base) / 2 - 8}
+          width={4}
+          height={16}
+          rx={2}
+        />
+      )}
     </g>
   );
 }
@@ -642,7 +708,7 @@ function ChartTip({
       </span>
       <span>
         {durationText(segment.step)}
-        {segment.estimated && (
+        {segment.estimated && segment.lap === null && (
           <span className="muted"> (about {formatMinutes(segment.seconds)})</span>
         )}
       </span>

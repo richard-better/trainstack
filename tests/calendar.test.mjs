@@ -207,6 +207,28 @@ test("a built-in workout, a note and a rest day go on the calendar too, and only
   assert.equal(days[0].totals.planned.seconds, builtin.totals.seconds);
 });
 
+test("a lap-button step counts at its expected length, and one without makes the numbers unknown, not zero", async () => {
+  const { client } = await athlete();
+  await client.settings.write({ writes: [ftp("2026-01-01", 200)] });
+  const lap = (expected) => ({
+    type: "step",
+    duration: expected ? { type: "open", expected } : { type: "open" },
+    target: { type: "power", unit: "watts", level: { kind: "constant", value: 200 } },
+  });
+  const plan = (steps) =>
+    client.plannedWorkouts.put({
+      id: randomUUID(),
+      day: "2026-02-10",
+      position: 1,
+      content: workoutContent({ name: "On lap", sport: "cycling", steps }),
+      updatedAt: at(1),
+    });
+  const estimated = await plan([lap({ type: "time", seconds: 600 }), watts(3000, 200)]);
+  assert.deepEqual(estimated.planned, { seconds: 3600, meters: null, load: 100 });
+  const unknown = await plan([lap(), watts(3000, 200)]);
+  assert.deepEqual(unknown.planned, { seconds: null, meters: null, load: null });
+});
+
 test("a day holds a bounded number of planned workouts, in order", async () => {
   const { client } = await athlete();
   const day = "2027-05-05";

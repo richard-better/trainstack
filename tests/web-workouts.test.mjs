@@ -205,16 +205,34 @@ test("a distance step's time comes from its pace and the athlete's threshold pac
   assert.equal(formatSpan(5430), "1 h 30 min 30 s");
 });
 
-test("a lap-button step draws at its expected length, or five minutes, and is marked estimated", () => {
-  const reference = noReference("cycling");
+test("a lap-button step draws at its expected length, or five minutes, and the totals count only what is known", () => {
+  const reference = { ...noReference("cycling"), ftp: 250 };
   const lap = (expected) => ({
     type: "step",
     duration: expected ? { type: "open", expected } : { type: "open" },
+    target: { type: "power", unit: "ftp", level: constant(1) },
   });
-  const expected = overviewOf({ steps: [lap({ type: "time", seconds: 600 })] }, reference);
-  assert.equal(expected.seconds, 600);
+  const hour = {
+    type: "step",
+    duration: { type: "time", seconds: 3000 },
+    target: { type: "power", unit: "ftp", level: constant(1) },
+  };
+  const expected = overviewOf({ steps: [lap({ type: "time", seconds: 600 }), hour] }, reference);
+  assert.equal(expected.seconds, 3600);
+  assert.equal(expected.drawnSeconds, 3600);
   assert.equal(expected.estimated, true);
-  assert.equal(overviewOf({ steps: [lap()] }, reference).seconds, 300);
+  assert.deepEqual([expected.lapSteps, expected.unknownLapSteps], [1, 0]);
+  assert.equal(expected.load.score, 100);
+  assert.equal(expected.segments[0].lap, "expected");
+
+  const unknown = overviewOf({ steps: [lap(), hour] }, reference);
+  assert.equal(unknown.seconds, 3000, "an unknown length is not counted as five minutes");
+  assert.equal(unknown.drawnSeconds, 3300, "but it is drawn as five minutes");
+  assert.equal(unknown.estimated, false);
+  assert.deepEqual([unknown.lapSteps, unknown.unknownLapSteps], [1, 1]);
+  assert.equal(unknown.load, null, "load is unknown, not computed from a placeholder");
+  assert.equal(unknown.averagePower, null);
+  assert.equal(unknown.segments[0].lap, "unknown");
   assert.equal(durationText(lap()), "Until lap");
   assert.equal(durationText(lap({ type: "distance", meters: 2000 })), "Until lap, about 2 km");
 });

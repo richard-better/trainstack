@@ -98,8 +98,13 @@ export function exportedWorkout(
       warnings: result.warnings,
     };
   }
-  const { ftp } = options;
-  const result = converted(() => writeWorkout(format, workout, ftp === undefined ? {} : { ftp }));
+  const { ftp, approximate } = options;
+  const result = converted(() =>
+    writeWorkout(format, workout, {
+      ...(ftp === undefined ? {} : { ftp }),
+      ...(approximate === undefined ? {} : { approximate }),
+    }),
+  );
   if ("failure" in result) return result;
   return {
     fileName,

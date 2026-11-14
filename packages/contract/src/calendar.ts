@@ -90,7 +90,7 @@ export const plannedNumbersSchema = z
       ),
   })
   .describe(
-    "What the workout asks for, in numbers comparable with an activity's, worked out with the athlete's thresholds of the planned day when it was planned, moved or changed. Null for a note or a rest day",
+    "What the workout asks for, in numbers comparable with an activity's, worked out with the athlete's thresholds of the planned day when it was planned, moved or changed. A lap-button step counts at its expected length, and all three are null when one has no expected length. Null for a note or a rest day",
   );
 
 export const plannedStateSchema = z

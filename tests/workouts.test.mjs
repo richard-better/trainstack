@@ -568,6 +568,86 @@ test("a stored workout comes out in each format and reads back to the same steps
   assert.equal(distance.data.issues[0].code, "unsupported");
 });
 
+test("a workout with lap-button steps is stored whole, totals only its certain time, and exports by the format's rule", async () => {
+  const { client } = await athlete();
+  const id = randomUUID();
+  const workout = workoutNamed("Lap intervals", {
+    steps: [
+      {
+        type: "step",
+        duration: { type: "open", expected: { type: "time", seconds: 600 } },
+        target: { type: "power", unit: "ftp", level: { kind: "range", low: 0.5, high: 0.6 } },
+        intensity: "warmUp",
+      },
+      {
+        type: "repeat",
+        count: 3,
+        steps: [
+          steady(300, 1),
+          { type: "step", duration: { type: "open" }, intensity: "recovery" },
+        ],
+      },
+    ],
+  });
+  const created = await client.workouts.put({ id, workout, updatedAt: at(0) });
+  assert.deepEqual(created.totals, { seconds: 900, meters: 0 });
+  assert.deepEqual((await client.workouts.get({ id })).workout, workout);
+
+  const ramp = await definedError(
+    client.workouts.put({
+      id: randomUUID(),
+      workout: workoutNamed("Lap ramp", {
+        steps: [
+          {
+            type: "step",
+            duration: { type: "open" },
+            target: { type: "power", unit: "ftp", level: { kind: "ramp", from: 0.5, to: 0.7 } },
+          },
+        ],
+      }),
+      updatedAt: at(0),
+    }),
+    "INVALID_WORKOUT",
+  );
+  assert.match(ramp.data.reason, /cannot ramp/);
+
+  const strict = await definedError(
+    client.workouts.export({ id, format: "zwo" }),
+    "WORKOUT_FORMAT_ERROR",
+  );
+  assert.deepEqual(
+    strict.data.issues.map((issue) => issue.message),
+    [
+      "A lap-button step has no place in a .zwo file",
+      "A lap-button step has no place in a .zwo file",
+    ],
+  );
+  const noExpected = await definedError(
+    client.workouts.export({ id, format: "mrc", approximate: true }),
+    "WORKOUT_FORMAT_ERROR",
+  );
+  assert.deepEqual(
+    noExpected.data.issues.map((issue) => issue.at),
+    ["steps.1.steps.1"],
+    "only the recovery has no expected length",
+  );
+
+  const fit = await client.workouts.export({ id, format: "fit" });
+  const back = await client.workouts.import({
+    file: new File([Uint8Array.from(atob(fit.base64), (c) => c.charCodeAt(0))], fit.fileName),
+    id: randomUUID(),
+    updatedAt: at(0),
+  });
+  assert.deepEqual(
+    flatten(back.workout.workout.steps).map((step) => step.duration.type),
+    ["open", "time", "open", "time", "open", "time", "open"],
+  );
+  assert.deepEqual(
+    fit.warnings.map((warning) => warning.message),
+    ["The lap-button step's expected length of 600 s has no place in a .fit file"],
+  );
+});
+
 test("the app reads, writes and exports workouts over plain HTTP with a bearer token", async () => {
   const { token } = await athlete();
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };

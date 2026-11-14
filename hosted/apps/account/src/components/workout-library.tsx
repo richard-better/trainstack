@@ -9,6 +9,7 @@ import {
   focusNames,
   formatMinutes,
   formatMeters,
+  lapStepsText,
   overviewOf,
   type Reference,
   sportNames,
@@ -402,6 +403,12 @@ function RowFigures({
         <dd>
           {estimated && "~"}
           {formatMinutes(seconds)}
+          {overview && overview.unknownLapSteps > 0 && (
+            <span className="muted" title={`Plus ${lapStepsText(overview.unknownLapSteps)}`}>
+              {" "}
+              + lap
+            </span>
+          )}
         </dd>
       </div>
       {summary.totals.meters > 0 ? (

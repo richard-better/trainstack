@@ -12,6 +12,7 @@ import {
   focusNames,
   formatMeters,
   formatSpan,
+  lapStepsText,
   type Overview,
   overviewOf,
   type Reference,
@@ -378,10 +379,15 @@ export function WorkoutView({
 }
 
 function WorkoutFigures({ overview, reference }: { overview: Overview; reference: Reference }) {
-  const figures: { label: string; value: string; unit?: string }[] = [
+  const figures: { label: string; value: string; unit?: string; note?: string }[] = [
     {
       label: overview.estimated ? "Duration, about" : "Duration",
       value: formatSpan(overview.seconds),
+      ...(overview.unknownLapSteps > 0
+        ? { note: `plus ${lapStepsText(overview.unknownLapSteps)}` }
+        : overview.lapSteps > 0
+          ? { note: "lap-button steps at their expected length" }
+          : {}),
     },
   ];
   if (overview.meters > 0)
@@ -402,9 +408,16 @@ function WorkoutFigures({ overview, reference }: { overview: Overview; reference
             {figure.value}
             {figure.unit && <span className="unit">{figure.unit}</span>}
           </dd>
+          {figure.note && <dd className="figure-note">{figure.note}</dd>}
         </div>
       ))}
-      {!overview.load && reference.ftp === null && (
+      {!overview.load && overview.unknownLapSteps > 0 && (
+        <div className="figure">
+          <dt>Load</dt>
+          <dd className="figure-note">Unknown until each lap-button step has an expected length</dd>
+        </div>
+      )}
+      {!overview.load && overview.unknownLapSteps === 0 && reference.ftp === null && (
         <div className="figure">
           <dt>Load</dt>
           <dd className="figure-note">
@@ -480,7 +493,10 @@ function ExportSection({
     onMutate: () => setResult(null),
     onSuccess: ({ format, exported }) => {
       const waits =
-        format === "fit" && exported.kind === "file" && exported.file.warnings.length > 0;
+        exported.kind === "file" &&
+        exported.file.warnings.some(
+          (warning) => format === "fit" || warning.code === "approximated",
+        );
       if (exported.kind === "file" && !waits) download(exported.file);
       setResult({ format, exported, downloaded: !waits });
     },
@@ -523,7 +539,9 @@ function ExportSection({
       )}
       {result?.exported.kind === "file" && !result.downloaded && (
         <div role="status" className="export-result">
-          <p className="lede">A .fit file cannot say everything in this workout. It will differ:</p>
+          <p className="lede">
+            A .{result.format} file cannot say everything in this workout. It will differ:
+          </p>
           <FormatIssues issues={result.exported.file.warnings} title="Changed or left out:" />
           <div className="export-buttons">
             <button

@@ -13,7 +13,7 @@ import {
   WORKOUT_FILE_TYPES,
 } from "../lib/library";
 import { datedChanges, localDay, settingsQueryKey } from "../lib/settings";
-import { formatMinutes, overviewOf, sportNames } from "../lib/workout-profile";
+import { formatMinutes, lapStepsText, overviewOf, sportNames } from "../lib/workout-profile";
 import { FileDropTarget } from "./uploads";
 import { WorkoutThumb } from "./workout-chart";
 import { rememberWorkout, useReference } from "./workout-data";
@@ -263,6 +263,7 @@ function ReadyItem({
             <span>
               {overview.estimated ? "about " : ""}
               {formatMinutes(overview.seconds)}
+              {overview.unknownLapSteps > 0 && ` plus ${lapStepsText(overview.unknownLapSteps)}`}
             </span>
             <span>{reading.file.name}</span>
           </p>
