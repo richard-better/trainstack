@@ -138,6 +138,27 @@ export const activitiesContract = {
           .describe(
             "List only the primary activity of each workout, so a workout recorded twice appears once. Without it the list holds every activity, as a client that syncs by id needs",
           ),
+        startedAfter: z
+          .date()
+          .optional()
+          .describe(
+            "Only activities that started at or after this instant. An activity with no start time counts from when it was uploaded",
+          ),
+        startedBefore: z
+          .date()
+          .optional()
+          .describe(
+            "Only activities that started before this instant, the instant itself left out",
+          ),
+        query: z
+          .string()
+          .trim()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            "Only activities whose name or sport contains this text, ignoring the case of A to Z. The name is the athlete's own, else the file's; the sport is the athlete's, else the file's, such as cycling or running",
+          ),
       }),
     )
     .output(

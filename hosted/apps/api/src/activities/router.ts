@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import type { Activity, ActivityDetail, DuplicateActivity } from "@trainstack/contract";
-import { and, asc, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
 import { activity, activityEvent, activityStatistic, deletedActivity } from "../db/schema";
@@ -130,6 +130,13 @@ async function currentActivity(db: Database, userId: string, id: string) {
   return withStatistics(db, row);
 }
 
+function matchesText(query: string) {
+  return or(
+    sql`instr(lower(coalesce(${activity.name}, ${activity.fileName}, '')), lower(${query})) > 0`,
+    sql`instr(lower(coalesce(${activity.sport}, ${activity.fileSport}, '')), lower(${query})) > 0`,
+  );
+}
+
 const encodeCursor = (row: ActivityRow) => `${row.occurredAt}.${row.id}`;
 
 function decodeCursor(cursor: string) {
@@ -228,6 +235,9 @@ export const activitiesRouter = {
         and(
           eq(activity.userId, userId),
           input.onePerWorkout ? eq(activity.isPrimary, true) : undefined,
+          input.startedAfter ? gte(activity.occurredAt, input.startedAfter.getTime()) : undefined,
+          input.startedBefore ? lt(activity.occurredAt, input.startedBefore.getTime()) : undefined,
+          input.query ? matchesText(input.query) : undefined,
           after
             ? or(
                 lt(activity.occurredAt, after.occurredAt),
