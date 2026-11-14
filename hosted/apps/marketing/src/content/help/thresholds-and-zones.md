@@ -39,7 +39,8 @@ and their load does not change.
 If a threshold was wrong in the past, set the right value **From** the day it became true, or use
 **Correct** on the entry under **History**, and TrainStack works out every activity since then
 again within a minute or two. **Remove** takes an entry out of the history. Activities before
-your first entry use your earliest settings.
+your first threshold, zone or sport setting use your earliest settings; weight follows the same
+rule on its own.
 
 ## Sports and their own zones
 
@@ -80,9 +81,10 @@ by itself. A suggestion names the effort it comes from (open it to see the activ
 it is.
 
 - **Use from today** sets the threshold from today. Older activities keep the settings they had,
-  so if you had no FTP before, older rides still have none. Only when **History** is empty do
-  older activities take it too, because activities before your first entry use your earliest
-  settings. To measure older activities with it, use the button below.
+  so if you had no FTP before, older rides still have none. Only when it is your first threshold,
+  zone or sport setting of any kind (weight does not count) do older activities take it too,
+  because activities before your first such setting use your earliest settings. To measure
+  older activities with it, use the button below.
 - **Use from** a day, when the effort was earlier, sets it from the day of the effort, so the
   activities since then are measured with it too.
 - **Dismiss** hides it. The same effort will not suggest it again, but a new effort can.
