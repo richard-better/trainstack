@@ -189,6 +189,12 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
     },
     readable: { createdAt: fromUnixSeconds },
   },
+  checkIn: {
+    about:
+      "The athlete's daily check-ins: for each day, how they slept and felt on a 1 to 5 scale where 3 is normal, whether they were ill or injured, and their note, as they entered it. A removed one keeps only its day and when it was removed, so a device cannot bring it back.",
+    owner: (table) => table.userId,
+    readable: { value: parsedJson },
+  },
 };
 
 export type AthleteFiles = {

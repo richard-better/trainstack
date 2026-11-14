@@ -11,3 +11,4 @@ export * from "./apple";
 export * from "./calendar";
 export * from "./thresholds";
 export * from "./calendar-feed";
+export * from "./check-ins";

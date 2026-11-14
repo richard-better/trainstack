@@ -190,6 +190,14 @@ async function athleteWithEverything(identity) {
     ],
   });
   await webApp.settings.setTimeZone({ timeZone: "Europe/Budapest" });
+  await webApp.checkIns.put({
+    day: "2026-03-01",
+    ratings: { sleep: 2, energy: 3, soreness: 2, stress: 3, mood: 4 },
+    illness: { kind: "respiratory" },
+    injury: null,
+    note: "Scratchy throat",
+    updatedAt: at(0),
+  });
   const workoutId = randomUUID();
   await webApp.workouts.put({
     id: workoutId,
