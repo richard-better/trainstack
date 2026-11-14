@@ -28,13 +28,20 @@ export const findPlanned = (db: Database, userId: string, id: string) =>
     .where(and(eq(plannedWorkout.userId, userId), eq(plannedWorkout.id, id)))
     .get();
 
-const nextRevision = (userId: string) =>
+export const nextRevision = (userId: string) =>
   sql`(SELECT coalesce(max(revision), 0) + 1 FROM ${plannedWorkout} WHERE user_id = ${userId})`;
 
 const latest = (...dates: (Date | null)[]) =>
   new Date(Math.max(...dates.map((date) => date?.getTime() ?? 0)));
 
-export function stateOf(row: PlannedRow, today: string): PlannedWorkout["state"] {
+export type PlannedPairing = { activityId: string; by: "athlete" | "auto" };
+
+export function stateOf(
+  row: PlannedRow,
+  today: string,
+  pairing: PlannedPairing | null,
+): PlannedWorkout["state"] {
+  if (pairing) return "completed";
   if (row.skipped) return "skipped";
   if (row.kind === "workout" && row.day! < today) return "missed";
   return "planned";
@@ -49,7 +56,11 @@ function contentOf(stored: string): PlannedContent {
   };
 }
 
-export function plannedOf(row: PlannedRow, today: string): PlannedWorkout {
+export function plannedOf(
+  row: PlannedRow,
+  today: string,
+  pairing: PlannedPairing | null,
+): PlannedWorkout {
   return {
     id: row.id,
     day: row.day!,
@@ -61,7 +72,8 @@ export function plannedOf(row: PlannedRow, today: string): PlannedWorkout {
         ? { seconds: row.plannedSeconds, meters: row.plannedMeters, load: row.plannedLoad }
         : null,
     skipped: row.skipped ? { reason: row.skipReason } : null,
-    state: stateOf(row, today),
+    state: stateOf(row, today, pairing),
+    pairing: pairing && { activityId: pairing.activityId, by: pairing.by },
     createdAt: row.createdAt,
     updatedAt: latest(row.placedAt, row.contentAt, row.skippedAt),
   };
@@ -267,12 +279,7 @@ export async function deletePlanned(db: Database, userId: string, id: string) {
   return { id, deletedAt: row?.deletedAt ?? deletedAt };
 }
 
-export async function plannedChanges(
-  db: Database,
-  userId: string,
-  since: string | undefined,
-  today: string,
-) {
+export async function plannedChanges(db: Database, userId: string, since: string | undefined) {
   const after = since === undefined ? 0 : Number(since);
   const rows = await db
     .select()
@@ -281,7 +288,7 @@ export async function plannedChanges(
     .orderBy(asc(plannedWorkout.revision));
   const cursor = Math.max(after, ...rows.map((row) => row.revision));
   return {
-    planned: rows.filter((row) => row.deletedAt === null).map((row) => plannedOf(row, today)),
+    planned: rows.filter((row) => row.deletedAt === null),
     deleted: rows.flatMap((row) =>
       row.deletedAt ? [{ id: row.id, deletedAt: row.deletedAt }] : [],
     ),

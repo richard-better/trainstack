@@ -1,8 +1,14 @@
-import type { CalendarActivity, CalendarDay, CalendarTotals } from "@trainstack/contract";
-import { and, asc, between, eq, isNull, sql } from "drizzle-orm";
+import type {
+  CalendarActivity,
+  CalendarDay,
+  CalendarTotals,
+  PlannedContent,
+} from "@trainstack/contract";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
-import { activity, activityStatistic, plannedWorkout } from "../db/schema";
+import { activity, activityStatistic, plannedPairingChoice, plannedWorkout } from "../db/schema";
+import { type Pair, pairDay, type PairChoice } from "./pairing";
 import { plannedOf, type PlannedRow } from "./planned";
 
 const millisecondsPerDay = 86_400_000;
@@ -40,7 +46,10 @@ type ActivityRow = {
 
 const calendarStatistics = ["timer_s", "elapsed_s", "distance_m", "load_tss"];
 
-function activitiesOn(db: Database, userId: string, from: string, through: string) {
+const listed = (values: readonly string[]) =>
+  sql`(SELECT value FROM json_each(${JSON.stringify(values)}))`;
+
+function activitiesOn(db: Database, userId: string, days: readonly string[]) {
   return db.all<ActivityRow>(sql`
     SELECT a.id AS id, a.local_day AS day,
       coalesce(a.sport, a.file_sport) AS sport,
@@ -54,27 +63,125 @@ function activitiesOn(db: Database, userId: string, from: string, through: strin
     FROM ${activity} a
     LEFT JOIN ${activityStatistic} s ON s.user_id = a.user_id AND s.activity_id = a.id
       AND s.name IN (SELECT value FROM json_each(${JSON.stringify(calendarStatistics)}))
-    WHERE a.user_id = ${userId} AND a.is_primary = 1 AND a.local_day BETWEEN ${from} AND ${through}
+    WHERE a.user_id = ${userId} AND a.is_primary = 1 AND a.local_day IN ${listed(days)}
     GROUP BY a.id
     ORDER BY a.local_day, a.occurred_at, a.id
   `);
 }
 
-function plannedOn(db: Database, userId: string, from: string, through: string) {
+function plannedOn(db: Database, userId: string, days: readonly string[]) {
   return db
     .select()
     .from(plannedWorkout)
     .where(
       and(
         eq(plannedWorkout.userId, userId),
-        between(plannedWorkout.day, from, through),
+        inArray(plannedWorkout.day, listed(days)),
         isNull(plannedWorkout.deletedAt),
       ),
     )
     .orderBy(asc(plannedWorkout.day), asc(plannedWorkout.position), asc(plannedWorkout.id));
 }
 
-const toActivity = (row: ActivityRow): CalendarActivity => ({
+async function choicesFor(db: Database, userId: string, plannedIds: readonly string[]) {
+  if (plannedIds.length === 0) return [];
+  const rows = await db.all<{
+    plannedId: string;
+    activityId: string;
+    paired: number;
+    updatedAt: number;
+  }>(sql`
+    SELECT c.planned_id AS plannedId, c.paired AS paired, c.updated_at AS updatedAt,
+      coalesce((
+        SELECT p.id FROM ${activity} p
+        WHERE p.user_id = a.user_id AND p.workout_id = a.workout_id AND p.is_primary = 1
+        LIMIT 1
+      ), a.id) AS activityId
+    FROM ${plannedPairingChoice} c
+    JOIN ${activity} a ON a.user_id = c.user_id AND a.id = c.activity_id
+    WHERE c.user_id = ${userId} AND c.planned_id IN ${listed(plannedIds)}
+  `);
+  const latest = new Map<string, PairChoice>();
+  for (const row of rows) {
+    const choice: PairChoice = { ...row, paired: row.paired === 1 };
+    const key = `${choice.plannedId} ${choice.activityId}`;
+    const held = latest.get(key);
+    const isLater =
+      !held ||
+      choice.updatedAt > held.updatedAt ||
+      (choice.updatedAt === held.updatedAt && choice.paired && !held.paired);
+    if (isLater) latest.set(key, choice);
+  }
+  return [...latest.values()];
+}
+
+const sportOf = (row: PlannedRow) =>
+  row.kind === "workout"
+    ? (JSON.parse(row.content!) as PlannedContent & { kind: "workout" }).workout.sport
+    : null;
+
+export type LoadedDay = {
+  planned: PlannedRow[];
+  activities: CalendarActivity[];
+  pairs: Map<string, Pair>;
+};
+
+export async function loadDays(db: Database, userId: string, days: readonly string[]) {
+  const [plannedRows, activityRows] = await Promise.all([
+    plannedOn(db, userId, days),
+    activitiesOn(db, userId, days),
+  ]);
+  const choices = await choicesFor(
+    db,
+    userId,
+    plannedRows.map((row) => row.id),
+  );
+  const plannedByDay = groupBy(plannedRows, (row) => row.day!);
+  const activitiesByDay = groupBy(activityRows, (row) => row.day);
+  const loaded = new Map<string, LoadedDay>();
+  for (const day of days) {
+    const planned = plannedByDay.get(day) ?? [];
+    const rows = activitiesByDay.get(day) ?? [];
+    const plannedIds = new Set(planned.map((row) => row.id));
+    const pairs = pairDay(
+      planned.map((row) => ({
+        id: row.id,
+        position: row.position!,
+        isWorkout: row.kind === "workout",
+        skipped: row.skipped,
+        sport: sportOf(row),
+        seconds: row.plannedSeconds,
+        load: row.plannedLoad,
+      })),
+      rows.map((row) => ({
+        id: row.id,
+        sport: row.sport,
+        seconds: row.timer ?? row.elapsed,
+        load: row.load,
+        startedAt: row.startedAt,
+      })),
+      choices.filter((choice) => plannedIds.has(choice.plannedId)),
+    );
+    const byPlanned = new Map(pairs.map((pair) => [pair.plannedId, pair]));
+    const byActivity = new Map(pairs.map((pair) => [pair.activityId, pair.plannedId]));
+    loaded.set(day, {
+      planned,
+      activities: rows.map((row) => toActivity(row, byActivity.get(row.id) ?? null)),
+      pairs: byPlanned,
+    });
+  }
+  return loaded;
+}
+
+export async function pairingsOf(db: Database, userId: string, rows: readonly PlannedRow[]) {
+  const days = [...new Set(rows.flatMap((row) => (row.day ? [row.day] : [])))];
+  const loaded = await loadDays(db, userId, days);
+  const pairs = new Map<string, Pair>();
+  for (const day of loaded.values()) for (const [id, pair] of day.pairs) pairs.set(id, pair);
+  return pairs;
+}
+
+const toActivity = (row: ActivityRow, plannedId: string | null): CalendarActivity => ({
   id: row.id,
   sport: row.sport,
   indoor: row.indoor === null ? null : row.indoor === 1,
@@ -83,6 +190,7 @@ const toActivity = (row: ActivityRow): CalendarActivity => ({
   seconds: row.timer ?? row.elapsed,
   meters: row.distance,
   load: row.load,
+  plannedId,
 });
 
 const zero = (): CalendarTotals => ({ seconds: 0, meters: 0, load: 0 });
@@ -126,20 +234,19 @@ export async function calendarRange(
 ) {
   const start = mondayOf(from);
   const end = sundayOf(through);
-  const [plannedRows, activityRows] = await Promise.all([
-    plannedOn(db, userId, start, end),
-    activitiesOn(db, userId, start, end),
-  ]);
-  const plannedByDay = groupBy(plannedRows, (row) => row.day!);
-  const activitiesByDay = groupBy(activityRows, (row) => row.day);
+  const loaded = await loadDays(db, userId, daysFrom(start, end));
   const dayOfRange = (day: string) => {
-    const planned = plannedByDay.get(day) ?? [];
-    const activities = (activitiesByDay.get(day) ?? []).map(toActivity);
-    return { day, planned, activities, totals: totalsOf(planned, activities) };
+    const { planned, activities, pairs } = loaded.get(day)!;
+    return { planned, activities, pairs, totals: totalsOf(planned, activities) };
   };
   const days: CalendarDay[] = daysFrom(from, through).map((day) => {
-    const { planned, activities, totals } = dayOfRange(day);
-    return { day, planned: planned.map((row) => plannedOf(row, today)), activities, totals };
+    const { planned, activities, pairs, totals } = dayOfRange(day);
+    return {
+      day,
+      planned: planned.map((row) => plannedOf(row, today, pairs.get(row.id) ?? null)),
+      activities,
+      totals,
+    };
   });
   const weeks = [];
   for (let monday = start; monday <= end; monday = dayOf(dayNumber(monday) + 7)) {

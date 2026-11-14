@@ -94,10 +94,21 @@ export const plannedNumbersSchema = z
   );
 
 export const plannedStateSchema = z
-  .enum(["planned", "skipped", "missed"])
+  .enum(["planned", "completed", "skipped", "missed"])
   .describe(
-    "planned: still to do, or a note or rest day. skipped: the athlete said they will not do it. missed: a workout on a day before the athlete's today that was neither done nor skipped",
+    "planned: still to do, or a note or rest day. completed: paired with an activity done that day. skipped: the athlete said they will not do it, and nothing was paired with it. missed: a workout on a day before the athlete's today that was neither done nor skipped",
   );
+
+export const pairingRule =
+  "Planned workouts and activities pair within a calendar day, an activity by its localDay and counting each workout recorded once, by its primary. First the athlete's own choices: a pairing the athlete made holds while both are on the same day, the latest choice winning where two claim the same planned workout or activity, and a pair the athlete took apart is never made again by itself. Then the rest pair by themselves, closest first: only a workout (not a note, a rest day or a skipped workout) with an activity of the same sport (cycling, running or swimming, indoors or out), where closeness is |ln(done ÷ planned time)| plus |ln(done ÷ planned load)| when both loads are known, a time or load that is missing counting as ln 2, and ties going to the planned workout first in the day and the activity that started first. Pairing is worked out when the calendar is read, so it follows every change to either side, in whichever order they arrive";
+
+export const plannedPairingSchema = z
+  .object({
+    activityId,
+    by: z.enum(["athlete", "auto"]).describe("athlete: the athlete paired them. auto: by the rule"),
+  })
+  .nullable()
+  .describe(`The activity this planned workout was done as, if any. ${pairingRule}`);
 
 export const plannedWorkoutSchema = z.object({
   id: plannedWorkoutIdSchema,
@@ -111,8 +122,13 @@ export const plannedWorkoutSchema = z.object({
     .nullable()
     .describe("Set when the athlete marked it skipped, with why"),
   state: plannedStateSchema,
+  pairing: plannedPairingSchema,
   createdAt: z.date(),
-  updatedAt: z.date().describe("The latest edit to any part of it, by the editing device's clock"),
+  updatedAt: z
+    .date()
+    .describe(
+      "The latest edit to what it is, where it is or whether it is skipped, by the editing device's clock. Pairing choices are kept apart and do not move it",
+    ),
 });
 
 export const plannedDeletionSchema = z.object({
@@ -144,6 +160,11 @@ export const calendarActivitySchema = z.object({
   seconds: z.number().nullable().describe("Moving time: timer_s, else elapsed_s"),
   meters: z.number().nullable().describe("distance_m"),
   load: z.number().nullable().describe("load_tss, once the analysis has it"),
+  plannedId: plannedWorkoutIdSchema
+    .nullable()
+    .describe(
+      "The planned workout it is paired with, by the pairing rule; null for an unplanned activity",
+    ),
 });
 
 export const calendarDaySchema = z.object({
@@ -173,6 +194,18 @@ const plannedDeleted = {
     status: 410,
     message: "The planned workout was deleted, and a deleted planned workout stays deleted",
     data: plannedDeletionSchema,
+  },
+};
+
+const activityNotFound = {
+  ACTIVITY_NOT_FOUND: { status: 404, message: "No such activity" },
+};
+
+const notPairable = {
+  NOT_PAIRABLE: {
+    status: 422,
+    message:
+      "Only a workout pairs, and only with an activity of its own day: move the planned workout to the activity's day first",
   },
 };
 
@@ -266,6 +299,38 @@ export const plannedWorkoutsContract = {
       }),
     )
     .output(plannedWorkoutSchema),
+  pair: oc
+    .route({
+      method: "POST",
+      path: "/planned-workouts/{id}/pair",
+      description: `Pair a planned workout with an activity of the same day, by the athlete's choice, which holds over the rule. Give any copy of a workout recorded twice; the pairing is with its primary. Of two choices about the same planned workout and activity, the later updatedAt wins. ${pairingRule}`,
+    })
+    .errors({
+      ...unauthorized,
+      ...plannedNotFound,
+      ...plannedDeleted,
+      ...editedInTheFuture,
+      ...activityNotFound,
+      ...notPairable,
+    })
+    .input(z.object({ id: plannedWorkoutIdSchema, activityId, updatedAt: editedAt }))
+    .output(plannedWorkoutSchema),
+  unpair: oc
+    .route({
+      method: "POST",
+      path: "/planned-workouts/{id}/unpair",
+      description:
+        "Take a planned workout and an activity apart, by the athlete's choice: the rule never pairs these two again by itself, though either may pair with something else. Of two choices about the same planned workout and activity, the later updatedAt wins",
+    })
+    .errors({
+      ...unauthorized,
+      ...plannedNotFound,
+      ...plannedDeleted,
+      ...editedInTheFuture,
+      ...activityNotFound,
+    })
+    .input(z.object({ id: plannedWorkoutIdSchema, activityId, updatedAt: editedAt }))
+    .output(plannedWorkoutSchema),
   delete: oc
     .route({
       method: "DELETE",
@@ -281,7 +346,7 @@ export const plannedWorkoutsContract = {
       method: "GET",
       path: "/planned-workouts/changes",
       description:
-        "Every planned workout written or deleted since the cursor, for a device that keeps a copy of the calendar, such as the app playing today's workout offline",
+        "Every planned workout written or deleted since the cursor, for a device that keeps a copy of the planned workouts, such as the app playing today's workout offline. A write is the athlete's own edit, including a pairing chosen or undone. Each planned workout's state and pairing are as of this read: they change without a new revision as activities arrive and days pass, so read calendar.range for the days on screen",
     })
     .errors(unauthorized)
     .input(z.object({ since: z.string().regex(/^\d+$/).optional() }))
@@ -299,8 +364,7 @@ export const calendarContract = {
     .route({
       method: "GET",
       path: "/calendar",
-      description:
-        "The athlete's calendar from one day through another: each day's planned workouts and the activities done, with totals of planned against completed time, distance and load for each day and for each Monday-to-Sunday week the range touches. Days are the athlete's calendar days: an activity is on its localDay, and today is where the athlete's time zone says. One request serves a month or a week view",
+      description: `The athlete's calendar from one day through another: each day's planned workouts and the activities done, paired by the pairing rule, with totals of planned against completed time, distance and load for each day and for each Monday-to-Sunday week the range touches. Days are the athlete's calendar days: an activity is on its localDay, and today is where the athlete's time zone says. One request serves a month or a week view. ${pairingRule}`,
     })
     .errors(unauthorized)
     .input(
