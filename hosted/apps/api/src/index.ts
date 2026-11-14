@@ -11,6 +11,7 @@ import { evlog, type EvlogVariables } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+import { analyzeDueActivities } from "./activities/analysis";
 import { summarizeDueActivities } from "./activities/summary";
 import { matchDueActivities } from "./activities/workouts";
 import { createContext } from "./context";
@@ -145,7 +146,10 @@ async function summarizeWhatIsDue() {
   const db = getDb();
   const summaries = await summarizeDueActivities(db, ENV.ACTIVITY_FILES);
   const matches = await matchDueActivities(db);
-  for (const failure of [...summaries.failures, ...matches.failures]) console.error(failure);
+  const analyses = await analyzeDueActivities(db, ENV.ACTIVITY_FILES);
+  for (const failure of [...summaries.failures, ...matches.failures, ...analyses.failures]) {
+    console.error(failure);
+  }
 }
 
 export default {

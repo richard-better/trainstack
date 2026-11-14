@@ -5,6 +5,7 @@ import { and, asc, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 import type { Database } from "../db";
 import {
   activity,
+  activityAnalysis,
   activityEvent,
   activityStatistic,
   athleteTimeZone,
@@ -45,12 +46,32 @@ async function statisticsOf(db: Database, userId: string, ids: string[]) {
   return byActivity;
 }
 
+type AnalysisRow = typeof activityAnalysis.$inferSelect;
+
+async function analysesOf(db: Database, userId: string, ids: string[]) {
+  if (ids.length === 0) return new Map<string, AnalysisRow>();
+  const rows = await db
+    .select()
+    .from(activityAnalysis)
+    .where(
+      and(
+        eq(activityAnalysis.userId, userId),
+        inArray(
+          activityAnalysis.activityId,
+          sql`(SELECT value FROM json_each(${JSON.stringify(ids)}))`,
+        ),
+      ),
+    );
+  return new Map(rows.map((row) => [row.activityId, row]));
+}
+
 const fileOf = (row: ActivityRow) =>
   row.fileFormat && row.fileSize !== null ? { format: row.fileFormat, size: row.fileSize } : null;
 
 function toActivity(
   row: ActivityRow,
   statistics: Record<string, number>,
+  analysis: AnalysisRow | undefined,
   duplicates: DuplicateActivity[],
 ): Activity {
   return {
@@ -67,6 +88,9 @@ function toActivity(
     localDay: row.localDay,
     localDaySource: row.localDaySource,
     statistics,
+    analyzedAt: analysis?.analyzedAt ?? null,
+    analysisError: analysis?.error ?? null,
+    missingThresholds: analysis?.missingThresholds ?? [],
     createdAt: row.createdAt,
     primary: row.isPrimary,
     duplicates,
@@ -107,11 +131,14 @@ async function duplicatesOf(db: Database, userId: string, rows: ActivityRow[]) {
 
 async function toActivities(db: Database, userId: string, rows: ActivityRow[]) {
   const ids = rows.map((row) => row.id);
-  const [statistics, duplicates] = await Promise.all([
+  const [statistics, analyses, duplicates] = await Promise.all([
     statisticsOf(db, userId, ids),
+    analysesOf(db, userId, ids),
     duplicatesOf(db, userId, rows),
   ]);
-  return rows.map((row) => toActivity(row, statistics.get(row.id)!, duplicates.get(row.id)!));
+  return rows.map((row) =>
+    toActivity(row, statistics.get(row.id)!, analyses.get(row.id), duplicates.get(row.id)!),
+  );
 }
 
 const findActivity = (db: Database, userId: string, id: string) =>

@@ -5,6 +5,9 @@ import { after, before, test } from "node:test";
 import { migrate, rpcClient, startWorker } from "./helpers/worker.mjs";
 import { mockApple } from "./helpers/apple.mjs";
 import { denseRide, manyLaps, pausedRun } from "./helpers/fit-files.mjs";
+import { analysisStatistics } from "../packages/contract/src/index.ts";
+
+const analysisNames = new Set(analysisStatistics.map(({ name }) => name));
 
 const SAMPLE_RIDE = "apps/ride/RideKit/Sources/RideData/Resources/SampleRide.fit";
 const TRACES = "apps/ride/RideKit/Tests/RideCoreTests/Traces";
@@ -73,6 +76,9 @@ async function storedBeforeSummaries(userId, bytes, format = "fit") {
     .run();
   return id;
 }
+
+const summaryStatistics = (statistics) =>
+  Object.fromEntries(Object.entries(statistics).filter(([name]) => !analysisNames.has(name)));
 
 const sampleRideStatistics = {
   elapsed_s: 1800,
@@ -325,7 +331,7 @@ test("activities stored before summaries existed are summarised by the scheduled
   await runCronUntilNothingIsDue();
   const after = await client.activities.get({ id });
   assert.ok(after.summarizedAt instanceof Date);
-  assert.deepEqual(after.statistics, sampleRideStatistics);
+  assert.deepEqual(summaryStatistics(after.statistics), sampleRideStatistics);
   assert.equal(after.events.length, 10);
 });
 
@@ -356,7 +362,7 @@ test("an activity summarised by older logic is summarised again, replacing what 
   }
   const resummarised = await client.activities.get({ id });
   assert.equal(resummarised.sport, "cycling");
-  assert.deepEqual(resummarised.statistics, sampleRideStatistics);
+  assert.deepEqual(summaryStatistics(resummarised.statistics), sampleRideStatistics);
   assert.equal(resummarised.events.length, 10);
 });
 

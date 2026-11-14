@@ -58,21 +58,28 @@ const FIT_EPOCH = Date.UTC(1989, 11, 31);
 const knownTime = (time: Date | undefined) =>
   time !== undefined && time.getTime() > FIT_EPOCH ? time : undefined;
 
+export function lapEventOrder(laps: readonly ActivityLap[]): number[] {
+  return laps
+    .flatMap((lap, index) => {
+      const startedAt = knownTime(lap.startTime);
+      return startedAt ? [{ index, startedAt: startedAt.getTime() }] : [];
+    })
+    .sort((a, b) => a.startedAt - b.startedAt)
+    .map(({ index }) => index);
+}
+
 function lapEvents(laps: readonly ActivityLap[]): SummaryEvent[] {
-  return laps.flatMap((lap) => {
-    const startedAt = knownTime(lap.startTime);
-    if (!startedAt) return [];
-    return [
-      {
-        type: "lap",
-        startedAt,
-        endedAt: knownTime(lap.endTime) ?? null,
-        data: {
-          ...statistics(lap),
-          ...(typeof lap.trigger === "string" ? { trigger: snakeCase(lap.trigger) } : {}),
-        },
+  return lapEventOrder(laps).map((index) => {
+    const lap = laps[index]!;
+    return {
+      type: "lap",
+      startedAt: knownTime(lap.startTime)!,
+      endedAt: knownTime(lap.endTime) ?? null,
+      data: {
+        ...statistics(lap),
+        ...(typeof lap.trigger === "string" ? { trigger: snakeCase(lap.trigger) } : {}),
       },
-    ];
+    };
   });
 }
 
@@ -88,9 +95,7 @@ export function summaryOfFile(bytes: Uint8Array): FileSummary {
       indoor,
       name: activity.name?.trim() || undefined,
       statistics: statistics(summary),
-      events: lapEvents(activity.laps).sort(
-        (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
-      ),
+      events: lapEvents(activity.laps),
     };
   } catch (error) {
     if (error instanceof ActivityFileError) throw new SummaryError(summaryErrorOf[error.code]);

@@ -15,7 +15,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { isTimeZone } from "../activities/local-day";
 import type { Database } from "../db";
-import { athleteSetting, athleteTimeZone } from "../db/schema";
+import { activityAnalysis, athleteSetting, athleteTimeZone } from "../db/schema";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
 import { ALLOWED_CLOCK_AHEAD_MS, canonical, keyOf, storedKey, validated } from "./changes";
@@ -26,6 +26,9 @@ const rowsOf = (db: Database, userId: string) =>
   db.select().from(athleteSetting).where(eq(athleteSetting.userId, userId));
 
 const isLive = (row: SettingRow) => !row.removed;
+
+export const settingsHistoryOf = async (db: Database, userId: string) =>
+  datedChanges(await rowsOf(db, userId));
 
 export async function timeZoneOf(db: Database, userId: string) {
   const row = await db
@@ -185,7 +188,14 @@ export const settingsRouter = {
         });
     });
     const [first, ...rest] = statements;
-    await db.batch([first!, ...rest]);
+    await db.batch([
+      first!,
+      ...rest,
+      db.run(sql`
+        UPDATE ${activityAnalysis} SET due = 1, generation = generation + 1
+        WHERE user_id = ${userId}
+      `),
+    ]);
     const rows = await rowsOf(db, userId);
     const written = new Set(
       input.writes.map((write) => {

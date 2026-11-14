@@ -5,7 +5,8 @@
     { "path": "../../../packages/zones" },
     { "path": "../../../packages/fit" },
     { "path": "../../../packages/activity-file" },
-    { "path": "../../../packages/workout" }
+    { "path": "../../../packages/workout" },
+    { "path": "../../../packages/analysis" }
   ],
   "compilerOptions": {
     "noEmit": true,

@@ -3,6 +3,7 @@ import { and, asc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Database } from "../db";
 import {
   activity,
+  activityAnalysis,
   activityEvent,
   activityStatistic,
   athleteTimeZone,
@@ -10,6 +11,7 @@ import {
   type ActivitySummaryError,
 } from "../db/schema";
 import { summaryOfFile } from "./activity-file";
+import { isAnalysisStatistic } from "./analysis-statistics";
 import { SummaryError, type FileSummary } from "./file-summary";
 import { fileKey } from "./files";
 import { localDayOf } from "./local-day";
@@ -73,7 +75,7 @@ async function store(
   );
   await db.batch([
     db.run(
-      sql`DELETE FROM ${activityStatistic} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
+      sql`DELETE FROM ${activityStatistic} WHERE user_id = ${userId} AND activity_id = ${id} AND ${summary ? sql`NOT ${isAnalysisStatistic(sql`name`)}` : sql`1`} AND ${stillOurs}`,
     ),
     db.run(
       sql`DELETE FROM ${activityEvent} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
@@ -87,6 +89,14 @@ async function store(
       SELECT ${userId}, ${id}, key, value ->> 'type', value ->> 'startedAt', value ->> 'endedAt', value -> 'data'
       FROM json_each(${events}) WHERE ${stillOurs}
     `),
+    summary
+      ? db.run(sql`
+          INSERT INTO ${activityAnalysis} (user_id, activity_id) SELECT ${userId}, ${id} WHERE ${stillOurs}
+          ON CONFLICT DO UPDATE SET due = 1, generation = generation + 1, attempts = 0, profile = NULL
+        `)
+      : db.run(
+          sql`DELETE FROM ${activityAnalysis} WHERE user_id = ${userId} AND activity_id = ${id} AND ${stillOurs}`,
+        ),
     db
       .update(activity)
       .set({

@@ -2,7 +2,11 @@ import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
 import { settingDaySchema, settingsContract } from "./settings.ts";
-import { activityStatistics } from "./statistics.ts";
+import {
+  activityStatistics,
+  analysisStatistics,
+  zoneTimeStatisticDescription,
+} from "./statistics.ts";
 import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from "./workouts.ts";
 
 export * from "./settings.ts";
@@ -39,6 +43,12 @@ export const activitySummaryErrorSchema = z
   .enum(["truncated", "corrupt", "no_activity", "too_large", "failed"])
   .describe(
     "Why the server could not derive the summary from the file: truncated (the file ends early), corrupt (it does not read as its format), no_activity (it reads, but holds no activity), too_large (more laps or sessions than an activity can have) or failed (summarising it kept failing)",
+  );
+
+export const activityAnalysisErrorSchema = z
+  .enum(["too_large", "failed"])
+  .describe(
+    "Why the server could not analyse the file: too_large (more records than one a second over the week the analysis reads) or failed (analysing it kept failing)",
   );
 
 export const activityLocalDaySourceSchema = z
@@ -79,7 +89,19 @@ export const activitySchema = z.object({
   statistics: z
     .record(z.string(), z.number())
     .describe(
-      `Numbers that sum up the activity, named <what>_<unit>: ${activityStatistics.map(({ name }) => name).join(", ")}, and more over time`,
+      `Numbers that sum up the activity, named <what>_<unit>. From the file's summary: ${activityStatistics.map(({ name }) => name).join(", ")}. From the analysis: ${analysisStatistics.map(({ name }) => name).join(", ")}, and ${zoneTimeStatisticDescription}. More may come over time`,
+    ),
+  analyzedAt: z
+    .date()
+    .nullable()
+    .describe(
+      "When the server last analysed the file with the athlete's settings of the activity's day; null while it has not. It analyses again by itself when those settings change",
+    ),
+  analysisError: activityAnalysisErrorSchema.nullable(),
+  missingThresholds: z
+    .array(z.string())
+    .describe(
+      "Thresholds the analysis needed on the activity's day but the athlete had not set, such as ftp, threshold_pace, resting_heart_rate, max_heart_rate or lactate_threshold_heart_rate. What needs none, such as work, the power curve and best efforts, is there without them",
     ),
   createdAt: z.date(),
   primary: z
@@ -98,7 +120,11 @@ export const activityEventSchema = z.object({
   type: slug.describe("Such as lap, pause or interval"),
   startedAt: z.date(),
   endedAt: z.date().nullable(),
-  data: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+  data: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .describe(
+      "A lap's statistics, named as the activity's are. Once analysed, a lap also has normalized_power_w, work_kj and average_grade_adjusted_speed_mps where its data allows",
+    ),
 });
 
 export const activityDetailSchema = activitySchema.extend({
@@ -241,4 +267,5 @@ export type ActivityDetail = z.infer<typeof activityDetailSchema>;
 export type DuplicateActivity = z.infer<typeof duplicateActivitySchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
 export type ActivitySummaryError = z.infer<typeof activitySummaryErrorSchema>;
+export type ActivityAnalysisError = z.infer<typeof activityAnalysisErrorSchema>;
 export type ActivityLocalDaySource = z.infer<typeof activityLocalDaySourceSchema>;

@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc -b ../../../packages/contract ../../../packages/zones ../../../packages/workout && vp pack",
-    "check-types": "tsc -b ../../../packages/contract ../../../packages/zones ../../../packages/fit ../../../packages/activity-file ../../../packages/workout && tsc --noEmit",
+    "check-types": "tsc -b ../../../packages/contract ../../../packages/zones ../../../packages/fit ../../../packages/activity-file ../../../packages/workout ../../../packages/analysis && tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile api",
     "env:generate": "varlock codegen",
     "db:generate": "cd db && drizzle-kit generate"
@@ -20,6 +20,7 @@
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "@trainstack/activity-file": "workspace:*",
+    "@trainstack/analysis": "workspace:*",
     "@trainstack/contract": "workspace:*",
     "@trainstack/fit": "workspace:*",
     "@trainstack/workout": "workspace:*",
