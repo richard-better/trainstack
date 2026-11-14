@@ -1,8 +1,6 @@
 import type { Activity, DuplicateActivity } from "@trainstack/contract";
 
 import type { ApiClient } from "./client.ts";
-import { activityDate } from "./dates.ts";
-import { activityTitle, sportName } from "./sports.ts";
 
 const sourceNames: Record<string, string> = {
   trainstack: "Ride",
@@ -154,47 +152,32 @@ export const NEAR_MS = 24 * 60 * 60 * 1000;
 export interface LinkCandidates {
   readonly near: readonly Activity[];
   readonly matches: readonly Activity[] | null;
-  readonly reachedNear: boolean;
 }
 
-function searchText(activity: Activity) {
-  const sport = sportName(activity.sport, activity.indoor);
-  return [
-    activityTitle(activity),
-    sport.label,
-    activityDate(occurredAt(activity)),
-    sourceLabel(activity),
-    ...activity.duplicates.map(sourceLabel),
-  ]
-    .join(" ")
-    .toLowerCase();
+export function nearWindow(activity: Pick<Activity, "startedAt" | "createdAt">) {
+  const at = occurredAt(activity).getTime();
+  return { startedAfter: new Date(at - NEAR_MS), startedBefore: new Date(at + NEAR_MS + 1) };
 }
+
+export const linkSearchText = (search: string) => {
+  const text = search.trim();
+  return text.length > 0 ? text.slice(0, 100) : null;
+};
 
 export function linkCandidates(
   activity: Pick<Activity, "id" | "duplicates" | "startedAt" | "createdAt">,
-  loaded: readonly Activity[],
-  search: string,
-  hasMore: boolean,
+  near: readonly Activity[],
+  matches: readonly Activity[] | null,
 ): LinkCandidates {
   const own = new Set(membersOf(activity));
-  const others = loaded.filter(
-    (other) => !own.has(other.id) && !other.duplicates.some(({ id }) => own.has(id)),
-  );
+  const offered = (other: Activity) =>
+    !own.has(other.id) && !other.duplicates.some(({ id }) => own.has(id));
   const at = occurredAt(activity).getTime();
   const distance = (other: Activity) => Math.abs(occurredAt(other).getTime() - at);
-  const near = others
-    .filter((other) => distance(other) <= NEAR_MS)
-    .sort((a, b) => distance(a) - distance(b));
-  const oldest = loaded.at(-1);
-  const reachedNear =
-    !hasMore || (oldest !== undefined && occurredAt(oldest).getTime() < at - NEAR_MS);
-  const words = search.toLowerCase().split(/\s+/).filter(Boolean);
-  const matches =
-    words.length === 0
-      ? null
-      : others.filter((other) => {
-          const text = searchText(other);
-          return words.every((word) => text.includes(word));
-        });
-  return { near, matches, reachedNear };
+  return {
+    near: near
+      .filter((other) => offered(other) && distance(other) <= NEAR_MS)
+      .sort((a, b) => distance(a) - distance(b)),
+    matches: matches === null ? null : matches.filter(offered),
+  };
 }

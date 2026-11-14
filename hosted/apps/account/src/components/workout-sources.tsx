@@ -13,6 +13,8 @@ import {
   type WorkoutChange,
   applyChange,
   linkCandidates,
+  linkSearchText,
+  nearWindow,
   membersOf,
   primaryIdOf,
   sourceLabel,
@@ -21,8 +23,7 @@ import {
 } from "../lib/workouts";
 import { SportIcon } from "./sport-icon";
 
-const LINK_PAGE_SIZE = 200;
-const linkCandidatesKey = ["activities", "link-candidates"] as const;
+const LINK_PAGE_SIZE = 30;
 
 export async function refreshWorkouts() {
   await Promise.all([
@@ -320,27 +321,40 @@ function LinkDialog({
     if (open && element && !element.open) element.showModal();
   }, [open]);
 
-  const pages = useInfiniteQuery({
-    queryKey: linkCandidatesKey,
-    queryFn: ({ pageParam }) =>
-      api.activities.list({ limit: LINK_PAGE_SIZE, cursor: pageParam, onePerWorkout: true }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
+  const query = linkSearchText(deferredSearch);
+  const nearby = useQuery({
+    queryKey: [...activitiesQueryKey, "near", activity.id],
+    queryFn: () => api.activities.list({ ...nearWindow(activity), onePerWorkout: true, limit: 50 }),
     enabled: open,
     staleTime: 0,
   });
+  const found = useInfiniteQuery({
+    queryKey: [...activitiesQueryKey, "search", query],
+    queryFn: ({ pageParam }) =>
+      api.activities.list({
+        query: query ?? undefined,
+        cursor: pageParam,
+        onePerWorkout: true,
+        limit: LINK_PAGE_SIZE,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    enabled: open && query !== null,
+    staleTime: 0,
+  });
 
-  const loaded = pages.data?.pages.flatMap((page) => page.activities) ?? [];
-  const candidates = linkCandidates(activity, loaded, deferredSearch, pages.hasNextPage);
-
-  useEffect(() => {
-    if (open && !candidates.reachedNear && pages.hasNextPage && !pages.isFetching) {
-      void pages.fetchNextPage();
-    }
-  }, [open, candidates.reachedNear, pages]);
-
+  const matched = found.data?.pages.flatMap((page) => page.activities) ?? [];
+  const candidates = linkCandidates(
+    activity,
+    nearby.data?.activities ?? [],
+    query === null ? null : matched,
+  );
+  const searching = candidates.matches !== null;
   const shown = candidates.matches ?? candidates.near;
-  const choice = loaded.find((other) => other.id === picked) ?? null;
+  const pending = searching ? found.isPending : nearby.isPending;
+  const failed = searching ? found.isError : nearby.isError;
+  const choice =
+    [...(nearby.data?.activities ?? []), ...matched].find((other) => other.id === picked) ?? null;
 
   const close = () => dialog.current?.close();
 
@@ -374,7 +388,7 @@ function LinkDialog({
           <input
             id={searchId}
             type="search"
-            placeholder="Search by name, sport or date"
+            placeholder="Search by name or sport"
             value={search}
             onChange={(event) => setSearch(event.currentTarget.value)}
             autoComplete="off"
@@ -382,19 +396,17 @@ function LinkDialog({
         </label>
         <fieldset className="candidates">
           <legend className="month-title">
-            {candidates.matches === null
-              ? "Near this activity in time"
-              : `Activities matching “${deferredSearch.trim()}”`}
+            {searching ? `Activities matching “${query}”` : "Within a day of this activity"}
           </legend>
-          {pages.isError ? (
+          {failed ? (
             <p className="notice">Your activities did not load. Close this and try again.</p>
           ) : shown.length === 0 ? (
             <p className="lede">
-              {pages.isPending || (!candidates.reachedNear && candidates.matches === null)
+              {pending
                 ? "Looking…"
-                : candidates.matches === null
-                  ? "Nothing else was recorded within a day of this activity. Search for the one you mean."
-                  : "No loaded activity matches."}
+                : searching
+                  ? "No activity's name or sport matches."
+                  : "Nothing else was recorded within a day of this activity. Search for the one you mean by its name or sport."}
             </p>
           ) : (
             <ol className="candidate-list">
@@ -409,14 +421,14 @@ function LinkDialog({
               ))}
             </ol>
           )}
-          {pages.hasNextPage && candidates.reachedNear && (
+          {searching && found.hasNextPage && (
             <button
               type="button"
               className="quiet"
-              onClick={() => pages.fetchNextPage()}
-              disabled={pages.isFetchingNextPage}
+              onClick={() => found.fetchNextPage()}
+              disabled={found.isFetchingNextPage}
             >
-              {pages.isFetchingNextPage ? "Loading…" : "Look further back"}
+              {found.isFetchingNextPage ? "Loading…" : "Show more"}
             </button>
           )}
         </fieldset>
