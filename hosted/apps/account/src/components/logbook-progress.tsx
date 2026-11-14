@@ -41,6 +41,17 @@ export function LogbookProgress({ today }: { today: string }) {
   );
 }
 
+function LoadFailed({ retry }: { retry: () => void }) {
+  return (
+    <div role="alert">
+      <p className="notice">This did not load.</p>
+      <button type="button" className="secondary" onClick={retry}>
+        Try again
+      </button>
+    </div>
+  );
+}
+
 function StrengthProgress({ from, through }: { from: string; through: string }) {
   const exercises = useExercises();
   const used = exercises.data?.used ?? [];
@@ -75,7 +86,9 @@ function StrengthProgress({ from, through }: { from: string; through: string }) 
           </select>
         </label>
       </div>
-      {progress.isPending && exerciseId !== null ? (
+      {progress.isError ? (
+        <LoadFailed retry={() => progress.refetch()} />
+      ) : progress.isPending && exerciseId !== null ? (
         <div className="traces-loading short" aria-busy="true" aria-label="Loading progress" />
       ) : points.length === 0 ? (
         <p className="lede">No sessions of this exercise in this period.</p>
@@ -246,7 +259,9 @@ function BoulderingProgress({ from, through }: { from: string; through: string }
           </select>
         </label>
       </div>
-      {progress.isPending ? (
+      {progress.isError ? (
+        <LoadFailed retry={() => progress.refetch()} />
+      ) : progress.isPending ? (
         <div className="traces-loading short" aria-busy="true" aria-label="Loading progress" />
       ) : sessions.length === 0 ? (
         <p className="lede">No bouldering sessions in this period.</p>

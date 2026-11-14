@@ -192,6 +192,51 @@ test("the exercise search puts what the athlete did lately first", () => {
   assert.ok(choices.every(({ name }) => name.toLowerCase().includes("press")));
 });
 
+test("a set from history in another unit is converted into the draft's unit, not relabelled", () => {
+  const latest = {
+    session: {
+      detail: {
+        sport: "strength",
+        exercises: [
+          {
+            exerciseId: "bench_press",
+            group: null,
+            notes: null,
+            sets: [
+              {
+                kind: "working",
+                reps: 5,
+                seconds: null,
+                load: { kind: "weight", weight: { value: 225, unit: "lb" } },
+                rpe: null,
+                repsInReserve: null,
+                tempo: null,
+                restSeconds: null,
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+  const [set] = exerciseFromHistory("bench_press", latest, "kg", []).sets;
+  assert.deepEqual([set.mass, set.unit], ["102.06", "kg"]);
+  const [same] = exerciseFromHistory("bench_press", latest, "lb", []).sets;
+  assert.deepEqual([same.mass, same.unit], ["225", "lb"]);
+});
+
+test("joining an exercise to a superset takes in the whole superset after it", () => {
+  const entry = (exerciseId) => exerciseFromHistory(exerciseId, null, "kg", []);
+  const list = groupWithNext(
+    [entry("bench_press"), entry("barbell_row"), entry("face_pull")],
+    1,
+    true,
+  );
+  const joined = groupWithNext(list, 0, true);
+  assert.equal(new Set(joined.map(({ group }) => group)).size, 1);
+  assert.notEqual(joined[0].group, null);
+});
+
 test("moving or removing an exercise keeps the supersets it does not split", () => {
   const entry = (exerciseId) => exerciseFromHistory(exerciseId, null, "kg", []);
   let list = [entry("bench_press"), entry("barbell_row"), entry("back_squat"), entry("deadlift")];

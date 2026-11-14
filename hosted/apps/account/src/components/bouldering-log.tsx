@@ -91,6 +91,7 @@ export function BoulderingEditor({
             onClick={() => {
               const next = repeatBouldering(draft, last);
               onChange(next);
+              setGrade(null);
               if (next.circuit) setScale("circuit");
             }}
           >

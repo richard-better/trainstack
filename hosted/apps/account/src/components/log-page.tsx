@@ -161,23 +161,25 @@ function LogForm({
       <div className="page-head log-head">
         <h1 className="page-title">{existing ? `Edit ${title.toLowerCase()}` : title}</h1>
       </div>
-      {draft.sport === "strength" ? (
-        <StrengthEditor
-          draft={draft}
-          onChange={(next: StrengthDraft) => setDraft(next)}
-          updateDraft={(change) =>
-            setDraft((current) => (current.sport === "strength" ? change(current) : current))
-          }
-          editing={existing !== null}
-        />
-      ) : (
-        <BoulderingEditor
-          draft={draft}
-          onChange={(next: BoulderingDraft) => setDraft(next)}
-          editing={existing !== null}
-        />
-      )}
-      <SessionFields timing={draft} onChange={(timing) => setDraft({ ...draft, ...timing })} />
+      <fieldset className="log-form" disabled={saving}>
+        {draft.sport === "strength" ? (
+          <StrengthEditor
+            draft={draft}
+            onChange={(next: StrengthDraft) => setDraft(next)}
+            updateDraft={(change) =>
+              setDraft((current) => (current.sport === "strength" ? change(current) : current))
+            }
+            editing={existing !== null}
+          />
+        ) : (
+          <BoulderingEditor
+            draft={draft}
+            onChange={(next: BoulderingDraft) => setDraft(next)}
+            editing={existing !== null}
+          />
+        )}
+        <SessionFields timing={draft} onChange={(timing) => setDraft({ ...draft, ...timing })} />
+      </fieldset>
       <div className="log-save">
         {(refusal || (tried && checked.problem)) && (
           <p role="alert" className="notice">

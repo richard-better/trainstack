@@ -27,7 +27,13 @@ import {
   type StrengthDraft,
   withWholeGroups,
 } from "../lib/logbook";
-import { exercisesKey, latestWith, useExercises, useLatest } from "./logbook-data";
+import {
+  exercisesKey,
+  latestWith,
+  useExercises,
+  useLatest,
+  usePreferredUnit,
+} from "./logbook-data";
 
 const kinds: SetKind[] = ["working", "warm_up", "drop", "failure"];
 
@@ -44,6 +50,7 @@ export function StrengthEditor({
 }) {
   const exercises = useExercises();
   const latest = useLatest("strength");
+  const [, setPreferredUnit] = usePreferredUnit();
   const custom = exercises.data?.custom ?? [];
   const last = latest.data;
 
@@ -79,7 +86,8 @@ export function StrengthEditor({
         )}
         <UnitSwitch
           unit={draft.unit}
-          onChange={(unit) =>
+          onChange={(unit) => {
+            setPreferredUnit(unit);
             onChange({
               ...draft,
               unit,
@@ -87,8 +95,8 @@ export function StrengthEditor({
                 ...entry,
                 sets: entry.sets.map((set) => ({ ...set, unit })),
               })),
-            })
-          }
+            });
+          }}
         />
       </div>
       <ol className="log-exercises">

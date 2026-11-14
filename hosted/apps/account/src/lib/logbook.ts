@@ -9,6 +9,7 @@ import {
   fontGrades,
   type Grade,
   inUnit,
+  kilogramsOf,
   type LoggedExercise,
   type LoggedSession,
   loggedSessionSchema,
@@ -138,8 +139,8 @@ export function setDraftOf(set: StrengthSet, unit: MassUnit): SetDraft {
     reps: text(set.reps),
     seconds: text(set.seconds),
     loadKind: set.load.kind,
-    mass: mass ? text(mass.value) : "",
-    unit: mass?.unit ?? unit,
+    mass: mass ? text(mass.unit === unit ? mass.value : inUnit(kilogramsOf(mass), unit)) : "",
+    unit,
     rpe: text(set.rpe),
     repsInReserve: text(set.repsInReserve),
     tempo: set.tempo ?? "",
@@ -451,9 +452,21 @@ export const presetColours = [
   "Black",
 ] as const;
 
-export const draftKey = (sport: Draft["sport"], id: string) => `logbook-draft:${sport}:${id}`;
+export const draftPrefix = "logbook-draft:";
+
+export const draftKey = (sport: Draft["sport"], id: string) => `${draftPrefix}${sport}:${id}`;
 
 export const unitKey = "logbook-unit";
+
+export function forgetLogDrafts() {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith(draftPrefix)) localStorage.removeItem(key);
+    }
+  } catch {
+    return;
+  }
+}
 
 export function loggedFigures(summary: LoggedSummary) {
   if (summary.sport === "strength") {
@@ -505,8 +518,11 @@ export function groupWithNext(list: ExerciseDraft[], index: number, together: bo
   if (!after) return list;
   if (together) {
     const group = here.group ?? Math.max(0, ...next.map(({ group }) => group ?? 0)) + 1;
+    const joining = after.group;
     here.group = group;
-    after.group = group;
+    for (const entry of next) {
+      if (entry === after || (joining !== null && entry.group === joining)) entry.group = group;
+    }
   } else {
     const group = here.group;
     for (let i = index + 1; i < next.length && next[i]!.group === group; i++) next[i]!.group = null;
