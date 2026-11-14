@@ -47,4 +47,17 @@ struct LapStepReplayTests {
     #expect(outcome.engine.session.elapsed == 165)
     #expect(outcome.engine.session.freeRideElapsed == 120)
   }
+
+  @Test func aRideFromTheSimulatorWithEveryMidRideControlKeepsPlanAndRideApart() throws {
+    let traces = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Traces")
+    let data = try Data(
+      contentsOf: traces.appending(path: "simulator-lap-extend-back-ride-on.jsonl"))
+    let trace = try #require(RideTrace(jsonLines: data))
+    #expect(trace.header.workout == WorkoutTemplate.named("Quick test 45s")!.planned)
+    let decoded = try FITDecoder.decode(FITEncoder.encode(trace.replay().session.recording()))
+    #expect(decoded.laps.map(\.stepIndex) == [0, 1, 1, 2, 1, 2, nil])
+    #expect(
+      decoded.laps.map(\.trigger) == [.time, .manual, .time, .manual, .time, .time, .sessionEnd])
+    #expect(decoded.utcOffsetSeconds == 3600)
+  }
 }
