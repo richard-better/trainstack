@@ -8,3 +8,4 @@ export * from "./workouts";
 export * from "./analysis";
 export * from "./account";
 export * from "./apple";
+export * from "./calendar";
