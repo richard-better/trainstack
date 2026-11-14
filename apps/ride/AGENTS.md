@@ -73,6 +73,27 @@ every request is bound to the session it started with, so signing out stops uplo
 account's deletions never reach another. A ride removed while signed out is deleted from the
 account this device last signed in to, when it signs in again.
 
+On iPhone, `HealthImport` brings the athlete's Apple Health workouts into the account once they
+turn on Import Workouts from Health (Settings, Account), which asks Health only then and only for
+what it reads (`HealthKitWorkouts.readTypes`). A Health workout has no file, so Ride writes one:
+`FITEncoder.encode(HealthActivity)` turns the workout's samples, route, pauses and totals into a FIT
+file, so the server summarises, analyses and matches it like any upload. The file is a function of
+the workout alone (samples ordered, a reading held no longer than `SamplingRule.maxHeldGap`, no
+clock, the local time only from the workout's own time zone), so the same workout gives the same
+activity id. It is uploaded with `source` `apple_health` and the workout's UUID as `sourceId`, and
+the server keeps one activity per source and `sourceId`, deleted ones included, so a second device
+whose Health had not yet received every sample cannot add the workout twice or bring back a
+deleted one. Ride never imports a workout from its own bundle or its watch app's
+(`HealthWorkoutEntry.isRide`): its rides reach the account as their own files. Samples come from
+the workout itself, or, when an app saved none with it, from the one source with the most samples
+in its time, preferring the workout's own app, since Health keeps every source's copies. A workout
+is imported five minutes after it ends (`HealthImport.settleTime`), so its route and samples have
+arrived, and each pass runs when the app becomes active, when Health reports a new workout while
+Ride runs, and after the settle time. State is kept per account (`Application Support/HealthImport`):
+which workouts were imported and which the server answered as deleted. Turning the import off stops
+it and leaves what was imported on the account. There is no background delivery, which would need
+the HealthKit background delivery entitlement.
+
 Rider settings (thresholds, zone models, a sport's own zones, weight and FTP tests) are kept
 as a `SettingsLedger`, the same registers the settings API keeps (`docs/deployment.md`): one
 per setting and day, holding the change or its removal and `updatedAt`, the moment the athlete
