@@ -1,6 +1,7 @@
 import { oc, type ContractRouterClient } from "@orpc/contract";
 import { z } from "zod";
 
+import { calendarContract, plannedWorkoutsContract } from "./calendar.ts";
 import { settingDaySchema, settingsContract } from "./settings.ts";
 import {
   activityStatistics,
@@ -10,6 +11,7 @@ import {
 import { trainingContract } from "./training.ts";
 import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from "./workouts.ts";
 
+export * from "./calendar.ts";
 export * from "./settings.ts";
 export * from "./statistics.ts";
 export * from "./training.ts";
@@ -284,6 +286,8 @@ export const appContract = {
   workouts: workoutsContract,
   builtinWorkouts: builtinWorkoutsContract,
   workoutLists: workoutListsContract,
+  plannedWorkouts: plannedWorkoutsContract,
+  calendar: calendarContract,
 };
 
 export type AppContractClient = ContractRouterClient<typeof appContract>;

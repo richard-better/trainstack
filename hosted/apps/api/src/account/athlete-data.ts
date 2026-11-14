@@ -148,6 +148,12 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
     about: "Which workouts are in which list, and in what order.",
     owner: (table) => table.userId,
   },
+  plannedWorkout: {
+    about:
+      "The athlete's calendar: each workout, note or rest day planned on a day, with a copy of the workout in content, what it asks for in planned_seconds, planned_meters and planned_load, and whether it was skipped. A deleted one keeps only its id and when it was deleted, so a device cannot bring it back.",
+    owner: (table) => table.userId,
+    readable: { content: parsedJson },
+  },
 };
 
 export type AthleteFiles = {

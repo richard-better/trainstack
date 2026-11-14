@@ -139,6 +139,7 @@
     "packages/analysis": {
       "name": "@trainstack/analysis",
       "dependencies": {
+        "@trainstack/workout": "workspace:*",
         "@trainstack/zones": "workspace:*",
       },
       "devDependencies": {

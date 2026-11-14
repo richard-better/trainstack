@@ -19,6 +19,14 @@ export {
   trainingLoad,
 } from "./load.ts";
 export {
+  longestPlannedSeconds,
+  maxEffortShare,
+  type PlannedEstimate,
+  plannedEstimate,
+  type PlanThresholds,
+  unguidedShares,
+} from "./planned.ts";
+export {
   intensity,
   normalizedAverage,
   normalizedPower,

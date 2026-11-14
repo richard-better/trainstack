@@ -1,6 +1,6 @@
 {
   "extends": "@trainstack/config/tsconfig.base.json",
-  "references": [{ "path": "../zones" }],
+  "references": [{ "path": "../zones" }, { "path": "../workout" }],
   "compilerOptions": {
     "composite": true,
     "declaration": true,

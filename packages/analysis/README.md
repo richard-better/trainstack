@@ -133,6 +133,18 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
   300 points; when every segment is down to its two ends, the shortest go. A million positions
   take about 0.1 to 0.2 s. The server stores what it returns, and later trimming, such as privacy
   zones, belongs in this function so the stored route and a map drawn from the file agree.
+- **Planned workouts.** `plannedEstimate(workout, thresholds)` gives a planned workout's
+  time, distance and stress from a workout of `@trainstack/workout` and the day's FTP,
+  threshold speed and lactate threshold heart rate. Each second's target becomes a share of
+  threshold: power over FTP, speed over threshold speed, heart rate over lactate threshold heart
+  rate. A range counts at its middle, a ramp along its length, a max effort at 1.5, and a step
+  without a target at a stated share by its intensity (`unguidedShares`: warm-up 0.55, active
+  0.75, recovery 0.5, rest 0, cool-down 0.5, none 0.65). The stress is Coggan's TSS of that
+  plan: the normalized power algorithm over the shares gives IF, and TSS = duration × IF² /
+  3600 × 100, so an hour at threshold is 100 whatever the target, as the heart rate stress
+  score is scaled. A distance step takes the time its speed needs, which is the share times
+  threshold speed. The distance counts only for a workout with distance steps. A number is null
+  when a target needs a threshold the day lacks.
 
 ## Sampling rules
 

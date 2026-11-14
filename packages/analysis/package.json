@@ -11,6 +11,7 @@
     "test": "node --test test/*.test.ts"
   },
   "dependencies": {
+    "@trainstack/workout": "workspace:*",
     "@trainstack/zones": "workspace:*"
   },
   "devDependencies": {

@@ -179,6 +179,13 @@ async function athleteWithEverything(identity) {
   const listId = randomUUID();
   await webApp.workoutLists.put({ id: listId, name: "Base block", updatedAt: at(2) });
   await webApp.workoutLists.place({ id: listId, workoutId, after: null, updatedAt: at(3) });
+  await webApp.plannedWorkouts.put({
+    id: randomUUID(),
+    day: "2026-03-02",
+    position: 1,
+    content: { kind: "rest", notes: "Travel day" },
+    updatedAt: at(4),
+  });
   const session = await db
     .prepare("SELECT token FROM session WHERE user_id = ? LIMIT 1")
     .bind(athlete.userId)
