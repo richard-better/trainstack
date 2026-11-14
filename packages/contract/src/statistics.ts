@@ -22,6 +22,13 @@ const bestPower = <const Seconds extends number>(seconds: Seconds, label: string
 const bestTime = <const Name extends string>(name: Name, label: string) =>
   ({ name: `best_time_${name}_s` as const, unit: "s", description: `Fastest ${label}` }) as const;
 
+const effortHeartRate = <const Effort extends string>(effort: Effort, label: string) =>
+  ({
+    name: `${effort}_heart_rate_bpm` as const,
+    unit: "bpm",
+    description: `Average heart rate over the last two thirds of ${label}`,
+  }) as const;
+
 export const activityStatistics = [
   { name: "elapsed_s", unit: "s", description: "Time from start to finish, pauses included" },
   { name: "timer_s", unit: "s", description: "Time moving or recording, pauses left out" },
@@ -77,6 +84,27 @@ export const analysisStatistics = [
   bestTime("half_marathon", "half marathon"),
   bestTime("marathon", "marathon"),
   { name: "heart_rate_stress_tss", unit: "tss", description: "Training stress from heart rate" },
+  {
+    name: "sustained_max_heart_rate_bpm",
+    unit: "bpm",
+    description:
+      "Highest heart rate held for 5 seconds across two records, so one bad record does not count",
+  },
+  effortHeartRate("best_power_1200s", "the best 20 minutes of power"),
+  effortHeartRate("best_power_1800s", "the best 30 minutes of power"),
+  {
+    name: "best_grade_adjusted_speed_1800s_mps",
+    unit: "m/s",
+    description: "Best average grade-adjusted speed over 30 minutes, for running",
+  },
+  effortHeartRate("best_grade_adjusted_speed_1800s", "the best 30 minutes of grade-adjusted speed"),
+  effortHeartRate("best_time_400m", "the fastest 400 m"),
+  effortHeartRate("best_time_1km", "the fastest 1 km"),
+  effortHeartRate("best_time_mile", "the fastest mile"),
+  effortHeartRate("best_time_5km", "the fastest 5 km"),
+  effortHeartRate("best_time_10km", "the fastest 10 km"),
+  effortHeartRate("best_time_half_marathon", "the fastest half marathon"),
+  effortHeartRate("best_time_marathon", "the fastest marathon"),
   {
     name: "load_tss",
     unit: "tss",

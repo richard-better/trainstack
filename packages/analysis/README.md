@@ -52,6 +52,10 @@ It returns:
 | `paceIntensity`, `paceStressScore`   | Intensity and stress score against threshold pace, for running       |
 | `bestEfforts`                        | Fastest 400 m, 1 km, mile, 5 km, 10 km, half marathon and marathon   |
 | `heartRateStressScore`               | Stress from heart rate                                               |
+| `sustainedMaxHeartRate`              | Highest heart rate held for 5 s, across at least two records         |
+| `powerCurveHeartRates`               | Heart rate in the best 20 and 30 min of power                        |
+| `bestGradeAdjustedSpeeds`            | Best 30 min of grade-adjusted speed and its heart rate, for running  |
+| `bestEffortHeartRates`               | Heart rate in each best effort, for running                          |
 | `timeInZones`                        | Seconds and share in each heart rate, power and pace zone            |
 | `load`                               | The stress score that counts for fitness and fatigue, and its source |
 | `laps`                               | Normalized power, work and average grade-adjusted speed of each lap  |
@@ -73,8 +77,8 @@ exists, the activity has no load.
 `activityStatistics` in `packages/contract` names them, so the server can store them as
 statistics. `analysisStatistics` lists the names that are always the same. On top of those,
 each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zone_3_s` or
-`time_in_heart_rate_zone_5a_s`. The units are `s`, `mps`, `w`, `kj`, `ratio` (intensity) and
-`tss` (stress scores, which all use the TSS scale, so an hour at threshold scores 100).
+`time_in_heart_rate_zone_5a_s`. The units are `s`, `mps`, `w`, `kj`, `bpm`, `ratio` (intensity)
+and `tss` (stress scores, which all use the TSS scale, so an hour at threshold scores 100).
 
 ## Formulas and sources
 

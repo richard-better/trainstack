@@ -8,6 +8,16 @@ export {
   type LoadSource,
   zoneSport,
 } from "./activity.ts";
+export {
+  type BestEffortHeartRate,
+  type BestGradeAdjustedSpeed,
+  effortHeartRateShare,
+  type EffortHeartRate,
+  gradeAdjustedSpeedDurations,
+  powerEffortHeartRateDurations,
+  sustainedHeartRateSeconds,
+  sustainedMaxHeartRate,
+} from "./effort-heart-rate.ts";
 export { type HeartRateThresholds, heartRateStressScore, trimpWeighting } from "./heart-rate.ts";
 export {
   type DailyLoad,

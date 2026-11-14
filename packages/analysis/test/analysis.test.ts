@@ -454,7 +454,7 @@ test("names every statistic <what>_<unit>, as the contract's statistics are", ()
   const statistics = statisticsOf(analysis);
   const known = new Set(analysisStatistics.map(({ name }) => name));
   for (const name of Object.keys(statistics)) {
-    assert.match(name, /^[a-z0-9]+(_[a-z0-9]+)*_(s|mps|w|kj|ratio|tss)$/);
+    assert.match(name, /^[a-z0-9]+(_[a-z0-9]+)*_(s|mps|w|kj|ratio|tss|bpm)$/);
     assert.ok(known.has(name) || name.startsWith("time_in_"), name);
   }
   assert.equal(statistics.best_time_10km_s, 2500);

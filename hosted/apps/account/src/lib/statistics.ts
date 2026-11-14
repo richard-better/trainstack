@@ -40,11 +40,15 @@ const analysisLabels = {
   pace_intensity_ratio: "Intensity",
   pace_stress_tss: "Load from pace",
   heart_rate_stress_tss: "Load from heart rate",
+  sustained_max_heart_rate_bpm: "Sustained max heart rate",
   load_tss: "Load",
 } satisfies Record<NamedAnalysisStatistic, string>;
 
 const bestPowerPattern = /^best_power_(\d+)s_w$/;
 const bestTimePattern = /^best_time_(.+)_s$/;
+const bestSpeedPattern = /^best_grade_adjusted_speed_(\d+)s_mps$/;
+const effortHeartRatePattern = /^(best_(power|time|grade_adjusted_speed)_.+)_heart_rate_bpm$/;
+const effortUnits: Record<string, string> = { power: "w", time: "s", grade_adjusted_speed: "mps" };
 
 export const effortDistances: Readonly<Record<string, { label: string; metres: number }>> = {
   "400m": { label: "400 m", metres: 400 },
@@ -67,7 +71,13 @@ export function durationLabel(seconds: number) {
 
 const isBest = (name: AnalysisStatisticName): name is BestName => name.startsWith("best_");
 
-function bestLabel(name: BestName) {
+function bestLabel(name: string): string {
+  const heartRate = effortHeartRatePattern.exec(name);
+  if (heartRate) {
+    return `Heart rate in ${bestLabel(`${heartRate[1]}_${effortUnits[heartRate[2]!]}`).toLowerCase()}`;
+  }
+  const bestSpeed = bestSpeedPattern.exec(name);
+  if (bestSpeed) return `Best ${durationLabel(Number(bestSpeed[1]))} grade-adjusted speed`;
   const bestPower = bestPowerPattern.exec(name);
   if (bestPower) return `Best ${durationLabel(Number(bestPower[1]))} power`;
   const bestTime = bestTimePattern.exec(name);

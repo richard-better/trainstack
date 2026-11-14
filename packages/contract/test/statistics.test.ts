@@ -23,6 +23,17 @@ const bestNames = [
   "best_time_10km_s",
   "best_time_half_marathon_s",
   "best_time_marathon_s",
+  "best_power_1200s_heart_rate_bpm",
+  "best_power_1800s_heart_rate_bpm",
+  "best_grade_adjusted_speed_1800s_mps",
+  "best_grade_adjusted_speed_1800s_heart_rate_bpm",
+  "best_time_400m_heart_rate_bpm",
+  "best_time_1km_heart_rate_bpm",
+  "best_time_mile_heart_rate_bpm",
+  "best_time_5km_heart_rate_bpm",
+  "best_time_10km_heart_rate_bpm",
+  "best_time_half_marathon_heart_rate_bpm",
+  "best_time_marathon_heart_rate_bpm",
 ] as const;
 
 const bestNamesAreExact: Same<
