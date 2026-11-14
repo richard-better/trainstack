@@ -404,8 +404,7 @@ struct SettingsSyncTests {
     phone.store[.maxHeartRate, .all] = 190
     await server.refuse(ftp(250))
     phone.sync.start()
-    try await waitUntil { !(await server.live(of: "ada").isEmpty) }
-    try await phone.sync.sync()
+    try await waitUntil { phone.store.settings.ledger.unsent.map(\.change) == [ftp(250)] }
     #expect(
       await server.live(of: "ada").values.elementsEqual([
         .threshold(sport: nil, threshold: "max_heart_rate", value: 190)
@@ -440,7 +439,26 @@ struct SettingsSyncTests {
     phone.sync.start()
     try await waitUntil { !(await server.calls.isEmpty) }
     phone.store[.ftp, .all] = 250
-    try await waitUntil { !(await server.live(of: "ada").isEmpty) }
+    try await waitUntil { phone.store.settings.ledger.unsent.isEmpty }
     #expect(await server.live(of: "ada")[ftpAddress(on: Self.start)] == ftp(250))
+  }
+
+  @Test func settingsKeptForAnotherAccountThatCannotBeReadAreNeitherReplacedNorLost()
+    async throws
+  {
+    let server = FakeSettingsServer()
+    let phone = try device(server: server)
+    phone.store[.ftp, .all] = 250
+    try await phone.sync.sync()
+    await server.signIn(as: "bob")
+    try await phone.sync.sync()
+    await server.signIn(as: "ada")
+    let kept = try #require(
+      FileManager.default.contentsOfDirectory(at: phone.state, includingPropertiesForKeys: nil)
+        .first)
+    try Data("not a ledger".utf8).write(to: kept)
+    await #expect(throws: DecodingError.self) { try await phone.sync.sync() }
+    #expect(phone.store.settings.ledger.account == "bob")
+    #expect(FileManager.default.fileExists(atPath: kept.path))
   }
 }

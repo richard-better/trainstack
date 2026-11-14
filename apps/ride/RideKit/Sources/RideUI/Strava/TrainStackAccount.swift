@@ -71,10 +71,10 @@ final class TrainStackAccount {
   }
 
   func deleteAccount() async throws {
-    let deleted = try? await client.signedInAccount()
+    guard let deleted = try await client.signedInAccount() else { throw StravaError.signedOut }
     try await client.deleteAccount()
     await refreshFromClient()
-    if let deleted { for observer in deletionObservers { observer(deleted.id) } }
+    for observer in deletionObservers { observer(deleted.id) }
     signInChanged()
     isStravaConnected = false
     stravaAthleteName = nil

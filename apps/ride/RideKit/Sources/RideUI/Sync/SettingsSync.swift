@@ -90,8 +90,9 @@ final class SettingsSync {
     }
     try keep(ledger, of: owner)
     let url = ledgerURL(of: account)
-    let kept = (try? Data(contentsOf: url))
-      .flatMap { try? JSONDecoder().decode(SettingsLedger.self, from: $0) }
+    let kept =
+      FileManager.default.fileExists(atPath: url.path)
+      ? try JSONDecoder().decode(SettingsLedger.self, from: Data(contentsOf: url)) : nil
     store.replaceLedger(with: kept ?? SettingsLedger(account: account))
     try? FileManager.default.removeItem(at: url)
   }
