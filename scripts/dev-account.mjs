@@ -18,6 +18,7 @@ const { values: options } = parseArgs({
 });
 
 const ANY_FREE_PORT = 0;
+const LOCAL_STORAGE_DUMP = "/__local/storage";
 const EVERY_WAY_LOCALHOST_IS_REACHED = ["127.0.0.1", "::1", "::"];
 
 function listen(server, port, host) {
@@ -57,6 +58,7 @@ async function portFor(chosen, preferred) {
 }
 
 let runtime;
+let migrated = false;
 const apiServer = createServer((req, res) => handleApi(req, res));
 const appleStandIn = createServer((req, res) => handleApple(req, res));
 const apiPort = await listen(apiServer, await portFor(options["api-port"], 3000));
@@ -86,6 +88,7 @@ const worker = await startWorker({
 });
 runtime = worker.runtime;
 await migrate(runtime);
+migrated = true;
 
 async function bodyOf(request) {
   const chunks = [];
@@ -112,8 +115,6 @@ async function towardsTheStandIn(response) {
   return new Response(JSON.stringify(started), { status: response.status, headers });
 }
 
-const LOCAL_STORAGE_DUMP = "/__local/storage";
-
 async function everythingStored() {
   const db = await runtime.getD1Database("DB");
   const tables = {};
@@ -137,11 +138,12 @@ async function everythingStored() {
 }
 
 async function handleApi(req, res) {
-  if (req.method === "GET" && req.url === LOCAL_STORAGE_DUMP) {
-    res.writeHead(200, { "content-type": "application/json" });
-    return res.end(JSON.stringify(await everythingStored(), null, 2));
-  }
   try {
+    if (!migrated) return res.writeHead(503).end("The API is still starting.");
+    if (req.method === "GET" && req.url === LOCAL_STORAGE_DUMP) {
+      res.writeHead(200, { "content-type": "application/json" });
+      return res.end(JSON.stringify(await everythingStored(), null, 2));
+    }
     const headers = new Headers();
     for (const [name, value] of Object.entries(req.headers)) {
       if (typeof value === "string") headers.set(name, value);
