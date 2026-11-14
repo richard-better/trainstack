@@ -26,7 +26,7 @@ extension RideRecording {
   }
 
   func powerPerSecond() -> [Int] {
-    guard hasPower, let last = samples.last else { return [] }
+    guard hasPowerWhileRunning, let last = samples.last else { return [] }
     var result = [Int](repeating: 0, count: max(Int(last.elapsed) + 1, 0))
     func fill(_ sample: Int, from start: TimeInterval, to end: TimeInterval) {
       let first = Int(start)

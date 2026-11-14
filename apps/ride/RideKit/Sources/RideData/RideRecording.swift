@@ -77,6 +77,10 @@ public struct RideRecording: Equatable, Sendable {
   public var hasHeartRate: Bool { samples.contains { $0.heartRate != nil } }
   public var hasSpeed: Bool { samples.contains { $0.speedMetresPerSecond != nil } }
 
+  var hasPowerWhileRunning: Bool {
+    samples.contains { $0.power != nil && !SamplingRule.isPaused($0.elapsed, by: pauses) }
+  }
+
   var heldIntervals: [HeldInterval] { SamplingRule.heldIntervals(of: samples, pauses: pauses) }
 }
 

@@ -140,6 +140,17 @@ struct RideAnalysisTests {
     #expect(ride.powerPerSecond() == [300, 300, 300, 300, 0, 0, 0, 300, 300, 300, 300])
   }
 
+  @Test func hasNoPowerWhenItsOnlyPowerIsWhileTheTimerIsStopped() {
+    var ride = recording([
+      .init(elapsed: 0, heartRate: 120), .init(elapsed: 10, power: 300),
+      .init(elapsed: 40, heartRate: 120),
+    ])
+    ride.pauses = [5..<15]
+    #expect(ride.workKilojoules() == nil)
+    #expect(ride.normalizedPower() == nil)
+    #expect(ride.powerCurve().isEmpty)
+  }
+
   @Test func countsNoTimeInZonesWhileTheTimerIsStopped() {
     var ride = recording((0...10).map { .init(elapsed: Double($0), heartRate: 190) })
     ride.pauses = [3.5..<6.5]

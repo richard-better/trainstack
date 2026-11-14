@@ -29,7 +29,7 @@ extension RideRecording {
   }
 
   public func workKilojoules() -> Int? {
-    guard hasPower else { return nil }
+    guard hasPowerWhileRunning else { return nil }
     var joules = 0.0
     for interval in heldIntervals {
       guard let power = samples[interval.sample].power else { continue }
