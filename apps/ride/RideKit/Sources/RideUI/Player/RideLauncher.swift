@@ -37,18 +37,18 @@ final class RideLauncher {
   }
 
   func start(
-    _ template: WorkoutTemplate, ftp: Int, heartRateZones: ZoneSet?, riderWeight: Double
+    _ workout: PlannedWorkout, ftp: Int, heartRateZones: ZoneSet?, riderWeight: Double
   ) {
     guard ride == nil, interrupted == nil else { return }
-    let session = RideSession(workout: template.workout(ftp: ftp), riderWeight: riderWeight)
+    let session = RideSession(workout: workout.workout(ftp: ftp), riderWeight: riderWeight)
     let journal = RideJournal(
       directory: journalDirectory,
       header: .init(
-        template: template, ftp: ftp, startDate: session.startDate, riderWeight: riderWeight))
+        workout: workout, ftp: ftp, startDate: session.startDate, riderWeight: riderWeight))
     recordBluetooth(resuming: false)
     begin(
       RideController(
-        template: template, ftp: ftp, heartRateZones: heartRateZones, heartRate: heartRate,
+        workout: workout, ftp: ftp, heartRateZones: heartRateZones, heartRate: heartRate,
         devices: devices, session: session, journal: journal, simulated: simulated))
   }
 

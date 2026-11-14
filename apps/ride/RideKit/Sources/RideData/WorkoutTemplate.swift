@@ -37,11 +37,7 @@ public struct WorkoutTemplate: Identifiable, Hashable, Codable, Sendable {
   }
 
   public func workout(ftp: Int) -> Workout {
-    Workout(
-      name: name,
-      steps: steps.map {
-        .init(duration: $0.duration, targetPower: Int((Double(ftp) * $0.intensity).rounded()))
-      })
+    planned.workout(ftp: ftp)
   }
 
   public func fitted(to duration: TimeInterval) -> WorkoutTemplate {

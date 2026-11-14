@@ -34,10 +34,10 @@ struct PlayerNextInterval: View {
   @ViewBuilder private func details(isNear: Bool) -> some View {
     let session = controller.session
     if let next = session.nextInterval {
-      PowerZoneBadge(zone: controller.zone(of: next), isHighlighted: isNear)
-      if session.mode == .erg {
+      IntervalBadge(interval: next, ftp: controller.ftp, isHighlighted: isNear)
+      if session.mode == .erg, let watts = next.plannedPower(at: next.start) {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-          Text("\(session.adjusted(next.plannedPower))").font(Design.statValueFont)
+          Text("\(session.adjusted(watts))").font(Design.statValueFont)
           Text("W").font(.subheadline).foregroundStyle(.secondary)
         }
       }

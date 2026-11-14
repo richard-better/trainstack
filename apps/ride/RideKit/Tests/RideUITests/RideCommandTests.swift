@@ -18,7 +18,8 @@ struct RideCommandTests {
   private func riding() -> RideLauncher {
     let launcher = launcher()
     launcher.start(
-      .named("Quick test 45s")!, ftp: 200, heartRateZones: nil, riderWeight: 75)
+      WorkoutTemplate.named("Quick test 45s")!.planned, ftp: 200, heartRateZones: nil,
+      riderWeight: 75)
     return launcher
   }
 

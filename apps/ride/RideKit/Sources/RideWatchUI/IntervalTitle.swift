@@ -12,7 +12,7 @@
         Text("Paused").foregroundStyle(.orange)
       } else if let interval = glance.interval {
         Text(interval.title)
-          .foregroundStyle(interval.zone.color.opacity(isLuminanceReduced ? 0.55 : 1))
+          .foregroundStyle((interval.zone?.color ?? .gray).opacity(isLuminanceReduced ? 0.55 : 1))
       } else {
         Text("Done").foregroundStyle(.green)
       }

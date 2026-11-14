@@ -3,16 +3,42 @@ import RideData
 
 public struct RideTrace: Equatable, Sendable {
   public struct Header: Equatable, Codable, Sendable {
-    public var template: WorkoutTemplate
+    public var workout: PlannedWorkout
     public var ftp: Int
     public var startDate: Date
     public var riderWeight: Double
 
-    public init(template: WorkoutTemplate, ftp: Int, startDate: Date, riderWeight: Double) {
-      self.template = template
+    public init(workout: PlannedWorkout, ftp: Int, startDate: Date, riderWeight: Double) {
+      self.workout = workout
       self.ftp = ftp
       self.startDate = startDate
       self.riderWeight = riderWeight
+    }
+
+    public init(template: WorkoutTemplate, ftp: Int, startDate: Date, riderWeight: Double) {
+      self.init(workout: template.planned, ftp: ftp, startDate: startDate, riderWeight: riderWeight)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+      case workout, template, ftp, startDate, riderWeight
+    }
+
+    public init(from decoder: any Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      workout =
+        try container.decodeIfPresent(PlannedWorkout.self, forKey: .workout)
+        ?? container.decode(WorkoutTemplate.self, forKey: .template).planned
+      ftp = try container.decode(Int.self, forKey: .ftp)
+      startDate = try container.decode(Date.self, forKey: .startDate)
+      riderWeight = try container.decode(Double.self, forKey: .riderWeight)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode(workout, forKey: .workout)
+      try container.encode(ftp, forKey: .ftp)
+      try container.encode(startDate, forKey: .startDate)
+      try container.encode(riderWeight, forKey: .riderWeight)
     }
   }
 
@@ -24,11 +50,11 @@ public struct RideTrace: Equatable, Sendable {
     self.inputs = inputs
   }
 
-  public var name: String { header.template.name }
+  public var name: String { header.workout.name }
 
   public func freshSession() -> RideSession {
     RideSession(
-      workout: header.template.workout(ftp: header.ftp), startDate: header.startDate,
+      workout: header.workout.workout(ftp: header.ftp), startDate: header.startDate,
       riderWeight: header.riderWeight)
   }
 

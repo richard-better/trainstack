@@ -25,7 +25,15 @@ public struct HeadlessRide: Sendable {
     _ template: WorkoutTemplate, ftp: Int, riderWeight: Double = 75,
     startDate: Date = Date(timeIntervalSince1970: 1_800_000_000), events: [Int: [Event]] = [:]
   ) {
-    header = .init(template: template, ftp: ftp, startDate: startDate, riderWeight: riderWeight)
+    self.init(
+      template.planned, ftp: ftp, riderWeight: riderWeight, startDate: startDate, events: events)
+  }
+
+  public init(
+    _ workout: PlannedWorkout, ftp: Int, riderWeight: Double = 75,
+    startDate: Date = Date(timeIntervalSince1970: 1_800_000_000), events: [Int: [Event]] = [:]
+  ) {
+    header = .init(workout: workout, ftp: ftp, startDate: startDate, riderWeight: riderWeight)
     self.events = events
   }
 

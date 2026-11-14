@@ -5,7 +5,19 @@ public struct RideSession: Sendable {
     public var index: Int
     public var start: TimeInterval
     public var end: TimeInterval
-    public var plannedPower: Int
+    public var step: Workout.Step
+
+    public func plannedPower(at position: TimeInterval) -> Int? {
+      step.targetPower(atOffset: position - start)
+    }
+
+    public var averagePlannedPower: Int? { step.target?.averagePower }
+
+    public func zone(ftp: Int) -> PowerZone? { step.target?.zone(ftp: ftp) }
+
+    public func cue(at position: TimeInterval) -> PlannedCue? {
+      step.cues.last { $0.isShowing(atOffset: position - start) }
+    }
   }
 
   public struct LiveSample: Equatable, Sendable {
@@ -43,8 +55,7 @@ public struct RideSession: Sendable {
     var start: TimeInterval = 0
     intervals = workout.steps.enumerated().map { index, step in
       defer { start += step.duration }
-      return Interval(
-        index: index, start: start, end: start + step.duration, plannedPower: step.targetPower)
+      return Interval(index: index, start: start, end: start + step.duration, step: step)
     }
   }
 
@@ -77,8 +88,18 @@ public struct RideSession: Sendable {
   public var remaining: TimeInterval { duration - position }
 
   public var targetPower: Int? {
-    guard mode == .erg, let interval = currentInterval else { return nil }
-    return adjusted(interval.plannedPower)
+    guard mode == .erg, let planned = currentInterval?.plannedPower(at: position) else {
+      return nil
+    }
+    return adjusted(planned)
+  }
+
+  public var cue: PlannedCue? {
+    guard !isComplete else { return nil }
+    return intervals.lazy.reversed().drop { $0.start > position }.compactMap {
+      $0.cue(at: position)
+    }
+    .first
   }
 
   public func adjusted(_ plannedPower: Int) -> Int {

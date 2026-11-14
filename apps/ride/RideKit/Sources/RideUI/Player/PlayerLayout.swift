@@ -19,6 +19,11 @@ struct PlayerLayout: View {
             PlayerBadge(message: message)
           }
         }
+        .overlay(alignment: .top) {
+          if let cue = session.cue, controller.trainerNotice == nil, !session.isPaused {
+            PlayerCue(text: cue.text)
+          }
+        }
       }
       .padding(.horizontal, Design.wideContentMargin)
       .padding(.top, 16)

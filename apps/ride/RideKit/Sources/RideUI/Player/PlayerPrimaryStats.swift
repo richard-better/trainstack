@@ -9,16 +9,20 @@ struct PlayerPrimaryStats: View {
     let session = controller.session
     let target = BigStat(
       value: targetValue.value, unit: targetValue.unit,
-      detail: controller.totals.intervalAveragePower.map { "Interval avg \($0) W" } ?? ""
+      detail: targetDetail
     ) {
-      PlayerTargetLabel(zone: session.currentInterval.map(controller.zone))
+      PlayerTargetLabel(interval: session.currentInterval, ftp: controller.ftp)
     }
     let power = BigStat(
       value: controller.power.map(String.init) ?? "—", unit: "W", detail: powerDetail
     ) {
       LegendSwatch(title: "Power", color: .primary.opacity(0.85), height: 2)
     }
-    let cadence = BigStat(value: session.latest.cadence.map(String.init) ?? "—", unit: "rpm") {
+    let cadence = BigStat(
+      value: session.latest.cadence.map(String.init) ?? "—", unit: "rpm",
+      detail: session.currentInterval?.step.cadence.map { "Target \(StepTargetText.cadence($0))" }
+        ?? ""
+    ) {
       Text("Cadence")
     }
     let heartRate = BigStat(
@@ -60,10 +64,36 @@ struct PlayerPrimaryStats: View {
   private var targetValue: (value: String, unit: String) {
     let session = controller.session
     return switch session.mode {
-    case .erg: (session.targetPower.map(String.init) ?? "—", "W")
+    case .erg: ergTargetValue
     case .slope: (session.slopeGradePercent.formatted(.oneDecimal), "%")
     case .level: ("\(session.level)", "level")
     }
+  }
+
+  private var ergTargetValue: (value: String, unit: String) {
+    let session = controller.session
+    if let target = session.targetPower { return (String(target), "W") }
+    return switch session.currentInterval?.step.target {
+    case .heartRate(let heartRate): StepTargetText.heartRate(heartRate)
+    case .maxEffort: ("All out", "")
+    case nil where session.currentInterval != nil: ("Free", "")
+    case .power, nil: ("—", "W")
+    }
+  }
+
+  private var targetDetail: String {
+    let session = controller.session
+    let average = controller.totals.intervalAveragePower.map { "Interval avg \($0) W" }
+    guard session.mode == .erg, case .power(let level) = session.currentInterval?.step.target
+    else { return average ?? "" }
+    let adjusted = level.mapped { Double(session.adjusted(Int($0))) }
+    let planned: String? =
+      switch level {
+      case .constant: nil
+      case .range: "Range \(StepTargetText.value(adjusted)) W"
+      case .ramp: "Ramp \(StepTargetText.value(adjusted)) W"
+      }
+    return [planned, average].compactMap(\.self).joined(separator: " · ")
   }
 
   private var powerDetail: String {

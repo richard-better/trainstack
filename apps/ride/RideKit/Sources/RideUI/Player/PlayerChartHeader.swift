@@ -42,6 +42,6 @@ struct PlayerChartHeader: View {
     let session = controller.session
     guard let interval = session.currentInterval else { return "Workout complete" }
     return
-      "Interval \(interval.index + 1) of \(session.intervals.count) · \(controller.zone(of: interval).name)"
+      "Interval \(interval.index + 1) of \(session.intervals.count) · \(interval.title(ftp: controller.ftp))"
   }
 }

@@ -13,10 +13,8 @@ struct PlayerView: View {
       ScrollView { PlayerLayout(controller: controller) }
     }
     .monospacedDigit()
-    .navigationTitle(controller.template.name)
-    .navigationSubtitle(
-      "\(controller.template.category.name) · \(Int((controller.template.duration / 60).rounded())) min"
-    )
+    .navigationTitle(controller.workout.name)
+    .navigationSubtitle(subtitle)
     #if os(iOS)
       .navigationBarTitleDisplayMode(.inline)
     #endif
@@ -55,6 +53,12 @@ struct PlayerView: View {
   }
 
   private func confirmEnd() { isConfirmingEnd = true }
+
+  private var subtitle: String {
+    let workout = controller.workout
+    let minutes = "\(Int((workout.duration / 60).rounded())) min"
+    return [workout.category?.name, minutes].compactMap(\.self).joined(separator: " · ")
+  }
 }
 
 #Preview("Riding") {
