@@ -27,7 +27,7 @@ import { calendarWrites, useReferenceOn } from "./calendar-data";
 import { PeriodPicker } from "./period-picker";
 import { SportIcon } from "./sport-icon";
 import { WorkoutThumb } from "./workout-chart";
-import { builtinsKey, useBuiltins, useWorkoutSearch } from "./workout-data";
+import { builtinsKey, useBuiltin, useBuiltins, useWorkoutSearch } from "./workout-data";
 
 export type DialogRequest =
   | { readonly kind: "plan"; readonly day: CalendarDay }
@@ -285,18 +285,26 @@ function BuiltinPicker({
         <ul className="pick-list">
           {builtins.data.workouts.map((summary) => (
             <li key={summary.id}>
-              <PickRow
-                day={day}
-                summary={summary}
-                workout={undefined}
-                onPick={() => onPick(summary)}
-              />
+              <BuiltinPickRow day={day} summary={summary} onPick={() => onPick(summary)} />
             </li>
           ))}
         </ul>
       )}
     </>
   );
+}
+
+function BuiltinPickRow({
+  day,
+  summary,
+  onPick,
+}: {
+  day: string;
+  summary: BuiltinWorkoutSummary;
+  onPick: () => Promise<void>;
+}) {
+  const full = useBuiltin(summary.id);
+  return <PickRow day={day} summary={summary} workout={full.data?.workout} onPick={onPick} />;
 }
 
 function PickRow({
