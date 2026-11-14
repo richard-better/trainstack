@@ -1,12 +1,12 @@
 # Licensing
 
-TrainStack is licensed under [AGPL-3.0-only](LICENSE), except for two kinds of directory:
+Trainstack is licensed under [AGPL-3.0-only](LICENSE), except for two kinds of directory:
 
 | Path                             | License                                              | Why                                                                                  |
 | -------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `hosted/`                        | [FSL-1.1-ALv2](hosted/LICENSE.md) (source-available) | Everything that runs trainstackhq.com: the API, website, account app, and infra      |
 | A package with its own `LICENSE` | That license, which must be permissive               | Chosen explicitly when other code needs to build on it, such as `hosted/` or clients |
-| Everything else                  | [AGPL-3.0-only](LICENSE)                             | The TrainStack app, packages, tests, tooling, and docs                               |
+| Everything else                  | [AGPL-3.0-only](LICENSE)                             | The Trainstack app, packages, tests, tooling, and docs                               |
 
 Packages that chose a permissive license:
 
@@ -31,11 +31,11 @@ checks it against these rules.
 
 ## What this means
 
-- **TrainStack is open source by default.** You can use, modify, and redistribute it under
+- **Trainstack is open source by default.** You can use, modify, and redistribute it under
   the AGPL. If you run a modified version as a network service, you must offer its source
   to its users.
 - **The hosted backend is source-available.** You can read, modify, and run it for any
-  purpose except a competing product or service. Self-hosting TrainStack for yourself,
+  purpose except a competing product or service. Self-hosting Trainstack for yourself,
   your club, or your organization is a permitted use. Each version becomes available under
   Apache-2.0 two years after its release.
 - **Permissive packages are free to build on,** including in closed-source software.
@@ -55,7 +55,7 @@ restricts third-party dependencies to licenses compatible with all three.
 
 ## Trademarks
 
-None of these licenses grant rights to the TrainStack name or logo. See
+None of these licenses grant rights to the Trainstack name or logo. See
 [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Contributing

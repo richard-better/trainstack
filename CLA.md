@@ -1,10 +1,10 @@
-# TrainStack Contributor License Agreement
+# Trainstack Contributor License Agreement
 
 Version 1.0
 
 This Contributor License Agreement ("Agreement") is between you ("You") and Richard
 Borcsik, together with his successors and assignees ("Maintainer"). It applies to every
-Contribution You submit to the TrainStack project, including the repository at
+Contribution You submit to the Trainstack project, including the repository at
 https://github.com/richard-better/trainstack. Accepting it lets the Maintainer use,
 license, and transfer Your Contributions while You keep the copyright in them.
 
