@@ -151,18 +151,23 @@ function listed(words: readonly string[]) {
 export function gapLines(readiness: DayReadiness): string[] {
   const missing = new Set(readiness.gaps.map((gap) => gap.kind));
   const nothingToGoOn = missing.has("no_check_in") && missing.has("no_training");
+  const measured = readiness.reasons.some((reason) => reason.kind === "measured");
   return readiness.gaps.map((gap) => {
     switch (gap.kind) {
       case "no_check_in":
         return nothingToGoOn
           ? "No check-in today."
-          : "No check-in today, so this comes from your training alone.";
+          : measured
+            ? "No check-in today, so this comes from your training and what was measured last night."
+            : "No check-in today, so this comes from your training alone.";
       case "short_baseline":
         return `${gap.checkIns} of 7 check-ins in the last four weeks rated what you rated today: until there are 7, those answers are read against normal rather than your own usual.`;
       case "no_training":
         return nothingToGoOn
           ? "No training yet."
-          : "No training yet, so this comes from your check-in alone.";
+          : measured
+            ? "No training yet, so this comes from your check-in and what was measured last night."
+            : "No training yet, so this comes from your check-in alone.";
       case "short_training_history":
         return `${gap.days} days of training so far: training load counts once there are ${loadHistoryDays}.`;
       case "little_training":
