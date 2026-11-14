@@ -29,7 +29,7 @@ it) and offer the result to anyone else, replace the name and logos with your ow
 | Website          | The Astro marketing site on a third Worker, with a KV namespace and an Images binding          | `<domain>`          |
 | Database         | One Cloudflare D1 database                                                                     | Your account        |
 | Activity files   | One private R2 bucket                                                                          | Your account        |
-| Deployment state | Alchemy's state store: a Worker, a Durable Object and a Secrets Store secret                   | Your account        |
+| Deployment state | Alchemy's state store: a Worker, a Durable Object and two Secrets Store secrets                | Your account        |
 | Logs             | Cloudflare Workers Logs, or Axiom if you configure it                                          | Your account        |
 | Apps             | Ride for iPhone, iPad, Mac and Apple Watch                                                     | Your own build only |
 
@@ -401,7 +401,13 @@ Take the backups you want first. Then, from the repository root:
 bun run --cwd hosted/infra destroy --stage production
 ```
 
-This deletes the Workers, their custom domains and route, and the KV namespace. It keeps the
+If you turned on Axiom, also destroy its stack, which holds the dataset and its ingest token:
+
+```bash
+cd hosted/infra && bunx alchemy destroy --config axiom.run.ts --stage production
+```
+
+The first command deletes the Workers, their custom domains and route, and the KV namespace. It keeps the
 database and the bucket, which the `production` stage protects from deletion, and only forgets
 them. Delete them yourself:
 
@@ -411,8 +417,9 @@ rclone purge "r2:$BUCKET"
 bunx wrangler r2 bucket delete "$BUCKET"
 ```
 
-Last, in the Cloudflare dashboard, delete the `alchemy-state-store` Worker and its secret in the
-Secrets Store, the API token, and the DNS record you added for the bare domain. In Apple
+Last, once no stack is left, in the Cloudflare dashboard, delete the `alchemy-state-store` Worker
+and its two secrets in the Secrets Store, `AlchemyStateStoreToken` and
+`AlchemyStateStoreEncryptionKey`, the API token, and the DNS record you added for the bare domain. In Apple
 Developer, delete the key and the Services ID; in Strava, the API application.
 
 ## What this guide could not test
