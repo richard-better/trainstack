@@ -21,6 +21,7 @@ import {
   type StepState,
   type SuggestedThreshold,
 } from "../lib/onboarding";
+import { ANALYSIS_POLL_MS, ANALYSIS_REFRESH_MS } from "../lib/analysis";
 import { datedChanges } from "../lib/settings";
 import { todayIn } from "../lib/time-zone";
 import { shiftDay } from "../lib/training";
@@ -126,7 +127,9 @@ export function GettingStarted() {
 
 function Checklist({ createdAt }: { createdAt: Date | null }) {
   const view = useOnboarding();
-  const suggestions = useThresholdSuggestions({ awaiting: view?.awaitingDetection });
+  const suggestions = useThresholdSuggestions({
+    refetchInterval: view?.awaitingDetection ? ANALYSIS_POLL_MS : false,
+  });
   if (!view || !showsGettingStarted(view.onboarding, createdAt, new Date())) return null;
   const { onboarding } = view;
   return (
@@ -348,7 +351,16 @@ const losses: readonly { readonly what: string; readonly why: string }[] = [
 
 function ThresholdsStep({ view }: { view: OnboardingView }) {
   const { onboarding } = view;
-  const suggestions = useThresholdSuggestions({ awaiting: view.awaitingDetection });
+  const stillLooking =
+    onboarding.thresholds.state !== "done" && onboarding.history.state === "done";
+  const suggestions = useThresholdSuggestions({
+    refetchInterval: (query) =>
+      view.awaitingDetection
+        ? ANALYSIS_POLL_MS
+        : stillLooking && query.state.data?.suggestions.length === 0
+          ? ANALYSIS_REFRESH_MS
+          : false,
+  });
   const found = suggestions.data?.suggestions ?? [];
   const { state } = onboarding.thresholds;
   return (

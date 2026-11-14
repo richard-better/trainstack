@@ -3,7 +3,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { api, queryClient } from "../api";
-import { ANALYSIS_POLL_MS } from "../lib/analysis";
 import { formatDay, settingsQueryKey } from "../lib/settings";
 import { suggestionsQueryKey, suggestionWords } from "../lib/thresholds";
 import { todayIn } from "../lib/time-zone";
@@ -11,13 +10,19 @@ import { refreshAnalysis } from "./settings-data";
 import { useAthleteSettings } from "./time-zone";
 import { HelpLink } from "./help-link";
 
-export function useThresholdSuggestions({ awaiting = false }: { awaiting?: boolean } = {}) {
+type Suggestions = Awaited<ReturnType<typeof api.thresholds.suggestions>>;
+
+export function useThresholdSuggestions({
+  refetchInterval = false,
+}: {
+  refetchInterval?: number | false | ((query: { state: { data?: Suggestions } }) => number | false);
+} = {}) {
   return useQuery({
     queryKey: suggestionsQueryKey,
     queryFn: () => api.thresholds.suggestions({}),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
-    refetchInterval: awaiting ? ANALYSIS_POLL_MS : false,
+    refetchInterval,
   });
 }
 
