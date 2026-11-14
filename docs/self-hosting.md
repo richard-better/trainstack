@@ -369,13 +369,19 @@ find ./backup/deleted -mindepth 1 -maxdepth 1 -mtime +30 -exec rm -rf {} +
 `sync` makes `./backup/activity-files` match the bucket, and `--backup-dir` moves the files of
 activities deleted since the last run into a folder for the day instead of dropping them. Keep
 those folders as long as D1 Time Travel can go back, 30 days, so a database restored to before a
-deletion can have its files back too; the `find` line removes older ones.
+deletion can have its files back too; the `find` line removes older ones. So a database export
+you keep for longer than 30 days cannot get back the files of activities deleted after it: keep a
+dated copy of `./backup/activity-files` with each such export, for as long as you keep the export.
 
-To restore, put back the files and those deleted since the database's restore point:
+To restore, set `RESTORE_DATE` to the day of the database's restore point, such as `2026-11-14`,
+and put back the files and those deleted since that day:
 
 ```bash
 rclone copy ./backup/activity-files "r2:$BUCKET"
-for day in ./backup/deleted/*/; do rclone copy "$day" "r2:$BUCKET"; done
+for day in ./backup/deleted/*/; do
+  [[ "$(basename "$day")" < "$RESTORE_DATE" ]] && continue
+  rclone copy "$day" "r2:$BUCKET"
+done
 ```
 
 Files never change once stored, so a restore only puts back what is missing. A file whose
