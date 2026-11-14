@@ -36,7 +36,7 @@ add reps but no weight.
 | Number                | Definition                                                                                   |
 | --------------------- | -------------------------------------------------------------------------------------------- |
 | Volume                | The sum over sets of reps times load, in kilograms                                           |
-| Heaviest              | The heaviest load lifted for at least one rep                                                |
+| Heaviest              | The heaviest load lifted for at least one rep, or held for a time                            |
 | Estimated one-rep max | Epley: load × (1 + reps / 30), the best over sets of 1 to 12 reps; a single is its load      |
 | Most reps             | The most reps in one set                                                                     |
 | Longest               | The longest hold, for exercises measured in time                                             |
@@ -84,13 +84,13 @@ its order wherever its ranges rise with it, and every set of problems has one ha
 
 ### Numbers
 
-| Number        | Definition                                                                                                                                       |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Tops          | Problems flashed, sent or repeated                                                                                                               |
-| Sends         | First ascents: flashes and sends                                                                                                                 |
-| Attempts      | All attempts in the session, on every problem                                                                                                    |
-| Hardest top   | The hardest problem topped, and the hardest flashed                                                                                              |
-| Grade pyramid | First ascents and projects per grade in one scale, hardest first; repeats are left out, and problems that do not convert are counted as ungraded |
+| Number        | Definition                                                                                                                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tops          | Problems flashed, sent or repeated                                                                                                                                                           |
+| Sends         | First ascents: flashes and sends                                                                                                                                                             |
+| Attempts      | All attempts in the session, on every problem                                                                                                                                                |
+| Hardest top   | The hardest problem topped, and the hardest flashed                                                                                                                                          |
+| Grade pyramid | First ascents and projects per grade in one scale, hardest first; repeats are left out, problems that do not convert are counted as ungraded, and a circuit's colours go by its latest order |
 
 ## Training load
 

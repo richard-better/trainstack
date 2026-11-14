@@ -87,9 +87,10 @@ export function gradePyramid(
   scale: PyramidScale,
 ): GradePyramid {
   const steps = new Map<string, PyramidStep>();
-  const ranks = new Map<string, number>();
+  let latestCircuit: Circuit | null = null;
   let ungraded = 0;
   for (const { problems, circuit } of sessions) {
+    if (typeof scale !== "string" && circuit?.name === scale.circuit) latestCircuit = circuit;
     for (const { grade, outcome, attempts } of problems) {
       if (outcome === "repeat") continue;
       const bucket = bucketOf(grade, circuit, scale);
@@ -104,7 +105,6 @@ export function gradePyramid(
         projects: 0,
         attempts: 0,
       };
-      ranks.set(bucket, rankIn(scale, bucket, circuit));
       if (outcome === "flash") step.flashes++;
       else if (outcome === "send") step.sends++;
       else step.projects++;
@@ -113,7 +113,9 @@ export function gradePyramid(
     }
   }
   return {
-    steps: [...steps.values()].sort((a, b) => ranks.get(b.grade)! - ranks.get(a.grade)!),
+    steps: [...steps.values()].sort(
+      (a, b) => rankIn(scale, b.grade, latestCircuit) - rankIn(scale, a.grade, latestCircuit),
+    ),
     ungraded,
   };
 }

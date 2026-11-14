@@ -164,6 +164,20 @@ describe("exercise numbers", () => {
     assert.equal(numbers.estimatedOneRepMaxKg, 110 * 1.1);
   });
 
+  test("a hang held with added weight counts toward the heaviest load", () => {
+    const numbers = exerciseNumbers(
+      exercise("hangboard_hang", [
+        set({
+          reps: null,
+          seconds: 10,
+          load: { kind: "weight", weight: { value: 20, unit: "kg" } },
+        }),
+      ]),
+    );
+    assert.equal(numbers.heaviestKg, 20);
+    assert.equal(numbers.longestSeconds, 10);
+  });
+
   test("pounds convert at 0.45359237 kg each", () => {
     const numbers = exerciseNumbers(
       exercise("bench_press", [

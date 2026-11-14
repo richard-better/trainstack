@@ -201,6 +201,35 @@ describe("bouldering numbers", () => {
     assert.equal(pyramid.ungraded, 1);
   });
 
+  test("a pyramid over a circuit whose colours changed follows its latest order", () => {
+    const older: Circuit = {
+      name: "Boulderbar",
+      colours: [
+        { name: "Green", from: null, to: null },
+        { name: "Yellow", from: null, to: null },
+        { name: "Black", from: null, to: null },
+      ],
+    };
+    const newer: Circuit = {
+      name: "Boulderbar",
+      colours: [
+        { name: "Yellow", from: null, to: null },
+        { name: "Black", from: null, to: null },
+      ],
+    };
+    const pyramid = gradePyramid(
+      [
+        session([problem({ grade: { scale: "circuit", colour: "Yellow" } })], older),
+        session([problem({ grade: { scale: "circuit", colour: "Black" } })], newer),
+      ],
+      { circuit: "Boulderbar" },
+    );
+    assert.deepEqual(
+      pyramid.steps.map(({ grade }) => grade),
+      ["Black", "Yellow"],
+    );
+  });
+
   test("a pyramid in a circuit's colours follows the circuit's order", () => {
     const pyramid = gradePyramid(
       [

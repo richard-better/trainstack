@@ -52,7 +52,9 @@ export function exerciseNumbers(
     sets: counted.length,
     reps: counted.reduce((sum, set) => sum + (set.reps ?? 0), 0),
     volumeKg: volumes.length === 0 ? null : volumes.reduce((sum, volume) => sum + volume, 0),
-    heaviestKg: maxOf(withReps.map(({ kg }) => kg)),
+    heaviestKg: maxOf(
+      loaded.filter(({ set }) => (set.reps ?? 0) > 0 || (set.seconds ?? 0) > 0).map(({ kg }) => kg),
+    ),
     estimatedOneRepMaxKg: maxOf(
       withReps.map(({ set, kg }) => (kg === null ? null : epleyOneRepMax(kg, set.reps!))),
     ),
