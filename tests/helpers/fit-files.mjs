@@ -108,8 +108,8 @@ export function manyLaps(count) {
   return writer.file();
 }
 
-const FIT_SPORTS = { running: 1, cycling: 2 };
-const FIT_SUB_SPORTS = { indoorCycling: 6, road: 7 };
+const FIT_SPORTS = { running: 1, cycling: 2, training: 10, rockClimbing: 31 };
+const FIT_SUB_SPORTS = { indoorCycling: 6, road: 7, strengthTraining: 20, bouldering: 69 };
 
 export function recordedSession({
   start,

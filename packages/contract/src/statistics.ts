@@ -8,7 +8,8 @@ export type ActivityStatisticUnit =
   | "W"
   | "kJ"
   | "ratio"
-  | "tss";
+  | "tss"
+  | "au";
 
 type Statistic = { name: string; unit: ActivityStatisticUnit; description: string };
 
@@ -110,6 +111,20 @@ export const analysisStatistics = [
     unit: "tss",
     description:
       "The stress score that counts toward fitness and fatigue: for running pace, then power, then heart rate; for any other sport power, then heart rate",
+  },
+] as const satisfies readonly Statistic[];
+
+export const loggedStatistics = [
+  {
+    name: "session_rpe_load_au",
+    unit: "au",
+    description: "Foster's session RPE load of a logged session: its RPE times its minutes",
+  },
+  {
+    name: "rpe_stress_tss",
+    unit: "tss",
+    description:
+      "Training stress estimated from a logged session's RPE: Friel's TSS per hour for the RPE times hours. It is the load_tss of a logged session",
   },
 ] as const satisfies readonly Statistic[];
 

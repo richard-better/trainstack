@@ -6,7 +6,8 @@
     { "path": "../../../packages/fit" },
     { "path": "../../../packages/activity-file" },
     { "path": "../../../packages/workout" },
-    { "path": "../../../packages/analysis" }
+    { "path": "../../../packages/analysis" },
+    { "path": "../../../packages/logbook" }
   ],
   "compilerOptions": {
     "noEmit": true,

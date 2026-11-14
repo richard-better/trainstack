@@ -35,6 +35,7 @@ type LoadRow = { id: string; day: string; stress: number; source: LoadSource };
 const stressSources = sql`CASE s.name
   WHEN 'pace_stress_tss' THEN 'pace'
   WHEN 'power_stress_tss' THEN 'power'
+  WHEN 'rpe_stress_tss' THEN 'rpe'
   ELSE 'heart_rate' END`;
 
 function loadedActivities(db: Database, userId: string, through: string) {
@@ -42,8 +43,8 @@ function loadedActivities(db: Database, userId: string, through: string) {
     SELECT a.id AS id, a.local_day AS day, l.value AS stress, (
       SELECT ${stressSources} FROM ${activityStatistic} s
       WHERE s.user_id = a.user_id AND s.activity_id = a.id AND s.value = l.value
-        AND s.name IN ('pace_stress_tss', 'power_stress_tss', 'heart_rate_stress_tss')
-      ORDER BY CASE s.name WHEN 'pace_stress_tss' THEN 0 WHEN 'power_stress_tss' THEN 1 ELSE 2 END
+        AND s.name IN ('pace_stress_tss', 'power_stress_tss', 'heart_rate_stress_tss', 'rpe_stress_tss')
+      ORDER BY CASE s.name WHEN 'pace_stress_tss' THEN 0 WHEN 'power_stress_tss' THEN 1 WHEN 'heart_rate_stress_tss' THEN 2 ELSE 3 END
       LIMIT 1
     ) AS source
     FROM ${activityStatistic} l

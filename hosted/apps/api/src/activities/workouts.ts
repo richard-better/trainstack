@@ -2,7 +2,7 @@ import { and, asc, eq, gt, isNotNull, isNull, lt, ne, or, sql, type SQL } from "
 import { alias } from "drizzle-orm/sqlite-core";
 
 import type { Database } from "../db";
-import { activity, activityStatistic, distinctActivities } from "../db/schema";
+import { activity, activityStatistic, distinctActivities, loggedSession } from "../db/schema";
 import { isSameWorkout, sharedMilliseconds, type Recording } from "./workout-match";
 
 export const MATCH_VERSION = 1;
@@ -28,11 +28,14 @@ export function electPrimary(db: Database, userId: string, memberId: string, lea
     WHERE s.user_id = p.user_id AND s.activity_id = p.id AND s.value > 0
       AND s.name IN (SELECT value FROM json_each(${JSON.stringify(richnessChannels)}))
   )`;
+  const logged = sql`EXISTS (
+    SELECT 1 FROM ${loggedSession} l WHERE l.user_id = p.user_id AND l.activity_id = p.id
+  )`;
   return db.run(sql`
     UPDATE ${activity} SET is_primary = (id = (
       SELECT p.id FROM ${activity} p
       WHERE p.user_id = ${userId} AND p.workout_id = ${workout} AND p.id != ${leavingId}
-      ORDER BY p.chosen_as_primary_at IS NULL, p.chosen_as_primary_at DESC, ${richness} DESC,
+      ORDER BY p.chosen_as_primary_at IS NULL, p.chosen_as_primary_at DESC, ${logged} DESC, ${richness} DESC,
         p.file_size DESC, p.created_at, p.id
       LIMIT 1
     ))
