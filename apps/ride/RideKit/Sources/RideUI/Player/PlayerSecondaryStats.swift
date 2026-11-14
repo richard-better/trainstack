@@ -6,12 +6,20 @@ struct PlayerSecondaryStats: View {
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
-    let intervalLeft = SmallStat(
-      label: "Interval left", value: session.intervalRemaining?.clockString ?? "—")
+    let intervalLeft =
+      session.awaitsLap
+      ? SmallStat(
+        label: "Interval, until lap", value: session.intervalElapsed?.clockString ?? "—",
+        unit: session.currentInterval?.step.untilLap?.hint)
+      : SmallStat(
+        label: "Interval left", value: session.intervalRemaining?.clockString ?? "—")
     let elapsed = SmallStat(
       label: "Elapsed", value: session.elapsed.clockString,
       unit: session.isComplete
-        ? "/ \(session.duration.clockString)" : "· \(session.remaining.clockString) left")
+        ? "/ \(session.duration.clockString)"
+        : session.hasLapStepsAhead
+          ? "· \(session.remaining.clockString) left + lap-button steps"
+          : "· \(session.remaining.clockString) left")
     let speed = SmallStat(
       label: "Speed",
       value: (session.speedMetresPerSecond * 3.6).formatted(.oneDecimal),

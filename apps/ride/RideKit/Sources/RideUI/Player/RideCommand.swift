@@ -17,7 +17,7 @@ enum RideCommand: Hashable {
   func title(in launcher: RideLauncher?) -> String {
     switch self {
     case .togglePause: launcher?.ride?.session.isPaused == true ? "Resume" : "Pause"
-    case .skipInterval: "Skip Interval"
+    case .skipInterval: "Skip Interval or Lap"
     case .mode(let mode): mode.rawValue
     case .decrease: "Easier"
     case .increase: "Harder"

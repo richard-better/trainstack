@@ -27,7 +27,8 @@ struct WorkoutsState: Equatable {
   func filtered(_ workouts: [LibraryWorkout], ftp: Int?) -> [LibraryWorkout] {
     workouts.filter { workout in
       workout.matches(search)
-        && (duration == .any || workout.duration.map(duration.includes) == true)
+        && (duration == .any
+          || (!workout.hasLapSteps && workout.duration.map(duration.includes) == true))
         && (zone == nil || workout.zone == zone)
         && (stress == .any || workout.planned?.stressScore(ftp: ftp).map(stress.includes) == true)
     }

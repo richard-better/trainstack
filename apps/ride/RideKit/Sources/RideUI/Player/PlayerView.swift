@@ -56,7 +56,8 @@ struct PlayerView: View {
 
   private var subtitle: String {
     let workout = controller.workout
-    let minutes = "\(Int((workout.duration / 60).rounded())) min"
+    let laps = workout.steps.contains { $0.untilLap != nil } ? " + laps" : ""
+    let minutes = "\(Int((workout.duration / 60).rounded())) min\(laps)"
     return [workout.category?.name, minutes].compactMap(\.self).joined(separator: " · ")
   }
 }

@@ -25,7 +25,7 @@ extension PlannedWorkout {
   func stressScore(ftp: Int?) -> Int? {
     var hoursAtFTP = 0.0
     for step in steps {
-      guard let share = step.shareOfFTP(ftp: ftp) else { return nil }
+      guard step.untilLap == nil, let share = step.shareOfFTP(ftp: ftp) else { return nil }
       let meanSquare =
         (share.from * share.from + share.from * share.to + share.to * share.to) / 3
       hoursAtFTP += step.duration * meanSquare / 3600

@@ -11,11 +11,12 @@ public struct RideGlance: Codable, Equatable, Sendable {
     public var label: String?
     public var remaining: TimeInterval
     public var duration: TimeInterval
+    public var elapsedUntilLap: TimeInterval?
 
     public init(
       index: Int, zone: PowerZone?, numberInZone: Int? = nil, countInZone: Int? = nil,
       targetPower: Int? = nil, label: String? = nil, remaining: TimeInterval,
-      duration: TimeInterval
+      duration: TimeInterval, elapsedUntilLap: TimeInterval? = nil
     ) {
       self.index = index
       self.zone = zone
@@ -25,6 +26,7 @@ public struct RideGlance: Codable, Equatable, Sendable {
       self.label = label
       self.remaining = remaining
       self.duration = duration
+      self.elapsedUntilLap = elapsedUntilLap
     }
 
     public var title: String {
@@ -34,7 +36,8 @@ public struct RideGlance: Codable, Equatable, Sendable {
     }
 
     public var progress: Double {
-      duration > 0 ? min(max(1 - remaining / duration, 0), 1) : 1
+      guard elapsedUntilLap == nil else { return 0 }
+      return duration > 0 ? min(max(1 - remaining / duration, 0), 1) : 1
     }
   }
 
@@ -114,8 +117,9 @@ extension RideGlance {
           ? (sameZone.firstIndex(of: interval.index) ?? 0) + 1 : nil,
         countInZone: sameZone.count > 1 ? sameZone.count : nil,
         targetPower: ergTarget(interval, session.position), label: label,
-        remaining: interval.end - session.position,
-        duration: interval.end - interval.start)
+        remaining: session.intervalRemaining ?? 0,
+        duration: interval.end - interval.start,
+        elapsedUntilLap: session.awaitsLap ? session.intervalElapsed : nil)
     }
     let next = session.nextInterval.map {
       NextInterval(

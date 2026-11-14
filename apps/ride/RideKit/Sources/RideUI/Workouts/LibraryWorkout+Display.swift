@@ -19,17 +19,31 @@ extension LibraryWorkout {
 
   var duration: TimeInterval? {
     let total = workout?.flattened.reduce(0) { total, step -> TimeInterval? in
-      guard let total, case .seconds(let seconds) = step.duration else { return nil }
-      return total + seconds
+      switch step.duration {
+      case .seconds(let seconds): total.map { $0 + seconds }
+      case .untilLap: total
+      case .meters, .unknown: nil
+      }
     }
     return total.flatMap {
       $0 <= Double(TrainStackWorkout.mostSteps) * PlannedStep.longest ? $0 : nil
     }
   }
 
+  var hasLapSteps: Bool {
+    workout?.flattened.contains {
+      guard case .untilLap = $0.duration else { return false }
+      return true
+    } == true
+  }
+
   func summary(ftp: Int?) -> String {
     var parts: [String] = []
-    if let duration, duration > 0 { parts.append("\(Int((duration / 60).rounded())) min") }
+    if let duration, duration > 0 {
+      parts.append("\(Int((duration / 60).rounded())) min\(hasLapSteps ? " + laps" : "")")
+    } else if hasLapSteps {
+      parts.append("Until you lap")
+    }
     if let stress = planned?.stressScore(ftp: ftp) { parts.append("\(stress) TSS") }
     if let zone { parts.append(zone.name) }
     if planned == nil, sport != TrainStackWorkout.Sport.cycling.rawValue {

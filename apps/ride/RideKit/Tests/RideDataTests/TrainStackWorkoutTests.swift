@@ -172,14 +172,34 @@ struct TrainStackWorkoutTests {
     #expect(workout.rideability.planned?.duration == 60)
   }
 
-  @Test func refusesALapButtonStepUntilThePlayerCanPlayOne() throws {
+  @Test func playsALapButtonStepHoldingItsTargetUntilTheRiderLaps() throws {
     let open = try Self.workout(
       steps: #"""
-        {"type":"repeat","count":2,"steps":[{"type":"step","duration":{"type":"open","expected":{"type":"time","seconds":600}},"target":{"type":"power","unit":"ftp","level":{"kind":"constant","value":0.9}}}]}
+        {"type":"repeat","count":2,"steps":[{"type":"step","duration":{"type":"open","expected":{"type":"time","seconds":600}},"target":{"type":"power","unit":"ftp","level":{"kind":"constant","value":0.9}},"cues":[{"at":{"type":"time","seconds":30},"text":"Settle"}]}]}
         """#)
-    #expect(open.rideability == .unrideable(.lapButtonSteps))
-    #expect(
-      open.flattened.first?.duration == .untilLap(expected: .seconds(600)))
+    let planned = try #require(open.rideability.planned)
+    #expect(planned.steps.count == 2)
+    #expect(planned.steps[0].untilLap == UntilLap(expectedSeconds: 600))
+    #expect(planned.steps[0].target == .shareOfFTP(.constant(0.9)))
+    #expect(planned.steps[0].cues == [PlannedCue(at: 30, text: "Settle")])
+  }
+
+  @Test func refusesWhatALapButtonStepCannotHold() throws {
+    let ramp = try Self.workout(
+      steps: #"""
+        {"type":"step","duration":{"type":"open"},"target":{"type":"power","unit":"ftp","level":{"kind":"ramp","from":0.5,"to":0.9}}}
+        """#)
+    #expect(ramp.rideability == .unrideable(.rampOnALapStep))
+    let heartRateRamp = try Self.workout(
+      steps: #"""
+        {"type":"step","duration":{"type":"open"},"target":{"type":"heartRate","unit":"bpm","level":{"kind":"ramp","from":120,"to":150}}}
+        """#)
+    #expect(heartRateRamp.rideability == .unrideable(.rampOnALapStep))
+    let repeatCue = try Self.workout(
+      steps: #"""
+        {"type":"repeat","count":2,"cues":[{"at":{"type":"time","seconds":30},"text":"Go"}],"steps":[{"type":"step","duration":{"type":"open"}}]}
+        """#)
+    #expect(repeatCue.rideability == .unrideable(.repeatCueAcrossALapStep))
   }
 
   @Test func refusesASportItDoesNotKnowAsAnotherSport() throws {
@@ -221,7 +241,11 @@ extension PlannedStep {
   fileprivate var asServerStep: TrainStackWorkout.Block {
     .step(
       TrainStackWorkout.Step(
-        duration: .seconds(duration), target: target?.asServerTarget,
+        duration: untilLap.map { lap in
+          .untilLap(
+            expected: lap.expectedSeconds.map(TrainStackWorkout.Amount.seconds)
+              ?? lap.expectedMeters.map(TrainStackWorkout.Amount.meters))
+        } ?? .seconds(duration), target: target?.asServerTarget,
         cadence: cadence?.asServerLevel, name: name, notes: notes,
         cues: cues.map { .init(at: .seconds($0.at), text: $0.text, shownForSeconds: $0.shownFor) }))
   }

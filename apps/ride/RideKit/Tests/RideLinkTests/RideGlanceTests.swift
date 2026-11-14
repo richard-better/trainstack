@@ -127,4 +127,25 @@ struct RideGlanceTests {
     #expect(
       RideGlance(session: session, ftp: 200, heartRateZones: nil).next?.title == "Max effort")
   }
+
+  @Test func countsALapButtonStepUpAndNeverDownOnTheWatch() {
+    let planned = PlannedWorkout(
+      name: "Lap", category: nil,
+      steps: [
+        PlannedStep(duration: 0, target: .watts(.constant(200)), untilLap: UntilLap()),
+        PlannedStep(duration: 60, target: .watts(.constant(100))),
+      ])
+    var session = RideSession(workout: planned.workout(ftp: 200))
+    var countdown = IntervalCountdown()
+    for _ in 0..<45 {
+      session.advance(by: 1, reading: .init(power: 200))
+      let glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+      #expect(countdown.update(glance.interval, isPaused: false) == nil)
+    }
+    let glance = RideGlance(session: session, ftp: 200, heartRateZones: nil)
+    #expect(glance.interval?.elapsedUntilLap == 45)
+    #expect(glance.interval?.remaining == 0)
+    #expect(glance.interval?.progress == 0)
+    #expect(glance.interval?.targetPower == 200)
+  }
 }

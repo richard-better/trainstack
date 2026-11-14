@@ -8,7 +8,6 @@ extension TrainStackWorkout {
       return .unrideable(.tooManySteps)
     }
     let steps = flattened
-    if steps.contains(where: \.lastsUntilLap) { return .unrideable(.lapButtonSteps) }
     if steps.contains(where: \.hasPaceTarget) { return .unrideable(.paceTargets) }
     if steps.contains(where: \.isMeasuredInDistance) { return .unrideable(.distanceSteps) }
     var planned: [PlannedStep] = []
@@ -36,6 +35,9 @@ extension TrainStackWorkout {
           return .unknownKind(of: "cue offset", named: unknown)
         }
         if block.cues.contains(where: { !$0.at.isTime }) { return .distanceSteps }
+        if !block.cues.isEmpty, containsALapStep(block.blocks) {
+          return .repeatCueAcrossALapStep
+        }
         if let unknown = firstUnknown(in: block.blocks) { return unknown }
       case .step(let step):
         if let unknown = step.unknownPart { return unknown }
@@ -59,6 +61,16 @@ extension TrainStackWorkout {
       }
       let (sum, overflow) = total.addingReportingOverflow(length)
       return overflow ? .max : sum
+    }
+  }
+
+  private static func containsALapStep(_ blocks: [Block]) -> Bool {
+    blocks.contains { block in
+      switch block {
+      case .step(let step): step.lastsUntilLap
+      case .repeat(let block): containsALapStep(block.blocks)
+      case .unknown: false
+      }
     }
   }
 
@@ -175,7 +187,10 @@ extension TrainStackWorkout.Step {
   }
 
   fileprivate var isMeasuredInDistance: Bool {
-    guard case .seconds = duration else { return true }
+    switch duration {
+    case .seconds, .untilLap: break
+    case .meters, .unknown: return true
+    }
     return cues.contains {
       guard case .seconds = $0.at else { return true }
       return false
@@ -183,9 +198,29 @@ extension TrainStackWorkout.Step {
   }
 
   fileprivate var planned: Result<PlannedStep, UnrideableReason> {
-    guard case .seconds(let seconds) = duration else { return .failure(.distanceSteps) }
-    guard seconds > 0 else { return .failure(.stepWithoutLength) }
-    guard seconds <= PlannedStep.longest else { return .failure(.stepTooLong) }
+    let seconds: TimeInterval
+    var untilLap: UntilLap?
+    switch duration {
+    case .seconds(let length):
+      guard length > 0 else { return .failure(.stepWithoutLength) }
+      guard length <= PlannedStep.longest else { return .failure(.stepTooLong) }
+      seconds = length
+    case .untilLap(let expected):
+      switch target {
+      case .power(_, .ramp), .heartRate(_, .ramp), .pace(_, .ramp):
+        return .failure(.rampOnALapStep)
+      default: break
+      }
+      switch expected {
+      case .seconds(let expected) where expected > 0 && expected <= PlannedStep.longest:
+        untilLap = UntilLap(expectedSeconds: expected)
+      case .meters(let expected) where expected > 0 && expected.isFinite:
+        untilLap = UntilLap(expectedMeters: expected)
+      default: untilLap = UntilLap()
+      }
+      seconds = 0
+    case .meters, .unknown: return .failure(.distanceSteps)
+    }
     let target: PlannedTarget?
     switch self.target {
     case nil: target = nil
@@ -209,7 +244,7 @@ extension TrainStackWorkout.Step {
         cues: cues.compactMap { cue in
           guard case .seconds(let at) = cue.at else { return nil }
           return PlannedCue(at: at, text: cue.text, shownFor: cue.shownForSeconds)
-        }))
+        }, untilLap: untilLap))
   }
 }
 

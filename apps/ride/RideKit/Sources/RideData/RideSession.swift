@@ -14,10 +14,6 @@ public struct RideSession: Sendable {
     public var averagePlannedPower: Int? { step.target?.averagePower }
 
     public func zone(ftp: Int) -> PowerZone? { step.target?.zone(ftp: ftp) }
-
-    public func cue(at position: TimeInterval) -> PlannedCue? {
-      step.cues.last { $0.isShowing(atOffset: position - start) }
-    }
   }
 
   public struct LiveSample: Equatable, Sendable {
@@ -32,7 +28,10 @@ public struct RideSession: Sendable {
 
   public let workout: Workout
   public let startDate: Date
-  public let intervals: [Interval]
+  public private(set) var intervals: [Interval] = []
+  private var current = 0
+  private var laps: [Int: TimeInterval] = [:]
+  private let hasLapSteps: Bool
   public private(set) var elapsed: TimeInterval = 0
   public private(set) var position: TimeInterval = 0
   public private(set) var isPaused = false
@@ -52,11 +51,32 @@ public struct RideSession: Sendable {
     self.workout = workout
     self.startDate = startDate
     bike = VirtualBike(riderWeight: riderWeight)
+    hasLapSteps = workout.steps.contains(where: \.endsOnLap)
+    layOut()
+    moveOnFromFinishedIntervals()
+  }
+
+  private mutating func layOut() {
     var start: TimeInterval = 0
     intervals = workout.steps.enumerated().map { index, step in
-      defer { start += step.duration }
-      return Interval(index: index, start: start, end: start + step.duration, step: step)
+      let length =
+        switch (step.endsOnLap, laps[index]) {
+        case (false, _): step.duration
+        case (true, let lapped?): lapped
+        case (true, nil) where index == current: max(position - start, 0)
+        case (true, nil): step.untilLap?.expectedSeconds ?? 0
+        }
+      defer { start += length }
+      return Interval(index: index, start: start, end: start + length, step: step)
     }
+  }
+
+  private mutating func moveOnFromFinishedIntervals() {
+    while let interval = currentInterval, !interval.step.endsOnLap, position >= interval.end {
+      current += 1
+      if hasLapSteps { layOut() }
+    }
+    if isComplete { position = min(position, duration) }
   }
 
   public var duration: TimeInterval { intervals.last?.end ?? 0 }
@@ -70,7 +90,13 @@ public struct RideSession: Sendable {
   }
 
   public var currentInterval: Interval? {
-    intervals.first { position < $0.end }
+    intervals.indices.contains(current) ? intervals[current] : nil
+  }
+
+  public var awaitsLap: Bool { currentInterval?.step.endsOnLap == true }
+
+  public var hasLapStepsAhead: Bool {
+    intervals.dropFirst(current).contains { $0.step.endsOnLap }
   }
 
   public var nextInterval: Interval? {
@@ -82,10 +108,21 @@ public struct RideSession: Sendable {
   public var isComplete: Bool { currentInterval == nil }
 
   public var intervalRemaining: TimeInterval? {
-    currentInterval.map { $0.end - position }
+    guard !awaitsLap else { return nil }
+    return currentInterval.map { $0.end - position }
   }
 
-  public var remaining: TimeInterval { duration - position }
+  public var intervalElapsed: TimeInterval? {
+    currentInterval.map { position - $0.start }
+  }
+
+  public var remaining: TimeInterval {
+    guard hasLapSteps else { return duration - position }
+    return intervals.dropFirst(current).reduce(0) { total, interval in
+      guard !interval.step.endsOnLap else { return total }
+      return total + interval.end - max(interval.start, position)
+    }
+  }
 
   public var targetPower: Int? {
     guard mode == .erg, let planned = currentInterval?.plannedPower(at: position) else {
@@ -96,8 +133,12 @@ public struct RideSession: Sendable {
 
   public var cue: PlannedCue? {
     guard !isComplete else { return nil }
-    return intervals.lazy.reversed().drop { $0.start > position }.compactMap {
-      $0.cue(at: position)
+    return intervals.prefix(current + 1).reversed().lazy.compactMap { interval in
+      let lapped = interval.step.endsOnLap && interval.index < current
+      return interval.step.cues.last { cue in
+        cue.isShowing(atOffset: self.position - interval.start)
+          && !(lapped && cue.at >= interval.end - interval.start)
+      }
     }
     .first
   }
@@ -112,7 +153,9 @@ public struct RideSession: Sendable {
     guard !isPaused, duration > 0 else { return }
     let target = targetPower
     elapsed += duration
-    position = min(position + duration, self.duration)
+    position += duration
+    if awaitsLap { layOut() }
+    moveOnFromFinishedIntervals()
     distanceMetres += bike.ride(
       power: Double(reading.power ?? 0), gradeFraction: roadGradeFraction, for: duration)
     samples.append(
@@ -130,7 +173,14 @@ public struct RideSession: Sendable {
 
   public mutating func skipInterval() {
     guard let interval = currentInterval else { return }
-    position = interval.end
+    if interval.step.endsOnLap {
+      laps[current] = position - interval.start
+      current += 1
+      layOut()
+    } else {
+      position = interval.end
+    }
+    moveOnFromFinishedIntervals()
   }
 
   public mutating func adjust(by steps: Int) {
