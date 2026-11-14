@@ -9,7 +9,8 @@ import Foundation
 enum AppActivitySync {
   static let shared: ActivitySync = {
     let account = TrainstackAccount.launched
-    let sync = ActivitySync(library: RideLibrary.launched, server: account.client)
+    let sync = ActivitySync(
+      library: RideLibrary.launched, history: AccountHistory.launched, server: account.client)
     account.observeSignInChanges { sync.accountChanged() }
     sync.onSignedOut = { Task { await account.refreshSignIn() } }
     #if os(iOS)

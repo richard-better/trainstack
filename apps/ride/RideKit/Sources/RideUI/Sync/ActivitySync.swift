@@ -5,6 +5,7 @@ import os
 
 final class ActivitySync {
   private let library: RideLibrary
+  private let history: AccountHistory?
   private let server: any ActivityServer
   private let directory: URL
   private var states: [String: ActivitySyncState] = [:]
@@ -21,8 +22,12 @@ final class ActivitySync {
     set { passes.onSignedOut = newValue }
   }
 
-  init(library: RideLibrary, server: any ActivityServer, directory: URL = defaultDirectory) {
+  init(
+    library: RideLibrary, history: AccountHistory? = nil, server: any ActivityServer,
+    directory: URL = defaultDirectory
+  ) {
     self.library = library
+    self.history = history
     self.server = server
     self.directory = directory
   }
@@ -59,7 +64,9 @@ final class ActivitySync {
   }
 
   func remember(_ change: RideLibrary.Change) {
-    guard case .removed(let id) = change, let account = lastAccountID else { return }
+    guard case .removed(let id) = change else { return }
+    history?.remove(id)
+    guard let account = lastAccountID else { return }
     update(account) { state in
       state.restoresToSend.remove(id)
       guard state.deleted.insert(id).inserted else { return }
@@ -68,7 +75,20 @@ final class ActivitySync {
     }
   }
 
+  func delete(_ id: AccountActivity.ID) {
+    history?.remove(id)
+    guard let account = history?.account else { return }
+    update(account) { state in
+      state.restoresToSend.remove(id)
+      state.deleted.insert(id)
+      state.onServer.remove(id)
+      state.deletionsToSend.insert(id)
+    }
+    syncSoon()
+  }
+
   func accountChanged() {
+    history?.forget()
     passes.restart()
   }
 
@@ -77,9 +97,14 @@ final class ActivitySync {
   }
 
   func sync() async throws {
-    guard let account = try await server.signedInAccount() else { throw StravaError.signedOut }
+    guard let account = try await server.signedInAccount() else {
+      try Task.checkCancellation()
+      history?.forget()
+      throw StravaError.signedOut
+    }
     try Task.checkCancellation()
     lastAccountID = account.id
+    history?.show(account.id)
     for id in state(of: account.id).deletionsToSend.sorted() {
       try await server.deleteActivity(id, for: account)
       try checkStillSyncing(account)
@@ -100,6 +125,8 @@ final class ActivitySync {
     let onServer = Set(listing.map(\.id))
     try checkStillSyncing(account)
     dropRidesDeletedOnTheServer(keeping: onServer, account: account.id)
+    let owed = state(of: account.id).deletionsToSend
+    history?.receive(listing.filter { !owed.contains($0.id) }, for: account.id)
     for ride in library.rides where needsUploading(ride.id, account: account.id) {
       let result = try await server.upload(ride.activityFile, for: account)
       try checkStillSyncing(account)
