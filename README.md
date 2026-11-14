@@ -70,6 +70,17 @@ training charts real; `-- --empty` to start with no activities; or `-- --api-onl
 app yourself. Activities are analysed every 20 seconds, as the deployed cron does every minute.
 Nothing is kept when it stops, and it needs no Cloudflare or Apple credentials.
 
+To see every screen of the web app at once, run `bun run showcase`. It seeds three athletes in a
+local API (weeks of training, a rough morning, and a new account), records what each screen asks
+the API for, then serves `/__dev/showcase`: every screen in its real components at phone and
+desktop width, answered from those recordings with the clock held at the moment they were made,
+with no API running and no sign-in. Add `-- --screenshots` to save a PNG of every screen at both
+widths in `hosted/apps/account/.showcase/screenshots`, and `--only today,activities` to take just
+those. The showcase and its recordings exist only in development: a production build holds none
+of it, which `tests/web-showcase.test.mjs` checks. A new route needs an entry in
+`hosted/apps/account/src/showcase/entries.ts`, or that test fails. It needs Playwright's Chromium:
+`bunx playwright install chromium` once.
+
 ## License
 
 Trainstack is open source under AGPL-3.0. The hosted backend in `hosted/` is source-available under FSL-1.1-ALv2, and packages that other code builds on, like the API contract, are explicitly Apache-2.0. See [LICENSING.md](LICENSING.md).

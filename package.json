@@ -31,6 +31,7 @@
   "scripts": {
     "dev": "vp run -r dev",
     "dev:account": "node scripts/dev-account.mjs",
+    "showcase": "node scripts/showcase.mjs",
     "build": "vp run -r build",
     "check-types": "vp run -r check-types",
     "check": "vp check && vp run -r check-types",
@@ -57,6 +58,7 @@
     "@types/node": "catalog:",
     "ical.js": "2.2.1",
     "miniflare": "4.20260730.0",
+    "playwright": "1.65.0",
     "rolldown": "1.2.16",
     "typescript": "catalog:",
     "varlock": "catalog:",
