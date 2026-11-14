@@ -347,6 +347,39 @@ test("a skip queued behind a lost move follows the item to the day the other bro
   assert.equal((await client.plannedWorkouts.get({ id: spin.id })).day, "2030-04-10");
 });
 
+test("a change queued behind a move out of the range stays with the moved item", async () => {
+  const { client } = await athlete();
+  const [spin] = await planDay(client, "2030-03-04", ["Spin"]);
+  let release;
+  const moveHeld = new Promise((resolve) => (release = resolve));
+  const laptop = device(client, {
+    move: async (input) => {
+      await moveHeld;
+      return client.plannedWorkouts.move(input);
+    },
+  });
+  await laptop.load();
+  const skipping = laptop.writes.skip(spin, { reason: null });
+  const moving = laptop.writes.move(spin, { day: "2030-03-11", position: 0 });
+  const changing = laptop.writes.change(spin, { ...spin.content, notes: "Easy spin" });
+  await skipping;
+
+  assert.deepEqual(
+    laptop.shown().days.flatMap((day) => day.planned.map((item) => item.id)),
+    [],
+    "the item is on its way to the next week, outside the week on screen",
+  );
+  const item = laptop.writes.viewItem(null, spin.id, "2030-03-01");
+  assert.deepEqual(
+    [item.day, item.state, item.content.notes],
+    ["2030-03-11", "skipped", "Easy spin"],
+  );
+  release();
+  await Promise.all([moving, changing]);
+  const stored = await client.plannedWorkouts.get({ id: spin.id });
+  assert.deepEqual([stored.day, stored.content.notes], ["2030-03-11", "Easy spin"]);
+});
+
 test("skipping a workout another browser deleted takes it off the calendar and says so", async () => {
   const { client } = await athlete();
   const [spin] = await planDay(client, "2030-03-04", ["Spin"]);

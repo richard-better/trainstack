@@ -262,13 +262,10 @@ export function createCalendarWrites({
     },
 
     view(range: CalendarRange): CalendarRange {
-      return pending.reduce((current, entry) => {
-        const item =
-          findPlanned(current, entry.id) ??
-          (answered.has(entry.id) ? answered.get(entry.id) : entry.base);
-        if (!item) return current;
-        const next = entry.apply(item, current.today);
-        return next ? withPlanned(current, next) : withoutPlanned(current, entry.id);
+      const ids = [...new Set(pending.map((entry) => entry.id))];
+      return ids.reduce((current, id) => {
+        const next = writes.viewItem(findPlanned(current, id), id, current.today);
+        return next ? withPlanned(current, next) : withoutPlanned(current, id);
       }, range);
     },
 
