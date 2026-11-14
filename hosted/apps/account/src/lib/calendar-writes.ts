@@ -10,6 +10,7 @@ import {
   draftPlanned,
   findPlanned,
   moved,
+  pairedAs,
   plannedName,
   skippedAs,
   withPlanned,
@@ -29,7 +30,7 @@ interface Pending {
   readonly apply: Apply;
 }
 
-export type WriteKind = "plan" | "change" | "move" | "skip" | "delete";
+export type WriteKind = "plan" | "change" | "move" | "skip" | "pair" | "unpair" | "delete";
 
 export type Notice =
   | {
@@ -89,6 +90,10 @@ function refusal(error: unknown): string | null {
       return "Your device's clock is ahead of Trainstack's. Set it to the right time and try again.";
     case "WORKOUT_TOO_LARGE":
       return "This workout is too large to plan.";
+    case "NOT_PAIRABLE":
+      return "Only a workout pairs, and only with an activity of its own day.";
+    case "ACTIVITY_NOT_FOUND":
+      return "That activity is no longer in your account.";
     default:
       return null;
   }
@@ -171,6 +176,7 @@ export function createCalendarWrites({
 
   function settleCaches() {
     void queryClient.invalidateQueries({ queryKey: calendarKey });
+    void queryClient.invalidateQueries({ queryKey: ["planned"] });
   }
 
   async function sendWithRetries(
@@ -351,6 +357,29 @@ export function createCalendarWrites({
         send: (updatedAt) => api.plannedWorkouts.skip({ id: item.id, skipped, updatedAt }),
         won: (result) => sameSkip(result.skipped, skipped),
         retry: () => void writes.skip(item, skipped),
+      });
+    },
+
+    pair(item: PlannedWorkout, activityId: string): Promise<void> {
+      return run({
+        kind: "pair",
+        base: item,
+        apply: (current, today) => pairedAs(current, activityId, today),
+        send: (updatedAt) => api.plannedWorkouts.pair({ id: item.id, activityId, updatedAt }),
+        won: (result) => result.pairing?.activityId === activityId,
+        retry: () => void writes.pair(item, activityId),
+      });
+    },
+
+    unpair(item: PlannedWorkout, activityId: string): Promise<void> {
+      return run({
+        kind: "unpair",
+        base: item,
+        apply: (current, today) =>
+          current.pairing?.activityId === activityId ? pairedAs(current, null, today) : current,
+        send: (updatedAt) => api.plannedWorkouts.unpair({ id: item.id, activityId, updatedAt }),
+        won: (result) => result.pairing?.activityId !== activityId,
+        retry: () => void writes.unpair(item, activityId),
       });
     },
 

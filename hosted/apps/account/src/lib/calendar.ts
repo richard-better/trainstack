@@ -1,4 +1,5 @@
 import type {
+  CalendarActivity,
   CalendarDay,
   CalendarTotals,
   PlannedContent,
@@ -377,3 +378,43 @@ export const dayInShort = (day: string) => shortDay.format(asDate(day));
 export const weekdayOf = (day: string) => weekdayFormat.format(asDate(day));
 export const monthNameOf = (day: string) => monthShort.format(asDate(day));
 export const weekdayNames = daysOf("2024-01-01", "2024-01-07").map(weekdayOf);
+
+export interface PlannedEntry {
+  readonly item: PlannedWorkout;
+  readonly done: CalendarActivity | null;
+}
+
+export function pairsOf(day: Pick<CalendarDay, "planned" | "activities">) {
+  const activities = new Map(day.activities.map((activity) => [activity.id, activity]));
+  const claimed = new Map<string, string>();
+  const byAthleteFirst = day.planned.toSorted(
+    (a, b) => Number(b.pairing?.by === "athlete") - Number(a.pairing?.by === "athlete"),
+  );
+  for (const item of byAthleteFirst) {
+    const activityId = item.pairing?.activityId;
+    if (activityId && activities.has(activityId) && !claimed.has(activityId)) {
+      claimed.set(activityId, item.id);
+    }
+  }
+  const planned: PlannedEntry[] = day.planned.map((item) => {
+    const activityId = item.pairing?.activityId;
+    const done =
+      activityId && claimed.get(activityId) === item.id ? activities.get(activityId)! : null;
+    return { item, done };
+  });
+  const unplanned = day.activities.filter((activity) => !claimed.has(activity.id));
+  return { planned, unplanned };
+}
+
+export function pairedAs(
+  item: PlannedWorkout,
+  activityId: string | null,
+  today: string,
+): PlannedWorkout {
+  const next = {
+    ...item,
+    pairing: activityId ? { activityId, by: "athlete" as const } : null,
+    compliance: null,
+  };
+  return { ...next, state: stateOn(next, item.day, today) };
+}
