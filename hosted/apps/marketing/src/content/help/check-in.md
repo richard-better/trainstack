@@ -32,15 +32,15 @@ Everything starts at normal, so tap only what is different. Then:
 - **I am injured**, where, and what it lets you do: training fully, training less, or cannot train.
 - A note, in your own words.
 
-Press **Save check-in**. To change it later the same day, change anything and **Save changes**,
-or **Remove check-in**.
+Press **Save check-in**. On **Today**, the form then gives way to a short summary; **Edit** opens
+the **Check-in** page, where you change anything and **Save changes**, or **Remove check-in**.
 
-Use the arrows beside the day to check in for a day you missed. You can check in for today or any
+On the **Check-in** page, use the arrows beside the day to check in for a day you missed. You can check in for today or any
 day before it, not ahead.
 
 ## Seeing it next to your training
 
-Below the form, **How you felt, beside your training** lays your ratings, illness and injury next
+Below the form on the **Check-in** page, **How you felt, beside your training** lays your ratings, illness and injury next
 to the fatigue from your training, day by day, over the period you choose. Your check-ins also
 show under each day on the [calendar](/help/plan-your-week).
 

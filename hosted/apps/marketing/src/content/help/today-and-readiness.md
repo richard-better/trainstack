@@ -45,7 +45,9 @@ advice.
 
 ## Suggestions for today's plan
 
-Each workout still to do today gets a suggestion, from its intensity and your readiness:
+Once readiness has a level, each workout still to do today gets a suggestion, from its intensity
+and your readiness. Until then, with no check-in today, no illness in the last week and less
+than about 12 weeks of training, readiness says **Not enough to go on**, and there are no suggestions: check in, and they appear.
 
 | Readiness | Easy session | Moderate session | Hard session  |
 | --------- | ------------ | ---------------- | ------------- |
