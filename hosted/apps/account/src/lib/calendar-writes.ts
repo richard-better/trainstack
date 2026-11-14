@@ -127,6 +127,7 @@ export function createCalendarWrites({
   let lastStamp = 0;
   let version = 0;
   const tails = new Map<string, Promise<void>>();
+  const answered = new Map<string, PlannedWorkout | null>();
   const listeners = new Set<() => void>();
 
   function changed() {
@@ -146,7 +147,13 @@ export function createCalendarWrites({
   }
 
   async function remember(result: Sent) {
-    await queryClient.cancelQueries({ queryKey: calendarKey }, { revert: false });
+    await Promise.all([
+      queryClient.cancelQueries({ queryKey: calendarKey }, { revert: false }),
+      queryClient.cancelQueries(
+        { queryKey: plannedKey(result.id), exact: true },
+        { revert: false },
+      ),
+    ]);
     if ("deletedAt" in result) {
       queryClient.setQueriesData<CalendarRange>({ queryKey: calendarKey }, (range) =>
         range ? withoutPlanned(range, result.id) : range,
@@ -206,6 +213,7 @@ export function createCalendarWrites({
       if ("result" in outcome) {
         await remember(outcome.result);
         const result = outcome.result;
+        answered.set(entry.id, "deletedAt" in result ? null : result);
         if (!("deletedAt" in result) && write.won && !write.won(result) && write.retry) {
           notify({
             kind: "overruled",
@@ -217,6 +225,7 @@ export function createCalendarWrites({
         }
       } else if (isGone(outcome.error)) {
         await remember({ id: entry.id, deletedAt: new Date() });
+        answered.set(entry.id, null);
         if (write.kind !== "delete")
           notify({ kind: "deleted", name: plannedName(write.base.content) });
       } else {
@@ -231,6 +240,7 @@ export function createCalendarWrites({
         });
       }
       pending = pending.filter((held) => held !== entry);
+      if (!pending.some((held) => held.id === entry.id)) answered.delete(entry.id);
       changed();
       settleCaches();
     });
@@ -253,20 +263,23 @@ export function createCalendarWrites({
 
     view(range: CalendarRange): CalendarRange {
       return pending.reduce((current, entry) => {
-        const item = findPlanned(current, entry.id) ?? entry.base;
+        const item =
+          findPlanned(current, entry.id) ??
+          (answered.has(entry.id) ? answered.get(entry.id) : entry.base);
+        if (!item) return current;
         const next = entry.apply(item, current.today);
         return next ? withPlanned(current, next) : withoutPlanned(current, entry.id);
       }, range);
     },
 
     viewItem(item: PlannedWorkout | null, id: string, today: string): PlannedWorkout | null {
-      return pending
-        .filter((entry) => entry.id === id)
-        .reduce<PlannedWorkout | null>(
-          (current, entry) =>
-            current ? entry.apply(current, today) : entry.apply(entry.base, today),
-          item,
-        );
+      let current = item ?? answered.get(id) ?? null;
+      for (const entry of pending) {
+        if (entry.id !== id) continue;
+        const from = current ?? (answered.has(id) ? null : entry.base);
+        current = from ? entry.apply(from, today) : null;
+      }
+      return current;
     },
 
     isPending: (id: string) => pending.some((entry) => entry.id === id),
@@ -363,6 +376,7 @@ export async function savePlannedWorkout(
   },
 ): Promise<PlannedSave> {
   const { base } = request;
+  const updatedAt = request.now ?? new Date();
   if (base.content.kind !== "workout") return { kind: "refused", reason: "This is not a workout." };
   const content: PlannedContent = { ...base.content, workout: request.workout };
   if (!request.overwrite) {
@@ -388,7 +402,7 @@ export async function savePlannedWorkout(
       position: base.position,
       content,
       planId: base.planId,
-      updatedAt: request.now ?? new Date(),
+      updatedAt,
     });
   } catch (error) {
     if (isGone(error)) return { kind: "deleted" };

@@ -299,6 +299,54 @@ test("a move sent late loses to a later move from another browser, and can then 
   assert.deepEqual(laptop.writes.notices(), []);
 });
 
+test("a skip queued behind a lost move follows the item to the day the other browser chose", async () => {
+  const { client } = await athlete();
+  const [spin] = await planDay(client, "2030-03-04", ["Spin"]);
+  let reconnect;
+  const offline = new Promise((resolve) => (reconnect = resolve));
+  let release;
+  const skipHeld = new Promise((resolve) => (release = resolve));
+  let firstTry = true;
+  const laptop = device(client, {
+    move: async (input) => {
+      if (firstTry) {
+        firstTry = false;
+        await offline;
+        throw new TypeError("fetch failed");
+      }
+      return client.plannedWorkouts.move(input);
+    },
+    skip: async (input) => {
+      await skipHeld;
+      return client.plannedWorkouts.skip(input);
+    },
+  });
+  const range = await laptop.load();
+  const moving = laptop.writes.move(spin, placementFor(range, spin.id, "2030-03-06", 0));
+  const skipping = laptop.writes.skip(spin, { reason: "Ill" });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  await client.plannedWorkouts.move({
+    id: spin.id,
+    day: "2030-04-10",
+    position: 0,
+    updatedAt: new Date(),
+  });
+  reconnect();
+  await moving;
+
+  const shown = laptop.shown();
+  assert.deepEqual(
+    shown.days.flatMap((day) => day.planned.map((item) => item.id)),
+    [],
+    "the item is in April now, outside the week on screen",
+  );
+  const item = laptop.writes.viewItem(null, spin.id, shown.today);
+  assert.deepEqual([item.day, item.state], ["2030-04-10", "skipped"]);
+  release();
+  await skipping;
+  assert.equal((await client.plannedWorkouts.get({ id: spin.id })).day, "2030-04-10");
+});
+
 test("skipping a workout another browser deleted takes it off the calendar and says so", async () => {
   const { client } = await athlete();
   const [spin] = await planDay(client, "2030-03-04", ["Spin"]);
