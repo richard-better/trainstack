@@ -117,7 +117,7 @@ test("a poor night reads as fair, says why first, and what it did not read", asy
     { effect: "steady", text: "Energy, soreness, stress and mood as usual" },
   ]);
   assert.deepEqual(gapLines(readiness), [
-    "0 of 7 check-ins in the last four weeks: until there are 7, your answers are read against normal rather than your own usual.",
+    "0 of 7 check-ins in the last four weeks rated what you rated today: until there are 7, those answers are read against normal rather than your own usual.",
     "No training yet, so this comes from your check-in alone.",
   ]);
   assert.match(unmeasuredLine, /sleep, resting heart rate and HRV/);

@@ -131,7 +131,7 @@ export function gapLines(readiness: DayReadiness): string[] {
       case "no_check_in":
         return "No check-in today, so this comes from your training alone.";
       case "short_baseline":
-        return `${gap.checkIns} of 7 check-ins in the last four weeks: until there are 7, your answers are read against normal rather than your own usual.`;
+        return `${gap.checkIns} of 7 check-ins in the last four weeks rated what you rated today: until there are 7, those answers are read against normal rather than your own usual.`;
       case "no_training":
         return "No training yet, so this comes from your check-in alone.";
       case "short_training_history":
