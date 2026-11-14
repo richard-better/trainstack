@@ -186,6 +186,29 @@ test("a dismissed suggestion stays away for the same evidence and comes back for
   assert.notEqual(better.id, ftp.id);
 });
 
+test("a suggestion whose effort moved to another day is a new suggestion", async () => {
+  const { client, user } = await athlete();
+  await withMaxHeartRate(client);
+  const { id: activityId } = await client.activities.upload({
+    file: testRide(daysAgo(10)),
+    source: "upload",
+  });
+  await runCronUntilDetected();
+  const [before] = (await client.thresholds.suggestions({})).suggestions;
+  await db.batch([
+    db
+      .prepare("UPDATE activity SET local_day = ? WHERE user_id = ? AND id = ?")
+      .bind(daysAgo(11), user.id, activityId),
+    db.prepare("UPDATE threshold_detection SET detected_at = 0 WHERE user_id = ?").bind(user.id),
+  ]);
+  await runCronUntilDetected();
+  const [after] = (await client.thresholds.suggestions({})).suggestions;
+  assert.equal(after.effortDay, daysAgo(11));
+  assert.equal(after.value, before.value);
+  assert.notEqual(after.id, before.id);
+  await assert.rejects(client.thresholds.accept({ id: before.id, from: "effort" }));
+});
+
 test("a threshold close to what is set is not suggested, and one far from it is, with what is set", async () => {
   const { client } = await athlete();
   await client.settings.write({

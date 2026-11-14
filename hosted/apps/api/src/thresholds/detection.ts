@@ -220,7 +220,10 @@ export async function detectFor(db: Database, userId: string, now = new Date()) 
       return [];
     }
     const before = previous.get(JSON.stringify([estimate.scope, estimate.threshold]));
-    const same = before?.fingerprint === fingerprint && before.value === estimate.value;
+    const same =
+      before?.fingerprint === fingerprint &&
+      before.value === estimate.value &&
+      before.effortDay === estimate.day;
     return [
       {
         userId,
@@ -242,7 +245,20 @@ export async function detectFor(db: Database, userId: string, now = new Date()) 
   const record = { ...state, detectedAt: now };
   await db.batch([
     db.delete(thresholdSuggestion).where(eq(thresholdSuggestion.userId, userId)),
-    ...rows.map((row) => db.insert(thresholdSuggestion).values(row)),
+    ...rows.map((row) =>
+      db.run(sql`
+        INSERT INTO ${thresholdSuggestion} (user_id, scope, threshold, id, value, method, confidence,
+          activity_id, effort_day, evidence, signals, fingerprint, detected_at)
+        SELECT ${row.userId}, ${row.scope}, ${row.threshold}, ${row.id}, ${row.value}, ${row.method},
+          ${row.confidence}, ${row.activityId}, ${row.effortDay}, ${JSON.stringify(row.evidence)},
+          ${JSON.stringify(row.signals)}, ${row.fingerprint}, ${row.detectedAt.getTime()}
+        WHERE NOT EXISTS (
+          SELECT 1 FROM ${thresholdAnswer} answer
+          WHERE answer.user_id = ${row.userId} AND answer.scope = ${row.scope}
+            AND answer.threshold = ${row.threshold} AND answer.fingerprint = ${row.fingerprint}
+        )
+      `),
+    ),
     db
       .insert(thresholdDetection)
       .values({ userId, ...record })
