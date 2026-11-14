@@ -6,6 +6,8 @@ import {
   activityBestEfforts,
   activityPowerCurve,
   analysisState,
+  analysisUpdating,
+  anyAnalysisDue,
   effortFigures,
   lapsFromEvents,
   loadOf,
@@ -227,6 +229,36 @@ test("week totals count a workout recorded twice once, and wait for the week to 
     [true, false],
     "the oldest week loaded may go on in the next page",
   );
+});
+
+test("an activity says it is updating while its analysis is due, and week totals wait for it", async () => {
+  const client = await athlete();
+  await client.settings.write({ writes: [threshold("2026-01-01", "ftp", 250)] });
+  const { id } = await client.activities.upload(ride("2026-07-07T17:00:00Z"));
+
+  const fresh = await client.activities.get({ id });
+  assert.equal(fresh.analysisDue, true);
+  assert.equal(analysisUpdating(fresh), false, "a first analysis is analysing, not updating");
+  await runCronUntilAnalysed();
+  const settled = await client.activities.list({ onePerWorkout: true, limit: 50 });
+  assert.equal(anyAnalysisDue(settled.activities), false);
+  assert.equal(activityWeeks(settled.activities, false)[0].totals.pending, 0);
+
+  await client.settings.write({ writes: [threshold("2026-01-01", "ftp", 280)] });
+  const changed = await client.activities.list({ onePerWorkout: true, limit: 50 });
+  assert.equal(anyAnalysisDue(changed.activities), true);
+  assert.equal(analysisUpdating(changed.activities[0]), true);
+  assert.equal(
+    activityWeeks(changed.activities, false)[0].totals.pending,
+    1,
+    "its load says so far",
+  );
+
+  await runCronUntilAnalysed();
+  const final = await client.activities.get({ id });
+  assert.equal(final.analysisDue, false);
+  assert.equal(analysisUpdating(final), false);
+  assert.ok(final.statistics.load_tss < settled.activities[0].statistics.load_tss);
 });
 
 test("weeks start on Monday and are named by their days", () => {

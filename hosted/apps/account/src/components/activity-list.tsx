@@ -4,18 +4,21 @@ import { Link } from "@tanstack/react-router";
 
 import { activitiesQueryKey, api } from "../api";
 import { ACTIVITIES_PER_PAGE } from "../lib/client";
-import { analysisRefreshMs, analysisState } from "../lib/analysis";
+import {
+  analysisRefreshMs,
+  analysisState,
+  analysisUpdating,
+  anyAnalysisDue,
+} from "../lib/analysis";
 import { activityWeeks, type WeekTotals } from "../lib/activity-weeks";
 import { activityDate, weekLabel } from "../lib/dates";
 import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
 import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
-import { useSettingsChangedRecently } from "./settings-data";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
 
 export function ActivityList() {
-  const settling = useSettingsChangedRecently();
   const activities = useInfiniteQuery({
     queryKey: activitiesQueryKey,
     queryFn: ({ pageParam }) =>
@@ -24,11 +27,7 @@ export function ActivityList() {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     refetchInterval: (query) =>
       analysisRefreshMs(
-        settling ||
-          (query.state.data?.pages.some((page) =>
-            page.activities.some((activity) => analysisState(activity).kind === "pending"),
-          ) ??
-            false),
+        query.state.data?.pages.some((page) => anyAnalysisDue(page.activities)) ?? false,
       ),
   });
 
@@ -136,6 +135,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
   const figures = headlineFigures(activity.statistics);
   const load = activity.statistics.load_tss;
   const analysing = analysisState(activity).kind === "pending";
+  const updating = analysisUpdating(activity);
   return (
     <Link to="/activities/$id" params={{ id: activity.id }} className="row">
       <span className="row-icon" title={sport.label}>
@@ -156,7 +156,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
           )}
         </span>
       </span>
-      {(figures.length > 0 || load !== undefined || analysing) && (
+      {(figures.length > 0 || load !== undefined || analysing || updating) && (
         <dl className="row-figures">
           {figures.map((figure) => (
             <div key={figure.name}>
@@ -170,13 +170,16 @@ function ActivityRow({ activity }: { activity: Activity }) {
           {load !== undefined ? (
             <div>
               <dt>Load</dt>
-              <dd>{formatLoad(load)}</dd>
+              <dd>
+                {formatLoad(load)}
+                {updating && <span className="unit"> updating</span>}
+              </dd>
             </div>
           ) : (
-            analysing && (
+            (analysing || updating) && (
               <div>
                 <dt>Load</dt>
-                <dd className="analysing">Analysing</dd>
+                <dd className="analysing">{analysing ? "Analysing" : "Updating"}</dd>
               </div>
             )
           )}

@@ -25,8 +25,13 @@ export { durationLabel };
 export const ANALYSIS_POLL_MS = 10_000;
 export const ANALYSIS_REFRESH_MS = 60_000;
 
-export const analysisRefreshMs = (urgent: boolean) =>
-  urgent ? ANALYSIS_POLL_MS : ANALYSIS_REFRESH_MS;
+export const analysisRefreshMs = (due: boolean) => (due ? ANALYSIS_POLL_MS : ANALYSIS_REFRESH_MS);
+
+export const anyAnalysisDue = (activities: readonly Pick<Activity, "analysisDue">[]) =>
+  activities.some((activity) => activity.analysisDue);
+
+export const analysisUpdating = (activity: Pick<Activity, "analysisDue" | "analyzedAt">) =>
+  activity.analysisDue && activity.analyzedAt !== null;
 
 export type LoadSource = "power" | "pace" | "heart_rate";
 

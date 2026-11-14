@@ -27,9 +27,8 @@ const summaryLabels = {
   calories_kcal: "Energy",
 } satisfies Record<ActivityStatisticName, string>;
 
-type BestPowerName = `best_power_${number}s_w`;
-type BestTimeName = `best_time_${string}_s`;
-type NamedAnalysisStatistic = Exclude<AnalysisStatisticName, BestPowerName | BestTimeName>;
+type BestName = Extract<AnalysisStatisticName, `best_${string}`>;
+type NamedAnalysisStatistic = Exclude<AnalysisStatisticName, BestName>;
 
 const analysisLabels = {
   normalized_power_w: "Normalized power",
@@ -66,12 +65,17 @@ export function durationLabel(seconds: number) {
   return `${seconds / 3600} h`;
 }
 
-function analysisLabel(name: AnalysisStatisticName) {
+const isBest = (name: AnalysisStatisticName): name is BestName => name.startsWith("best_");
+
+function bestLabel(name: BestName) {
   const bestPower = bestPowerPattern.exec(name);
   if (bestPower) return `Best ${durationLabel(Number(bestPower[1]))} power`;
   const bestTime = bestTimePattern.exec(name);
-  if (bestTime) return `Fastest ${effortLabel(bestTime[1]!).toLowerCase()}`;
-  return analysisLabels[name as NamedAnalysisStatistic];
+  return `Fastest ${effortLabel(bestTime?.[1] ?? name).toLowerCase()}`;
+}
+
+function analysisLabel(name: AnalysisStatisticName) {
+  return isBest(name) ? bestLabel(name) : analysisLabels[name];
 }
 
 const paceLabels: Partial<Record<ActivityStatisticName | AnalysisStatisticName, string>> = {

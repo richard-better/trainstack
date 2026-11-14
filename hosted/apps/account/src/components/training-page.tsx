@@ -2,12 +2,13 @@ import type { Activity, BestEffort, BestPower } from "@trainstack/contract";
 import { profileOn } from "@trainstack/zones";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { activityKey, api, queryClient } from "../api";
+import { activityKey, api } from "../api";
 import {
   analysisRefreshMs,
   analysisState,
+  anyAnalysisDue,
   durationLabel,
   sourceWords,
   settingsScopeOf,
@@ -44,50 +45,40 @@ import { useBests } from "./activity-bests";
 import { LoadChart } from "./load-chart";
 import { PeriodPicker } from "./period-picker";
 import { PowerCurve } from "./power-curve";
-import { useSettingsChangedRecently, useSettingsHistory } from "./settings-data";
+import { useSettingsHistory } from "./settings-data";
 import { TimeZoneOffer, useAthleteSettings } from "./time-zone";
 
 const HISTORY_DAYS = 3 * 365;
 const recentKey = ["activities", "recent-analysis"] as const;
 
-function useRecentActivities(settling: boolean) {
+function useRecentActivities() {
   return useQuery({
     queryKey: recentKey,
     queryFn: () => api.activities.list({ limit: 50, onePerWorkout: true }),
     refetchInterval: (query) =>
-      analysisRefreshMs(
-        settling ||
-          (query.state.data?.activities.some((a) => analysisState(a).kind === "pending") ?? false),
-      ),
+      analysisRefreshMs(anyAnalysisDue(query.state.data?.activities ?? [])),
   });
 }
 
-function useRefreshWhenSettled(updating: boolean) {
-  const [wasUpdating, setWasUpdating] = useState(updating);
-  useEffect(() => {
-    if (wasUpdating && !updating) {
-      void queryClient.invalidateQueries({ queryKey: ["training"] });
-      void queryClient.invalidateQueries({ queryKey: recentKey });
-    }
-    setWasUpdating(updating);
-  }, [updating, wasUpdating]);
+function UpdatingNote() {
+  return (
+    <p className="updating-note" role="status">
+      Updating. These numbers may change in a moment.
+    </p>
+  );
 }
 
 export function TrainingPage({ range, period }: { range: LoadRangeKey; period: BestsPeriodKey }) {
   const navigate = useNavigate({ from: "/training" });
   const settings = useAthleteSettings();
   const today = todayIn(settings.data?.timeZone ?? null);
-  const settling = useSettingsChangedRecently();
-  const recent = useRecentActivities(settling);
-  const pending = recent.data?.activities.filter((a) => analysisState(a).kind === "pending") ?? [];
-  const updating = pending.length > 0 || settling;
-  useRefreshWhenSettled(updating);
+  const recent = useRecentActivities();
   const from = shiftDay(today, -(HISTORY_DAYS - 1));
   const load = useQuery({
     queryKey: loadQueryKey(from, today),
     queryFn: () => api.training.load({ from, through: today }),
     enabled: !settings.isPending,
-    refetchInterval: analysisRefreshMs(updating),
+    refetchInterval: (query) => analysisRefreshMs((query.state.data?.analysesDue ?? 0) > 0),
   });
 
   return (
@@ -96,13 +87,7 @@ export function TrainingPage({ range, period }: { range: LoadRangeKey; period: B
         <h1 className="page-title">Training</h1>
       </div>
       <TimeZoneOffer where="training" />
-      {updating && (
-        <p className="lede analysing-note" role="status">
-          {pending.length > 0
-            ? `Trainstack is analysing ${pending.length === 1 ? "an activity" : `${pending.length} activities`}, so these numbers may still change in the next minute.`
-            : "Your settings changed a moment ago. Trainstack is scoring the activities they touch again, so these numbers may still move for a minute or two."}
-        </p>
-      )}
+      {(load.data?.analysesDue ?? 0) > 0 && <UpdatingNote />}
       {load.isPending ? (
         <div
           className="skeleton training-skeleton"
@@ -366,9 +351,9 @@ function Bests({
   onPeriod: (period: BestsPeriodKey) => void;
 }) {
   const shown = bestsPeriod(period, today);
-  const refresh = { refetchInterval: analysisRefreshMs(false) };
-  const rides = useBests(shown.from, "cycling", refresh);
-  const runs = useBests(shown.from, "running", refresh);
+  const rides = useBests(shown.from, "cycling");
+  const runs = useBests(shown.from, "running");
+  const due = (rides.data?.analysesDue ?? 0) + (runs.data?.analysesDue ?? 0);
   return (
     <section aria-labelledby="bests-title">
       <div className="section-head">
@@ -382,6 +367,7 @@ function Bests({
           onChange={onPeriod}
         />
       </div>
+      {due > 0 && <UpdatingNote />}
       <div className="bests-grid">
         <div>
           <h3 className="group-title">Power curve, cycling</h3>

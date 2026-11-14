@@ -267,3 +267,9 @@ fieldset.segmented .segment {
     display: none;
   }
 }
+
+.updating-note {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+}

@@ -7,6 +7,7 @@ import { api } from "../api";
 import {
   activityBestEfforts,
   activityPowerCurve,
+  analysisRefreshMs,
   bestEffortDistances,
   durationLabel,
 } from "../lib/analysis";
@@ -18,16 +19,12 @@ import { membersOf } from "../lib/workouts";
 import { PeriodPicker } from "./period-picker";
 import { PowerCurve } from "./power-curve";
 
-export function useBests(
-  from: string,
-  sport: string | null,
-  { enabled = true, refetchInterval = false as number | false } = {},
-) {
+export function useBests(from: string, sport: string | null, { enabled = true } = {}) {
   return useQuery({
     queryKey: bestsQueryKey(from, sport),
     queryFn: () => api.training.bests({ from, sport: sport ?? undefined }),
     enabled,
-    refetchInterval,
+    refetchInterval: (query) => analysisRefreshMs((query.state.data?.analysesDue ?? 0) > 0),
   });
 }
 
