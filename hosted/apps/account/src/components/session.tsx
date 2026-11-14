@@ -6,7 +6,15 @@ import { authClient } from "../auth";
 
 type SignedInUser = { name: string; email: string };
 
-export function SignedIn({ signInError, children }: { signInError?: string; children: ReactNode }) {
+export function SignedIn({
+  signInError,
+  accountDeleted,
+  children,
+}: {
+  signInError?: string;
+  accountDeleted?: boolean;
+  children: ReactNode;
+}) {
   const { data: session, isPending, error } = authClient.useSession();
 
   if (isPending) return <Gate busy />;
@@ -19,7 +27,7 @@ export function SignedIn({ signInError, children }: { signInError?: string; chil
       </Gate>
     );
   }
-  if (!session) return <SignIn signInError={signInError} />;
+  if (!session) return <SignIn signInError={signInError} accountDeleted={accountDeleted} />;
   const user = { name: session.user.name, email: session.user.email };
   return (
     <div className="app">
@@ -83,7 +91,13 @@ function Gate({ busy, children }: { busy?: boolean; children?: ReactNode }) {
   );
 }
 
-function SignIn({ signInError }: { signInError?: string }) {
+function SignIn({
+  signInError,
+  accountDeleted,
+}: {
+  signInError?: string;
+  accountDeleted?: boolean;
+}) {
   const [starting, setStarting] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -92,6 +106,7 @@ function SignIn({ signInError }: { signInError?: string }) {
     setFailed(false);
     const here = new URL(window.location.href);
     here.searchParams.delete("error");
+    here.searchParams.delete("deleted");
     window.history.replaceState(null, "", here);
     const { error } = await authClient.signIn.social({
       provider: "apple",
@@ -106,6 +121,11 @@ function SignIn({ signInError }: { signInError?: string }) {
 
   return (
     <Gate>
+      {accountDeleted && (
+        <p role="status" className="lede account-deleted">
+          Your account and everything in it is deleted.
+        </p>
+      )}
       <h1>Sign in to Trainstack</h1>
       <p className="lede">Use the Apple ID you sign in to Ride with to reach the same account.</p>
       {(signInError || failed) && (

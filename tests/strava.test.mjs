@@ -577,6 +577,97 @@ test("disconnecting tells Strava and forgets the tokens", async () => {
   assert.equal((await uploadWithFreshBudgets(token)).status, 409);
 });
 
+test("disconnecting with an access token about to run out refreshes it, so Strava is told with one it accepts", async () => {
+  reset();
+  const { email, token } = await signUp();
+  await connect(token);
+  await expireToken(email);
+  strava.requests.length = 0;
+  assert.equal((await call(token, "", { method: "DELETE" })).status, 204);
+  assert.deepEqual(
+    strava.requests.map((r) => [r.path, r.auth ?? r.body?.grant_type]),
+    [
+      ["/oauth/token", "refresh_token"],
+      ["/oauth/deauthorize", "Bearer access-2"],
+    ],
+  );
+  assert.deepEqual(await (await call(token, "")).json(), { connected: false });
+});
+
+test("disconnecting when Strava will not refresh a token about to run out still tells Strava with the stored one", async () => {
+  reset({
+    token: (body) =>
+      body.grant_type === "refresh_token"
+        ? new Response("{}", { status: 400 })
+        : Response.json({ ...tokens(1), athlete: { id: 42, firstname: "Ada", lastname: "Rider" } }),
+  });
+  const { email, token } = await signUp();
+  await connect(token);
+  await expireToken(email);
+  strava.requests.length = 0;
+  assert.equal((await call(token, "", { method: "DELETE" })).status, 204);
+  assert.deepEqual(
+    strava.requests.map((r) => [r.path, r.auth ?? r.body?.grant_type]),
+    [
+      ["/oauth/token", "refresh_token"],
+      ["/oauth/deauthorize", "Bearer access-1"],
+    ],
+  );
+});
+
+test("a sign-in whose account is deleted while Strava exchanges the code gives the grant back to Strava", async () => {
+  reset({
+    token: async () => {
+      await db.prepare("DELETE FROM strava_link").run();
+      return Response.json({
+        ...tokens(1),
+        athlete: { id: 42, firstname: "Ada", lastname: "Rider" },
+      });
+    },
+  });
+  const { token } = await signUp();
+  const link = await startConnecting(token);
+  strava.requests.length = 0;
+  const response = await callback(link.state);
+  assert.equal(response.status, 302);
+  assert.equal(
+    new URL(response.headers.get("location")).searchParams.get("error"),
+    "exchange_failed",
+  );
+  assert.deepEqual(
+    strava.requests.filter((r) => r.path === "/oauth/deauthorize").map((r) => r.auth),
+    ["Bearer access-1"],
+  );
+});
+
+test("a sign-in cancelled by connecting again leaves the account's working connection alone", async () => {
+  reset();
+  const { token } = await signUp();
+  await connect(token);
+  const stale = await startConnecting(token);
+  strava.token = async () => {
+    await db.prepare("DELETE FROM strava_link").run();
+    return Response.json({
+      ...tokens(3),
+      athlete: { id: 42, firstname: "Ada", lastname: "Rider" },
+    });
+  };
+  strava.requests.length = 0;
+  const response = await callback(stale.state);
+  assert.equal(
+    new URL(response.headers.get("location")).searchParams.get("error"),
+    "exchange_failed",
+  );
+  assert.deepEqual(
+    strava.requests.filter((r) => r.path === "/oauth/deauthorize"),
+    [],
+  );
+  assert.deepEqual(await (await call(token, "")).json(), {
+    connected: true,
+    athleteName: "Ada Rider",
+  });
+});
+
 test("disconnecting forgets the tokens even when Strava cannot be told", async () => {
   for (const [stravaCannotBeTold, deauthorize] of [
     ["Strava is down", () => new Response("{}", { status: 503 })],

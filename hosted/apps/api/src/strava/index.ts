@@ -33,9 +33,9 @@ const STRAVA_DUPLICATE_UPLOAD = /duplicate of activity (\d+)/i;
 const CALLS_PER_ATHLETE = 30;
 const CONNECT_STARTS_PER_ACCOUNT = 10;
 const CODE_EXCHANGES_PER_APP = 60;
-const BUDGET_WINDOW_SECONDS = 15 * 60;
+export const BUDGET_WINDOW_SECONDS = 15 * 60;
 
-const budgetOf = {
+export const budgetOf = {
   athlete: (athleteId: number) => `athlete:${athleteId}`,
   connectStarts: (userId: string) => `user:${userId}`,
   codeExchanges: "app:exchange",
@@ -51,6 +51,111 @@ class NotConnected extends Error {}
 class AthleteInUse extends Error {}
 
 class OverBudget extends Error {}
+
+async function spendBudget(database: Database, key: string, limit: number) {
+  const now = Math.floor(Date.now() / 1000);
+  const stale = sql`${stravaBudget.windowStart} <= ${now - BUDGET_WINDOW_SECONDS}`;
+  const spent = await database
+    .insert(stravaBudget)
+    .values({ key, windowStart: now, used: 1 })
+    .onConflictDoUpdate({
+      target: stravaBudget.key,
+      set: {
+        used: sql`CASE WHEN ${stale} THEN 1 ELSE ${stravaBudget.used} + 1 END`,
+        windowStart: sql`CASE WHEN ${stale} THEN ${now} ELSE ${stravaBudget.windowStart} END`,
+      },
+      setWhere: sql`${stale} OR ${stravaBudget.used} < ${limit}`,
+    })
+    .returning({ key: stravaBudget.key });
+  return spent.length > 0;
+}
+
+export type StravaDisconnectDeps = {
+  database: Database;
+  vault: Vault;
+  fetcher: typeof fetch;
+  credentials: strava.StravaCredentials | undefined;
+  budget: "spend" | "ignore";
+};
+
+export async function disconnectStrava(deps: StravaDisconnectDeps, userId: string) {
+  const row = await deps.database
+    .select()
+    .from(stravaConnection)
+    .where(eq(stravaConnection.userId, userId))
+    .get();
+  if (!row) return undefined;
+  const mayCall = async () =>
+    deps.budget === "ignore" ||
+    spendBudget(deps.database, budgetOf.athlete(row.athleteId), CALLS_PER_ATHLETE);
+  const tellStrava = async () => {
+    let accessToken = await deps.vault.decrypt(row.accessToken);
+    const refreshToken = await deps.vault.decrypt(row.refreshToken);
+    const expired = row.expiresAt - Math.floor(Date.now() / 1000) <= REFRESH_WHEN_SECONDS_LEFT;
+    if (expired && deps.credentials && refreshToken && (await mayCall())) {
+      const refreshed = await strava
+        .refreshTokens(deps.fetcher, deps.credentials, refreshToken)
+        .catch((error: unknown) => error);
+      if (refreshed instanceof Response && refreshed.ok) {
+        accessToken = ((await refreshed.json()) as strava.TokenResponse).access_token;
+      } else {
+        console.error("Strava did not refresh before deauthorizing; trying the stored token");
+      }
+    }
+    if (!accessToken || !(await mayCall())) return;
+    const response = await strava.deauthorize(deps.fetcher, accessToken);
+    if (!response.ok) throw new Error(`Strava refused to deauthorize: ${response.status}`);
+  };
+  await tellStrava().catch((error: unknown) => console.error(error));
+  await deps.database.delete(stravaConnection).where(eq(stravaConnection.userId, userId));
+  return row.athleteId;
+}
+
+async function deauthorizeUnlessConnected(
+  deps: Pick<StravaDisconnectDeps, "database" | "fetcher">,
+  tokens: strava.TokenResponse,
+  spare: { anyAccount: true } | { accountsOtherThan: string },
+) {
+  if (tokens.athlete) {
+    const connected = await deps.database
+      .select({ userId: stravaConnection.userId })
+      .from(stravaConnection)
+      .where(
+        "anyAccount" in spare
+          ? eq(stravaConnection.athleteId, tokens.athlete.id)
+          : and(
+              eq(stravaConnection.athleteId, tokens.athlete.id),
+              ne(stravaConnection.userId, spare.accountsOtherThan),
+            ),
+      )
+      .get();
+    if (connected) return;
+  }
+  const response = await strava
+    .deauthorize(deps.fetcher, tokens.access_token)
+    .catch((error: unknown) => error);
+  if (!(response instanceof Response && response.ok)) {
+    console.error("Strava did not deauthorize an unfinished sign-in", response);
+  }
+}
+
+export async function deauthorizeUnfinishedSignIns(
+  deps: Pick<StravaDisconnectDeps, "database" | "vault" | "fetcher">,
+  userId: string,
+) {
+  const links = await deps.database
+    .delete(stravaLink)
+    .where(eq(stravaLink.userId, userId))
+    .returning({ tokens: stravaLink.tokens });
+  for (const { tokens } of links) {
+    if (!tokens || tokens === PENDING_EXCHANGE) continue;
+    const plain = await deps.vault.decrypt(tokens);
+    if (!plain) continue;
+    await deauthorizeUnlessConnected(deps, JSON.parse(plain) as strava.TokenResponse, {
+      accountsOtherThan: userId,
+    });
+  }
+}
 
 export function stravaRoutes(deps: StravaDeps) {
   const app = new Hono();
@@ -78,9 +183,6 @@ export function stravaRoutes(deps: StravaDeps) {
       .from(stravaConnection)
       .where(eq(stravaConnection.userId, userId))
       .get();
-
-  const forget = (userId: string) =>
-    deps.database().delete(stravaConnection).where(eq(stravaConnection.userId, userId));
 
   const cancelSignInsOf = (userId: string) =>
     deps.database().delete(stravaLink).where(eq(stravaLink.userId, userId));
@@ -118,24 +220,7 @@ export function stravaRoutes(deps: StravaDeps) {
       );
   };
 
-  const spend = async (key: string, limit: number) => {
-    const now = nowSeconds();
-    const stale = sql`${stravaBudget.windowStart} <= ${now - BUDGET_WINDOW_SECONDS}`;
-    const spent = await deps
-      .database()
-      .insert(stravaBudget)
-      .values({ key, windowStart: now, used: 1 })
-      .onConflictDoUpdate({
-        target: stravaBudget.key,
-        set: {
-          used: sql`CASE WHEN ${stale} THEN 1 ELSE ${stravaBudget.used} + 1 END`,
-          windowStart: sql`CASE WHEN ${stale} THEN ${now} ELSE ${stravaBudget.windowStart} END`,
-        },
-        setWhere: sql`${stale} OR ${stravaBudget.used} < ${limit}`,
-      })
-      .returning({ key: stravaBudget.key });
-    return spent.length > 0;
-  };
+  const spend = (key: string, limit: number) => spendBudget(deps.database(), key, limit);
 
   const isSpent = async (key: string, limit: number) => {
     const row = await deps
@@ -338,11 +423,19 @@ export function stravaRoutes(deps: StravaDeps) {
       return end("exchange_failed");
     const response = await strava.exchangeCode(fetcher, keysOfApp, code);
     if (!response.ok) return end("exchange_failed");
-    await deps
+    const tokens = (await response.json()) as strava.TokenResponse;
+    const kept = await deps
       .database()
       .update(stravaLink)
-      .set({ tokens: await keys.encrypt(JSON.stringify(await response.json())) })
-      .where(eq(stravaLink.id, link.id));
+      .set({ tokens: await keys.encrypt(JSON.stringify(tokens)) })
+      .where(eq(stravaLink.id, link.id))
+      .returning({ id: stravaLink.id });
+    if (kept.length === 0) {
+      await deauthorizeUnlessConnected({ database: deps.database(), fetcher }, tokens, {
+        anyAccount: true,
+      });
+      return c.redirect(toApp({ error: "exchange_failed" }), 302);
+    }
     return c.redirect(toApp({ connected: "1" }), 302);
   });
 
@@ -389,15 +482,16 @@ export function stravaRoutes(deps: StravaDeps) {
   app.get("/", async (c) => c.json(await statusOf(riderId(c))));
 
   app.delete("/", async (c) => {
-    const userId = riderId(c);
-    const row = await connectionOf(userId);
-    if (row) {
-      const accessToken = await (await getVault()).decrypt(row.accessToken);
-      if (accessToken && (await spend(budgetOf.athlete(row.athleteId), CALLS_PER_ATHLETE))) {
-        await strava.deauthorize(fetcher, accessToken).catch(() => undefined);
-      }
-      await forget(userId);
-    }
+    await disconnectStrava(
+      {
+        database: deps.database(),
+        vault: await getVault(),
+        fetcher,
+        credentials: credentials(),
+        budget: "spend",
+      },
+      riderId(c),
+    );
     return c.body(null, 204);
   });
 

@@ -14,6 +14,7 @@ import {
 import { ENV } from "../env.server";
 import { signedIn } from "../procedures";
 import { getDb } from "../services";
+import { promiseToSweepFilesAfterDeleting } from "../account/deletion";
 import { contentTypes, fileKey, formatOf, sha256Hex } from "./files";
 import { DEFAULT_TIME_ZONE } from "./local-day";
 import { summarizeActivity } from "./summary";
@@ -243,7 +244,9 @@ export const activitiesRouter = {
       `);
     } catch (error) {
       if (!(await findActivity(db, userId, id))) {
-        await ENV.ACTIVITY_FILES.delete(fileKey(userId, id));
+        await ENV.ACTIVITY_FILES.delete(fileKey(userId, id)).catch(() =>
+          promiseToSweepFilesAfterDeleting(db, userId),
+        );
       }
       throw error;
     }

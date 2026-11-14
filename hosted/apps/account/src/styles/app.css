@@ -1813,3 +1813,39 @@ input[aria-invalid="true"] {
 .confirm .lede + .lede {
   margin-top: 12px;
 }
+
+.deleted-things {
+  margin: 12px 0;
+  padding-left: 20px;
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sign-in-again {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.sign-in-again .notice {
+  margin: 0;
+}
+
+.account-deleted {
+  margin-bottom: 20px;
+  color: var(--mist);
+}
+
+.account-data {
+  max-width: calc(100% - 320px - 56px);
+  margin-top: 32px;
+}
+
+@media (max-width: 860px) {
+  .account-data {
+    max-width: none;
+  }
+}

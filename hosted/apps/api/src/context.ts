@@ -13,13 +13,14 @@ function cookiesCount(request: Request) {
   return request.headers.get("Sec-Fetch-Site") !== "cross-site";
 }
 
-export async function createContext({ context }: CreateContextOptions) {
-  const db = getDb();
-  const request = context.req.raw;
+export async function sessionOf(request: Request) {
   const headers = new Headers(request.headers);
   if (!cookiesCount(request)) headers.delete("Cookie");
-  const session = await (await createAuth(db)).api.getSession({ headers });
-  return { session };
+  return (await createAuth(getDb())).api.getSession({ headers });
+}
+
+export async function createContext({ context }: CreateContextOptions) {
+  return { session: await sessionOf(context.req.raw) };
 }
 
 export type Context = Awaited<ReturnType<typeof createContext>>;

@@ -37,15 +37,7 @@ export async function sha256Hex(bytes: Uint8Array) {
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-const filePrefix = (userId: string) => `activities/${userId}/`;
+export const activityFilePrefix = (userId: string) => `activities/${userId}/`;
 
-export const fileKey = (userId: string, activityId: string) => `${filePrefix(userId)}${activityId}`;
-
-export async function deleteActivityFiles(bucket: R2Bucket, userId: string) {
-  let cursor: string | undefined;
-  do {
-    const page = await bucket.list({ prefix: filePrefix(userId), cursor });
-    if (page.objects.length > 0) await bucket.delete(page.objects.map((object) => object.key));
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor);
-}
+export const fileKey = (userId: string, activityId: string) =>
+  `${activityFilePrefix(userId)}${activityId}`;

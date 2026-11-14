@@ -10,6 +10,7 @@ export const Route = createFileRoute("/settings")({
     error: z.string().optional(),
     sport: z.string().optional().catch(undefined),
     metric: z.enum(zoneMetrics).optional().catch(undefined),
+    delete: z.boolean().optional().catch(undefined),
   }),
   ssr: false,
   head: () => ({ meta: [{ title: "Settings - Trainstack" }] }),
@@ -17,10 +18,10 @@ export const Route = createFileRoute("/settings")({
 });
 
 function Settings() {
-  const { error, sport, metric } = Route.useSearch();
+  const { error, sport, metric, delete: confirmDeleting } = Route.useSearch();
   return (
     <SignedIn signInError={error}>
-      <SettingsPage sport={sport} metric={metric} />
+      <SettingsPage sport={sport} metric={metric} confirmDeleting={confirmDeleting} />
     </SignedIn>
   );
 }

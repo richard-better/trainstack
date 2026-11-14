@@ -18,9 +18,12 @@ function fromItsOwnAddress(runtime) {
   };
 }
 
-export async function signInOnTheWeb(runtime, apple, callbackURL = `${origin}/`) {
-  const subject = `001234.${randomUUID()}`;
-  const email = `${randomUUID()}@example.com`;
+export async function signInOnTheWeb(
+  runtime,
+  apple,
+  callbackURL = `${origin}/`,
+  { subject = `001234.${randomUUID()}`, email = `${randomUUID()}@example.com` } = {},
+) {
   const browser = browserThatDoesNotFollowRedirects(fromItsOwnAddress(runtime));
   const started = await browser.visit(`${api}/api/auth/sign-in/social`, {
     method: "POST",
@@ -54,5 +57,5 @@ export async function signInOnTheWeb(runtime, apple, callbackURL = `${origin}/`)
   const ride = rpcClient(runtime, {
     token: (await apple.signIn(fromItsOwnAddress(runtime), { email, subject })).token,
   });
-  return { back, webApp, ride };
+  return { back, webApp, ride, browser, subject, email };
 }
