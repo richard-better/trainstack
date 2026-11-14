@@ -97,6 +97,20 @@ the device, unclaimed, for the next account. Settings saved before the ledger ar
 stamped at the Unix epoch, so any real edit, from any device or the web, wins over them; a
 weight other than the default goes on the day of the first zone history entry.
 
+Signed in, `WorkoutSync` keeps a copy of the athlete's TrainStack workouts and lists on the
+device (`AccountWorkouts`, one file per account in `Application Support/WorkoutSync`), so the
+Workouts screens show them beside the bundled workouts, offline too. Each pass (`SyncPasses`,
+after every edit, when the app becomes active and when the Workouts screen appears) sends the
+deletions and built-in copies the device owes, then reads `workouts/changes` and
+`workout-lists/changes` after their cursors. The server's copy wins: it settles conflicts by the
+later `updatedAt`. A workout keeps the server's JSON as it came, so one this version cannot read
+is shown as needing a newer Ride rather than lost. Ride does not edit workouts: it saves a copy of
+a built-in under an id it chooses (`builtin-workouts/{id}/copy`, so a replayed copy changes
+nothing) and deletes the athlete's own, which stays deleted: the device remembers it and ignores
+any later write of it, as the server refuses them. Signing out hides the workouts and keeps the
+file; another account sees only its own; deleting the account removes its file. A ride copies the
+workout when it starts, so a change or deletion on the web during the ride does not reach it.
+
 Apple asks apps with Sign in with Apple to revoke the user's tokens when the account is deleted,
 so the server needs a refresh token Ride's own sign-in got. After every native sign-in Ride sends
 the credential's authorization code to `account/apple-authorization` (it lasts five minutes and

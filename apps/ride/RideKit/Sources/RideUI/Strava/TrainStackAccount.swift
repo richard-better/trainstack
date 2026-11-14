@@ -39,7 +39,7 @@ final class TrainStackAccount {
 
   func restore() async {
     guard isRestoring else { return }
-    await refreshFromClient()
+    await refreshFromClient(notifying: false)
   }
 
   func signIn(
@@ -54,7 +54,7 @@ final class TrainStackAccount {
         }
       }
     }
-    await refreshFromClient()
+    await refreshFromClient(notifying: false)
     signInChanged()
     await refreshStrava()
   }
@@ -70,14 +70,14 @@ final class TrainStackAccount {
       throw StravaError.cancelled
     }
     try await client.finishAppleWebSignIn(attempt, callback: callback)
-    await refreshFromClient()
+    await refreshFromClient(notifying: false)
     signInChanged()
     await refreshStrava()
   }
 
   func signOut() async {
     await client.signOut()
-    await refreshFromClient()
+    await refreshFromClient(notifying: false)
     signInChanged()
     isStravaConnected = false
     stravaAthleteName = nil
@@ -97,7 +97,7 @@ final class TrainStackAccount {
       )
     }
     try await client.deleteAccount(deleted)
-    await refreshFromClient()
+    await refreshFromClient(notifying: false)
     for observer in deletionObservers { observer(deleted.id) }
     signInChanged()
     isStravaConnected = false
@@ -116,10 +116,12 @@ final class TrainStackAccount {
     await refreshFromClient()
   }
 
-  private func refreshFromClient() async {
+  private func refreshFromClient(notifying: Bool = true) async {
+    let wasSignedIn = isSignedIn
     isSignedIn = await client.isSignedIn
     name = await client.accountName
     isRestoring = false
+    if notifying, isSignedIn != wasSignedIn { signInChanged() }
   }
 
   func refreshStrava() async {
