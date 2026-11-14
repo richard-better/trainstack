@@ -54,6 +54,9 @@ struct ZoneParityTests {
     lines.append("  ],")
     lines.append(#"  "customLimits": ["#)
     lines.append(customLimitCases().joined(separator: ",\n"))
+    lines.append("  ],")
+    lines.append(#"  "profiles": ["#)
+    lines.append(profileCases().joined(separator: ",\n"))
     lines.append("  ]")
     lines.append("}")
     return lines.joined(separator: "\n") + "\n"
@@ -161,6 +164,108 @@ struct ZoneParityTests {
           ])
       }
     }
+  }
+
+  private static func profileCases() -> [String] {
+    let cases: [(String, [(String, SettingChange)], String)] = [
+      (
+        "the earliest settings hold before the first change",
+        [("2026-03-01", ftp(200)), ("2026-06-01", ftp(220))], "2026-01-01"
+      ),
+      (
+        "a day takes every change up to it",
+        [("2026-03-01", ftp(200)), ("2026-06-01", ftp(220)), ("2026-09-01", ftp(240))],
+        "2026-07-01"
+      ),
+      (
+        "changes on one day apply in a fixed order",
+        [
+          ("2026-03-01", .ownZones(sport: "running", metric: "power", own: true)),
+          ("2026-03-01", .threshold(sport: "running", threshold: "ftp", value: 300)),
+          ("2026-03-01", ftp(250)),
+          ("2026-03-01", .sport("running", listed: true)),
+          (
+            "2026-03-01",
+            .zones(
+              sport: nil, metric: "heart_rate", model: "karvonen",
+              customLimits: [120, 140, 160, 175])
+          ),
+        ], "2026-03-01"
+      ),
+      (
+        "a change that changes nothing does not end the earliest settings",
+        [
+          ("2026-02-01", .ownZones(sport: "running", metric: "power", own: true)),
+          ("2026-03-01", ftp(200)), ("2026-06-01", ftp(220)),
+        ], "2026-02-15"
+      ),
+      (
+        "a weight before the first zones does not decide which zones hold",
+        [("2026-01-01", .weight(kg: 70)), ("2026-02-01", ftp(250))], "2026-01-15"
+      ),
+      (
+        "listing a sport is a change that ends the earliest settings",
+        [("2026-01-01", .sport("cycling", listed: true)), ("2026-02-01", ftp(250))],
+        "2026-01-15"
+      ),
+    ]
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    return cases.map { name, changes, day in
+      var settings = RiderSettings(calendar: calendar)
+      settings.receive(
+        changes.map { day, change in
+          SettingWrite(SettingAddress(change.key, on: SettingDay(day)!), change, at: .beforeAnyEdit)
+        }, through: nil)
+      let profile = settings.history.profile(
+        on: SettingDay(day)!.date(in: calendar), calendar: calendar)
+      let changeList = changes.map { day, change in
+        object([("day", json(day)), ("change", encoded(change))])
+      }
+      let sports = profile.listedSports.map { sport in
+        (sport.rawValue, metrics(profile.sports[sport] ?? [:]))
+      }
+      return "    "
+        + object([
+          ("name", json(name)), ("changes", array(changeList)), ("day", json(day)),
+          ("defaults", metrics(profile.defaults)), ("sports", object(sports)),
+        ])
+    }
+  }
+
+  private static func ftp(_ value: Int) -> SettingChange {
+    .threshold(sport: nil, threshold: "ftp", value: value)
+  }
+
+  private static func metrics(_ metrics: [ZoneMetric: MetricZones]) -> String {
+    object(
+      ZoneMetric.allCases.compactMap { metric in
+        metrics[metric].map { zones in
+          (
+            metric.wireName,
+            object([
+              ("model", json(zones.choice.model.wireName)),
+              (
+                "customLimits",
+                zones.choice.customLimits.map { array($0.map(String.init)) } ?? "null"
+              ),
+              (
+                "thresholds",
+                object(
+                  Threshold.allCases.compactMap { threshold in
+                    zones.thresholds[threshold].map { (threshold.wireName, "\($0)") }
+                  })
+              ),
+            ])
+          )
+        }
+      })
+  }
+
+  private static func encoded(_ change: SettingChange) -> String {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = .sortedKeys
+    return String(decoding: try! encoder.encode(change), as: UTF8.self)
   }
 
   private static func zones(_ model: ZoneModel, _ limits: [Int]?) -> String {

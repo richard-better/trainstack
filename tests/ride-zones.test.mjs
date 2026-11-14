@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
+import { isDeepStrictEqual } from "node:util";
 import {
   basisThresholds,
   knownSports,
   paceDistanceMetres,
+  profileOn,
   standardZoneModel,
   thresholds,
   zoneLimits,
@@ -18,7 +20,7 @@ const ride = JSON.parse(
 );
 
 const rerecord =
-  "Ride's ZoneParityTests recorded these from ZoneModel.swift and ZoneSet.swift. Change both sides, then record with RIDE_RECORD_ZONES=1";
+  "Ride's ZoneParityTests recorded these from its zone models, zone sets and ZoneHistory. Change both sides, then record with RIDE_RECORD_ZONES=1";
 
 const zonesOf = (model, limits) =>
   limits && zoneSet(model, limits)?.zones.map(({ start, end }) => [start, end]);
@@ -101,3 +103,43 @@ test("an athlete's own zone limits are accepted and refused as Ride accepts and 
   );
   assert.deepEqual(mismatches, [], rerecord);
 });
+
+const waitingForProfileOnToIgnoreWeight = new Set([
+  "a weight before the first zones does not decide which zones hold",
+]);
+
+const metricsOf = (metrics) =>
+  Object.fromEntries(
+    Object.entries(metrics).map(([metric, { model, customLimits, thresholds: values }]) => [
+      metric,
+      { model, customLimits, thresholds: values },
+    ]),
+  );
+
+function profileMismatches(cases) {
+  return cases.filter(({ changes, day, defaults, sports }) => {
+    const profile = profileOn(changes, day);
+    const listed = Object.fromEntries(
+      Object.keys(sports).map((sport) => [sport, metricsOf(profile.sports[sport] ?? {})]),
+    );
+    return (
+      !isDeepStrictEqual(metricsOf(profile.defaults), defaults) ||
+      !isDeepStrictEqual(listed, sports)
+    );
+  });
+}
+
+test("a history holds the zones on each day that Ride's ZoneHistory holds", () => {
+  const settled = ride.profiles.filter(({ name }) => !waitingForProfileOnToIgnoreWeight.has(name));
+  assert.deepEqual(profileMismatches(settled), [], rerecord);
+});
+
+test(
+  "a weight does not decide which zones an old activity gets",
+  { todo: "packages/zones profileOn still counts a weight as taking effect" },
+  () => {
+    const waiting = ride.profiles.filter(({ name }) => waitingForProfileOnToIgnoreWeight.has(name));
+    assert.equal(waiting.length, waitingForProfileOnToIgnoreWeight.size);
+    assert.deepEqual(profileMismatches(waiting), [], rerecord);
+  },
+);
