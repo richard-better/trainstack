@@ -1,18 +1,18 @@
 const encoder = new TextEncoder();
 
-const toBase64Url = (bytes: ArrayBuffer | Uint8Array) =>
+export const toBase64Url = (bytes: ArrayBuffer | Uint8Array) =>
   btoa(String.fromCharCode(...new Uint8Array(bytes)))
     .replaceAll("+", "-")
     .replaceAll("/", "_")
     .replace(/=+$/, "");
 
-const fromBase64Url = (text: string) =>
+export const fromBase64Url = (text: string) =>
   Uint8Array.from(atob(text.replaceAll("-", "+").replaceAll("_", "/")), (c) => c.charCodeAt(0));
 
 type DerivedKeyAlgorithm = Parameters<SubtleCrypto["deriveKey"]>[2];
 type DerivedKeyUsages = Parameters<SubtleCrypto["deriveKey"]>[4];
 
-async function derive(
+export async function derive(
   secret: string,
   info: string,
   algorithm: DerivedKeyAlgorithm,

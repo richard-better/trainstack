@@ -55,6 +55,7 @@
     "@orpc/client": "catalog:",
     "@trainstack/config": "workspace:*",
     "@types/node": "catalog:",
+    "ical.js": "2.2.1",
     "miniflare": "4.20260730.0",
     "rolldown": "1.2.16",
     "typescript": "catalog:",

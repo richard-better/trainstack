@@ -10,3 +10,4 @@ export * from "./account";
 export * from "./apple";
 export * from "./calendar";
 export * from "./thresholds";
+export * from "./calendar-feed";
