@@ -1,7 +1,14 @@
-import type { DecodedActivity } from "./activity.ts";
+import type { ActivityFileSummary } from "./activity.ts";
 import { ActivityFileError } from "./error.ts";
 import { sportFromName } from "./sports.ts";
-import { emptyPoint, isTimed, summarize, Track, type TrackPoint } from "./track.ts";
+import {
+  emptyPoint,
+  isTimed,
+  summarize,
+  Track,
+  type TrackKeeps,
+  type TrackPoint,
+} from "./track.ts";
 import { parseLatitude, parseLongitude, parseMeasure, parseNumber, parseTime } from "./values.ts";
 import { scanXml, type XmlAttributes, type XmlHandler } from "./xml.ts";
 
@@ -77,18 +84,26 @@ class GpxReader implements XmlHandler {
   }
 }
 
-export function readGpx(bytes: Uint8Array, keepRecords: boolean): DecodedActivity {
-  const track = new Track(keepRecords);
+export interface TrackActivity {
+  readonly file: ActivityFileSummary;
+  readonly start: number;
+  readonly track: Track;
+}
+
+export function readGpx(bytes: Uint8Array, keeps: TrackKeeps): TrackActivity {
+  const track = new Track(keeps, "gpx");
   const reader = new GpxReader(track);
   scanXml(bytes, reader, "gpx");
   const { start, end } = track;
   if (start === undefined || end === undefined) throw new ActivityFileError("noActivity", "gpx");
   return {
-    format: "gpx",
-    name: reader.trackName ?? reader.metadataName,
-    summary: summarize({ start, end, sport: sportFromName(reader.trackType), laps: [], track }),
-    laps: [],
-    records: track.records(start),
-    events: track.events,
+    file: {
+      format: "gpx",
+      name: reader.trackName ?? reader.metadataName,
+      summary: summarize({ start, end, sport: sportFromName(reader.trackType), laps: [], track }),
+      laps: [],
+    },
+    start,
+    track,
   };
 }

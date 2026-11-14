@@ -1,13 +1,14 @@
 import type { FitLap, LapTrigger } from "@trainstack/fit";
 
-import type { DecodedActivity } from "./activity.ts";
 import { ActivityFileError } from "./error.ts";
+import type { TrackActivity } from "./gpx.ts";
 import { sportFromName, type SportAndSubSport } from "./sports.ts";
 import {
   emptyPoint,
   isTimed,
   summarize,
   Track,
+  type TrackKeeps,
   type TimedPoint,
   type TrackPoint,
 } from "./track.ts";
@@ -242,8 +243,8 @@ function lap(draft: LapDraft, sport: SportAndSubSport): FitLap | undefined {
   };
 }
 
-export function readTcx(bytes: Uint8Array, keepRecords: boolean): DecodedActivity {
-  const track = new Track(keepRecords);
+export function readTcx(bytes: Uint8Array, keeps: TrackKeeps): TrackActivity {
+  const track = new Track(keeps, "tcx");
   const reader = new TcxReader(track);
   scanXml(bytes, reader, "tcx");
   const { laps } = reader;
@@ -260,11 +261,13 @@ export function readTcx(bytes: Uint8Array, keepRecords: boolean): DecodedActivit
       ? { sport: "multisport" as const, subSport: undefined }
       : (reader.firstSport ?? { sport: undefined, subSport: undefined });
   return {
-    format: "tcx",
-    name: undefined,
-    summary: summarize({ start, end, sport, laps, track }),
-    laps,
-    records: track.records(start),
-    events: track.events,
+    file: {
+      format: "tcx",
+      name: undefined,
+      summary: summarize({ start, end, sport, laps, track }),
+      laps,
+    },
+    start,
+    track,
   };
 }

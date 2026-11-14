@@ -1,5 +1,14 @@
-import type { ActivitySummary, FitEvent, FitLap, FitRecord } from "@trainstack/fit";
+import {
+  maxTimerEvents,
+  type ActivitySummary,
+  type FitEvent,
+  type FitLap,
+  type FitRecord,
+  type RecordColumns,
+  type StreamLimits,
+} from "@trainstack/fit";
 
+import { ActivityFileError, type ActivityFileFormat } from "./error.ts";
 import type { SportAndSubSport } from "./sports.ts";
 
 export interface TrackPoint {
@@ -118,6 +127,46 @@ class Climbs {
   }
 }
 
+class Column {
+  private values = new Float64Array(1024);
+  length = 0;
+
+  push(value: number | undefined): void {
+    if (this.length === this.values.length) {
+      const grown = new Float64Array(this.values.length * 2);
+      grown.set(this.values);
+      this.values = grown;
+    }
+    this.values[this.length++] = value ?? NaN;
+  }
+
+  at(index: number): number {
+    return this.values[index]!;
+  }
+}
+
+class PointColumns {
+  readonly time = new Column();
+  readonly power = new Column();
+  readonly heartRate = new Column();
+  readonly speed = new Column();
+  readonly fileDistance = new Column();
+  readonly travelled = new Column();
+  readonly altitude = new Column();
+
+  add(point: TimedPoint, travelled: number | undefined): void {
+    this.time.push(point.time);
+    this.power.push(point.power);
+    this.heartRate.push(point.heartRate);
+    this.speed.push(point.speedMetresPerSecond);
+    this.fileDistance.push(point.distanceMetres);
+    this.travelled.push(travelled);
+    this.altitude.push(point.altitudeMetres);
+  }
+}
+
+export type TrackKeeps = "summary" | "records" | "streams";
+
 export class Track {
   start: number | undefined;
   end: number | undefined;
@@ -128,6 +177,9 @@ export class Track {
   readonly power = new Series();
   readonly climbs = new Climbs();
   private readonly keptPoints: TimedPoint[] | undefined;
+  private readonly keptColumns: PointColumns | undefined;
+  private readonly keepsPauses: boolean;
+  private readonly format: ActivityFileFormat;
   private readonly pauses: Pause[] = [];
   private readonly travelledAtPoints: (number | undefined)[] = [];
   private readonly fileDistance = new Series();
@@ -136,8 +188,11 @@ export class Track {
   private lastTime: number | undefined;
   private segmentStarting = false;
 
-  constructor(keepPoints: boolean) {
-    this.keptPoints = keepPoints ? [] : undefined;
+  constructor(keeps: TrackKeeps, format: ActivityFileFormat) {
+    this.keptPoints = keeps === "records" ? [] : undefined;
+    this.keptColumns = keeps === "streams" ? new PointColumns() : undefined;
+    this.keepsPauses = keeps !== "summary";
+    this.format = format;
   }
 
   segment(): void {
@@ -148,7 +203,7 @@ export class Track {
   add(point: TimedPoint): void {
     if (this.segmentStarting && this.lastTime !== undefined) {
       this.pausedSeconds += Math.max(0, point.time - this.lastTime) / 1000;
-      if (this.keptPoints) this.pauses.push({ stoppedAt: this.lastTime, startedAt: point.time });
+      if (this.keepsPauses) this.pause({ stoppedAt: this.lastTime, startedAt: point.time });
     }
     this.segmentStarting = false;
     this.lastTime = point.time;
@@ -177,6 +232,14 @@ export class Track {
       this.keptPoints.push(point);
       this.travelledAtPoints.push(this.travelled);
     }
+    this.keptColumns?.add(point, this.travelled);
+  }
+
+  private pause(pause: Pause): void {
+    if (this.keptColumns && 2 * (this.pauses.length + 1) > maxTimerEvents) {
+      throw new ActivityFileError("tooLarge", this.format);
+    }
+    this.pauses.push(pause);
   }
 
   get distanceMetres(): number | undefined {
@@ -199,6 +262,39 @@ export class Track {
       temperatureCelsius: point.temperatureCelsius,
       developerFields: {},
     }));
+  }
+
+  columns(start: number, limits: StreamLimits): RecordColumns {
+    const columns = this.keptColumns;
+    const length = columns?.time.length ?? 0;
+    let count = 0;
+    for (let index = 0; index < length; index++) {
+      if ((columns!.time.at(index) - start) / 1000 <= limits.untilSeconds) count++;
+    }
+    if (count > limits.maxRecords) throw new ActivityFileError("tooLarge", this.format);
+    const kept = {
+      count,
+      elapsedSeconds: new Float64Array(count),
+      power: new Float64Array(count),
+      heartRate: new Float64Array(count),
+      speedMetresPerSecond: new Float64Array(count),
+      distanceMetres: new Float64Array(count),
+      altitudeMetres: new Float64Array(count),
+    };
+    const distance = this.fileDistance.isEmpty ? columns?.travelled : columns?.fileDistance;
+    let next = 0;
+    for (let index = 0; index < length; index++) {
+      const elapsed = (columns!.time.at(index) - start) / 1000;
+      if (!(elapsed <= limits.untilSeconds)) continue;
+      kept.elapsedSeconds[next] = elapsed;
+      kept.power[next] = columns!.power.at(index);
+      kept.heartRate[next] = columns!.heartRate.at(index);
+      kept.speedMetresPerSecond[next] = columns!.speed.at(index);
+      kept.distanceMetres[next] = distance!.at(index);
+      kept.altitudeMetres[next] = columns!.altitude.at(index);
+      next++;
+    }
+    return kept;
   }
 
   get events(): FitEvent[] {
