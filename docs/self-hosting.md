@@ -362,7 +362,9 @@ deletes everything in the database, so restore only into one you mean to replace
 ```
 
 It stops at the first step that fails, and before dropping anything when either backup file is
-missing or empty or the list of tables cannot be made. It needs [jq](https://jqlang.org).
+missing or empty or the list of tables cannot be made. It needs [jq](https://jqlang.org). Run
+it while nobody uses the instance: someone signing in between the schema and the rows makes a new
+account that the rows then collide with, and the restore stops partway.
 
 Tables are dropped newest first, so a table goes before the tables it refers to. The export
 includes `__alchemy_migrations`, Alchemy's record of applied migrations, so restore a backup with
@@ -374,7 +376,9 @@ R2 has no history of its own, so copy the bucket. [rclone](https://rclone.org) d
 R2's S3 API. Create an R2 API token with **Object Read & Write** on the bucket under **R2 >
 Manage API tokens**. Then run `rclone config` and add a remote named `r2` at its prompts, so the
 keys stay out of your shell history: storage `s3`, provider `Cloudflare`, the token's access key
-ID and secret access key, and the endpoint `https://<account id>.r2.cloudflarestorage.com`.
+ID and secret access key, and the endpoint `https://<account id>.r2.cloudflarestorage.com`. In
+the advanced settings, set `no_check_bucket` to `true`: a token scoped to one bucket cannot check
+that the bucket exists, and uploads fail without it.
 
 Set `BUCKET` to the bucket name the deploy printed. Back up with
 
