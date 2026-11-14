@@ -159,7 +159,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
   const analysing = analysisState(activity).kind === "pending";
   const updating = analysisUpdating(activity);
   return (
-    <Link to="/activities/$id" params={{ id: activity.id }} className="row">
+    <Link to="/activities/$id" params={{ id: activity.id }} className="row activity-row">
       <span className="row-icon" title={sport.label}>
         <SportIcon family={sport.family} />
       </span>
