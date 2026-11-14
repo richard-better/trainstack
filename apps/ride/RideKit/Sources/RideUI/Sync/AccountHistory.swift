@@ -67,8 +67,10 @@ final class AccountHistory {
 
   func receive(_ listing: [AccountActivity], for account: String) {
     guard self.account == account else { return }
-    let kept = Set(listing.map(\.id))
-    for gone in activities.map(\.id) where !kept.contains(gone) { removeCached(gone) }
+    let kept = Dictionary(listing.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    for known in activities where kept[known.id] != known {
+      if kept[known.id] == nil { removeCached(known.id) } else { forgetDetail(of: known.id) }
+    }
     guard listing != activities else { return }
     activities = listing
     save()
@@ -155,8 +157,12 @@ final class AccountHistory {
 
   private func removeCached(_ id: AccountActivity.ID) {
     downloads.removeValue(forKey: id)?.cancel()
-    details[id] = nil
     try? FileManager.default.removeItem(at: fileURL(of: id))
+    forgetDetail(of: id)
+  }
+
+  private func forgetDetail(of id: AccountActivity.ID) {
+    details[id] = nil
     try? FileManager.default.removeItem(at: detailURL(of: id))
   }
 

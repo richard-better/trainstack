@@ -40,7 +40,7 @@ struct AccountActivitySummaryView: View {
       }
       .pageLayout(maxWidth: Design.ridePageWidth, alignment: .center)
     }
-    .task(id: activity.id) {
+    .task(id: activity) {
       await history.loadDetailIfNeeded(
         of: activity, forLaps: !activity.hasFIT && activity.logged == nil)
     }

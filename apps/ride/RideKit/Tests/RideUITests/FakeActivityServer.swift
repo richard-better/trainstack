@@ -24,6 +24,7 @@ actor FakeActivityServer: ActivityServer, HealthDayServer {
   private var tombstones: [String: Set<String>] = [:]
   private var listed: [String: AccountActivity] = [:]
   private var storedFiles: [String: Data] = [:]
+  private var storedDetails: [String: AccountActivityDetail] = [:]
   private var signedIn: ActivityAccount?
   private var offline = false
   private var holding: Request?
@@ -61,6 +62,10 @@ actor FakeActivityServer: ActivityServer, HealthDayServer {
     listed[activity.id] = activity
     storedFiles[activity.id] = file
   }
+
+  func describeOnceStored(_ activity: AccountActivity) { listed[activity.id] = activity }
+
+  func store(_ detail: AccountActivityDetail, of id: String) { storedDetails[id] = detail }
 
   var downloads: [String] {
     calls.compactMap { if case .file(let id, _) = $0 { id } else { nil } }
@@ -111,7 +116,7 @@ actor FakeActivityServer: ActivityServer, HealthDayServer {
     try check(account)
     calls.append(.detail(id, account: account.id))
     guard activities(of: account.id).contains(id) else { throw StravaError.unavailable }
-    return AccountActivityDetail()
+    return storedDetails[id] ?? AccountActivityDetail()
   }
 
   func activityFile(_ id: String, for account: ActivityAccount) async throws -> Data {

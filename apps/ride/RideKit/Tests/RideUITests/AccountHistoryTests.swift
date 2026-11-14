@@ -72,6 +72,13 @@ struct AccountHistoryTests {
       statistics: ["timer_s": 2700], primary: primary, duplicateIDs: duplicates)
   }
 
+  private static func waitUntil(_ condition: () async -> Bool) async {
+    let deadline = ContinuousClock.now + .seconds(5)
+    while !(await condition()), ContinuousClock.now < deadline {
+      try? await Task.sleep(for: .milliseconds(5))
+    }
+  }
+
   private static let run = String(repeating: "a", count: 64)
   private static let lift = String(repeating: "b", count: 64)
 
@@ -259,12 +266,10 @@ struct AccountHistoryTests {
       await device.server.releaseReplies()
       try await pass.value
       #expect(device.shown.isEmpty)
-      while true {
+      await Self.waitUntil {
         let calls = await device.server.calls
-        if calls.last == .list(account: "ada"), calls.contains(.delete(Self.run, account: "ada")) {
-          break
-        }
-        await Task.yield()
+        return calls.last == .list(account: "ada")
+          && calls.contains(.delete(Self.run, account: "ada"))
       }
       #expect(await device.server.deletions == [.delete(Self.run, account: "ada")])
       #expect(device.shown.isEmpty)
@@ -290,6 +295,41 @@ struct AccountHistoryTests {
       #expect(device.history.file(of: ids[1]) == nil)
       #expect(device.history.file(of: ids[2]) != nil)
       #expect(device.history.cachedFileBytes <= files[0].count * 2 + 10)
+    }
+  }
+
+  @Test func aRideThatUploadsAsADuplicateIsShownOnceWithoutWaitingForAnotherTrigger() async throws {
+    try await withDevice { device in
+      let ride = try device.library.add(Self.rideFile(startingAt: 0))
+      await device.server.store(Self.activity(Self.run, duplicates: [ride]), for: "ada")
+      await device.server.describeOnceStored(
+        Self.activity(ride, sport: "cycling", primary: false, duplicates: [Self.run]))
+      device.sync.syncSoon()
+      await Self.waitUntil {
+        let calls = await device.server.calls
+        guard let upload = calls.firstIndex(of: .upload(ride, account: "ada")) else { return false }
+        return calls[upload...].contains(.list(account: "ada"))
+      }
+      #expect(device.shown == [Self.run])
+    }
+  }
+
+  @Test func aRouteReadBeforeTheAnalysisFinishedIsReadAgainOnceItHas() async throws {
+    try await withDevice { device in
+      var run = Self.activity(Self.run)
+      run.analysisDue = true
+      await device.server.store(run, for: "ada")
+      try await device.sync.sync()
+      await device.history.loadDetailIfNeeded(of: run)
+      #expect(device.history.detail(of: Self.run)?.route == nil)
+      let route = AccountActivityDetail.Route(segments: ["_p~iF~ps|U_ulLnnqC"])
+      run.analysisDue = false
+      await device.server.store(run, for: "ada")
+      await device.server.store(AccountActivityDetail(route: route), of: Self.run)
+      try await device.sync.sync()
+      await device.history.loadDetailIfNeeded(of: run)
+      #expect(device.history.detail(of: Self.run)?.route == route)
+      #expect(device.relaunched().history.detail(of: Self.run)?.route == route)
     }
   }
 }

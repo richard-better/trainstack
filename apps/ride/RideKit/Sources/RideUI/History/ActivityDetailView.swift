@@ -58,7 +58,7 @@ struct ActivityDetailView: View {
         }
       #endif
     }
-    .task(id: activity?.id) {
+    .task(id: activity) {
       if let activity { await history.loadDetailIfNeeded(of: activity) }
     }
     .confirmationDialog(
