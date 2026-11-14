@@ -27,7 +27,19 @@ For cycling, the numbers match Ride's analysis in `apps/ride/RideKit/Sources/Rid
 
 `analyzeActivity(activity, profile)` takes anything shaped like a decoded activity, meaning a
 `summary` (`startTime`, `sport`, `subSport`, `elapsedSeconds`), `records`, `laps` and `events`, together
-with the profile that held on the activity's day. It returns:
+with the profile that held on the activity's day. `records` is either an array of records or
+columns of them (`AnalysisColumns`), as `streamActivityFile` in `@trainstack/activity-file` gives
+them, so the server analyses a 25 MB file without an object per record:
+
+```ts
+const activity = streamActivityFile(bytes, analysisColumnLimits);
+const analysis = analyzeActivity(activity, profileOn(history, day));
+```
+
+The analysis cleans columns in place, so after it the columns hold its samples, not the file's
+values. `analysisColumnLimits` keeps a week of records, the most the analysis reads, and refuses
+more records in that week than one a second. `columnsOf(records)` turns records into columns.
+It returns:
 
 | Field                                | What                                                                 |
 | ------------------------------------ | -------------------------------------------------------------------- |
@@ -181,6 +193,12 @@ typed arrays, around 128 bytes per record. It finishes in a 24 MB V8 heap, 20 MB
 records themselves take. `test/cost.test.ts` runs this in a capped child process
 (`test/day-long.ts`). Laps cost time in proportion to records plus laps, whatever
 the file claims: 40,000 one-second laps over 40,000 records take about 25 ms.
+
+A dense 25 MB FIT file holds a week of 1 Hz records (604,801 with the limits), the most any
+file can bring. Streaming and analysing it takes about 1 s on an Apple M-series Mac and about 1.1 s
+of CPU in workerd, and peak resident memory grows by 78 MB as a ride and 87 MB as a run, the file
+included. GPX and TCX files of 25 MB hold far fewer points and take about 0.5 s and 40 MB.
+`test/columns.test.ts` runs these in a Node process with a 16 MB heap (`test/analyze-file.ts`).
 
 ## Parity with Ride
 

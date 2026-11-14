@@ -19,6 +19,7 @@ import {
 } from "./power.ts";
 import { type BestEffort, bestEfforts, gradeAdjustedSpeeds } from "./running.ts";
 import {
+  type AnalysisColumns,
   type AnalysisRecord,
   averageWhileHeld,
   perSecond,
@@ -41,7 +42,7 @@ export interface AnalysisActivity {
     readonly subSport: string | number | undefined;
     readonly elapsedSeconds: number;
   };
-  readonly records: readonly AnalysisRecord[];
+  readonly records: readonly AnalysisRecord[] | AnalysisColumns;
   readonly laps?: readonly AnalysisLap[];
   readonly events?: readonly TimerEvent[];
 }
@@ -153,7 +154,7 @@ function lapAnalysis(
   activity: AnalysisActivity,
   samples: Samples,
   powerPerSecond: Float64Array,
-  gradeAdjusted: Float64Array,
+  gradeAdjusted: Float64Array | null,
 ): LapAnalysis[] {
   const second = (seconds: number) =>
     Math.min(powerPerSecond.length, Math.max(0, Math.floor(seconds)));
@@ -164,7 +165,7 @@ function lapAnalysis(
       powerPerSecond.subarray(second(span.from), second(span.to)),
     ),
     workKilojoules: powerPerSecond.length > 0 ? heldKilojoules(samples, span) : null,
-    averageGradeAdjustedSpeed: averageWhileHeld(samples, gradeAdjusted, span),
+    averageGradeAdjustedSpeed: gradeAdjusted && averageWhileHeld(samples, gradeAdjusted, span),
   }));
 }
 
@@ -182,11 +183,10 @@ export function analyzeActivity(activity: AnalysisActivity, profile: Profile): A
   const powerStressScore = stressScore(duration, powerIntensity);
 
   const running = sport === "running";
-  const gradeAdjusted = running ? gradeAdjustedSpeeds(samples) : samples.speed.map(() => NaN);
-  const averageGradeAdjustedSpeed = running ? averageWhileHeld(samples, gradeAdjusted) : null;
-  const normalizedGradeAdjustedSpeed = running
-    ? normalizedAverage(perSecond(samples, gradeAdjusted))
-    : null;
+  const gradeAdjusted = running ? gradeAdjustedSpeeds(samples) : null;
+  const averageGradeAdjustedSpeed = gradeAdjusted && averageWhileHeld(samples, gradeAdjusted);
+  const normalizedGradeAdjustedSpeed =
+    gradeAdjusted && normalizedAverage(perSecond(samples, gradeAdjusted));
   const thresholdPace =
     sport === null ? undefined : metricSettings(profile, "pace", sport)?.thresholds.threshold_pace;
   const paceDistance = sport === null ? undefined : paceDistanceMetres(sport);

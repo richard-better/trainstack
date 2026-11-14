@@ -49,44 +49,97 @@ export interface SamplesOptions {
 
 type Range = { readonly min: number; readonly max: number };
 
+const isColumns = (
+  records: readonly AnalysisRecord[] | AnalysisColumns,
+): records is AnalysisColumns => !Array.isArray(records);
+
 const within = (value: number | undefined, { min, max }: Range) =>
   value !== undefined && Number.isFinite(value) && value >= min && value <= max ? value : NaN;
 
-function inTimeOrder(records: readonly AnalysisRecord[]): readonly AnalysisRecord[] {
-  const kept = records.filter(
-    ({ elapsedSeconds }) => Number.isFinite(elapsedSeconds) && elapsedSeconds <= maxActivitySeconds,
-  );
-  const ordered = kept.every(
-    (record, index) => index === 0 || kept[index - 1]!.elapsedSeconds <= record.elapsedSeconds,
-  );
-  return ordered ? kept : kept.toSorted((a, b) => a.elapsedSeconds - b.elapsedSeconds);
+export interface AnalysisColumns {
+  readonly count: number;
+  readonly elapsedSeconds: Float64Array;
+  readonly power: Float64Array;
+  readonly heartRate: Float64Array;
+  readonly speedMetresPerSecond: Float64Array;
+  readonly distanceMetres: Float64Array;
+  readonly altitudeMetres: Float64Array;
+}
+
+export const analysisColumnLimits = {
+  untilSeconds: maxActivitySeconds,
+  maxRecords: maxActivitySeconds + 1,
+} as const;
+
+export function columnsOf(records: readonly AnalysisRecord[]): AnalysisColumns {
+  const column = (value: (record: AnalysisRecord) => number | undefined) =>
+    Float64Array.from(records, (record) => value(record) ?? NaN);
+  return {
+    count: records.length,
+    elapsedSeconds: column((record) => record.elapsedSeconds),
+    power: column((record) => record.power),
+    heartRate: column((record) => record.heartRate),
+    speedMetresPerSecond: column((record) => record.speedMetresPerSecond),
+    distanceMetres: column((record) => record.distanceMetres),
+    altitudeMetres: column((record) => record.altitudeMetres),
+  };
+}
+
+const isKept = (seconds: number) => Number.isFinite(seconds) && seconds <= maxActivitySeconds;
+
+function inTimeOrder(columns: AnalysisColumns): AnalysisColumns {
+  const { count, elapsedSeconds: elapsed } = columns;
+  let kept = 0;
+  let ordered = true;
+  let previous = -Infinity;
+  for (let index = 0; index < count; index++) {
+    const seconds = elapsed[index]!;
+    if (!isKept(seconds)) continue;
+    kept++;
+    if (seconds < previous) ordered = false;
+    previous = seconds;
+  }
+  if (kept === count && ordered) return columns;
+  const order = new Uint32Array(kept);
+  for (let index = 0, next = 0; index < count; index++) {
+    if (isKept(elapsed[index]!)) order[next++] = index;
+  }
+  if (!ordered) order.sort((a, b) => elapsed[a]! - elapsed[b]! || a - b);
+  const gathered = (values: Float64Array) => Float64Array.from(order, (index) => values[index]!);
+  return {
+    count: kept,
+    elapsedSeconds: gathered(elapsed),
+    power: gathered(columns.power),
+    heartRate: gathered(columns.heartRate),
+    speedMetresPerSecond: gathered(columns.speedMetresPerSecond),
+    distanceMetres: gathered(columns.distanceMetres),
+    altitudeMetres: gathered(columns.altitudeMetres),
+  };
 }
 
 export function samplesOf(
-  records: readonly AnalysisRecord[],
+  records: readonly AnalysisRecord[] | AnalysisColumns,
   sport: string | null,
   { pauses = [], rule = samplingRule }: SamplesOptions = {},
 ): Samples {
-  const ordered = inTimeOrder(records);
-  const count = ordered.length;
+  const raw = inTimeOrder(isColumns(records) ? records : columnsOf(records));
+  const { count, elapsedSeconds: elapsed } = raw;
   const speedRange = sport === "running" ? plausibleRanges.runningSpeed : plausibleRanges.speed;
-  const elapsed = Float64Array.from(ordered, (record) => record.elapsedSeconds);
   const paused = pausedRecords(elapsed, pauses);
   const samples: Samples = {
     count,
     elapsed,
-    power: new Float64Array(count),
-    heartRate: new Float64Array(count),
-    speed: new Float64Array(count),
-    distance: new Float64Array(count),
-    altitude: new Float64Array(count),
+    power: raw.power,
+    heartRate: raw.heartRate,
+    speed: raw.speedMetresPerSecond,
+    distance: raw.distanceMetres,
+    altitude: raw.altitudeMetres,
     held: heldSegments(elapsed, pauses, rule),
     paused,
   };
   let furthest = NaN;
   let previousWithDistance = -1;
   for (let index = 0; index < count; index++) {
-    const record = ordered[index]!;
     const seconds = elapsed[index]!;
     if (paused[index]) {
       for (const values of [
@@ -100,20 +153,16 @@ export function samplesOf(
       }
       continue;
     }
-    samples.power[index] = within(record.power, plausibleRanges.power);
-    samples.heartRate[index] = within(record.heartRate, plausibleRanges.heartRate);
-    samples.altitude[index] = within(record.altitudeMetres, plausibleRanges.altitude);
-    const distance = within(record.distanceMetres, plausibleRanges.distance);
+    samples.power[index] = within(samples.power[index], plausibleRanges.power);
+    samples.heartRate[index] = within(samples.heartRate[index], plausibleRanges.heartRate);
+    samples.altitude[index] = within(samples.altitude[index], plausibleRanges.altitude);
+    const distance = within(samples.distance[index], plausibleRanges.distance);
     if (!Number.isNaN(distance))
       furthest = Number.isNaN(furthest) ? distance : Math.max(furthest, distance);
     samples.distance[index] = Number.isNaN(distance) ? NaN : furthest;
-    let speed = within(record.speedMetresPerSecond, speedRange);
-    if (
-      Number.isNaN(speed) &&
-      record.speedMetresPerSecond === undefined &&
-      previousWithDistance >= 0 &&
-      !Number.isNaN(distance)
-    ) {
+    const rawSpeed = samples.speed[index]!;
+    let speed = within(rawSpeed, speedRange);
+    if (Number.isNaN(rawSpeed) && previousWithDistance >= 0 && !Number.isNaN(distance)) {
       const previous = elapsed[previousWithDistance]!;
       const gap = seconds - previous;
       if (gap > 0 && gap <= rule.maxHeldGapSeconds && !overlapsPause(pauses, previous, seconds)) {
