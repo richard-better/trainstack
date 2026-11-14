@@ -164,6 +164,21 @@ export const athleteTables: { [T in TableKey]: Handling<T> } = {
       "Pairings of a planned workout with an activity that the athlete made or took apart by hand, which hold over the automatic pairing.",
     owner: (table) => table.userId,
   },
+  thresholdSuggestion: {
+    about:
+      "Thresholds detected from the athlete's activities that differ from what is set, each with how it was estimated, how sure it is, and the activity statistics it read as evidence.",
+    owner: (table) => table.userId,
+  },
+  thresholdAnswer: {
+    about:
+      "Detected thresholds the athlete accepted or dismissed, by the evidence behind them, so the same evidence does not suggest them again.",
+    owner: (table) => table.userId,
+  },
+  thresholdDetection: {
+    about:
+      "When thresholds were last detected for the athlete, and how many analysed activities and which settings revision that read.",
+    owner: (table) => table.userId,
+  },
 };
 
 export type AthleteFiles = {

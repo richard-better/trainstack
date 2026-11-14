@@ -2,6 +2,7 @@ import { activitiesRouter } from "./activities/router";
 import { calendarRouter, plannedWorkoutsRouter } from "./calendar/router";
 import { api } from "./procedures";
 import { settingsRouter } from "./settings/router";
+import { thresholdsRouter } from "./thresholds/router";
 import { trainingRouter } from "./training/router";
 import { builtinWorkoutsRouter, workoutListsRouter, workoutsRouter } from "./workouts/router";
 
@@ -15,4 +16,5 @@ export const appRouter = api.router({
   workoutLists: workoutListsRouter,
   plannedWorkouts: plannedWorkoutsRouter,
   calendar: calendarRouter,
+  thresholds: thresholdsRouter,
 });

@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import {
+  analysisStatistics,
   detectThresholds,
   type ThresholdActivity,
   type ThresholdDetection,
   type ThresholdEstimate,
+  thresholdStatistics,
 } from "../src/index.ts";
 import {
   activityOf,
@@ -412,4 +414,21 @@ test("reads five years of activities in well under a Worker's budget", () => {
   }
   const elapsed = performance.now() - started;
   assert.ok(elapsed < 100, `${elapsed} ms`);
+});
+
+test("reads only statistics the analysis stores, and no others from the synthetic athletes", () => {
+  const stored = new Set(analysisStatistics.map(({ name }) => name));
+  for (const name of thresholdStatistics) assert.ok(stored.has(name), name);
+  const narrowed = [...cyclist, ...runner].map((activity) => ({
+    ...activity,
+    statistics: Object.fromEntries(
+      Object.entries(activity.statistics).filter(([name]) => thresholdStatistics.includes(name)),
+    ),
+  }));
+  for (const sport of ["cycling", "running"]) {
+    assert.deepEqual(
+      detectThresholds(narrowed, sport, { today, current: withMax }),
+      detectThresholds([...cyclist, ...runner], sport, { today, current: withMax }),
+    );
+  }
 });

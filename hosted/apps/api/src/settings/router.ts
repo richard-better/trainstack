@@ -1,4 +1,9 @@
-import type { AthleteSettings, SettingEntry, SettingRemoval } from "@trainstack/contract";
+import type {
+  AthleteSettings,
+  SettingEntry,
+  SettingRemoval,
+  SettingWrite,
+} from "@trainstack/contract";
 import {
   type DatedChange,
   listedSports,
@@ -77,6 +82,65 @@ const metricOutput = (settings: MetricZones) => ({
   missingThresholds: missingThresholds(settings),
 });
 
+export function settingWriteStatements(
+  db: Database,
+  userId: string,
+  writes: readonly SettingWrite[],
+  invalid: (index: number, reason: string) => never,
+) {
+  const latestAllowed = Date.now() + ALLOWED_CLOCK_AHEAD_MS;
+  return writes.map((write, index) => {
+    if (write.updatedAt.getTime() > latestAllowed) {
+      invalid(index, "updatedAt is later than the server's clock");
+    }
+    let key;
+    let value = "";
+    if ("remove" in write) {
+      key = storedKey(write.key);
+    } else {
+      const change = validated(write.change);
+      if (typeof change === "string") {
+        invalid(index, change);
+      }
+      key = storedKey(change);
+      value = JSON.stringify(canonical(change));
+    }
+    return db
+      .insert(athleteSetting)
+      .values({
+        userId,
+        ...key,
+        day: write.day,
+        value,
+        removed: "remove" in write,
+        updatedAt: write.updatedAt,
+        revision: sql`(SELECT coalesce(max(revision), 0) + 1 FROM ${athleteSetting} WHERE user_id = ${userId})`,
+      })
+      .onConflictDoUpdate({
+        target: [
+          athleteSetting.userId,
+          athleteSetting.kind,
+          athleteSetting.scope,
+          athleteSetting.name,
+          athleteSetting.day,
+        ],
+        set: {
+          value: sql`excluded.value`,
+          removed: sql`excluded.removed`,
+          updatedAt: sql`excluded.updated_at`,
+          revision: sql`excluded.revision`,
+        },
+        setWhere: sql`(excluded.updated_at, excluded.removed, excluded.value) > (${athleteSetting.updatedAt}, ${athleteSetting.removed}, ${athleteSetting.value})`,
+      });
+  });
+}
+
+export const analysesDueAfterSettings = (db: Database, userId: string) =>
+  db.run(sql`
+    UPDATE ${activityAnalysis} SET due = 1, generation = generation + 1
+    WHERE user_id = ${userId}
+  `);
+
 export const settingsRouter = {
   get: signedIn.settings.get.handler(async ({ context, input }) => {
     const db = getDb();
@@ -140,62 +204,11 @@ export const settingsRouter = {
   write: signedIn.settings.write.handler(async ({ context, input, errors }) => {
     const db = getDb();
     const userId = context.session.user.id;
-    const latestAllowed = Date.now() + ALLOWED_CLOCK_AHEAD_MS;
-    const statements = input.writes.map((write, index) => {
-      if (write.updatedAt.getTime() > latestAllowed) {
-        throw errors.INVALID_SETTING({
-          data: { index, reason: "updatedAt is later than the server's clock" },
-        });
-      }
-      let key;
-      let value = "";
-      if ("remove" in write) {
-        key = storedKey(write.key);
-      } else {
-        const change = validated(write.change);
-        if (typeof change === "string") {
-          throw errors.INVALID_SETTING({ data: { index, reason: change } });
-        }
-        key = storedKey(change);
-        value = JSON.stringify(canonical(change));
-      }
-      return db
-        .insert(athleteSetting)
-        .values({
-          userId,
-          ...key,
-          day: write.day,
-          value,
-          removed: "remove" in write,
-          updatedAt: write.updatedAt,
-          revision: sql`(SELECT coalesce(max(revision), 0) + 1 FROM ${athleteSetting} WHERE user_id = ${userId})`,
-        })
-        .onConflictDoUpdate({
-          target: [
-            athleteSetting.userId,
-            athleteSetting.kind,
-            athleteSetting.scope,
-            athleteSetting.name,
-            athleteSetting.day,
-          ],
-          set: {
-            value: sql`excluded.value`,
-            removed: sql`excluded.removed`,
-            updatedAt: sql`excluded.updated_at`,
-            revision: sql`excluded.revision`,
-          },
-          setWhere: sql`(excluded.updated_at, excluded.removed, excluded.value) > (${athleteSetting.updatedAt}, ${athleteSetting.removed}, ${athleteSetting.value})`,
-        });
+    const statements = settingWriteStatements(db, userId, input.writes, (index, reason) => {
+      throw errors.INVALID_SETTING({ data: { index, reason } });
     });
     const [first, ...rest] = statements;
-    await db.batch([
-      first!,
-      ...rest,
-      db.run(sql`
-        UPDATE ${activityAnalysis} SET due = 1, generation = generation + 1
-        WHERE user_id = ${userId}
-      `),
-    ]);
+    await db.batch([first!, ...rest, analysesDueAfterSettings(db, userId)]);
     const rows = await rowsOf(db, userId);
     const written = new Set(
       input.writes.map((write) => {

@@ -9,6 +9,7 @@ import {
   analysisStatistics,
   zoneTimeStatisticDescription,
 } from "./statistics.ts";
+import { thresholdsContract } from "./thresholds.ts";
 import { trainingContract } from "./training.ts";
 import { builtinWorkoutsContract, workoutListsContract, workoutsContract } from "./workouts.ts";
 
@@ -16,6 +17,7 @@ export * from "./calendar.ts";
 export * from "./route.ts";
 export * from "./settings.ts";
 export * from "./statistics.ts";
+export * from "./thresholds.ts";
 export * from "./training.ts";
 export * from "./workouts.ts";
 
@@ -274,6 +276,7 @@ export const appContract = {
   workoutLists: workoutListsContract,
   plannedWorkouts: plannedWorkoutsContract,
   calendar: calendarContract,
+  thresholds: thresholdsContract,
 };
 
 export type AppContractClient = ContractRouterClient<typeof appContract>;

@@ -110,6 +110,19 @@ export interface ThresholdDetectionOptions {
   readonly current?: ThresholdValues;
 }
 
+export const thresholdStatistics: readonly string[] = [
+  "sustained_max_heart_rate_bpm",
+  ...[...criticalPowerDurations, 1800, 3600].map((seconds) => `best_power_${seconds}s_w`),
+  "best_power_1200s_heart_rate_bpm",
+  `best_power_${thresholdEffortSeconds}s_heart_rate_bpm`,
+  `best_grade_adjusted_speed_${thresholdEffortSeconds}s_mps`,
+  `best_grade_adjusted_speed_${thresholdEffortSeconds}s_heart_rate_bpm`,
+  ...bestEffortDistances.flatMap(({ name }) => [
+    `best_time_${name}_s`,
+    `best_time_${name}_heart_rate_bpm`,
+  ]),
+];
+
 export const detectedThresholds = (sport: string): readonly DetectedThreshold[] => {
   if (sport === "cycling") return ["ftp", "lactate_threshold_heart_rate", "max_heart_rate"];
   if (sport === "running") {
