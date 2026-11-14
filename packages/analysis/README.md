@@ -150,6 +150,96 @@ and `tss` (stress scores, which all use the TSS scale, so an hour at threshold s
   threshold speed. The distance counts only for a workout with distance steps. A number is null
   when a target needs a threshold the day lacks.
 
+## Threshold detection
+
+`detectThresholds(activities, sport, { today, current })` estimates a sport's thresholds from the
+statistics of its activities, as `statisticsOf` names them, so the server reads them from storage
+without opening a file. Cycling gets `ftp`, running `threshold_pace`, both
+`lactate_threshold_heart_rate`, and every sport `max_heart_rate`, in the units of
+`@trainstack/zones` (watts, seconds per kilometre, beats per minute). `current` holds the
+thresholds the athlete has set for the sport. Each result is either an estimate, with its `method`,
+a `confidence` of `high`, `medium` or `low`, the activity and day of the effort behind it, the
+statistics it used as `evidence`, and `signals` that say what raised or lowered the confidence, or
+`value: null` with a `reason`: `no_data`, `too_short`, `efforts_not_maximal`, `needs_threshold`
+or `no_qualifying_effort`.
+
+Every effort is a floor on what the athlete can do, so the rules never present a sub-maximal
+effort as a threshold with confidence. Without a max heart rate the athlete has set, heart rate
+cannot show that an effort was maximal (an observed max is itself only as high as the hardest
+effort), so estimates are `low` until the athlete sets or accepts one.
+
+### Per activity
+
+The analysis keeps what detection needs as statistics:
+
+- `sustained_max_heart_rate_bpm`: the highest value the heart rate stays at or above for 5 s
+  of held time spanning at least two records. A single bad record, even one held for 30 s by
+  smart recording, does not count.
+- `best_power_1200s_heart_rate_bpm` and `best_power_1800s_heart_rate_bpm`: the average heart
+  rate over the last two thirds of the best 20 and 30 min of power per second. For 30 min that is
+  the last 20 min, Friel's test (below). It needs heart rate for 80 % of that time.
+- `best_grade_adjusted_speed_1800s_mps` and its `_heart_rate_bpm`, the same for running.
+- `best_time_<distance>_heart_rate_bpm`: the same over each best effort.
+
+### Methods and sources
+
+- **Age.** Detection reads the last 180 days (`thresholdWindowDays`). An effort counts at full
+  value for 28 days, then loses 0.1 % of its value a day (`effortDecay`), so one 180 days old
+  counts at 85 %. That is gentler than stopping training, which costs trained athletes 4-14 % of
+  VO2max within four weeks (Mujika & Padilla, "Detraining: loss of training-induced
+  physiological and performance adaptations. Part I", _Sports Medicine_ 30 (2000), 79-87),
+  because most athletes keep training: the decay stands for the doubt that an old effort is still
+  repeatable. Confidence drops a level when the effort behind an estimate is over 42 days old,
+  and is `low` over 90 days.
+- **Maximal efforts.** Heart rate over the last two thirds of an effort of up to an hour at 90 %
+  of max heart rate or more marks it maximal; for longer efforts, 85 %. 5 points below that marks
+  it sub-maximal, and such an effort is left out. In between, or without heart rate, the effort
+  counts with `low` confidence.
+- **FTP.** Three estimates from the best power per duration, each value aged first:
+  - 95 % of the best 20 min (Allen & Coggan, _Training and Racing with a Power Meter_, 2nd ed.,
+    2010).
+  - Critical power: a least-squares line through work against time at 5, 10 and 20 min, W = CP ×
+    t + W' (Monod & Scherrer, "The work capacity of a synergic muscular group", _Ergonomics_ 8
+    (1965), 329-338; Jones et al., "Critical power: implications for determination of VO2max and
+    exercise tolerance", _Medicine & Science in Sports & Exercise_ 42 (2010), 1876-1890), with
+    FTP at 97 % of CP, the ratio of mean FTP (249 W) to CP (256 W) in Karsten et al.,
+    "Relationship between the critical power test and a 20-min functional threshold power test
+    in cycling", _Frontiers in Physiology_ 11 (2021), 613151.
+  - The best hour, which is FTP by its definition (Allen & Coggan).
+
+  The fit is trusted when W' falls within 5-35 kJ, about two standard deviations around the 17 ±
+  7 kJ Karsten et al. measured. Below that the curve is flat, which happens when the short
+  efforts were not all-out; above it the 20 min effort was weak against the short ones. A
+  trusted fit gives the estimate, `high` when the 20 min rule agrees within 5 % and the 20 min
+  effort was maximal, otherwise `medium`. An untrusted or missing fit falls back to the 20 min
+  rule, `medium` at most. An hour held above either raises the estimate to it. A sub-maximal 20
+  min effort gives no estimate.
+
+- **Threshold pace.** Riegel's model, T₂ = T₁ × (D₂ / D₁)^1.06 (Riegel, "Athletic records and
+  human endurance", _American Scientist_ 69 (1981), 285-290), predicts from each best effort of
+  10 min to 2 h the distance the athlete could run in an hour, and threshold pace is the pace of
+  the fastest prediction after ageing. It is `high` when an effort in another activity predicts
+  within 3 %, `medium` alone. Treadmill runs (`indoor`) do not count, since their distance comes
+  from the treadmill or a foot pod.
+- **Lactate threshold heart rate.** Friel's 30 minute test: the average heart rate over the last
+  20 min of a solo 30 min all-out effort (Friel, _The Cyclist's Training Bible_ and _Total
+  Heart Rate Training_, 2006). An activity qualifies when its best 30 min of power, or of
+  grade-adjusted speed, is at least 98 % of FTP or threshold speed, taken from the estimate
+  above unless it is `low`, then from the athlete's own. The latest qualifying activity gives
+  the estimate, `high` when another within 42 days agrees within 4 bpm, and never more
+  confident than the threshold it was qualified against.
+- **Max heart rate.** The highest `sustained_max_heart_rate_bpm`. When it is more than 10 bpm
+  above the next activity's, it is taken for a lost or locked sensor and the next one counts. It
+  is `medium` when another activity comes within 3 bpm, else `low`, and never `high`, since it
+  is only as high as the hardest effort. It is not aged.
+
+`test/thresholds.test.ts` generates athletes (`test/synthetic-athlete.ts`) with a known critical
+power, W', hour speed and heart rate response, gives them four months of seeded training with a
+few maximal tests or races, analyses every activity from its records, and requires FTP within 3
+%, threshold pace within 2 %, and lactate threshold and max heart rate within 3 bpm. It covers
+only easy riding, a freak spike and a locked heart rate sensor, indoor ERG workouts, a long break,
+and five years of activities, which take a few milliseconds.
+
 ## Sampling rules
 
 - **Order.** Records are sorted by elapsed time. Ride's FIT files are already in order.
