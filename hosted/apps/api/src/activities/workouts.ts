@@ -54,7 +54,7 @@ export function mergeWorkouts(
   userId: string,
   a: string,
   b: string,
-  { evenIfDistinct = false } = {},
+  { evenIfDistinct = false, when = sql`1` }: { evenIfDistinct?: boolean; when?: SQL } = {},
 ) {
   const workoutA = workoutOf(userId, a);
   const workoutB = workoutOf(userId, b);
@@ -71,7 +71,7 @@ export function mergeWorkouts(
     SET workout_id = (SELECT min(workout_id) FROM ${activity} WHERE user_id = ${userId} AND id IN (${a}, ${b}))
     WHERE user_id = ${userId}
       AND workout_id IN (SELECT workout_id FROM ${activity} WHERE user_id = ${userId} AND id IN (${a}, ${b}))
-      AND NOT ${keptApart}
+      AND NOT ${keptApart} AND ${when}
   `);
 }
 
@@ -172,6 +172,14 @@ async function candidatesFor(db: Database, userId: string, self: Candidate) {
   return rows.map(asCandidate).filter((candidate) => candidate.workoutId !== self.workoutId);
 }
 
+const stillAsMatched = (userId: string, recording: Candidate) => sql`EXISTS (
+  SELECT 1 FROM ${activity} g
+  JOIN ${activityStatistic} ge ON ge.user_id = g.user_id AND ge.activity_id = g.id AND ge.name = 'elapsed_s'
+  WHERE g.user_id = ${userId} AND g.id = ${recording.id}
+    AND g.started_at = ${recording.startedAt.getTime()} AND ge.value = ${recording.elapsedSeconds}
+    AND coalesce(g.sport, g.file_sport) IS ${recording.sport}
+)`;
+
 export async function matchActivity(db: Database, userId: string, id: string) {
   const current = await db
     .select({ summarizedAt: activity.summarizedAt })
@@ -185,7 +193,11 @@ export async function matchActivity(db: Database, userId: string, id: string) {
     const matches = (await candidatesFor(db, userId, self))
       .filter((candidate) => !(self.logged && candidate.logged) && isSameWorkout(self, candidate))
       .sort((a, b) => sharedMilliseconds(self, b) - sharedMilliseconds(self, a));
-    for (const match of matches) await mergeWorkouts(db, userId, id, match.id);
+    for (const match of matches) {
+      await mergeWorkouts(db, userId, id, match.id, {
+        when: sql`${stillAsMatched(userId, self)} AND ${stillAsMatched(userId, match)}`,
+      });
+    }
   }
   await db.batch([
     electPrimary(db, userId, id),
