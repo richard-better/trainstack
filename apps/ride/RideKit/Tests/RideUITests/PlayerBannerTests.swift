@@ -66,6 +66,20 @@ struct PlayerBannerTests {
         == "Next: Threshold block · 275 W · for 5:00")
   }
 
+  @Test func announcesANamedAllOutStepAsAMaxEffort() {
+    var session = RideSession(
+      workout: Workout(
+        name: "Finish",
+        steps: [
+          .init(duration: 30, target: .power(.constant(150))),
+          .init(duration: 20, target: .maxEffort, name: "Finish"),
+        ]))
+    for _ in 0..<20 { session.advance(by: 1, reading: .init(power: 150)) }
+    #expect(
+      PlayerBanner.shown(in: session, ftp: 250).first?.text
+        == "Next: Finish · Max effort · for 0:20")
+  }
+
   @Test func announcesALapButtonStepAsLastingUntilTheLap() {
     let banner = shown(at: 355).first
     #expect(banner?.text == "Next: Free ride · until you press lap")

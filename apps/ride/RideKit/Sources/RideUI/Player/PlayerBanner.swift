@@ -38,6 +38,8 @@ struct PlayerBanner: Equatable {
       } else if case .heartRate(let heartRate) = next.step.target {
         StepTargetText.heartRate(heartRate).value + " "
           + StepTargetText.heartRate(heartRate).unit
+      } else if case .maxEffort = next.step.target, next.step.name != nil {
+        "Max effort"
       } else {
         nil
       }
