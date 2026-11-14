@@ -84,8 +84,12 @@ export function createUploads({
     }
   }
 
+  const isStillListed = (key: number, started: number) =>
+    started === generation && uploads.some((upload) => upload.key === key);
+
   async function send(key: number, file: CheckedFile, started: number) {
     const current = () => started === generation;
+    if (!isStillListed(key, started)) return;
     update(key, { state: { phase: "sending", progress: null } });
     const shared = inFlight.get(file.id);
     const sending =
@@ -123,7 +127,7 @@ export function createUploads({
 
   async function restore(key: number, file: CheckedFile, started: number) {
     const current = () => started === generation;
-    if (!current() || !uploads.some((upload) => upload.key === key)) return;
+    if (!isStillListed(key, started)) return;
     update(key, { state: { phase: "sending", progress: null } });
     try {
       finish(
@@ -143,7 +147,7 @@ export function createUploads({
 
   async function run(key: number, file: File, started: number) {
     await turn(async () => {
-      if (started !== generation || !uploads.some((upload) => upload.key === key)) return;
+      if (!isStillListed(key, started)) return;
       update(key, { state: { phase: "checking" } });
       const check = await checkActivityFile(file).catch(() => null);
       if (started !== generation) return;

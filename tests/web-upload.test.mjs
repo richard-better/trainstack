@@ -309,6 +309,43 @@ test("a restore still waiting its turn when the athlete signs out is never sent"
   assert.deepEqual(uploads.list(), []);
 });
 
+test("a retry still waiting its turn when the athlete signs out is never sent", async () => {
+  const { webApp } = await signInOnTheWeb(runtime, apple);
+  let online = false;
+  let release;
+  let started;
+  const held = new Promise((resolve) => (release = resolve));
+  const holding = new Promise((resolve) => (started = resolve));
+  const sent = [];
+  const api = {
+    activities: {
+      get: (input) =>
+        online ? webApp.activities.get(input) : Promise.reject(new TypeError("offline")),
+      upload: async (input) => {
+        sent.push(input.file.name);
+        if (input.file.name === "garmin-connect-run.gpx") {
+          started();
+          await held;
+        }
+        return webApp.activities.upload(input);
+      },
+    },
+  };
+  const uploads = createUploads({ api, concurrency: 1 });
+  await uploads.add([await fileAt(`${FILES}/strava-ride.gpx`)]);
+  const [failed] = uploads.list();
+  assert.equal(failed.state.phase, "failed");
+  online = true;
+  const busy = uploads.add([await fileAt(`${FILES}/garmin-connect-run.gpx`)]);
+  await holding;
+  const retrying = uploads.retry(failed.key);
+  uploads.clear();
+  release();
+  await Promise.all([busy, retrying]);
+  assert.deepEqual(sent, ["garmin-connect-run.gpx"]);
+  assert.deepEqual(uploads.list(), []);
+});
+
 test("an upload that fails on the way can be tried again without choosing the file again", async () => {
   const { webApp } = await signInOnTheWeb(runtime, apple);
   let online = false;
