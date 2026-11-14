@@ -1,4 +1,5 @@
-import { FitWriter, fitTime } from "../packages/fit/test/fit-writer.ts";
+import { FitWriter, fitTime, semicircles } from "../packages/fit/test/fit-writer.ts";
+import { BUDA_HILLS_LOOP, MARGARET_ISLAND_LOOP, decodePolyline } from "./dev-routes.mjs";
 
 const DAY_MS = 86_400_000;
 const FIT_SPORT = { cycling: 2, running: 1 };
@@ -65,8 +66,62 @@ function heartRateFor(effort, previous) {
   return previous + (target - previous) * 0.02;
 }
 
-export function activityFile({ sport, start, blocks, seed, indoor = false, withPower = true }) {
+const EARTH_RADIUS_METRES = 6_371_000;
+
+function metresBetween([fromLatitude, fromLongitude], [toLatitude, toLongitude]) {
+  const radians = (degrees) => (degrees * Math.PI) / 180;
+  const haversine =
+    Math.sin(radians(toLatitude - fromLatitude) / 2) ** 2 +
+    Math.cos(radians(fromLatitude)) *
+      Math.cos(radians(toLatitude)) *
+      Math.sin(radians(toLongitude - fromLongitude) / 2) ** 2;
+  return 2 * EARTH_RADIUS_METRES * Math.asin(Math.min(1, Math.sqrt(haversine)));
+}
+
+function trackAlong(encoded, { low, high, hills }) {
+  const points = decodePolyline(encoded);
+  const along = [0];
+  for (let index = 1; index < points.length; index++) {
+    along.push(along[index - 1] + metresBetween(points[index - 1], points[index]));
+  }
+  const length = along.at(-1);
+  let index = 1;
+  return {
+    length,
+    at(distance, wobble) {
+      const lap = ((distance % length) + length) % length;
+      if (along[index - 1] > lap) index = 1;
+      while (index < along.length - 1 && along[index] < lap) index++;
+      const share = (lap - along[index - 1]) / (along[index] - along[index - 1] || 1);
+      const [fromLatitude, fromLongitude] = points[index - 1];
+      const [toLatitude, toLongitude] = points[index];
+      const climb = Math.sin((Math.PI * lap) / length) ** 2;
+      return {
+        latitude: fromLatitude + (toLatitude - fromLatitude) * share + wobble() * 0.00003,
+        longitude: fromLongitude + (toLongitude - fromLongitude) * share + wobble() * 0.00004,
+        altitude: low + (high - low) * climb + hills * Math.sin(lap / 900) * climb,
+      };
+    },
+  };
+}
+
+export const tracks = {
+  budaHills: () => trackAlong(BUDA_HILLS_LOOP, { low: 112, high: 330, hills: 35 }),
+  margaretIsland: () => trackAlong(MARGARET_ISLAND_LOOP, { low: 104, high: 107, hills: 1.5 }),
+};
+
+export function activityFile({
+  sport,
+  start,
+  blocks,
+  seed,
+  indoor = false,
+  withPower = true,
+  track = null,
+  gpsGap = null,
+}) {
   const next = random(seed);
+  const wobble = () => next() - 0.5;
   const startTime = fitTime(start);
   const writer = new FitWriter()
     .define(0, 0, [
@@ -77,6 +132,8 @@ export function activityFile({ sport, start, blocks, seed, indoor = false, withP
     .data(0, [4, 255, startTime])
     .define(1, 20, [
       { number: 253, type: "uint32" },
+      { number: 0, type: "sint32" },
+      { number: 1, type: "sint32" },
       { number: 2, type: "uint16" },
       { number: 3, type: "uint8" },
       { number: 4, type: "uint8" },
@@ -92,16 +149,30 @@ export function activityFile({ sport, start, blocks, seed, indoor = false, withP
       { number: 9, type: "uint32" },
     ]);
   let second = 0;
+  let paused = 0;
   let distance = 0;
   let heartRate = 95;
   const laps = [];
   for (const block of blocks) {
+    if (block.pause) {
+      second += block.pause;
+      paused += block.pause;
+      heartRate = 80;
+      continue;
+    }
     const lapLength = block.seconds > 1800 ? 1200 : block.seconds;
     let lapStart = second;
     let lapDistance = distance;
     for (let index = 0; index < block.seconds; index++) {
-      const hill = indoor ? 0 : Math.sin((second / 900) * Math.PI);
-      const altitude = indoor ? 120 : 140 + 40 * hill;
+      const place = track ? track.at(distance, wobble) : null;
+      const ahead = track ? track.at(distance + 30, () => 0).altitude : null;
+      const hill = indoor
+        ? 0
+        : place
+          ? Math.max(-1, Math.min(1, (ahead - place.altitude) / 2))
+          : Math.sin((second / 900) * Math.PI);
+      const altitude = indoor ? 120 : place ? place.altitude : 140 + 40 * hill;
+      const lost = gpsGap && second >= gpsGap.from && second < gpsGap.to;
       let speed;
       let power = null;
       let effort;
@@ -118,6 +189,8 @@ export function activityFile({ sport, start, blocks, seed, indoor = false, withP
       distance += speed;
       writer.data(1, [
         startTime + second,
+        place && !lost ? semicircles(place.latitude) : null,
+        place && !lost ? semicircles(place.longitude) : null,
         Math.round((altitude + 500) * 5),
         Math.round(heartRate),
         sport === "cycling" ? Math.round(85 + (next() - 0.5) * 8) : Math.round(86 + next() * 4),
@@ -158,7 +231,7 @@ export function activityFile({ sport, start, blocks, seed, indoor = false, withP
       FIT_SPORT[sport],
       sport === "cycling" ? (indoor ? FIT_SUB_SPORT.indoor_cycling : FIT_SUB_SPORT.road) : 0,
       second * 1000,
-      second * 1000,
+      (second - paused) * 1000,
       Math.round(distance * 100),
     ]);
   return writer.file();
@@ -210,8 +283,24 @@ export function trainingHistory({ today = new Date(), weeks = 30 } = {}) {
         start: new Date(time).toISOString(),
         blocks: sport === "cycling" ? rideBlocks(kind, riderFtp) : runBlocks(kind, thresholdSpeed),
         seed: week * 10 + offset,
+        route: indoor ? null : sport === "cycling" ? "budaHills" : "margaretIsland",
       });
     }
+  }
+  const coffeeRide = activities.findLast((activity) => activity.kind === "endurance");
+  if (coffeeRide) {
+    const [ride] = coffeeRide.blocks;
+    coffeeRide.name = "Coffee ride to Zsámbék";
+    coffeeRide.blocks = [
+      { ...ride, seconds: ride.seconds / 2 },
+      { pause: 25 * 60 },
+      { ...ride, seconds: ride.seconds / 2 },
+    ];
+  }
+  const lostSignal = activities.findLast((activity) => activity.kind === "easy");
+  if (lostSignal) {
+    lostSignal.name = "Easy run, GPS lost on the island";
+    lostSignal.gpsGap = { from: 900, to: 1040 };
   }
   const settings = [
     { day: dayIso(firstMonday - 7 * DAY_MS), change: ftpChange(240) },
@@ -246,9 +335,16 @@ export function trainingHistory({ today = new Date(), weeks = 30 } = {}) {
       change: { kind: "threshold", sport: "running", threshold: "threshold_pace", value: 262 },
     },
   ];
-  const duplicate = activities.findLast((activity) => activity.kind === "endurance");
+  const duplicate = activities.findLast(
+    (activity) => activity.kind === "endurance" && activity !== coffeeRide,
+  );
   return { activities, settings, duplicate };
 }
+
+const withTrack = (activity) => ({
+  ...activity,
+  track: activity.route ? tracks[activity.route]() : null,
+});
 
 export async function seedHistory(client, { today = new Date(), weeks } = {}) {
   const { activities, settings, duplicate } = trainingHistory({ today, weeks });
@@ -261,7 +357,7 @@ export async function seedHistory(client, { today = new Date(), weeks } = {}) {
     })),
   });
   for (const activity of activities) {
-    const bytes = activityFile(activity);
+    const bytes = activityFile(withTrack(activity));
     await client.activities.upload({
       file: new File([bytes], `${activity.start.slice(0, 10)}-${activity.kind}.fit`),
       source: "trainstack",
@@ -269,7 +365,7 @@ export async function seedHistory(client, { today = new Date(), weeks } = {}) {
     });
   }
   if (duplicate) {
-    const bytes = activityFile({ ...duplicate, seed: duplicate.seed + 1 });
+    const bytes = activityFile(withTrack({ ...duplicate, seed: duplicate.seed + 1 }));
     await client.activities.upload({
       file: new File([bytes], "strava-copy.fit"),
       source: "strava",
