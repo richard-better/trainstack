@@ -1,6 +1,6 @@
 ---
 title: The daily check-in
-summary: Tell TrainStack how you feel each day, and see it next to your training.
+summary: Tell Trainstack how you feel each day, and see it next to your training.
 section: Log
 order: 40
 ---
@@ -47,7 +47,7 @@ show under each day on the [calendar](/help/plan-your-week).
 Look for your own patterns, such as sleep dropping after big weeks. A pattern here does not show
 that one causes the other.
 
-## What TrainStack does with it
+## What Trainstack does with it
 
 It feeds your [readiness](/help/today-and-readiness) on **Today**, read against your own usual
 answers, and that is all. It does not change your plan by itself, your load or your form, and it

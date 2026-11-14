@@ -83,7 +83,7 @@ used with temporal checking. Each model explores all schedules in its bounds.
   re-upload the record for a moment before it fetches the deletion. Recreating a lost zone sends
   every ride and deletion record again (`handleFailedSaves`), and a deleted ride imported again
   stays on that device: neither a refetched deletion record nor the record's deletion removes it.
-  `DeleteOnServer` is a deletion reaching the TrainStack server, from this rider's devices or
+  `DeleteOnServer` is a deletion reaching the Trainstack server, from this rider's devices or
   another place such as the web app, before or after any device removes the ride.
   `DropDeletedOnServer` is `ActivitySync` (`RideUI/Sync/ActivitySync.swift`) dropping a ride
   the server answers was deleted, or one it uploaded that has gone from the account: it calls

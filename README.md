@@ -1,7 +1,7 @@
-# TrainStack
+# Trainstack
 
-TrainStack is an open source training app for serious amateur athletes. Today it is
-**TrainStack Ride**, an indoor cycling app for iPhone, iPad, Mac and Apple Watch: pick a
+Trainstack is an open source training app for serious amateur athletes. Today it is
+**Trainstack Ride**, an indoor cycling app for iPhone, iPad, Mac and Apple Watch: pick a
 structured workout, Ride sets your smart trainer's resistance for every interval, and it saves
 the ride as a standard `.fit` file you can send to Strava.
 
@@ -31,16 +31,16 @@ not yet, and what to test first.
 
 - Ride works without an account. Rides sync between your devices through your own iCloud, and
   are saved to Apple Health. Settings stay on your device.
-- You can create a TrainStack account with Sign in with Apple, and link it to Strava to send
+- You can create a Trainstack account with Sign in with Apple, and link it to Strava to send
   rides there.
 - The Strava connection is limited to 10 users for now, so linking may not be available to you
   yet.
 
 ## Use at your own risk
 
-TrainStack is experimental software, and everything you do with it is at your own risk. There
+Trainstack is experimental software, and everything you do with it is at your own risk. There
 is no privacy policy or terms of service yet. They are coming, but until they exist, do not
-rely on TrainStack for anything you cannot afford to lose, and export rides you want to keep.
+rely on Trainstack for anything you cannot afford to lose, and export rides you want to keep.
 
 ## Contributing
 
@@ -72,4 +72,4 @@ Nothing is kept when it stops, and it needs no Cloudflare or Apple credentials.
 
 ## License
 
-TrainStack is open source under AGPL-3.0. The hosted backend in `hosted/` is source-available under FSL-1.1-ALv2, and packages that other code builds on, like the API contract, are explicitly Apache-2.0. See [LICENSING.md](LICENSING.md).
+Trainstack is open source under AGPL-3.0. The hosted backend in `hosted/` is source-available under FSL-1.1-ALv2, and packages that other code builds on, like the API contract, are explicitly Apache-2.0. See [LICENSING.md](LICENSING.md).

@@ -1,6 +1,6 @@
 # Daily check-in
 
-An athlete tells TrainStack how they feel each day: how they slept, how fresh, sore, stressed and
+An athlete tells Trainstack how they feel each day: how they slept, how fresh, sore, stressed and
 happy they are, whether they are ill or injured, and anything else in a note. It is the first part
 of the recovery picture in section 4 of the roadmap (#64), and the only one that needs no device.
 Daily readiness (`packages/readiness`, the web app's Today page) reads it against the athlete's

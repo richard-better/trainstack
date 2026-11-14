@@ -172,7 +172,7 @@ export const dayReadinessSchema = z.object({
     trainingDays: z.number().int().min(0).describe("Days of training history before the day"),
     unmeasured: z
       .array(z.enum(["sleep", "resting_heart_rate", "hrv"]))
-      .describe("What a device would measure and TrainStack does not have yet, so did not read"),
+      .describe("What a device would measure and Trainstack does not have yet, so did not read"),
   }),
   suggestions: z.array(readinessSuggestionSchema).describe("By the day's planned order"),
 });

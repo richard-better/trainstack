@@ -1,6 +1,6 @@
 # @trainstack/activity-file
 
-Decodes an activity file of any format TrainStack accepts, FIT, GPX or TCX, into one shape. It
+Decodes an activity file of any format Trainstack accepts, FIT, GPX or TCX, into one shape. It
 tells the format from the content, not the file name. Like `@trainstack/fit`, it has no Node
 APIs and no `DOMParser`, so it runs in Cloudflare Workers and in the browser.
 

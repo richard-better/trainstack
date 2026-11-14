@@ -231,13 +231,13 @@ function readme(madeAt: Date, tables: Counted[], files: CountedFiles[]) {
     ];
   });
   return [
-    "# Your TrainStack data",
+    "# Your Trainstack data",
     "",
-    `Everything TrainStack held about your account on ${madeAt.toISOString()}.`,
+    `Everything Trainstack held about your account on ${madeAt.toISOString()}.`,
     "",
     "## How it is laid out",
     "",
-    "Each folder under `data/` is one kind of record, as JSON Lines: one JSON object per line, split into numbered parts of a few megabytes. Field names are the ones TrainStack uses. Times are ISO 8601 in UTC, days are `YYYY-MM-DD`, and ids are shared between folders, so `activityId` in `data/activity_statistic` is the `id` of a row in `data/activity`.",
+    "Each folder under `data/` is one kind of record, as JSON Lines: one JSON object per line, split into numbered parts of a few megabytes. Field names are the ones Trainstack uses. Times are ISO 8601 in UTC, days are `YYYY-MM-DD`, and ids are shared between folders, so `activityId` in `data/activity_statistic` is the `id` of a row in `data/activity`.",
     "",
     "## Records",
     "",
@@ -247,7 +247,7 @@ function readme(madeAt: Date, tables: Counted[], files: CountedFiles[]) {
     ...folders,
     "## What is not in this archive",
     "",
-    "TrainStack keeps these too, but they are short-lived workings rather than your data. Deleting your account deletes any of them that belong to it.",
+    "Trainstack keeps these too, but they are short-lived workings rather than your data. Deleting your account deletes any of them that belong to it.",
     "",
     ...notExported,
     "",

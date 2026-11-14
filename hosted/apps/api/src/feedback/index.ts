@@ -146,7 +146,7 @@ export function issueBody({ message, context }: Submission) {
     "",
     ...details,
     ...(details.length ? [""] : []),
-    "_Sent from Send Feedback in TrainStack Ride._",
+    "_Sent from Send Feedback in Trainstack Ride._",
   ].join("\n");
 }
 

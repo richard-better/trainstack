@@ -111,7 +111,7 @@ and `tss` (stress scores, which all use the TSS scale, so an hour at threshold s
   "Modeling human performance in running", _Journal of Applied Physiology_ 69 (1990),
   1171-1177: minutes × HRr × 0.64 × e^(1.92 × HRr), where HRr = (HR − resting) / (max −
   resting), clamped to 0..1. The weighting for women (0.86, 1.67) is not used, since
-  TrainStack does not ask for sex. The sum is scaled like TSS, so an hour at lactate threshold
+  Trainstack does not ask for sex. The sum is scaled like TSS, so an hour at lactate threshold
   heart rate scores 100. It needs resting, max and lactate threshold heart rate, in that order.
 - **Best efforts.** For each standard distance this is the shortest elapsed time between two
   records that cover it. The start is interpolated to the exact distance. Time spent paused

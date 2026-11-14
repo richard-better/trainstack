@@ -5,7 +5,7 @@ section: Plan
 order: 31
 ---
 
-When an activity is paired with a planned workout, TrainStack scores how closely it followed the
+When an activity is paired with a planned workout, Trainstack scores how closely it followed the
 plan, from 0 to 100, and puts it in one of three words:
 
 | Score     | Word       |
@@ -38,7 +38,7 @@ you were in it.
 ## How steps are found in the activity
 
 When your device recorded one lap per step, each about as long as planned, as a watch or bike
-computer running the workout does, TrainStack uses the laps. Otherwise it lays the steps end to end from the start of the activity,
+computer running the workout does, Trainstack uses the laps. Otherwise it lays the steps end to end from the start of the activity,
 over the time you were moving. So if you warmed up longer than planned, the steps after the
 warm-up are compared with the wrong part of the ride. Running the workout on a watch or bike computer
 that records a lap per step gives the truest score.

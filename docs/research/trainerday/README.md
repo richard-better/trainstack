@@ -2,7 +2,7 @@
 
 Verified on October 13, 2026. TrainerDay combines a workout community, structured workout editor, reusable plans, dated calendar, trainer-control apps, activity analysis, and external integrations. Its current web app also exposes AI creation and a public developer service.
 
-This reference collects observations from signed-in Chrome, official documentation, the public OpenAPI schema, and bounded analysis of shipped JavaScript. It supports product comparison and future implementation work in TrainStack. It does not establish the behavior of untested hardware, backend services, or generated plans.
+This reference collects observations from signed-in Chrome, official documentation, the public OpenAPI schema, and bounded analysis of shipped JavaScript. It supports product comparison and future implementation work in Trainstack. It does not establish the behavior of untested hardware, backend services, or generated plans.
 
 ## Reference files
 
@@ -112,7 +112,7 @@ Privacy findings are summarized once in public-sources.md. The live October 9 po
 
 Coverage is broad across the visible web product, but partial within each subsystem. No workout/plan was saved, activity edited, integration changed, billing action taken, credential read, or device paired. Native binaries, offline behavior, trainer control, AI output quality, algorithm internals, integration delivery, and full backend authorization remain unverified. REA covered the entry and two focused chunks, with a manually inspected vendor file. Other chunks were not analyzed, and its semantic graph hit a node limit.
 
-## Implications for TrainStack
+## Implications for Trainstack
 
 These are design inferences from the collected evidence:
 

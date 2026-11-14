@@ -320,7 +320,7 @@ export const builtinWorkoutsContract = {
       method: "GET",
       path: "/builtin-workouts",
       description:
-        "The workouts TrainStack ships, the same for every athlete and read-only. They are Ride's bundled workouts",
+        "The workouts Trainstack ships, the same for every athlete and read-only. They are Ride's bundled workouts",
     })
     .errors(unauthorized)
     .input(

@@ -7,14 +7,14 @@ order: 50
 
 ## Who can see your data
 
-Only you. TrainStack has no profiles, followers, feeds or coaches yet, so nothing you upload,
+Only you. Trainstack has no profiles, followers, feeds or coaches yet, so nothing you upload,
 log or plan is shown to anyone else. The exceptions are ones you turn on yourself:
 
 - The [calendar feed](/help/calendar-feed), which anyone with its address can read.
 - Strava, if you connect it in Ride: Ride sends the rides you choose to Strava, and Strava's own
   privacy settings apply there.
 
-There is no privacy policy or terms of service yet. Until there are, do not rely on TrainStack
+There is no privacy policy or terms of service yet. Until there are, do not rely on Trainstack
 for anything you cannot afford to lose, and download your data now and then.
 
 ## Downloading everything
@@ -29,21 +29,21 @@ archive, `trainstack-export-<day>.tar`, with:
 It is built as it downloads, so a large account takes a while. If the download breaks, start it
 again. macOS and Windows open `.tar` files themselves.
 
-Nothing imports this archive back into TrainStack yet. It is for keeping, and for taking your data
+Nothing imports this archive back into Trainstack yet. It is for keeping, and for taking your data
 elsewhere: every activity file opens in any app that reads FIT, GPX or TCX.
 
 ## Deleting your account
 
-In **Settings**, press **Delete account…**. TrainStack lists what goes:
+In **Settings**, press **Delete account…**. Trainstack lists what goes:
 
 - Every activity, with its original file, statistics and laps.
 - Your weight, thresholds and zones, with their history.
 - Your workouts and workout lists.
-- Your Strava connection. Strava is told TrainStack no longer has access.
+- Your Strava connection. Strava is told Trainstack no longer has access.
 - Your Sign in with Apple link, and every device signed in.
 
 It happens at once and cannot be undone, so download your data first. If you have not signed in
-in the last day, TrainStack asks you to **Sign in again** first, to be sure it is you.
+in the last day, Trainstack asks you to **Sign in again** first, to be sure it is you.
 
 Activities already on Strava stay there, and Ride keeps the rides on your devices and in iCloud.
 If you sign in again later, you start a new, empty account, and Ride fills it with the rides still

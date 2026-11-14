@@ -111,7 +111,7 @@ test("signed-in feedback becomes a GitHub issue that does not say who sent it", 
       "- Device: iPhone18,1",
       "- Screen: History",
       "",
-      "_Sent from Send Feedback in TrainStack Ride._",
+      "_Sent from Send Feedback in Trainstack Ride._",
     ].join("\n"),
   );
   for (const secret of ["ada@example.com", "Test Rider", rider.user.id]) {

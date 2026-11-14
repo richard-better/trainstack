@@ -149,7 +149,7 @@ export const confidenceWords = {
 } as const;
 
 export const unmeasuredLine =
-  "Not read: measured sleep, resting heart rate and HRV, which TrainStack does not have yet.";
+  "Not read: measured sleep, resting heart rate and HRV, which Trainstack does not have yet.";
 
 export const intensityWords = {
   easy: "Easy",

@@ -1,13 +1,13 @@
 # @trainstack/readiness
 
-How ready an athlete is to train on a day, worked out from what TrainStack holds today: the
+How ready an athlete is to train on a day, worked out from what Trainstack holds today: the
 athlete's daily check-in (`docs/check-in.md`) and their training load (`@trainstack/analysis`).
 It says how ready they are on four worded levels, which inputs drove it, how sure it is given
 what is missing, and what it would change about each session planned for the day. It is pure
 code with no dependency beyond `@trainstack/analysis`, and runs in Workers and the browser.
 
 It is not Whoop's recovery, Garmin's training readiness or Oura's readiness. Those rest on sleep,
-resting heart rate and HRV measured by a device. TrainStack does not have them yet, so readiness
+resting heart rate and HRV measured by a device. Trainstack does not have them yet, so readiness
 says so on every day (`basis.unmeasured`) and claims nothing they would be needed for. It never
 diagnoses: illness and injury are what the athlete said, and the answer to them is rest or less,
 never a judgement of how ill or how hurt.
@@ -110,7 +110,7 @@ worse than usual on most items, `poor`. These cut points are our choice.
 - **Ill today**: `poor`, and every session is rest. Return-to-sport guidance for acute
   respiratory illness is to stop and come back gradually (Schwellnus and others 2022). The
   common "neck check", training through symptoms above the neck, is not used: it was never
-  validated and its use has been challenged. TrainStack does not judge how ill someone is.
+  validated and its use has been challenged. Trainstack does not judge how ill someone is.
 - **Ill on any of the 7 days before** and not today: no better than `fair`, so a hard session is
   eased while coming back. The 7 days are our choice.
 - **Injured, cannot train** (the OSTRC answer): `poor`, rest. **Trains less**: no better than

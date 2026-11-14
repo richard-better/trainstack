@@ -1,12 +1,12 @@
 # Contributing
 
-Thanks for helping build TrainStack.
+Thanks for helping build Trainstack.
 
 ## Contributor License Agreement
 
 Before we can merge your first pull request, you need to sign the
 [Contributor License Agreement](CLA.md). You keep the copyright in your contributions; the
-agreement lets the project license and transfer them. This is what lets TrainStack use
+agreement lets the project license and transfer them. This is what lets Trainstack use
 different licenses for different parts of the repository and change them later.
 
 When you open a pull request, a bot asks you to sign by commenting:

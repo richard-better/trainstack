@@ -1,6 +1,6 @@
-# Self-hosting TrainStack
+# Self-hosting Trainstack
 
-This guide runs your own TrainStack: the API, the web app and the website, on your own
+This guide runs your own Trainstack: the API, the web app and the website, on your own
 Cloudflare account and domain. It is written for a developer who has not seen the repository
 before. [The deployment guide](deployment.md) describes how trainstackhq.com itself runs; this
 one covers what is different when it is yours.
@@ -16,7 +16,7 @@ your organisation is a permitted use; offering it as a competing product or serv
 version becomes Apache-2.0 two years after its release. The packages it builds on are Apache-2.0,
 and the Ride app is AGPL-3.0. See [LICENSING.md](../LICENSING.md).
 
-[TRADEMARKS.md](../TRADEMARKS.md) lets you keep the TrainStack name and logo in an unmodified copy
+[TRADEMARKS.md](../TRADEMARKS.md) lets you keep the Trainstack name and logo in an unmodified copy
 you run for yourself or your organisation. If you change the code (and today sign-in requires
 it) and offer the result to anyone else, replace the name and logos with your own.
 
@@ -36,7 +36,7 @@ it) and offer the result to anyone else, replace the name and logos with your ow
 `hosted/infra/alchemy.run.ts` declares all of it, and [Alchemy](https://alchemy.run) creates it,
 applies the database migrations in `hosted/apps/api/src/db/migrations`, builds the web app and
 website, and deploys them. Nothing needs a server of your own, and there is no supported way to
-run TrainStack outside Cloudflare.
+run Trainstack outside Cloudflare.
 
 ## What you need
 
@@ -101,7 +101,7 @@ bun run build
 
 ## Sign-in
 
-TrainStack signs athletes in with Sign in with Apple and nothing else. Email and password sign-in
+Trainstack signs athletes in with Sign in with Apple and nothing else. Email and password sign-in
 is turned off, and there is no other provider yet (it is on the roadmap as "Sign-in beyond
 Apple"). Apple only signs people in to apps registered to an Apple Developer team, and the API
 names trainstackhq.com's in `hosted/apps/api/src/auth/apple.ts`:
@@ -375,7 +375,7 @@ account that the rows then collide with, and the restore stops partway.
 
 Tables are dropped newest first, so a table goes before the tables it refers to. The export
 includes `__alchemy_migrations`, Alchemy's record of applied migrations, so restore a backup with
-the revision of TrainStack that made it, and upgrade afterwards.
+the revision of Trainstack that made it, and upgrade afterwards.
 
 ### Activity files
 
@@ -428,7 +428,7 @@ Such a file is never read; it only takes space.
 
 ### One athlete's copy
 
-Every athlete can download everything TrainStack holds about them from the web app's settings,
+Every athlete can download everything Trainstack holds about them from the web app's settings,
 as a tar archive with their rows as JSON Lines and every original activity file. It is the most
 readable backup, but nothing imports it back yet.
 
