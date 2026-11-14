@@ -118,6 +118,11 @@ test("a wrong, empty, damaged or oversized file is refused before anything is se
     kind: "noActivity",
     format: "gpx",
   });
+  assert.deepEqual(
+    await refusal(await fileAt("packages/fit/test/fixtures/workouts/trainingpeaks-bike.fit")),
+    { kind: "workoutFile" },
+    "a FIT workout is told apart from an activity",
+  );
 });
 
 test("several files upload at once, each with its own outcome, and only activity files are sent", async () => {

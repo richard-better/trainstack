@@ -169,6 +169,8 @@ function refusalText(refusal: Refusal) {
       return `Too large. Activity files can be up to ${sizeLimit}.`;
     case "notActivityFile":
       return "Not a FIT, GPX or TCX file.";
+    case "workoutFile":
+      return "This FIT file is a planned workout, not a recorded activity. Import it on the Workouts page.";
     case "noActivity":
       return `This ${refusal.format.toUpperCase()} file has no recorded activity in it, such as a planned route.`;
     case "damaged":

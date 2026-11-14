@@ -17,6 +17,7 @@
     "@trainstack/activity-file": "workspace:*",
     "@trainstack/analysis": "workspace:*",
     "@trainstack/contract": "workspace:*",
+    "@trainstack/fit": "workspace:*",
     "@trainstack/workout": "workspace:*",
     "@trainstack/zones": "workspace:*",
     "better-auth": "catalog:",
