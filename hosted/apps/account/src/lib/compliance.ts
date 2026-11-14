@@ -78,12 +78,17 @@ export const hasLapStep = (item: Pick<PlannedWorkout, "content">) =>
   item.content.kind === "workout" &&
   placedSteps(item.content.workout.steps).some(({ step }) => step.duration.type === "open");
 
-function intervalsUnscored(intervals: Intervals | null) {
+export const hasTargets = (item: Pick<PlannedWorkout, "content">) =>
+  item.content.kind === "workout" &&
+  placedSteps(item.content.workout.steps).some(({ step }) => step.target !== undefined);
+
+function intervalsUnscored(intervals: Intervals | null, item: PlannedWorkout) {
+  if (!hasTargets(item)) return "Intervals are not scored: the workout has no targets to hold.";
   const steps = intervals?.steps;
-  if (!intervals || (steps && steps.length === 0)) {
-    return "Intervals are not scored: the workout has no targets to hold.";
+  if (!intervals) {
+    return "Intervals are not scored: they need the activity's analysis, and for targets set against a threshold, that threshold in Settings.";
   }
-  if (steps && steps.every((step) => !step.placed)) {
+  if (steps && steps.length > 0 && steps.every((step) => !step.placed)) {
     return "Intervals are not scored: its steps could not be found in the activity, which has no lap per step while a step's length was not known in advance.";
   }
   return "Intervals are not scored: no step with a target had data, such as power targets on a ride without a power meter, or the steps could not be found in the activity.";
@@ -114,7 +119,7 @@ export function complianceWords(item: PlannedWorkout): ComplianceWords | null {
     }
   }
   if (!intervals || !intervalsLine(intervals)) {
-    unscored.push(intervalsUnscored(intervals));
+    unscored.push(intervalsUnscored(intervals, item));
   }
 
   const weakest = parts.toSorted((a, b) => a.score - b.score)[0];

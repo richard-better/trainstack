@@ -866,7 +866,7 @@ test("a part that is not scored says why, a lap step first among them", () => {
   assert.equal(words.label, "Not scored");
   assert.equal(words.provisional, true);
   assert.match(words.why, /a step lasts until you press lap/);
-  assert.match(words.unscored[1], /no targets to hold/);
+  assert.match(words.unscored[1], /no targets to hold/, "its only step has no target");
 });
 
 test("every scored part on target says so", () => {
@@ -893,4 +893,19 @@ test("a step's target reads in the athlete's units", () => {
     band: "5:00 /km to 4:30 /km",
     average: "-",
   });
+});
+
+test("intervals missing for a workout with targets ask for analysis or thresholds, not claim no targets", () => {
+  const words = complianceWords(
+    pairedWith({
+      score: 100,
+      rating: "on_target",
+      parts: { duration: part(3600, 3600), distance: null, load: null, intervals: null },
+      pending: false,
+    }),
+  );
+  assert.match(
+    words.unscored.at(-1),
+    /need the activity's analysis, and for targets set against a threshold/,
+  );
 });
