@@ -275,7 +275,6 @@ export function loadOf(segments: readonly Segment[], reference: Reference): Load
 }
 
 export function averagePower(segments: readonly Segment[], reference: Reference): number | null {
-  if (reference.ftp === null) return null;
   let work = 0;
   let seconds = 0;
   for (const segment of segments) {
