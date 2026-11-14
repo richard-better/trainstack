@@ -809,7 +809,11 @@ test("two files for the same Health workout uploaded at once make one activity",
       }),
     ),
   );
-  assert.deepEqual(a, b);
+  assert.equal(
+    a.id,
+    b.id,
+    "the second answer is the first file's activity, however far its summary got",
+  );
   assert.equal((await client.activities.list({})).activities.length, 1);
   const stored = await bucket.list({ prefix: `activities/${user.id}/` });
   assert.deepEqual(
