@@ -34,10 +34,20 @@ struct SettingsLedgerTests {
     #expect(ledger.unsent == [SettingWrite(address, ftp(250), at: at(3_000))])
   }
 
+  @Test func anotherDevicesEditAtTheSameStampLeavesTheServerToChoose() {
+    var ledger = SettingsLedger()
+    ledger.edit(address, to: ftp(250), at: time(3_000))
+    ledger.receive(SettingWrite(address, ftp(270), at: at(3_000)))
+    #expect(ledger.unsent == [SettingWrite(address, ftp(250), at: at(3_000))])
+    ledger.settle(SettingWrite(address, ftp(270), at: at(3_000)))
+    #expect(ledger.unsent.isEmpty)
+    #expect(ledger.live.map(\.change) == [ftp(270)])
+  }
+
   @Test func theServersAnswerAtTheSameStampSettlesAnEdit() {
     var ledger = SettingsLedger()
     ledger.edit(address, to: ftp(250), at: time(3_000))
-    ledger.receive(SettingWrite(address, ftp(250), at: at(3_000)))
+    ledger.settle(SettingWrite(address, ftp(250), at: at(3_000)))
     #expect(ledger.unsent.isEmpty)
     #expect(ledger.live.map(\.change) == [ftp(250)])
   }
@@ -47,7 +57,7 @@ struct SettingsLedgerTests {
     ledger.edit(address, to: ftp(250), at: time(3_000))
     let sent = ledger.unsent
     ledger.edit(address, to: ftp(255), at: time(4_000))
-    for write in sent { ledger.receive(write) }
+    for write in sent { ledger.settle(write) }
     #expect(ledger.unsent == [SettingWrite(address, ftp(255), at: at(4_000))])
   }
 

@@ -42,6 +42,16 @@ public struct SettingsLedger: Equatable, Codable, Sendable {
 
   @discardableResult
   public mutating func receive(_ write: SettingWrite) -> Bool {
+    if let local = registers[write.address], local.unsent, local.updatedAt == write.updatedAt,
+      local.change != write.change
+    {
+      return false
+    }
+    return settle(write)
+  }
+
+  @discardableResult
+  public mutating func settle(_ write: SettingWrite) -> Bool {
     if let local = registers[write.address], local.updatedAt > write.updatedAt { return false }
     let before = registers[write.address]?.change
     registers[write.address] = Register(

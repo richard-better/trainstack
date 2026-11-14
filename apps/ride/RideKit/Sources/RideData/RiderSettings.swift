@@ -150,6 +150,11 @@ public struct RiderSettings: Codable, Equatable, Sendable {
     derive()
   }
 
+  public mutating func settle(_ writes: [SettingWrite]) {
+    for write in writes { ledger.settle(write) }
+    derive()
+  }
+
   public mutating func claim(for account: String) {
     ledger.claim(for: account)
   }

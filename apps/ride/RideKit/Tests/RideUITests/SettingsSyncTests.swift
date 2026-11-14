@@ -191,6 +191,29 @@ struct SettingsSyncTests {
     #expect(await server.live(of: "ada")[ftpAddress(on: earlier)] == ftp(255))
   }
 
+  @Test func twoDevicesMigratingDifferentValuesForOneDayEndOnTheServersChoiceInEitherOrder()
+    async throws
+  {
+    let earlier = Self.start.addingTimeInterval(-30 * 86_400)
+    var winners: [SettingChange?] = []
+    for phoneFirst in [true, false] {
+      let server = FakeSettingsServer()
+      let phone = try device(
+        "phone-\(phoneFirst)", server: server,
+        legacy: try legacySettings(ftp: 230, on: earlier, weight: 75))
+      let mac = try device(
+        "mac-\(phoneFirst)", server: server,
+        legacy: try legacySettings(ftp: 240, on: earlier, weight: 75))
+      let order = phoneFirst ? [phone, mac, phone] : [mac, phone, mac]
+      for device in order { try await device.sync.sync() }
+      let onServer = await server.live(of: "ada")
+      #expect(phone.live == onServer)
+      #expect(mac.live == onServer)
+      winners.append(onServer[ftpAddress(on: earlier)])
+    }
+    #expect(winners == [ftp(240), ftp(240)])
+  }
+
   @Test func twoDevicesAndTheWebEndOnTheSameHistoryWhateverOrderTheySyncIn() async throws {
     let orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
     var outcomes: [[SettingAddress: SettingChange]] = []

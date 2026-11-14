@@ -65,7 +65,7 @@ final class SettingsSync {
       try checkStillSyncing(account)
       switch result {
       case .stored(let writes):
-        store.receive(writes, through: nil)
+        store.settle(writes)
       case .refused(let index, let reason):
         guard batch.indices.contains(index) else { throw StravaError.unavailable }
         refusedThisLaunch.append(batch[index])

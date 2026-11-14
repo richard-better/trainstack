@@ -149,6 +149,11 @@ final class RiderSettingsStore {
     save()
   }
 
+  func settle(_ writes: [SettingWrite]) {
+    settings.settle(writes)
+    save()
+  }
+
   func claim(for account: String) {
     settings.claim(for: account)
     save()
