@@ -1,3 +1,4 @@
+import { pairingChoices } from "../lib/planned-actions";
 import { ORPCError } from "@orpc/client";
 import {
   type CalendarDay,
@@ -505,7 +506,7 @@ function DoneAs({
   }
   const { planned } = pairsOf(day);
   const done = planned.find((entry) => entry.item.id === item.id)?.done ?? null;
-  const others = day.activities.filter((activity) => activity.id !== done?.id);
+  const others = pairingChoices(item.content, day.activities, done?.id ?? null);
   return (
     <section aria-labelledby="done-as-title" className="workout-section done-as">
       <h2 id="done-as-title" className="section-title">
@@ -580,8 +581,8 @@ function DoneAs({
         </>
       ) : (
         <p className="lede">
-          {day.activities.length === 0
-            ? "No activity on this day yet."
+          {others.length === 0
+            ? "No matching activity on this day yet."
             : "Not paired with an activity. Pair it with one done that day:"}
         </p>
       )}
