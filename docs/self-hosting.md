@@ -45,6 +45,10 @@ run TrainStack outside Cloudflare.
 - A [Cloudflare](https://dash.cloudflare.com/sign-up) account on the **Workers Paid** plan. The
   free plan is not enough: uploads take more CPU than its 10 ms limit, and the API raises its
   subrequest limit for account exports, which only Workers Paid allows.
+- R2 turned on in that account. Workers Paid does not include it: in the dashboard, open
+  **Storage & databases > R2 > Overview** and complete its checkout once, before the first deploy,
+  or the deploy cannot create the activity files bucket. See
+  [Cloudflare's R2 guide](https://developers.cloudflare.com/r2/get-started/#before-you-begin).
 - A domain whose DNS is on Cloudflare, in the same account.
 - For sign-in, an [Apple Developer Program](https://developer.apple.com/programs/) membership.
   See [Sign-in](#sign-in).
