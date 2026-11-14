@@ -10,10 +10,12 @@ export function NotFoundPage() {
       </header>
       <main className="content">
         <h1 className="page-title">Page not found</h1>
-        <p className="lede">This address does not lead to a page. Your training is still here.</p>
-        <Link to="/" className="primary link-button">
-          Back to Today
-        </Link>
+        <div className="state not-found">
+          <p className="lede">This address does not lead to a page. Your training is still here.</p>
+          <Link to="/" className="primary link-button">
+            Back to Today
+          </Link>
+        </div>
       </main>
     </div>
   );
