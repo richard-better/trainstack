@@ -28,7 +28,7 @@ export interface ShowcaseEntry {
   readonly id: string;
   readonly screen: string;
   readonly title: string;
-  readonly route: Exclude<keyof FileRoutesById, "__root__">;
+  readonly route: keyof FileRoutesById;
   readonly world: ShowcaseWorld;
   readonly network?: ShowcaseNetwork;
   readonly path: (places: ShowcasePlaces) => string;
@@ -433,9 +433,34 @@ export const showcaseEntries: readonly ShowcaseEntry[] = [
     route: "/log/bouldering",
     world: "athlete",
     path: () => "/log/bouldering",
-    steps: [{ click: "Colours" }],
+    steps: [{ click: "Colours" }, { click: "Use these colours" }],
   },
-
+  {
+    id: "missing-page",
+    screen: "Page not found",
+    title: "An unknown address",
+    route: "__root__",
+    world: "athlete",
+    path: () => "/no-such-page",
+  },
+  {
+    id: "settings-threshold-edit",
+    screen: "Settings",
+    title: "Changing a threshold from a date",
+    route: "/settings",
+    world: "athlete",
+    path: () => "/settings",
+    steps: [{ click: "Change" }],
+  },
+  {
+    id: "planned-move",
+    screen: "Planned workout",
+    title: "Moving a workout to another date",
+    route: "/calendar/planned/$id/",
+    world: "athlete",
+    path: ({ plannedAhead }) => `/calendar/planned/${plannedAhead}`,
+    steps: [{ click: "Move to another day" }],
+  },
 ];
 
 export const SHOWCASE_PARAMETER = "showcase";

@@ -14,7 +14,7 @@ const app = resolve("hosted/apps/account");
 const routes = join(app, "src/routes");
 
 async function routeIds() {
-  const ids = [];
+  const ids = ["__root__"];
   for (const name of await readdir(routes)) {
     const source = await readFile(join(routes, name), "utf8");
     const id = /createFileRoute\("([^"]+)"\)/.exec(source)?.[1];
@@ -91,4 +91,13 @@ test("the production web app answers the showcase and its recordings with not fo
     assert.equal(response.status, 404, path);
     assert.doesNotMatch(await response.text(), /showcase/i, path);
   }
+});
+
+test("unknown production addresses return a designed 404 with a way back to Today", async () => {
+  const server = (await import(pathToFileURL(join(built, "server/server.js")).href)).default;
+  const response = await server.fetch(new Request("https://account.trainstackhq.com/no-such-page"));
+  assert.equal(response.status, 404);
+  const html = await response.text();
+  assert.match(html, /Page not found/);
+  assert.match(html, /href="\/"[^>]*>Back to Today/);
 });

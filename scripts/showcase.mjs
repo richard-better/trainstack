@@ -203,7 +203,10 @@ async function startWebApp() {
       detached: true,
     },
   );
+  let stopped = false;
   const stop = () => {
+    if (stopped) return;
+    stopped = true;
     try {
       process.kill(-web.pid);
     } catch (error) {
@@ -378,6 +381,13 @@ async function screenshot(browser, files) {
       if (!recording) throw new Error(`Nothing is recorded for ${entry.world}`);
       const page = await context.newPage();
       page.on("console", (message) => {
+        if (
+          entry.route === "__root__" &&
+          message.text().includes("the server responded with a status of 404")
+        )
+          return;
+        if (message.type() === "warning" && message.text().includes("could not be loaded"))
+          problems.push(`${entry.id} at ${width}: ${message.text()}`);
         if (message.type() === "error") problems.push(`${entry.id} at ${width}: ${message.text()}`);
       });
       page.on("pageerror", (error) => problems.push(`${entry.id} at ${width}: ${error.message}`));
