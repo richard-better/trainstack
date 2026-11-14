@@ -2,7 +2,12 @@ import { and, asc, eq, inArray, lte, notExists, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
 import { accountFileSweep, stravaBudget, user } from "../db/schema";
-import { BUDGET_WINDOW_SECONDS, budgetOf, disconnectStrava } from "../strava";
+import {
+  BUDGET_WINDOW_SECONDS,
+  budgetOf,
+  deauthorizeUnfinishedSignIns,
+  disconnectStrava,
+} from "../strava";
 import { createVault } from "../strava/crypto";
 import { athleteFiles } from "./athlete-data";
 
@@ -34,10 +39,12 @@ export async function disconnectStravaForGood(
   userId: string,
   fetcher: typeof fetch = fetch,
 ) {
+  const vault = await createVault(env.BETTER_AUTH_SECRET);
+  await deauthorizeUnfinishedSignIns({ database, vault, fetcher }, userId);
   const athleteId = await disconnectStrava(
     {
       database,
-      vault: await createVault(env.BETTER_AUTH_SECRET),
+      vault,
       fetcher,
       credentials:
         env.STRAVA_CLIENT_ID && env.STRAVA_CLIENT_SECRET

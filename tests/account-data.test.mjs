@@ -76,7 +76,7 @@ async function webRequest(athlete, path, init = {}) {
   return athlete.browser.visit(`${api}${path}`, { ...init, headers });
 }
 
-async function connectStrava(token) {
+async function startConnectingStrava(token) {
   const call = (path, init = {}) =>
     runtime.dispatchFetch(`${api}/strava${path}`, {
       redirect: "manual",
@@ -97,6 +97,11 @@ async function connectStrava(token) {
     { redirect: "manual" },
   );
   assert.equal(back.status, 302);
+  return { call, verifier };
+}
+
+async function connectStrava(token) {
+  const { call, verifier } = await startConnectingStrava(token);
   const completed = await call("/connect/complete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -490,8 +495,11 @@ test("deleting an account leaves nothing of the athlete, revokes Strava and Appl
 test("deleting an account tells Strava even when the athlete's calls to Strava are used up", async () => {
   const athlete = await athleteWithEverything();
   await db
-    .prepare("UPDATE strava_budget SET used = 1000, window_start = ? WHERE key = ?")
-    .bind(Math.floor(Date.now() / 1000), `athlete:${athlete.stravaAthleteId}`)
+    .prepare(
+      "INSERT INTO strava_budget (key, window_start, used) VALUES (?, ?, 1000) " +
+        "ON CONFLICT(key) DO UPDATE SET window_start = excluded.window_start, used = excluded.used",
+    )
+    .bind(`athlete:${athlete.stravaAthleteId}`, Math.floor(Date.now() / 1000))
     .run();
   strava.deauthorized.length = 0;
   const deleted = await webRequest(athlete, "/api/auth/delete-user", {
@@ -501,6 +509,22 @@ test("deleting an account tells Strava even when the athlete's calls to Strava a
   });
   assert.equal(deleted.status, 200, await deleted.clone().text());
   assert.equal(strava.deauthorized.length, 1);
+});
+
+test("deleting an account in the middle of connecting Strava tells Strava about that grant too", async () => {
+  const athlete = await signInOnTheWeb(runtime, apple);
+  const { token } = await apple.signIn(runtime, { subject: athlete.subject, email: athlete.email });
+  strava.nextAthleteId = 900_000_000 + Math.floor(Math.random() * 99_999_999);
+  await startConnectingStrava(token);
+  strava.deauthorized.length = 0;
+  const deleted = await webRequest(athlete, "/api/auth/delete-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  assert.equal(deleted.status, 200, await deleted.clone().text());
+  assert.equal(strava.deauthorized.length, 1);
+  assert.match(strava.deauthorized[0], /^Bearer strava-access-/);
 });
 
 async function countMentions(table, trace) {

@@ -93,9 +93,14 @@ export async function disconnectStrava(deps: StravaDisconnectDeps, userId: strin
     const refreshToken = await deps.vault.decrypt(row.refreshToken);
     const expired = row.expiresAt - Math.floor(Date.now() / 1000) <= REFRESH_WHEN_SECONDS_LEFT;
     if (expired && deps.credentials && refreshToken && (await mayCall())) {
-      const refreshed = await strava.refreshTokens(deps.fetcher, deps.credentials, refreshToken);
-      if (!refreshed.ok) throw new Error(`Strava refused to refresh: ${refreshed.status}`);
-      accessToken = ((await refreshed.json()) as strava.TokenResponse).access_token;
+      const refreshed = await strava
+        .refreshTokens(deps.fetcher, deps.credentials, refreshToken)
+        .catch((error: unknown) => error);
+      if (refreshed instanceof Response && refreshed.ok) {
+        accessToken = ((await refreshed.json()) as strava.TokenResponse).access_token;
+      } else {
+        console.error("Strava did not refresh before deauthorizing; trying the stored token");
+      }
     }
     if (!accessToken || !(await mayCall())) return;
     const response = await strava.deauthorize(deps.fetcher, accessToken);
@@ -104,6 +109,28 @@ export async function disconnectStrava(deps: StravaDisconnectDeps, userId: strin
   await tellStrava().catch((error: unknown) => console.error(error));
   await deps.database.delete(stravaConnection).where(eq(stravaConnection.userId, userId));
   return row.athleteId;
+}
+
+export async function deauthorizeUnfinishedSignIns(
+  deps: Pick<StravaDisconnectDeps, "database" | "vault" | "fetcher">,
+  userId: string,
+) {
+  const links = await deps.database
+    .select({ tokens: stravaLink.tokens })
+    .from(stravaLink)
+    .where(and(eq(stravaLink.userId, userId), ne(stravaLink.tokens, PENDING_EXCHANGE)));
+  for (const { tokens } of links) {
+    if (!tokens || tokens === PENDING_EXCHANGE) continue;
+    const plain = await deps.vault.decrypt(tokens);
+    if (!plain) continue;
+    const { access_token: accessToken } = JSON.parse(plain) as strava.TokenResponse;
+    const response = await strava
+      .deauthorize(deps.fetcher, accessToken)
+      .catch((error: unknown) => error);
+    if (!(response instanceof Response && response.ok)) {
+      console.error("Strava did not deauthorize an unfinished sign-in", response);
+    }
+  }
 }
 
 export function stravaRoutes(deps: StravaDeps) {
