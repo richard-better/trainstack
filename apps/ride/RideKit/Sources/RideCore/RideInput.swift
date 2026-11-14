@@ -8,6 +8,8 @@ public enum RideInput: Equatable, Codable, Sendable {
   case togglePause
   case skipInterval
   case markLap
+  case extendInterval(seconds: Int)
+  case previousInterval
   case adjust(steps: Int)
   case changeMode(TrainerMode)
 }

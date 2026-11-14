@@ -3,7 +3,9 @@ import SwiftUI
 
 enum RideCommand: Hashable {
   case togglePause
+  case previousInterval
   case skipInterval
+  case extendInterval
   case lap
   case mode(TrainerMode)
   case decrease
@@ -12,13 +14,16 @@ enum RideCommand: Hashable {
   case end
 
   static let allCases: [RideCommand] =
-    [.togglePause, .skipInterval, .lap] + TrainerMode.allCases.map(mode)
+    [.togglePause, .previousInterval, .skipInterval, .extendInterval, .lap]
+    + TrainerMode.allCases.map(mode)
     + [.decrease, .increase, .togglePlayer, .end]
 
   func title(in launcher: RideLauncher?) -> String {
     switch self {
     case .togglePause: launcher?.ride?.session.isPaused == true ? "Resume" : "Pause"
+    case .previousInterval: "Previous Interval"
     case .skipInterval: "Skip Interval"
+    case .extendInterval: "Add a Minute"
     case .lap: "Lap"
     case .mode(let mode): mode.rawValue
     case .decrease: "Easier"
@@ -31,7 +36,9 @@ enum RideCommand: Hashable {
   func shortcut(playerPresented: Bool) -> KeyboardShortcut? {
     switch self {
     case .togglePause: playerPresented ? KeyboardShortcut(.space, modifiers: []) : nil
+    case .previousInterval: KeyboardShortcut(.leftArrow, modifiers: .command)
     case .skipInterval: KeyboardShortcut(.rightArrow, modifiers: .command)
+    case .extendInterval: KeyboardShortcut("t", modifiers: .command)
     case .lap: KeyboardShortcut("l", modifiers: .command)
     case .mode(.erg): KeyboardShortcut("1", modifiers: .command)
     case .mode(.slope): KeyboardShortcut("2", modifiers: .command)
@@ -46,7 +53,8 @@ enum RideCommand: Hashable {
   func isEnabled(in launcher: RideLauncher?) -> Bool {
     guard let launcher, let ride = launcher.ride, !launcher.isConfirmingEnd else { return false }
     return switch self {
-    case .skipInterval: !ride.session.isComplete
+    case .skipInterval, .previousInterval: !ride.session.isComplete
+    case .extendInterval: ride.session.canExtendInterval
     default: true
     }
   }
@@ -59,7 +67,9 @@ enum RideCommand: Hashable {
     guard isEnabled(in: launcher), let ride = launcher.ride else { return }
     switch self {
     case .togglePause: ride.togglePause()
+    case .previousInterval: ride.previousInterval()
     case .skipInterval: ride.skipInterval()
+    case .extendInterval: ride.extendInterval()
     case .lap: ride.markLap()
     case .mode(let mode): ride.mode = mode
     case .decrease: ride.adjust(by: -1)

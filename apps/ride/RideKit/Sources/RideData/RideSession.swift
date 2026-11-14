@@ -3,6 +3,7 @@ import Foundation
 public struct RideSession: Sendable {
   public struct Interval: Equatable, Identifiable, Sendable {
     public var index: Int
+    public var stepIndex: Int
     public var start: TimeInterval
     public var end: TimeInterval
     public var step: Workout.Step
@@ -22,6 +23,12 @@ public struct RideSession: Sendable {
     public var endedBy: LapTrigger?
   }
 
+  private struct Planned: Sendable {
+    var stepIndex: Int
+    var ridden: TimeInterval?
+    var added: TimeInterval = 0
+  }
+
   public struct LiveSample: Equatable, Sendable {
     public var position: TimeInterval
     public var sample: RideRecording.Sample
@@ -37,7 +44,7 @@ public struct RideSession: Sendable {
   public let utcOffsetSeconds: Int?
   public private(set) var intervals: [Interval] = []
   private var current = 0
-  private var laps: [Int: TimeInterval] = [:]
+  private var timeline: [Planned]
   private let hasLapSteps: Bool
   public private(set) var elapsed: TimeInterval = 0
   public private(set) var position: TimeInterval = 0
@@ -62,23 +69,26 @@ public struct RideSession: Sendable {
     self.utcOffsetSeconds = utcOffsetSeconds
     bike = VirtualBike(riderWeight: riderWeight)
     hasLapSteps = workout.steps.contains(where: \.endsOnLap)
+    timeline = workout.steps.indices.map { Planned(stepIndex: $0) }
     layOut()
     moveOnFromFinishedIntervals()
-    lapMarks = [LapMark(start: 0, stepIndex: currentInterval?.index)]
+    lapMarks = [LapMark(start: 0, stepIndex: currentInterval?.stepIndex)]
   }
 
   private mutating func layOut() {
     var start: TimeInterval = 0
-    intervals = workout.steps.enumerated().map { index, step in
+    intervals = timeline.enumerated().map { index, planned in
+      let step = workout.steps[planned.stepIndex]
       let length =
-        switch (step.endsOnLap, laps[index]) {
-        case (false, _): step.duration
-        case (true, let lapped?): lapped
+        switch (step.endsOnLap, planned.ridden) {
+        case (_, let ridden?): ridden
+        case (false, nil): step.duration + planned.added
         case (true, nil) where index == current: max(position - start, 0)
         case (true, nil): step.untilLap?.expectedSeconds ?? 0
         }
       defer { start += length }
-      return Interval(index: index, start: start, end: start + length, step: step)
+      return Interval(
+        index: index, stepIndex: planned.stepIndex, start: start, end: start + length, step: step)
     }
   }
 
@@ -90,7 +100,6 @@ public struct RideSession: Sendable {
       beginLap(at: elapsed - (position - interval.end), endingTheLastBy: trigger)
       trigger = .time
     }
-    if isComplete { position = min(position, duration) }
   }
 
   public var duration: TimeInterval { intervals.last?.end ?? 0 }
@@ -148,10 +157,10 @@ public struct RideSession: Sendable {
   public var cue: PlannedCue? {
     guard !isComplete else { return nil }
     return intervals.prefix(current + 1).reversed().lazy.compactMap { interval in
-      let lapped = interval.step.endsOnLap && interval.index < current
+      let finished = interval.index < current
       return interval.step.cues.last { cue in
         cue.isShowing(atOffset: self.position - interval.start)
-          && !(lapped && cue.at >= interval.end - interval.start)
+          && !(finished && cue.at >= interval.end - interval.start)
       }
     }
     .first
@@ -188,7 +197,7 @@ public struct RideSession: Sendable {
   public mutating func skipInterval() {
     guard let interval = currentInterval else { return }
     if interval.step.endsOnLap {
-      laps[current] = position - interval.start
+      timeline[current].ridden = position - interval.start
       current += 1
       layOut()
       beginLap(at: elapsed, endingTheLastBy: .manual)
@@ -197,6 +206,41 @@ public struct RideSession: Sendable {
       position = interval.end
       moveOnFromFinishedIntervals(endingLapBy: .manual)
     }
+  }
+
+  public var canExtendInterval: Bool { currentInterval.map { !$0.step.endsOnLap } ?? false }
+
+  public mutating func extendInterval(by seconds: TimeInterval) {
+    guard seconds > 0, canExtendInterval else { return }
+    timeline[current].added += seconds
+    layOut()
+  }
+
+  public mutating func previousInterval() {
+    guard let interval = currentInterval else { return }
+    let stepIndex = interval.stepIndex
+    let again =
+      stepIndex > 0
+      ? [Planned(stepIndex: stepIndex - 1), Planned(stepIndex: stepIndex)]
+      : [Planned(stepIndex: stepIndex)]
+    let ridden = position - interval.start
+    if ridden > 0 {
+      timeline[current].ridden = ridden
+      current += 1
+    } else {
+      timeline.remove(at: current)
+    }
+    timeline.insert(contentsOf: again, at: current)
+    layOut()
+    beginLap(at: elapsed, endingTheLastBy: .manual)
+    moveOnFromFinishedIntervals()
+  }
+
+  public var freeRideElapsed: TimeInterval? {
+    guard isComplete,
+      let start = lapMarks.reversed().prefix(while: { $0.stepIndex == nil }).last?.start
+    else { return nil }
+    return elapsed - start
   }
 
   public mutating func markLap() {
@@ -210,7 +254,7 @@ public struct RideSession: Sendable {
   public var currentLap: LapMark? { lapMarks.last }
 
   private mutating func beginLap(at start: TimeInterval, endingTheLastBy trigger: LapTrigger) {
-    let next = LapMark(start: start, stepIndex: currentInterval?.index)
+    let next = LapMark(start: start, stepIndex: currentInterval?.stepIndex)
     guard let last = lapMarks.indices.last, lapMarks[last].start < start else {
       if lapMarks.isEmpty { lapMarks = [next] } else { lapMarks[lapMarks.count - 1] = next }
       return

@@ -18,8 +18,9 @@ struct WorkoutTargetBar: Equatable, Identifiable {
       let step = interval.step
       switch step.target {
       case .power(.ramp):
-        let slices = max(1, Int((step.duration / rampSliceSeconds).rounded()))
-        let length = step.duration / Double(slices)
+        let ridden = interval.end - interval.start
+        let slices = max(1, Int((ridden / rampSliceSeconds).rounded()))
+        let length = ridden / Double(slices)
         return (0..<slices).map { slice in
           let start = interval.start + Double(slice) * length
           return WorkoutTargetBar(
