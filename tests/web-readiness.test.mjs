@@ -14,6 +14,7 @@ import {
   reasonLines,
   restFrom,
   swapForEasy,
+  swapPosition,
   swapSkipReason,
   unmeasuredLine,
 } from "../hosted/apps/account/src/lib/readiness.ts";
@@ -248,4 +249,14 @@ test("a change to the calendar makes the readiness on screen stale, so it is rea
   await writes.settled();
   assert.equal(queryClient.getQueryState(key).isInvalidated, true);
   assert.deepEqual(key.slice(0, 1), [...readinessKey]);
+});
+
+test("an easy swap goes after its session even when another shares its position", () => {
+  const day = [
+    { id: "a", position: 1 },
+    { id: "b", position: 1 },
+    { id: "c", position: 2 },
+  ];
+  assert.equal(swapPosition(day, "a"), 1.5);
+  assert.equal(swapPosition(day, "c"), 3);
 });

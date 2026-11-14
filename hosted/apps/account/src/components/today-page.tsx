@@ -25,7 +25,7 @@ import { useAthleteSettings } from "./time-zone";
 export function TodayPage() {
   const settings = useAthleteSettings();
   const today = todayIn(settings.data?.timeZone ?? null);
-  const ready = !settings.isPending;
+  const ready = settings.data !== undefined;
   const readiness = useReadiness(today, today, { enabled: ready });
   const day = readiness.data?.days.find((entry) => entry.day === today) ?? null;
   const checkIn = useCheckInOn(today, { enabled: ready });
@@ -38,7 +38,14 @@ export function TodayPage() {
       </div>
       <div className="today-grid">
         <div className="today-readiness">
-          {readiness.isError ? (
+          {settings.isError && !ready ? (
+            <div className="state" role="alert">
+              <p className="state-title">Your settings did not load, so today is not known.</p>
+              <button type="button" className="secondary" onClick={() => settings.refetch()}>
+                Try again
+              </button>
+            </div>
+          ) : readiness.isError ? (
             <div className="state" role="alert">
               <p className="state-title">Readiness did not load.</p>
               <button type="button" className="secondary" onClick={() => readiness.refetch()}>

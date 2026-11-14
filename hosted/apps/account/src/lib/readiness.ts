@@ -227,7 +227,7 @@ export function swapPosition(day: readonly Pick<PlannedWorkout, "id" | "position
   const positions = day.map((item) => item.position).sort((a, b) => a - b);
   const at = day.find((item) => item.id === id);
   if (!at) return positionAt(positions, positions.length);
-  return positionAt(positions, positions.indexOf(at.position) + 1);
+  return positionAt(positions, positions.lastIndexOf(at.position) + 1);
 }
 
 export async function swapForEasy(
