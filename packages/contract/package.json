@@ -7,7 +7,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "check-types": "tsc -b"
+    "check-types": "tsc -b && tsc -p test --noEmit",
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
     "@orpc/contract": "catalog:",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@trainstack/config": "workspace:*",
+    "@types/node": "catalog:",
     "typescript": "catalog:"
   }
 }
