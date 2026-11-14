@@ -41,7 +41,7 @@ run TrainStack outside Cloudflare.
 ## What you need
 
 - A Mac or Linux machine with `git`, and [mise](https://mise.jdx.dev) or the versions of Bun and
-  Node in `mise.toml`.
+  Node in `.mise.toml`.
 - A [Cloudflare](https://dash.cloudflare.com/sign-up) account on the **Workers Paid** plan. The
   free plan is not enough: uploads take more CPU than its 10 ms limit, and the API raises its
   subrequest limit for account exports, which only Workers Paid allows.
