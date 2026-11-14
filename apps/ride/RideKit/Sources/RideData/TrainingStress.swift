@@ -28,14 +28,12 @@ extension RideRecording {
     return Int((summary.duration * intensity * intensity / secondsInAnHour * 100).rounded())
   }
 
-  public func workKilojoules(maxSampleGap: TimeInterval = 5) -> Int? {
+  public func workKilojoules() -> Int? {
     guard hasPower else { return nil }
     var joules = 0.0
-    for (sample, next) in zip(samples, samples.dropFirst()) {
-      guard let power = sample.power else { continue }
-      let duration = next.elapsed - sample.elapsed
-      guard duration > 0, duration <= maxSampleGap else { continue }
-      joules += Double(power) * duration
+    for interval in heldIntervals {
+      guard let power = samples[interval.sample].power else { continue }
+      joules += Double(power) * interval.duration
     }
     return Int((joules / 1000).rounded())
   }

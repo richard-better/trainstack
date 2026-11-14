@@ -21,10 +21,9 @@ import {
   workKilojoules,
 } from "../src/index.ts";
 import { reference, type ReferenceResults, syntheticRecords, zones } from "./ride-reference.ts";
+import { smartRecordedRide } from "./smart-recorded-ride.ts";
 
 const { ftp, maxHeartRate, thresholdPace } = reference.thresholds;
-
-const rideSamplingRule = { maxHeldGapSeconds: 5 };
 
 function computed(
   records: readonly AnalysisRecord[],
@@ -64,6 +63,7 @@ function computed(
 const goldens: Record<string, Uint8Array> = {
   "SampleRide.fit": sampleRide(),
   ...Object.fromEntries(traceNames.map((name) => [`${name}.fit`, trace(name)])),
+  "smart-recorded-ride.fit": smartRecordedRide(),
 };
 
 describe("agrees with Ride's Swift analysis", () => {
@@ -79,16 +79,9 @@ describe("agrees with Ride's Swift analysis", () => {
   for (const { name, seed, count, steps, results } of reference.synthetic) {
     const records = syntheticRecords(seed, count, steps);
     const duration = records.at(-1)!.elapsedSeconds;
-    if (steps.every((step) => step <= rideSamplingRule.maxHeldGapSeconds)) {
-      test(`on a synthetic ride, ${name}`, () => {
-        assert.deepEqual(computed(records, duration), results);
-      });
-    } else {
-      test(`on a synthetic ride, ${name}, once its 5 to 30 s gaps are read as pauses as Ride reads them`, () => {
-        assert.deepEqual(computed(records, duration, { rule: rideSamplingRule }), results);
-        assert.notDeepEqual(computed(records, duration), results);
-      });
-    }
+    test(`on a synthetic ride, ${name}`, () => {
+      assert.deepEqual(computed(records, duration), results);
+    });
   }
 
   test("on fitness, fatigue and form per day", () => {

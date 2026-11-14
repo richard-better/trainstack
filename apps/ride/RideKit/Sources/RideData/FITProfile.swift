@@ -121,6 +121,8 @@ enum FITProfile {
     static let start: UInt8 = 0
     static let stop: UInt8 = 1
     static let stopAll: UInt8 = 4
+    static let stopDisable: UInt8 = 8
+    static let stopDisableAll: UInt8 = 9
   }
 
   enum ActivityType {

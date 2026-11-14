@@ -25,18 +25,22 @@ extension RideRecording {
     }
   }
 
-  func powerPerSecond(maxSampleGap: TimeInterval = 5) -> [Int] {
+  func powerPerSecond() -> [Int] {
     guard hasPower, let last = samples.last else { return [] }
     var result = [Int](repeating: 0, count: max(Int(last.elapsed) + 1, 0))
+    func fill(_ sample: Int, from start: TimeInterval, to end: TimeInterval) {
+      let first = Int(start)
+      guard first >= 0, first < result.count else { return }
+      let power = samples[sample].power ?? 0
+      for second in first..<min(max(Int(end), first + 1), result.count) { result[second] = power }
+    }
+    let held = Dictionary(grouping: heldIntervals, by: \.sample)
     for (index, sample) in samples.enumerated() {
-      let first = Int(sample.elapsed)
-      guard first >= 0, first < result.count else { continue }
-      var end = first + 1
-      if index + 1 < samples.count {
-        let next = samples[index + 1].elapsed
-        if next - sample.elapsed <= maxSampleGap { end = max(Int(next), end) }
+      if let intervals = held[index] {
+        for interval in intervals { fill(index, from: interval.start, to: interval.end) }
+      } else if !SamplingRule.isPaused(sample.elapsed, by: pauses) {
+        fill(index, from: sample.elapsed, to: sample.elapsed)
       }
-      for second in first..<min(end, result.count) { result[second] = sample.power ?? 0 }
     }
     return result
   }

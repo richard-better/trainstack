@@ -4,12 +4,14 @@ public enum FITDecoder {
   public static func decode(_ data: Data) throws -> RideRecording {
     var reader = try MessageReader(data)
     var records: [Message] = []
+    var events: [Message] = []
     var session: Message?
     var workoutName: String?
     var targetPowerField: DeveloperField?
     while let message = try reader.next() {
       switch message.kind {
       case .record: records.append(message)
+      case .event: events.append(message)
       case .session: session = session ?? message
       case .workout: workoutName = workoutName ?? message.string(FITProfile.WorkoutField.name)
       case .fieldDescription:
@@ -25,12 +27,12 @@ public enum FITDecoder {
     }
     guard !records.isEmpty else { throw FITError.noRecords }
     return recording(
-      records: records, session: session, workoutName: workoutName,
+      records: records, events: events, session: session, workoutName: workoutName,
       targetPowerField: targetPowerField)
   }
 
   private static func recording(
-    records: [Message], session: Message?, workoutName: String?,
+    records: [Message], events: [Message], session: Message?, workoutName: String?,
     targetPowerField: DeveloperField?
   ) -> RideRecording {
     typealias Record = FITProfile.RecordField
@@ -71,7 +73,34 @@ public enum FITDecoder {
       sport: session?.integer(Session.sport).flatMap {
         Sport(fitSport: $0, subSport: session?.integer(Session.subSport))
       },
-      samples: samples, summary: summary)
+      samples: samples,
+      pauses: pauses(
+        from: events, startTimestamp: startTimestamp, during: samples.map(\.elapsed)),
+      summary: summary)
+  }
+
+  private static func pauses(
+    from events: [Message], startTimestamp: Int, during elapsed: [TimeInterval]
+  ) -> [Range<TimeInterval>] {
+    typealias Field = FITProfile.EventField
+    typealias EventType = FITProfile.EventType
+    let stops = [
+      EventType.stop, EventType.stopAll, EventType.stopDisable, EventType.stopDisableAll,
+    ]
+    let timerEvents = events.compactMap { event -> TimerEvent? in
+      guard event.integer(Field.event) == Int(FITProfile.Event.timer),
+        let timestamp = event.integer(FITProfile.CommonField.timestamp),
+        let type = event.integer(Field.eventType)
+      else { return nil }
+      let stopsTheTimer = stops.contains { Int($0) == type }
+      guard stopsTheTimer || type == Int(EventType.start) else { return nil }
+      return TimerEvent(
+        elapsed: TimeInterval(timestamp - startTimestamp), stopsTheTimer: stopsTheTimer)
+    }
+    guard let first = elapsed.min(), let last = elapsed.max() else { return [] }
+    return SamplingRule.pauses(from: timerEvents).filter {
+      $0.upperBound > first && $0.lowerBound < last
+    }
   }
 
   public static func isRecordedByRide(_ data: Data) -> Bool {
@@ -92,7 +121,7 @@ public enum FITDecoder {
 }
 
 private struct Message {
-  enum Kind { case record, session, workout, fieldDescription, developerDataID, other }
+  enum Kind { case record, event, session, workout, fieldDescription, developerDataID, other }
 
   let kind: Kind
   let fields: [Int: Field]
@@ -249,6 +278,7 @@ private struct MessageReader {
     let kind: Message.Kind =
       switch definition.globalNumber {
       case Number.record: .record
+      case Number.event: .event
       case Number.session: .session
       case Number.workout: .workout
       case Number.fieldDescription: .fieldDescription
