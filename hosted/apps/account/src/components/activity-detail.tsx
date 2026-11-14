@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/client";
-import { activitySport } from "@trainstack/activity-file";
+import { type DecodedActivity, activitySport } from "@trainstack/activity-file";
 import {
   type ActivityDetail,
   type ActivitySummaryError,
@@ -8,7 +8,7 @@ import {
 import { profileOn } from "@trainstack/zones";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { activityKey, api, queryClient } from "../api";
 import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
@@ -26,7 +26,10 @@ import {
 } from "../lib/analysis";
 import { activityDateInFull } from "../lib/dates";
 import { datedChanges, localDay } from "../lib/settings";
-import { lapsOf, traceOf } from "../lib/series";
+import { type Axis, type LapRow, type Trace, lapsOf, traceOf } from "../lib/series";
+import { type Route, routeOf } from "../lib/route";
+import { type MeasureOption, routeMeasures } from "../lib/route-colours";
+import type { Elevation } from "../lib/terrain";
 import { activityTitle, sportName } from "../lib/sports";
 import {
   type Figure,
@@ -44,6 +47,8 @@ import { SportIcon } from "./sport-icon";
 import { TimeInZones } from "./time-in-zones";
 import { Traces } from "./traces";
 import { OtherSource, Sources, refreshWorkouts, useWorkout } from "./workout-sources";
+import { PeriodPicker } from "./period-picker";
+import { RouteSection } from "./route-map";
 
 const refused = (error: Error) => error instanceof ORPCError && error.status < 500;
 
@@ -219,6 +224,8 @@ function Activity({ activity }: { activity: ActivityDetail }) {
         activity={activity}
         activityFile={activityFile}
         sport={sport}
+        indoor={indoor}
+        title={title}
         speed={speed}
         day={localDay(startedAt ?? activity.createdAt)}
       />
@@ -331,12 +338,16 @@ function Analysis({
   activity,
   activityFile,
   sport,
+  indoor,
+  title,
   speed,
   day,
 }: {
   activity: ActivityDetail;
   activityFile: ReturnType<typeof useActivityFile>;
   sport: string | null;
+  indoor: boolean | null;
+  title: string;
   speed: SpeedStyle;
   day: string;
 }) {
@@ -372,25 +383,59 @@ function Analysis({
       </Note>
     );
   }
-  const trace = traceOf(reading.activity);
+  return (
+    <Recorded
+      activity={activity}
+      decoded={reading.activity}
+      sport={sport}
+      indoor={indoor}
+      title={title}
+      speed={speed}
+      day={day}
+    />
+  );
+}
+
+function Recorded({
+  activity,
+  decoded,
+  sport,
+  indoor,
+  title,
+  speed,
+  day,
+}: {
+  activity: ActivityDetail;
+  decoded: DecodedActivity;
+  sport: string | null;
+  indoor: boolean | null;
+  title: string;
+  speed: SpeedStyle;
+  day: string;
+}) {
+  const trace = useMemo(() => traceOf(decoded), [decoded]);
+  const route = useMemo(() => (indoor ? null : routeOf(decoded.records)), [decoded, indoor]);
+  const elevation = indoor ? null : trace.elevation;
+  const measures = useMemo(
+    () => (route ? routeMeasures(trace, elevation, speed) : []),
+    [route, trace, elevation, speed],
+  );
   const analysed = analysisState(activity).kind === "analysed";
   const storedLaps =
     analysed && activity.startedAt ? lapsFromEvents(activity.events, activity.startedAt) : [];
-  const laps = storedLaps.length > 0 ? storedLaps : lapsOf(reading.activity);
+  const laps = storedLaps.length > 0 ? storedLaps : lapsOf(decoded);
   return (
     <>
-      {trace.channels.length > 0 ? (
-        <section aria-labelledby="over-time">
-          <h2 id="over-time" className="section-title">
-            Over time
-          </h2>
-          <Traces trace={trace} laps={laps} />
-        </section>
-      ) : (
-        <Note title="This file has no power, heart rate, cadence or speed to chart." />
-      )}
+      <Linked
+        trace={trace}
+        route={route}
+        measures={measures}
+        elevation={elevation}
+        laps={laps}
+        title={title}
+      />
       <TimeInZones
-        activity={reading.activity}
+        activity={decoded}
         sport={sport}
         day={day}
         trace={trace}
@@ -401,6 +446,70 @@ function Analysis({
         }
       />
       {laps.length > 0 && <Laps laps={laps} speed={speed} />}
+    </>
+  );
+}
+
+function Linked({
+  trace,
+  route,
+  measures,
+  elevation,
+  laps,
+  title,
+}: {
+  trace: Trace;
+  route: Route | null;
+  measures: readonly MeasureOption[];
+  elevation: Elevation | null;
+  laps: LapRow[];
+  title: string;
+}) {
+  const [cursor, setCursor] = useState<number | null>(null);
+  const [axis, setAxis] = useState<Axis>("time");
+  const charted = trace.channels.length > 0 || elevation !== null;
+  return (
+    <>
+      {route && (
+        <RouteSection
+          route={route}
+          measures={measures}
+          distances={trace.distances}
+          cursor={cursor}
+          onCursor={setCursor}
+          title={title}
+        />
+      )}
+      {charted ? (
+        <section aria-labelledby="over-time">
+          <div className="section-head">
+            <h2 id="over-time" className="section-title">
+              {axis === "distance" ? "Over distance" : "Over time"}
+            </h2>
+            {trace.distances && (
+              <PeriodPicker
+                label="Chart against"
+                options={[
+                  { key: "time" as const, label: "Time" },
+                  { key: "distance" as const, label: "Distance" },
+                ]}
+                value={axis}
+                onChange={setAxis}
+              />
+            )}
+          </div>
+          <Traces
+            trace={trace}
+            laps={laps}
+            elevation={elevation}
+            axis={axis}
+            cursor={cursor}
+            onCursor={setCursor}
+          />
+        </section>
+      ) : (
+        <Note title="This file has no power, heart rate, cadence or speed to chart." />
+      )}
     </>
   );
 }

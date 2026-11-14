@@ -20,6 +20,7 @@
     "@trainstack/workout": "workspace:*",
     "@trainstack/zones": "workspace:*",
     "better-auth": "catalog:",
+    "maplibre-gl": "6.16.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "catalog:"
