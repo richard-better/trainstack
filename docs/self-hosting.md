@@ -346,14 +346,23 @@ To restore them into the stack's database, empty it, then run the schema and the
 deletes everything in the database, so restore only into one you mean to replace:
 
 ```bash
-bunx wrangler d1 execute "$DB" --remote --json \
-  --command "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY rowid DESC" \
-  | jq -r '.[0].results[] | "DROP TABLE \"\(.name)\";"' \
-  | (echo "PRAGMA defer_foreign_keys = on;"; cat) > drop.sql
-bunx wrangler d1 execute "$DB" --remote --file drop.sql
-bunx wrangler d1 execute "$DB" --remote --file schema.sql
-bunx wrangler d1 execute "$DB" --remote --file data.sql
+(
+  set -euo pipefail
+  test -s schema.sql
+  test -s data.sql
+  bunx wrangler d1 execute "$DB" --remote --json \
+    --command "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY rowid DESC" \
+    | jq -r '.[0].results[] | "DROP TABLE \"\(.name)\";"' \
+    | (echo "PRAGMA defer_foreign_keys = on;"; cat) > drop.sql
+  grep -q "DROP TABLE" drop.sql
+  bunx wrangler d1 execute "$DB" --remote --file drop.sql
+  bunx wrangler d1 execute "$DB" --remote --file schema.sql
+  bunx wrangler d1 execute "$DB" --remote --file data.sql
+)
 ```
+
+It stops at the first step that fails, and before dropping anything when either backup file is
+missing or empty or the list of tables cannot be made. It needs [jq](https://jqlang.org).
 
 Tables are dropped newest first, so a table goes before the tables it refers to. The export
 includes `__alchemy_migrations`, Alchemy's record of applied migrations, so restore a backup with
