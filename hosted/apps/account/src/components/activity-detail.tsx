@@ -11,18 +11,32 @@ import { useEffect, useRef, useState } from "react";
 
 import { activityKey, api, queryClient } from "../api";
 import { type Reading, downloadName, fileSize, readActivityFile } from "../lib/activity-file";
+import {
+  ANALYSIS_POLL_MS,
+  analysisErrorText,
+  analysisState,
+  effortFigures,
+  lapsFromEvents,
+  loadOf,
+  sourceWords,
+  speedStyleOf,
+  thresholdPrompt,
+} from "../lib/analysis";
 import { activityDateInFull } from "../lib/dates";
 import { localDay } from "../lib/settings";
 import { lapsOf, traceOf } from "../lib/series";
 import { activityTitle, sportName } from "../lib/sports";
 import {
   type Figure,
+  type SpeedStyle,
   formatDistance,
   formatDuration,
+  formatSpeed,
   statisticsFromFit,
   summaryFigures,
 } from "../lib/statistics";
 import { deletingSource } from "../lib/workouts";
+import { ActivityBests } from "./activity-bests";
 import { SportIcon } from "./sport-icon";
 import { TimeInZones } from "./time-in-zones";
 import { Traces } from "./traces";
@@ -37,6 +51,10 @@ export function ActivityPage({ id }: { id: string }) {
     queryFn: () => api.activities.get({ id }),
     enabled: valid,
     retry: (failures, error) => !refused(error) && failures < 2,
+    refetchInterval: (query) =>
+      query.state.data && analysisState(query.state.data).kind === "pending"
+        ? ANALYSIS_POLL_MS
+        : false,
   });
 
   if (
@@ -137,7 +155,8 @@ function Activity({ activity }: { activity: ActivityDetail }) {
       : decoded
         ? statisticsFromFit(decoded.summary)
         : {};
-  const figures = summaryFigures(statistics);
+  const speed = speedStyleOf(sport);
+  const figures = summaryFigures(statistics, speed);
   const { label, family } = sportName(sport, indoor);
   const workout = useWorkout(activity);
 
@@ -189,12 +208,17 @@ function Activity({ activity }: { activity: ActivityDetail }) {
           </p>
         )}
 
+      <Effort activity={activity} sport={sport} />
+
       <Analysis
         activity={activity}
         activityFile={activityFile}
         sport={sport}
+        speed={speed}
         day={localDay(startedAt ?? activity.createdAt)}
       />
+
+      <ActivityBests activity={activity} sport={sport} />
 
       <Sources activity={activity} title={title} />
     </Shell>
@@ -214,7 +238,13 @@ function summaryProblem(error: ActivitySummaryError, readHere: boolean) {
     : `${because}, so it has no numbers in your activity list.`;
 }
 
-function Figures({ figures }: { figures: Figure[] }) {
+function Figures({
+  figures,
+  details = {},
+}: {
+  figures: Figure[];
+  details?: Record<string, string>;
+}) {
   return (
     <dl className="figures">
       {figures.map((figure) => (
@@ -223,10 +253,53 @@ function Figures({ figures }: { figures: Figure[] }) {
           <dd>
             {figure.value}
             {figure.unit && <span className="unit">{figure.unit}</span>}
+            {details[figure.name] && <span className="figure-detail">{details[figure.name]}</span>}
           </dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+function Effort({ activity, sport }: { activity: ActivityDetail; sport: string | null }) {
+  const state = analysisState(activity);
+  const scored = { ...activity, sport };
+  const figures = effortFigures(activity.statistics, sport);
+  const load = loadOf(activity.statistics, sport);
+  const prompt = state.kind === "analysed" ? thresholdPrompt(scored) : null;
+  const noun = sportName(sport).noun;
+  if (state.kind === "no_file" && figures.length === 0) return null;
+  return (
+    <section aria-labelledby="effort">
+      <h2 id="effort" className="section-title">
+        Effort
+      </h2>
+      {state.kind === "pending" && (
+        <p className="lede analysing-note" role="status">
+          Trainstack is analysing this {noun}. Its load, bests and stored zones appear here within a
+          minute.
+        </p>
+      )}
+      {state.kind === "failed" && (
+        <p className="lede summary-problem" role="status">
+          {analysisErrorText(state.error)}
+        </p>
+      )}
+      {figures.length > 0 && (
+        <Figures
+          figures={figures}
+          details={load?.source ? { load_tss: `from ${sourceWords[load.source]}` } : {}}
+        />
+      )}
+      {prompt && (
+        <div className="zone-prompt effort-prompt">
+          <p className="lede">{prompt.text}</p>
+          <Link to="/settings" search={prompt.search} className="secondary link-button compact">
+            {prompt.action}
+          </Link>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -247,11 +320,13 @@ function Analysis({
   activity,
   activityFile,
   sport,
+  speed,
   day,
 }: {
   activity: ActivityDetail;
   activityFile: ReturnType<typeof useActivityFile>;
   sport: string | null;
+  speed: SpeedStyle;
   day: string;
 }) {
   if (!activity.file) {
@@ -287,7 +362,10 @@ function Analysis({
     );
   }
   const trace = traceOf(reading.activity);
-  const laps = lapsOf(reading.activity);
+  const analysed = analysisState(activity).kind === "analysed";
+  const storedLaps =
+    analysed && activity.startedAt ? lapsFromEvents(activity.events, activity.startedAt) : [];
+  const laps = storedLaps.length > 0 ? storedLaps : lapsOf(reading.activity);
   return (
     <>
       {trace.channels.length > 0 ? (
@@ -300,8 +378,18 @@ function Analysis({
       ) : (
         <Note title="This file has no power, heart rate, cadence or speed to chart." />
       )}
-      <TimeInZones activity={reading.activity} sport={sport} day={day} trace={trace} />
-      {laps.length > 0 && <Laps laps={laps} />}
+      <TimeInZones
+        activity={reading.activity}
+        sport={sport}
+        day={day}
+        trace={trace}
+        stored={
+          analysed && activity.localDay
+            ? { statistics: activity.statistics, day: activity.localDay }
+            : null
+        }
+      />
+      {laps.length > 0 && <Laps laps={laps} speed={speed} />}
     </>
   );
 }
@@ -315,7 +403,12 @@ function Note({ title, children }: { title: string; children?: React.ReactNode }
   );
 }
 
-function Laps({ laps }: { laps: ReturnType<typeof lapsOf> }) {
+function Laps({ laps, speed }: { laps: ReturnType<typeof lapsOf>; speed: SpeedStyle }) {
+  const pace = (value: number | undefined) => {
+    if (value === undefined) return undefined;
+    const shown = formatSpeed(value, speed);
+    return `${shown.value} ${shown.unit}`;
+  };
   const columns = (
     [
       ["Time", (lap) => (lap.seconds === undefined ? undefined : formatDuration(lap.seconds))],
@@ -328,14 +421,13 @@ function Laps({ laps }: { laps: ReturnType<typeof lapsOf> }) {
         },
       ],
       ["Avg power", (lap) => whole(lap.averagePower, "W")],
+      ["NP", (lap) => whole(lap.normalizedPower, "W")],
       ["Max power", (lap) => whole(lap.maxPower, "W")],
+      ["Work", (lap) => whole(lap.workKilojoules, "kJ")],
       ["Avg HR", (lap) => whole(lap.averageHeartRate, "bpm")],
-      ["Cadence", (lap) => whole(lap.averageCadence, "rpm")],
-      [
-        "Speed",
-        (lap) =>
-          lap.averageSpeedKmh === undefined ? undefined : `${lap.averageSpeedKmh.toFixed(1)} km/h`,
-      ],
+      ["Cadence", (lap) => whole(lap.averageCadence, speed === "pace_km" ? "spm" : "rpm")],
+      [speed === "speed" ? "Speed" : "Pace", (lap) => pace(lap.averageSpeed)],
+      ["GAP", (lap) => (speed === "pace_km" ? pace(lap.gradeAdjustedSpeed) : undefined)],
     ] as const satisfies readonly (readonly [
       string,
       (lap: (typeof laps)[number]) => string | undefined,

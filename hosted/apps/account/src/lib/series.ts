@@ -171,7 +171,10 @@ export interface LapRow {
   readonly maxPower: number | undefined;
   readonly averageHeartRate: number | undefined;
   readonly averageCadence: number | undefined;
-  readonly averageSpeedKmh: number | undefined;
+  readonly averageSpeed: number | undefined;
+  readonly normalizedPower?: number | undefined;
+  readonly workKilojoules?: number | undefined;
+  readonly gradeAdjustedSpeed?: number | undefined;
 }
 
 export function lapsOf(activity: Decoded): LapRow[] {
@@ -185,10 +188,7 @@ export function lapsOf(activity: Decoded): LapRow[] {
     maxPower: lap.maxPower,
     averageHeartRate: lap.averageHeartRate,
     averageCadence: lap.averageCadence,
-    averageSpeedKmh:
-      lap.averageSpeedMetresPerSecond === undefined
-        ? undefined
-        : lap.averageSpeedMetresPerSecond * 3.6,
+    averageSpeed: lap.averageSpeedMetresPerSecond,
   }));
   return rows.length > 1 ? rows : [];
 }

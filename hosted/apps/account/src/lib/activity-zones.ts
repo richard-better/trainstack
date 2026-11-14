@@ -1,6 +1,11 @@
 import type { DecodedActivity } from "@trainstack/activity-file";
-import { type ActivityAnalysis, analyzeActivity, zoneSport } from "@trainstack/analysis";
-import { paceDistanceMetres, type Profile, type ZoneMetric } from "@trainstack/zones";
+import {
+  type ActivityAnalysis,
+  analyzeActivity,
+  type ZoneShare,
+  zoneSport,
+} from "@trainstack/analysis";
+import { paceDistanceMetres, type Profile, type ZoneMetric, type ZoneSet } from "@trainstack/zones";
 
 import type { ChannelKey, Trace } from "./series.ts";
 
@@ -44,3 +49,21 @@ export const recordedMetrics = (trace: Trace, sport: string | null) =>
       trace.channels.some((channel) => channel.key === channelOf[metric]) &&
       (metric !== "pace" || (sport !== null && paceDistanceMetres(sport) !== undefined)),
   );
+
+const zoneStatistic = (metric: ZoneMetric, label: string) =>
+  `time_in_${metric}_zone_${label.toLowerCase()}_s`;
+
+export function storedShares(
+  statistics: Readonly<Record<string, number>>,
+  set: ZoneSet,
+): ZoneShare[] {
+  const seconds = set.zones.map((zone) => statistics[zoneStatistic(set.metric, zone.label)]);
+  if (seconds.every((value) => value === undefined)) return [];
+  const total = seconds.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+  if (total <= 0) return [];
+  return set.zones.map((zone, index) => ({
+    zone,
+    seconds: seconds[index] ?? 0,
+    fraction: (seconds[index] ?? 0) / total,
+  }));
+}

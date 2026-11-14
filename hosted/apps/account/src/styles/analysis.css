@@ -1,0 +1,259 @@
+.week + .week {
+  margin-top: 40px;
+}
+
+.week-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+}
+
+.week-head .month-title {
+  margin: 0;
+}
+
+.week-totals {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  color: var(--soft);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-totals > div {
+  display: flex;
+  gap: 6px;
+}
+
+.week-totals dt {
+  color: var(--muted);
+}
+
+.week-totals dd {
+  margin: 0;
+  color: var(--mist);
+}
+
+.row-figures .analysing {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.figure-detail {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.analysing-note {
+  border-left: 2px solid var(--power);
+  padding: 4px 0 4px 16px;
+}
+
+.effort-prompt {
+  max-width: 640px;
+  margin-top: 16px;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 56px 0 16px;
+}
+
+.section-head .section-title {
+  margin: 0;
+}
+
+fieldset.segmented {
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.segmented .segment {
+  position: relative;
+  cursor: pointer;
+}
+
+.segmented .segment input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented .segment[data-checked] {
+  background: var(--graphite);
+  color: var(--mist);
+}
+
+.segmented .segment:has(input:focus-visible) {
+  outline: 2px solid var(--power);
+  outline-offset: 1px;
+}
+
+.power-curve {
+  --activity: var(--power);
+  --best: #b9bbc0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.power-curve:focus-visible {
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+
+.curve-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  min-height: 22px;
+}
+
+.curve-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--soft);
+  font-size: 13px;
+}
+
+.curve-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.curve-key line {
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.curve-activity line,
+.curve.curve-activity path {
+  stroke: var(--activity);
+}
+
+.curve-best line,
+.curve.curve-best path {
+  stroke: var(--best);
+  stroke-dasharray: 5 4;
+}
+
+.curve path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.curve circle {
+  stroke: var(--night);
+  stroke-width: 2;
+}
+
+.curve-activity circle {
+  fill: var(--activity);
+}
+
+.curve-best circle {
+  fill: var(--best);
+}
+
+.curve-readout {
+  margin: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.curve-readout > span + span {
+  margin-left: 8px;
+}
+
+.power-curve .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.power-curve .tick {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.power-curve .cursor-line {
+  stroke: var(--edge);
+  stroke-width: 1;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 16px 10px 0;
+  text-align: right;
+}
+
+.data-table th:first-child {
+  text-align: left;
+}
+
+.data-table thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.data-table tbody th {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.data-table .muted {
+  color: var(--muted);
+}
+
+.bests-table {
+  margin-top: 16px;
+}
+
+.best-from a {
+  color: var(--mist);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .row-figures {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .power-curve .tick[data-minor],
+  .best-ahead {
+    display: none;
+  }
+}

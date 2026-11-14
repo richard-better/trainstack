@@ -4,9 +4,12 @@ import { Link } from "@tanstack/react-router";
 
 import { activitiesQueryKey, api } from "../api";
 import { ACTIVITIES_PER_PAGE } from "../lib/client";
-import { activityDate, byMonth } from "../lib/dates";
+import { ANALYSIS_POLL_MS, analysisState } from "../lib/analysis";
+import { activityWeeks, type WeekTotals } from "../lib/activity-weeks";
+import { activityDate, weekLabel } from "../lib/dates";
+import { localDay } from "../lib/settings";
 import { activityTitle, sportName } from "../lib/sports";
-import { headlineFigures } from "../lib/statistics";
+import { formatDistance, formatHours, formatLoad, headlineFigures } from "../lib/statistics";
 import { SportIcon } from "./sport-icon";
 import { DropTarget, UploadButton, UploadList } from "./uploads";
 
@@ -17,6 +20,12 @@ export function ActivityList() {
       api.activities.list({ limit: ACTIVITIES_PER_PAGE, cursor: pageParam, onePerWorkout: true }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
+    refetchInterval: (query) =>
+      query.state.data?.pages.some((page) =>
+        page.activities.some((activity) => analysisState(activity).kind === "pending"),
+      )
+        ? ANALYSIS_POLL_MS
+        : false,
   });
 
   return (
@@ -41,7 +50,10 @@ export function ActivityList() {
         <EmptyState />
       ) : (
         <>
-          <Months activities={activities.data.pages.flatMap((page) => page.activities)} />
+          <Weeks
+            activities={activities.data.pages.flatMap((page) => page.activities)}
+            hasMore={activities.hasNextPage}
+          />
           {activities.hasNextPage && (
             <div className="more">
               <button
@@ -65,28 +77,61 @@ export function ActivityList() {
   );
 }
 
-function Months({ activities }: { activities: Activity[] }) {
-  return byMonth(activities, (activity) => activity.startedAt ?? activity.createdAt).map(
-    (month) => (
-      <section key={month.id} className="month" aria-labelledby={`month-${month.id}`}>
-        <h2 id={`month-${month.id}`} className="month-title">
-          {month.label}
+function Weeks({ activities, hasMore }: { activities: Activity[]; hasMore: boolean }) {
+  const today = localDay(new Date());
+  return activityWeeks(activities, hasMore).map((week) => (
+    <section key={week.id} className="week" aria-labelledby={`week-${week.id}`}>
+      <div className="week-head">
+        <h2 id={`week-${week.id}`} className="month-title">
+          {weekLabel(week.id, today)}
         </h2>
-        <ol className="rows">
-          {month.items.map((activity) => (
-            <li key={activity.id}>
-              <ActivityRow activity={activity} />
-            </li>
-          ))}
-        </ol>
-      </section>
-    ),
+        {week.complete && <Totals totals={week.totals} />}
+      </div>
+      <ol className="rows">
+        {week.items.map((activity) => (
+          <li key={activity.id}>
+            <ActivityRow activity={activity} />
+          </li>
+        ))}
+      </ol>
+    </section>
+  ));
+}
+
+function Totals({ totals }: { totals: WeekTotals }) {
+  const distance = formatDistance(totals.metres);
+  return (
+    <dl className="week-totals" aria-label="Week totals">
+      <div>
+        <dt>Time</dt>
+        <dd>{formatHours(totals.seconds)}</dd>
+      </div>
+      {totals.metres > 0 && (
+        <div>
+          <dt>Distance</dt>
+          <dd>
+            {distance.value} <span className="unit">{distance.unit}</span>
+          </dd>
+        </div>
+      )}
+      {(totals.scored > 0 || totals.pending > 0) && (
+        <div>
+          <dt>Load</dt>
+          <dd title={totals.pending > 0 ? "Some activities are still being analysed" : undefined}>
+            {formatLoad(totals.load)}
+            {totals.pending > 0 && <span className="unit"> so far</span>}
+          </dd>
+        </div>
+      )}
+    </dl>
   );
 }
 
 function ActivityRow({ activity }: { activity: Activity }) {
   const sport = sportName(activity.sport, activity.indoor);
   const figures = headlineFigures(activity.statistics);
+  const load = activity.statistics.load_tss;
+  const analysing = analysisState(activity).kind === "pending";
   return (
     <Link to="/activities/$id" params={{ id: activity.id }} className="row">
       <span className="row-icon" title={sport.label}>
@@ -107,7 +152,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
           )}
         </span>
       </span>
-      {figures.length > 0 && (
+      {(figures.length > 0 || load !== undefined || analysing) && (
         <dl className="row-figures">
           {figures.map((figure) => (
             <div key={figure.name}>
@@ -118,6 +163,19 @@ function ActivityRow({ activity }: { activity: Activity }) {
               </dd>
             </div>
           ))}
+          {load !== undefined ? (
+            <div>
+              <dt>Load</dt>
+              <dd>{formatLoad(load)}</dd>
+            </div>
+          ) : (
+            analysing && (
+              <div>
+                <dt>Load</dt>
+                <dd className="analysing">Analysing</dd>
+              </div>
+            )
+          )}
         </dl>
       )}
     </Link>
