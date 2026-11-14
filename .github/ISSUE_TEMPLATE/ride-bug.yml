@@ -1,5 +1,5 @@
 name: Ride bug report
-description: Something in TrainStack Ride did not work
+description: Something in Trainstack Ride did not work
 labels: ["ride"]
 body:
   - type: textarea

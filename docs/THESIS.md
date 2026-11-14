@@ -1,4 +1,4 @@
-# TrainStack Thesis
+# Trainstack Thesis
 
 https://trainstackhq.com/
 
@@ -10,7 +10,7 @@ TrainerDay run indoor sessions. Each sees only part of the athlete. The plan doe
 you slept four hours, the recovery app does not know you have a race in six weeks, and
 neither knows what is in your calendar.
 
-Training is one system, so it should live in one place. TrainStack is the whole training
+Training is one system, so it should live in one place. Trainstack is the whole training
 stack in a single app:
 
 - **Track** workouts across sports: cycling, running, swimming, strength training, and
@@ -25,18 +25,18 @@ stack in a single app:
 - **Coach** through coach access to your data, coach-made plans that AI tailors to each
   athlete, and tooling for clubs.
 
-The TrainStack app is open source, and the server that runs it is source-available. You
+The Trainstack app is open source, and the server that runs it is source-available. You
 own your data, the community can extend it with new sports and training load models, and
 anyone can self-host it. See [LICENSING.md](../LICENSING.md).
 
-## Where we start: TrainStack Ride
+## Where we start: Trainstack Ride
 
 We start with indoor cycling: an open source alternative to the likes of TrainerRoad and
 TrainerDay.
 
 Zwift's 3D world loses its appeal after the first few rides. What indoor riders actually
 need is simple: a structured workout, a trainer that holds the right resistance, and a
-clean recording at the end. TrainStack Ride does exactly that:
+clean recording at the end. Trainstack Ride does exactly that:
 
 1. Shows the workout as a graph of planned intervals, with live progress through it.
 2. Connects to your smart trainer and heart rate sensor over Bluetooth.

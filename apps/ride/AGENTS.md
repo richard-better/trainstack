@@ -1,4 +1,4 @@
-# TrainStack Ride
+# Trainstack Ride
 
 Native SwiftUI app for iOS and iPadOS 27+ and macOS 26+, with a watchOS 27+ companion. It connects to smart trainers and
 sensors over Bluetooth, runs structured workouts, and records rides. See
@@ -19,7 +19,7 @@ sensors over Bluetooth, runs structured workouts, and records rides. See
   `Health`, `Sync`) and
   `Shared` for what several use, with one type per file. `RideCore` runs a ride as a pure
   function of its inputs, and records and replays them (see below). `RideWatchUI` is the watch app,
-  `RideLink` what the phone and watch send each other, `RideStrava` the TrainStack account (Sign in with Apple)
+  `RideLink` what the phone and watch send each other, `RideStrava` the Trainstack account (Sign in with Apple)
   and sending rides to Strava through the hosted API, which holds Strava's tokens (see
   `docs/deployment.md`), and `RideStyle` the zone colours both
   apps share.
@@ -56,7 +56,7 @@ the others adopt it. The Mac has no Health, so an
 iPhone saves the Mac's rides as they sync, and the Mac tells a relaying iPhone it records the
 ride so the watch discards its workout then too.
 
-Signed in to a TrainStack account, `ActivitySync` also sends the library to the hosted API's
+Signed in to a Trainstack account, `ActivitySync` also sends the library to the hosted API's
 activities (`docs/deployment.md`), beside iCloud, which stays for riders without an account. An
 activity is named by the same SHA-256. Each pass sends the deletions it owes, lists the
 account's activities, and uploads every ride the account does not have, so it survives being
@@ -97,7 +97,7 @@ the device, unclaimed, for the next account. Settings saved before the ledger ar
 stamped at the Unix epoch, so any real edit, from any device or the web, wins over them; a
 weight other than the default goes on the day of the first zone history entry.
 
-Signed in, `WorkoutSync` keeps a copy of the athlete's TrainStack workouts and lists on the
+Signed in, `WorkoutSync` keeps a copy of the athlete's Trainstack workouts and lists on the
 device (`AccountWorkouts`, one file per account in `Application Support/WorkoutSync`), so the
 Workouts screens show them beside the bundled workouts, offline too. Each pass (`SyncPasses`,
 after every edit, when the app becomes active and when the Workouts screen appears) sends the
@@ -182,7 +182,7 @@ paired trainer disconnects mid ride the ride pauses, and the rider resumes it on
 back.
 
 The player runs a `PlannedWorkout`: a bundled `WorkoutTemplate` becomes one (`planned`), and so
-does a workout from the athlete's TrainStack library. That arrives in the model of
+does a workout from the athlete's Trainstack library. That arrives in the model of
 `@trainstack/workout` as `TrainStackWorkout`, and `rideability` is the one place that maps it to
 what the player runs, or to the reason it cannot be ridden. It expands repeats as the package's
 `flatten` does, placing each repeat's cues on the step they fall in; `tests/ride-workouts.test.mjs`
@@ -295,8 +295,8 @@ To keep the entitlements:
   iCloud and Sign in with Apple, though iCloud only syncs in a build signed with the team.
 - On the Mac, ad hoc alone fails with `"Ride" requires a provisioning profile`, because Sign in
   with Apple needs one. Add `CODE_SIGN_ENTITLEMENTS=` to drop it: the app keeps the sandbox,
-  Bluetooth, network and file entitlements, but cannot sign in to TrainStack or sync rides.
-- The Mac keeps the TrainStack session in the data protection keychain, which needs the
+  Bluetooth, network and file entitlements, but cannot sign in to Trainstack or sync rides.
+- The Mac keeps the Trainstack session in the data protection keychain, which needs the
   application identifier a provisioning profile gives. Builds without one start signed out.
 
 Debug builds take launch arguments to try the app without hardware:

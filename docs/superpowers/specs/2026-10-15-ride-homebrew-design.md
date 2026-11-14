@@ -11,7 +11,7 @@ brew install --cask richard-better/tap/trainstack-ride        # named releases
 brew install --cask richard-better/tap/trainstack-ride@alpha  # every push to main
 ```
 
-Homebrew users keep the TrainStack account and Send to Strava.
+Homebrew users keep the Trainstack account and Send to Strava.
 
 ## Decisions
 

@@ -1,4 +1,4 @@
-# TrainStack Ride alpha
+# Trainstack Ride alpha
 
 Ride is an indoor cycling app for iPhone, iPad, Mac and Apple Watch. You pick a structured
 workout, Ride sets your smart trainer's resistance for every interval, and it saves the ride as a
@@ -35,14 +35,14 @@ and a Polar H10, so please tell us what breaks.
   syncs. Ride skips a ride Health already has a cycling workout for.
 - Rides synced between your devices through iCloud, when they are signed in to the same Apple
   Account.
-- Signed in to a TrainStack account, Ride sends your rides to the account, where
+- Signed in to a Trainstack account, Ride sends your rides to the account, where
   account.trainstackhq.com shows them, and keeps your settings the same on every device signed in
   to it. Rides reach your other devices through iCloud, not the account. Deleting the account
-  deletes everything it holds from TrainStack's server for good: your rides with their files and
+  deletes everything it holds from Trainstack's server for good: your rides with their files and
   analysis, your settings and their history, your workouts and lists, your feedback and your
   Strava connection. The account's link to your Apple Account goes too, and every device is
   signed out. Where Ride signs in with Apple's own sheet, Apple asks you to confirm first so
-  TrainStack can also end Ride's Sign in with Apple access; the account is deleted even if you
+  Trainstack can also end Ride's Sign in with Apple access; the account is deleted even if you
   cancel. Rides and settings on your devices and in iCloud stay, and so do rides on Strava.
   Signing in again starts a new account, and Ride fills it with the rides and settings still on
   your devices. Download Your data from Settings on account.trainstackhq.com first to keep a copy.
@@ -50,9 +50,9 @@ and a Polar H10, so please tell us what breaks.
 ## What does not work yet
 
 - You cannot build your own workouts or import `.zwo` and `.mrc` files.
-- Besides your TrainStack account, Strava is the only service Ride can send a ride to. Anywhere
+- Besides your Trainstack account, Strava is the only service Ride can send a ride to. Anywhere
   else, export the `.fit` file and upload it yourself.
-- Without a TrainStack account, settings stay on the device, and so do rides without iCloud:
+- Without a Trainstack account, settings stay on the device, and so do rides without iCloud:
   deleting the app then deletes them. Deleting a ride on one device deletes it on the others too.
   Ride works without an account.
 - No training plans.
