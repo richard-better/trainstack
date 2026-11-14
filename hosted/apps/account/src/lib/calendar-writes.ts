@@ -128,6 +128,8 @@ export function createCalendarWrites({
   let version = 0;
   const tails = new Map<string, Promise<void>>();
   const answered = new Map<string, PlannedWorkout | null>();
+  const sleepers = new Set<() => void>();
+  let epoch = 0;
   const listeners = new Set<() => void>();
 
   function changed() {
@@ -174,8 +176,10 @@ export function createCalendarWrites({
   async function sendWithRetries(
     write: Write,
     updatedAt: Date,
-  ): Promise<{ readonly result: Sent } | { readonly error: unknown }> {
+    queuedIn: number,
+  ): Promise<{ readonly result: Sent } | { readonly error: unknown } | { readonly dropped: true }> {
     for (let attempt = 0; ; attempt++) {
+      if (queuedIn !== epoch) return { dropped: true } as const;
       try {
         return { result: await write.send(updatedAt) } as const;
       } catch (error) {
@@ -186,15 +190,15 @@ export function createCalendarWrites({
       await new Promise<void>((resolve) => {
         const delay = retryDelays[Math.min(attempt, retryDelays.length - 1)] ?? 1_000;
         let stop = () => {};
-        const timer = setTimeout(() => {
-          stop();
-          resolve();
-        }, delay);
-        stop = whenOnline(() => {
+        const wake = () => {
           clearTimeout(timer);
           stop();
+          sleepers.delete(wake);
           resolve();
-        });
+        };
+        const timer = setTimeout(wake, delay);
+        stop = whenOnline(wake);
+        sleepers.add(wake);
       });
       waiting -= 1;
       changed();
@@ -207,9 +211,11 @@ export function createCalendarWrites({
     pending = [...pending, entry];
     changed();
     const updatedAt = stamp();
+    const queuedIn = epoch;
     const previous = tails.get(entry.id) ?? Promise.resolve();
     const done = previous.then(async () => {
-      const outcome = await sendWithRetries(write, updatedAt);
+      const outcome = await sendWithRetries(write, updatedAt, queuedIn);
+      if ("dropped" in outcome || queuedIn !== epoch) return;
       if ("result" in outcome) {
         await remember(outcome.result);
         const result = outcome.result;
@@ -279,6 +285,16 @@ export function createCalendarWrites({
         current = from ? entry.apply(from, today) : null;
       }
       return current;
+    },
+
+    clear() {
+      epoch += 1;
+      pending = [];
+      notices = [];
+      answered.clear();
+      tails.clear();
+      for (const wake of sleepers) wake();
+      changed();
     },
 
     isPending: (id: string) => pending.some((entry) => entry.id === id),
@@ -384,12 +400,13 @@ export async function savePlannedWorkout(
       if (isGone(error)) return { kind: "deleted" };
       throw error;
     }
-    if (
-      current.updatedAt.getTime() > base.updatedAt.getTime() &&
-      current.content.kind === "workout" &&
-      !sameContent(current.content, base.content) &&
-      !sameContent(current.content, content)
-    ) {
+    if (current.content.kind !== "workout") {
+      return {
+        kind: "refused",
+        reason: `It became ${current.content.kind === "note" ? "a note" : "a rest day"} on another device, so your changes were not saved over it.`,
+      };
+    }
+    if (!sameContent(current.content, base.content) && !sameContent(current.content, content)) {
       return { kind: "changed", stored: current };
     }
   }

@@ -509,3 +509,63 @@ test("saving an edited copy warns when another browser changed it, but not when 
   assert.equal(overwritten.kind, "saved");
   assert.equal((await client.plannedWorkouts.get({ id: spin.id })).content.workout.name, "Mine");
 });
+
+test("signing out drops the writes still waiting for the network", async () => {
+  const { client } = await athlete();
+  const [spin] = await planDay(client, "2030-03-04", ["Spin"]);
+  let tries = 0;
+  const laptop = device(client, {
+    move: async () => {
+      tries += 1;
+      throw new TypeError("fetch failed");
+    },
+  });
+  await laptop.load();
+  const moving = laptop.writes.move(spin, { day: "2030-03-06", position: 0 });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  laptop.writes.clear();
+  await moving;
+  const triedBeforeClear = tries;
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(tries, triedBeforeClear, "no retry after sign-out");
+  assert.equal(laptop.writes.retrying(), false);
+  assert.equal((await client.plannedWorkouts.get({ id: spin.id })).day, "2030-03-04");
+});
+
+test("saving an edited copy warns about an older content edit that arrived after a later move", async () => {
+  const { client } = await athlete();
+  const [spin] = await planDay(client, "2030-03-04", ["Spin"]);
+  const offlineEdit = new Date();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const movedLater = await client.plannedWorkouts.move({
+    id: spin.id,
+    day: "2030-03-05",
+    position: 0,
+    updatedAt: new Date(),
+  });
+  await client.plannedWorkouts.put({
+    ...movedLater,
+    content: ride("Edited offline"),
+    updatedAt: offlineEdit,
+  });
+  const conflict = await savePlannedWorkout(client, {
+    base: movedLater,
+    workout: { ...spin.content.workout, name: "Mine" },
+    overwrite: false,
+  });
+  assert.equal(conflict.kind, "changed");
+
+  await client.plannedWorkouts.put({
+    ...movedLater,
+    content: { kind: "rest", notes: null },
+    updatedAt: new Date(),
+  });
+  const replaced = await savePlannedWorkout(client, {
+    base: movedLater,
+    workout: { ...spin.content.workout, name: "Mine" },
+    overwrite: false,
+  });
+  assert.equal(replaced.kind, "refused");
+  assert.match(replaced.reason, /rest day/);
+  assert.equal((await client.plannedWorkouts.get({ id: spin.id })).content.kind, "rest");
+});
