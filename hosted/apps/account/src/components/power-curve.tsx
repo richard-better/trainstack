@@ -26,6 +26,9 @@ const durations = powerCurveDurations.map(({ seconds }) => seconds);
 const first = Math.log(durations[0]!);
 const last = Math.log(durations.at(-1)!);
 
+const hiddenTicks = (plotWidth: number) =>
+  plotWidth < 420 ? [15, 30, 600, 1800] : plotWidth < 640 ? [15, 30, 1800] : [];
+
 export function PowerCurve({ series, label }: { series: readonly CurveSeries[]; label: string }) {
   const [ref, width] = useWidth();
   const [cursor, setCursor] = useState<number | null>(null);
@@ -137,7 +140,7 @@ export function PowerCurve({ series, label }: { series: readonly CurveSeries[]; 
               x={x(seconds)}
               y={HEIGHT - 8}
               textAnchor={index === 0 ? "start" : index === durations.length - 1 ? "end" : "middle"}
-              data-minor={[15, 30, 1800].includes(seconds) || undefined}
+              display={hiddenTicks(plotWidth).includes(seconds) ? "none" : undefined}
             >
               {durationLabel(seconds)}
             </text>

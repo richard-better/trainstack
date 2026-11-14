@@ -75,9 +75,15 @@
 }
 
 fieldset.segmented {
+  max-width: 100%;
   margin: 0;
   border: 0;
   min-width: 0;
+  overflow-x: auto;
+}
+
+fieldset.segmented .segment {
+  white-space: nowrap;
 }
 
 .segmented .segment {
@@ -247,12 +253,16 @@ fieldset.segmented {
 }
 
 @media (max-width: 640px) {
+  fieldset.segmented .segment {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
   .row-figures {
     display: flex;
     flex-wrap: wrap;
   }
 
-  .power-curve .tick[data-minor],
   .best-ahead {
     display: none;
   }
