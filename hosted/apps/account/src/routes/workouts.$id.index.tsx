@@ -4,7 +4,7 @@ import * as z from "zod";
 import { SignedIn } from "../components/session";
 import { OwnWorkoutPage } from "../components/workout-page";
 
-export const Route = createFileRoute("/workouts/$id")({
+export const Route = createFileRoute("/workouts/$id/")({
   validateSearch: z.object({ error: z.string().optional() }),
   ssr: false,
   head: () => ({ meta: [{ title: "Workout - Trainstack" }] }),
