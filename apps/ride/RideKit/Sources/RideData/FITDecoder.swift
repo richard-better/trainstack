@@ -5,6 +5,7 @@ public enum FITDecoder {
     var reader = try MessageReader(data)
     var records: [Message] = []
     var events: [Message] = []
+    var laps: [Message] = []
     var session: Message?
     var workoutName: String?
     var targetPowerField: DeveloperField?
@@ -12,6 +13,7 @@ public enum FITDecoder {
       switch message.kind {
       case .record: records.append(message)
       case .event: events.append(message)
+      case .lap: laps.append(message)
       case .session: session = session ?? message
       case .workout: workoutName = workoutName ?? message.string(FITProfile.WorkoutField.name)
       case .fieldDescription:
@@ -27,13 +29,13 @@ public enum FITDecoder {
     }
     guard !records.isEmpty else { throw FITError.noRecords }
     return recording(
-      records: records, events: events, session: session, workoutName: workoutName,
+      records: records, events: events, laps: laps, session: session, workoutName: workoutName,
       targetPowerField: targetPowerField)
   }
 
   private static func recording(
-    records: [Message], events: [Message], session: Message?, workoutName: String?,
-    targetPowerField: DeveloperField?
+    records: [Message], events: [Message], laps: [Message], session: Message?,
+    workoutName: String?, targetPowerField: DeveloperField?
   ) -> RideRecording {
     typealias Record = FITProfile.RecordField
     typealias Session = FITProfile.SessionField
@@ -73,10 +75,32 @@ public enum FITDecoder {
       sport: session?.integer(Session.sport).flatMap {
         Sport(fitSport: $0, subSport: session?.integer(Session.subSport))
       },
-      samples: samples, summary: summary)
+      samples: samples, laps: laps.compactMap { lap(from: $0, startTimestamp: startTimestamp) },
+      summary: summary)
     recording.pauses = pauses(
       from: events, startTimestamp: startTimestamp, during: samples.map(\.elapsed))
     return recording
+  }
+
+  private static func lap(from message: Message, startTimestamp: Int) -> RideLap? {
+    typealias Lap = FITProfile.LapField
+    typealias Scale = FITProfile.Scale
+    guard let lapStart = message.integer(Lap.startTime) else { return nil }
+    let duration =
+      (message.integer(Lap.totalElapsedTime) ?? message.integer(Lap.totalTimerTime)).map {
+        TimeInterval($0) / Scale.time
+      }
+      ?? message.integer(FITProfile.CommonField.timestamp).map { TimeInterval($0 - lapStart) }
+    guard let duration else { return nil }
+    return RideLap(
+      start: TimeInterval(lapStart - startTimestamp), duration: duration,
+      trigger: message.integer(Lap.lapTrigger).map(LapTrigger.init(fit:)) ?? .other,
+      stepIndex: message.integer(Lap.workoutStepIndex),
+      distanceMetres: message.integer(Lap.totalDistance).map { Double($0) / Scale.distance },
+      averagePower: message.integer(Lap.averagePower), maxPower: message.integer(Lap.maxPower),
+      averageHeartRate: message.integer(Lap.averageHeartRate),
+      maxHeartRate: message.integer(Lap.maxHeartRate),
+      averageCadence: message.integer(Lap.averageCadence))
   }
 
   private static func pauses(
@@ -121,7 +145,7 @@ public enum FITDecoder {
 }
 
 private struct Message {
-  enum Kind { case record, event, session, workout, fieldDescription, developerDataID, other }
+  enum Kind { case record, event, lap, session, workout, fieldDescription, developerDataID, other }
 
   let kind: Kind
   let fields: [Int: Field]
@@ -279,6 +303,7 @@ private struct MessageReader {
       switch definition.globalNumber {
       case Number.record: .record
       case Number.event: .event
+      case Number.lap: .lap
       case Number.session: .session
       case Number.workout: .workout
       case Number.fieldDescription: .fieldDescription

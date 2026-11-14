@@ -152,6 +152,7 @@ describe("Ride's own recordings in the trace goldens", () => {
       averageHeartRate: 108,
       maxHeartRate: 144,
       records: 45,
+      lapSeconds: [15, 15, 15],
       first: { power: 129, targetPower: 125, heartRate: 77, cadence: 87, speed: 1.704 },
     },
     {
@@ -165,6 +166,7 @@ describe("Ride's own recordings in the trace goldens", () => {
       averageHeartRate: 138,
       maxHeartRate: 158,
       records: 550,
+      lapSeconds: [60, 60, 60, 60, 120, 10, 60, 60, 60],
       first: { power: 109, targetPower: 105, heartRate: 77, cadence: 87, speed: 1.565 },
     },
     {
@@ -178,6 +180,7 @@ describe("Ride's own recordings in the trace goldens", () => {
       averageHeartRate: undefined,
       maxHeartRate: undefined,
       records: 50,
+      lapSeconds: [15, 15, 15, 5],
       first: { power: 204, targetPower: 125, heartRate: undefined, cadence: 89, speed: 2.187 },
     },
   ] as const;
@@ -206,7 +209,18 @@ describe("Ride's own recordings in the trace goldens", () => {
       assert.equal(first!.heartRate, expected.first.heartRate);
       assert.equal(first!.cadence, expected.first.cadence);
       assert.equal(first!.speedMetresPerSecond, expected.first.speed);
-      assert.equal(ride.laps.length, 1);
+      assert.deepEqual(
+        ride.laps.map((lap) => lap.elapsedSeconds),
+        expected.lapSeconds,
+      );
+      assert.deepEqual(
+        ride.laps.map((lap) => lap.startTime!.getTime()),
+        expected.lapSeconds.map(
+          (_, index) =>
+            (expected.start + expected.lapSeconds.slice(0, index).reduce((a, b) => a + b, 0)) *
+            1000,
+        ),
+      );
       assert.deepEqual(
         ride.events.map((event) => [event.event, event.type]),
         [

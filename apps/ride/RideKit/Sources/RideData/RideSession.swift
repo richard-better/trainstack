@@ -16,6 +16,12 @@ public struct RideSession: Sendable {
     public func zone(ftp: Int) -> PowerZone? { step.target?.zone(ftp: ftp) }
   }
 
+  public struct LapMark: Equatable, Sendable {
+    public var start: TimeInterval
+    public var stepIndex: Int?
+    public var endedBy: LapTrigger?
+  }
+
   public struct LiveSample: Equatable, Sendable {
     public var position: TimeInterval
     public var sample: RideRecording.Sample
@@ -42,6 +48,7 @@ public struct RideSession: Sendable {
   public private(set) var latest = TrainerReading()
   public private(set) var recentPower = PowerAverage()
   public private(set) var samples: [LiveSample] = []
+  public private(set) var lapMarks: [LapMark] = []
   public private(set) var distanceMetres: Double = 0
   private var bike: VirtualBike
 
@@ -54,6 +61,7 @@ public struct RideSession: Sendable {
     hasLapSteps = workout.steps.contains(where: \.endsOnLap)
     layOut()
     moveOnFromFinishedIntervals()
+    lapMarks = [LapMark(start: 0, stepIndex: currentInterval?.index)]
   }
 
   private mutating func layOut() {
@@ -71,10 +79,13 @@ public struct RideSession: Sendable {
     }
   }
 
-  private mutating func moveOnFromFinishedIntervals() {
+  private mutating func moveOnFromFinishedIntervals(endingLapBy trigger: LapTrigger = .time) {
+    var trigger = trigger
     while let interval = currentInterval, !interval.step.endsOnLap, position >= interval.end {
       current += 1
       if hasLapSteps { layOut() }
+      beginLap(at: elapsed - (position - interval.end), endingTheLastBy: trigger)
+      trigger = .time
     }
     if isComplete { position = min(position, duration) }
   }
@@ -177,10 +188,32 @@ public struct RideSession: Sendable {
       laps[current] = position - interval.start
       current += 1
       layOut()
+      beginLap(at: elapsed, endingTheLastBy: .manual)
+      moveOnFromFinishedIntervals()
     } else {
       position = interval.end
+      moveOnFromFinishedIntervals(endingLapBy: .manual)
     }
-    moveOnFromFinishedIntervals()
+  }
+
+  public mutating func markLap() {
+    if awaitsLap {
+      skipInterval()
+    } else {
+      beginLap(at: elapsed, endingTheLastBy: .manual)
+    }
+  }
+
+  public var currentLap: LapMark? { lapMarks.last }
+
+  private mutating func beginLap(at start: TimeInterval, endingTheLastBy trigger: LapTrigger) {
+    let next = LapMark(start: start, stepIndex: currentInterval?.index)
+    guard let last = lapMarks.indices.last, lapMarks[last].start < start else {
+      if lapMarks.isEmpty { lapMarks = [next] } else { lapMarks[lapMarks.count - 1] = next }
+      return
+    }
+    lapMarks[last].endedBy = trigger
+    lapMarks.append(next)
   }
 
   public mutating func adjust(by steps: Int) {
@@ -201,6 +234,16 @@ public struct RideSession: Sendable {
     return Self.average(ridden.compactMap(\.sample.power))
   }
 
+  private func recordedLaps(_ recorded: [RideRecording.Sample]) -> [RideLap] {
+    let ends = lapMarks.dropFirst().map(\.start) + [elapsed]
+    return zip(lapMarks, ends).compactMap { mark, end in
+      guard end > mark.start || lapMarks.count == 1 else { return nil }
+      return RideLap(
+        from: mark.start, to: end, trigger: mark.endedBy ?? .sessionEnd,
+        stepIndex: mark.stepIndex, samples: recorded)
+    }
+  }
+
   private static func average(_ values: [Int]) -> Int? {
     values.isEmpty ? nil : Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
   }
@@ -212,6 +255,7 @@ public struct RideSession: Sendable {
     let average = Self.average
     return RideRecording(
       startDate: startDate, workoutName: workout.name, sport: .cycling, samples: recorded,
+      laps: recordedLaps(recorded),
       summary: .init(
         duration: elapsed, distanceMetres: distanceMetres > 0 ? distanceMetres : nil,
         averagePower: average(powers), maxPower: powers.max(),

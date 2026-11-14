@@ -17,6 +17,9 @@ struct FITEncoderTests {
     }
     return RideRecording(
       startDate: start, workoutName: workoutName, sport: sport, samples: samples,
+      laps: [
+        RideLap(from: 0, to: 45, trigger: .sessionEnd, stepIndex: nil, samples: samples)
+      ],
       summary: .init(
         duration: 45, distanceMetres: 371.25, averagePower: 123, maxPower: 145,
         averageHeartRate: 94,
@@ -70,6 +73,9 @@ struct FITEncoderTests {
       RideRecording.Sample(elapsed: $0.elapsed, power: $0.power)
     }
     ride.summary = .init(duration: 45, averagePower: 123, maxPower: 145)
+    ride.laps = [
+      RideLap(from: 0, to: 45, trigger: .sessionEnd, stepIndex: nil, samples: ride.samples)
+    ]
     let decoded = try FITDecoder.decode(FITEncoder.encode(ride))
     #expect(decoded == ride)
     #expect(!decoded.hasHeartRate && !decoded.hasSpeed && !decoded.hasTarget)

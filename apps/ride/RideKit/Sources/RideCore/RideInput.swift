@@ -7,6 +7,7 @@ public enum RideInput: Equatable, Codable, Sendable {
   case tick(seconds: TimeInterval, reading: TrainerReading, trainerConnected: Bool)
   case togglePause
   case skipInterval
+  case markLap
   case adjust(steps: Int)
   case changeMode(TrainerMode)
 }

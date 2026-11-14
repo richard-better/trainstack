@@ -22,4 +22,22 @@ struct LapStepReplayTests {
     #expect(trace.header.workout == workout)
     #expect(trace.replay().session.recording() == outcome.engine.session.recording())
   }
+
+  @Test func lapsTheRiderMarkedComeBackWhenACrashedRideIsRecovered() throws {
+    let ride = HeadlessRide(
+      WorkoutTemplate.named("Recovery 30")!.fitted(to: 300), ftp: 220,
+      events: [40: [.rider(.markLap)], 100: [.rider(.markLap)]])
+    let outcome = ride.run(with: SimulatedRider(.typical(ftp: 220)))
+    let cut = try #require(outcome.trace.inputs.lastIndex(of: .markLap))
+    var crashed = outcome.trace
+    crashed.inputs = Array(outcome.trace.inputs[...cut])
+    let recovered = try #require(InterruptedRide(trace: crashed))
+    var engine = recovered.engine
+    engine.apply(.resumeAfterCrash(trainerConnected: true))
+    #expect(engine.session.isPaused)
+    engine.apply(.togglePause)
+    for input in outcome.trace.inputs[(cut + 1)...] { engine.apply(input) }
+    #expect(engine.session.recording().laps == outcome.engine.session.recording().laps)
+    #expect(engine.session.lapMarks.filter { $0.endedBy == .manual }.count == 2)
+  }
 }

@@ -101,15 +101,17 @@ public enum FITEncoder {
         .uint32(timestamp, end), .enumeration(EventField.event, Event.timer),
         .enumeration(EventField.eventType, EventType.stopAll),
       ])
-    typealias Lap = FITProfile.LapField
-    writer.message(
-      local: 6, global: Number.lap,
-      [
-        .uint32(timestamp, end), .uint32(Lap.startTime, start),
-        .enumeration(EventField.event, Event.lap),
-        .enumeration(EventField.eventType, EventType.stop),
-        .uint32(Lap.totalElapsedTime, duration), .uint32(Lap.totalTimerTime, duration),
-      ])
+    let laps =
+      recording.laps.isEmpty
+      ? [
+        RideLap(
+          from: 0, to: summary.duration, trigger: .sessionEnd, stepIndex: nil,
+          samples: recording.samples)
+      ] : recording.laps
+    writer.definition(local: 6, global: Number.lap, lapFields(laps[0], index: 0, start: start))
+    for (index, lap) in laps.enumerated() {
+      writer.data(local: 6, lapFields(lap, index: index, start: start))
+    }
     typealias Session = FITProfile.SessionField
     writer.message(
       local: 7, global: Number.session,
@@ -128,7 +130,7 @@ public enum FITEncoder {
         .uint16(
           Session.averagePower, summary.averagePower.map { UInt16(clamping: $0) } ?? invalid16),
         .uint16(Session.maxPower, summary.maxPower.map { UInt16(clamping: $0) } ?? invalid16),
-        .uint16(Session.firstLapIndex, 0), .uint16(Session.lapCount, 1),
+        .uint16(Session.firstLapIndex, 0), .uint16(Session.lapCount, UInt16(clamping: laps.count)),
       ])
     typealias Activity = FITProfile.ActivityField
     writer.message(
@@ -142,6 +144,28 @@ public enum FITEncoder {
       ])
 
     return writer.file()
+  }
+
+  private static func lapFields(_ lap: RideLap, index: Int, start: UInt32) -> [FITWriter.Field] {
+    typealias Lap = FITProfile.LapField
+    let lapStart = start + UInt32(clamping: Int(lap.start.rounded()))
+    let lapEnd = start + UInt32(clamping: Int(lap.end.rounded()))
+    let duration = UInt32(clamping: Int((lap.duration * FITProfile.Scale.time).rounded()))
+    return [
+      .uint16(FITProfile.CommonField.messageIndex, UInt16(clamping: index)),
+      .uint32(FITProfile.CommonField.timestamp, lapEnd), .uint32(Lap.startTime, lapStart),
+      .enumeration(FITProfile.EventField.event, FITProfile.Event.lap),
+      .enumeration(FITProfile.EventField.eventType, FITProfile.EventType.stop),
+      .uint32(Lap.totalElapsedTime, duration), .uint32(Lap.totalTimerTime, duration),
+      .uint32(Lap.totalDistance, scaledDistance(lap.distanceMetres)),
+      .uint8(Lap.averageHeartRate, lap.averageHeartRate.map { UInt8(clamping: $0) } ?? invalid8),
+      .uint8(Lap.maxHeartRate, lap.maxHeartRate.map { UInt8(clamping: $0) } ?? invalid8),
+      .uint8(Lap.averageCadence, lap.averageCadence.map { UInt8(clamping: $0) } ?? invalid8),
+      .uint16(Lap.averagePower, lap.averagePower.map { UInt16(clamping: $0) } ?? invalid16),
+      .uint16(Lap.maxPower, lap.maxPower.map { UInt16(clamping: $0) } ?? invalid16),
+      .enumeration(Lap.lapTrigger, lap.trigger.fit),
+      .uint16(Lap.workoutStepIndex, lap.stepIndex.map { UInt16(clamping: $0) } ?? invalid16),
+    ]
   }
 
   private static func scaledDistance(_ metres: Double?) -> UInt32 {
