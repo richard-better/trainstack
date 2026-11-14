@@ -8,5 +8,6 @@
     "allowImportingTsExtensions": true,
     "outDir": "dist"
   },
+  "references": [{ "path": "../workout" }],
   "include": ["src/**/*.ts"]
 }

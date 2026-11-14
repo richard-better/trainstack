@@ -6,7 +6,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "check-types": "tsc -p . && tsc -p test",
+    "build": "tsc -b",
+    "check-types": "tsc -b && tsc -p test --noEmit",
     "test": "node --test test/*.test.ts"
   },
   "dependencies": {

@@ -16,8 +16,10 @@ import { parseZwo, writeZwo } from "./zwo.ts";
 export * from "./model.ts";
 export {
   CuePlacementError,
+  cueCount,
   expandedLength,
   flatten,
+  maxCues,
   maxExpandedSteps,
   totals,
   type Totals,

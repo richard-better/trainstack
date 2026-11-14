@@ -436,6 +436,22 @@ then sprints. Keep cadence above 90 in the efforts.</description>
   });
 });
 
+test("rejects a file with a repeat's text event after the repeat ends", () => {
+  const error = failure(() =>
+    parseZwo(
+      `<workout_file><workout><IntervalsT Repeat="2" OnDuration="60" OffDuration="60" OnPower="1" OffPower="0.5"><textevent timeoffset="900" message="Too late"/></IntervalsT></workout></workout_file>`,
+    ),
+  );
+  assert.equal(error.format, "zwo");
+  assert.deepEqual(error.issues, [
+    {
+      code: "malformed",
+      message: "A cue 900 seconds into a repeat comes after the repeat ends",
+      at: "steps",
+    },
+  ]);
+});
+
 test("rejects a file whose repeats would expand past the step limit", () => {
   const error = failure(() =>
     parseZwo(

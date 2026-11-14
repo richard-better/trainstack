@@ -4,7 +4,8 @@
     { "path": "../../../packages/contract" },
     { "path": "../../../packages/zones" },
     { "path": "../../../packages/fit" },
-    { "path": "../../../packages/activity-file" }
+    { "path": "../../../packages/activity-file" },
+    { "path": "../../../packages/workout" }
   ],
   "compilerOptions": {
     "noEmit": true,

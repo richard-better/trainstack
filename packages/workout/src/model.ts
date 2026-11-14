@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { expandedLength, maxExpandedSteps } from "./timeline.ts";
+import {
+  CuePlacementError,
+  cueCount,
+  expandedLength,
+  flatten,
+  maxCues,
+  maxExpandedSteps,
+} from "./timeline.ts";
 
 export const sportSchema = z.enum(["cycling", "running", "swimming"]);
 export type Sport = z.infer<typeof sportSchema>;
@@ -152,8 +159,24 @@ export const workoutSchema = z.object({
   steps: z
     .array(blockSchema)
     .min(1)
-    .refine((steps) => expandedLength(steps) <= maxExpandedSteps, {
-      message: `A workout can expand to at most ${maxExpandedSteps} steps`,
+    .superRefine((steps, context) => {
+      if (expandedLength(steps) > maxExpandedSteps) {
+        context.addIssue({
+          code: "custom",
+          message: `A workout can expand to at most ${maxExpandedSteps} steps`,
+        });
+        return;
+      }
+      if (cueCount(steps) > maxCues) {
+        context.addIssue({ code: "custom", message: `A workout can have at most ${maxCues} cues` });
+        return;
+      }
+      try {
+        flatten(steps);
+      } catch (error) {
+        if (!(error instanceof CuePlacementError)) throw error;
+        context.addIssue({ code: "custom", message: error.message });
+      }
     }),
 });
 export type Workout = z.infer<typeof workoutSchema>;

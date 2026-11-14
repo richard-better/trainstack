@@ -58,6 +58,16 @@ export function expandedLength(blocks: readonly Block[]): number {
   );
 }
 
+export const maxCues = 1_000;
+
+export function cueCount(blocks: readonly Block[]): number {
+  return blocks.reduce(
+    (sum, block) =>
+      sum + (block.cues?.length ?? 0) + (block.type === "repeat" ? cueCount(block.steps) : 0),
+    0,
+  );
+}
+
 export function flatten(blocks: readonly Block[]): Step[] {
   const length = expandedLength(blocks);
   if (length > maxExpandedSteps) {

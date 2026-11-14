@@ -61,6 +61,7 @@
         "@trainstack/activity-file": "workspace:*",
         "@trainstack/contract": "workspace:*",
         "@trainstack/fit": "workspace:*",
+        "@trainstack/workout": "workspace:*",
         "@trainstack/zones": "workspace:*",
         "better-auth": "catalog:",
         "drizzle-orm": "catalog:",
@@ -155,6 +156,7 @@
       "name": "@trainstack/contract",
       "dependencies": {
         "@orpc/contract": "catalog:",
+        "@trainstack/workout": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
