@@ -1,5 +1,5 @@
 import type { ThresholdSuggestion } from "@trainstack/contract";
-import { thresholds } from "@trainstack/zones";
+import { thresholds, type ZoneMetric } from "@trainstack/zones";
 
 import { formatDay, formatWithUnit, thresholdWord } from "./settings.ts";
 import { sportName } from "./sports.ts";
@@ -16,17 +16,19 @@ const effortNouns: Record<ThresholdSuggestion["threshold"], string> = {
 const confidenceWords: Record<ThresholdSuggestion["confidence"], string> = {
   high: "Your efforts agree and look all-out.",
   medium: "The effort looks all-out.",
-  low: "A rough estimate: Trainstack cannot tell whether the effort was all-out. Setting your max heart rate makes it surer.",
+  low: "A rough estimate: Trainstack cannot tell whether the effort was all-out.",
 };
 
+const observedMaxWords = "It is the highest your heart rate held, so your max is at least this.";
+
 export function suggestionWords(suggestion: ThresholdSuggestion) {
-  const { threshold, sport, value, current, effortDay, confidence } = suggestion;
+  const { threshold, sport, value, current, effortDay, confidence, method } = suggestion;
   const metric = thresholds[threshold].metric;
   const scope = sport === null ? "" : ` for ${sportName(sport).label.toLowerCase()}`;
   return {
     headline: `Your ${thresholdWord(threshold, sport)}${scope} looks like ${formatWithUnit(metric, value, sport)}`,
     source: `from your ${effortNouns[threshold]} on ${formatDay(effortDay)}`,
-    confidence: confidenceWords[confidence],
+    confidence: method === "observed_max" ? observedMaxWords : confidenceWords[confidence],
     current:
       current === null
         ? "You have not set it yet."
@@ -38,9 +40,11 @@ export const suggestionsFor = (
   suggestions: readonly ThresholdSuggestion[],
   names: readonly string[],
   sport: string | null,
+  own: readonly ZoneMetric[],
 ) =>
-  suggestions.filter(
-    (suggestion) =>
-      names.includes(suggestion.threshold) &&
-      (suggestion.sport === null || suggestion.sport === sport),
-  );
+  suggestions.filter((suggestion) => {
+    if (!names.includes(suggestion.threshold)) return false;
+    const metric = thresholds[suggestion.threshold].metric;
+    const sportsOwn = metric === "pace" || own.includes(metric);
+    return sportsOwn ? sport !== null && suggestion.sport === sport : suggestion.sport === null;
+  });

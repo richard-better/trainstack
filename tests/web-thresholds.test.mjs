@@ -42,6 +42,12 @@ test("a suggestion says what it found, from which effort, how sure it is and wha
     suggestionWords(suggestion({ threshold: "lactate_threshold_heart_rate", value: 172 })).headline,
     "Your lactate threshold heart rate looks like 172 bpm",
   );
+  assert.equal(
+    suggestionWords(
+      suggestion({ threshold: "max_heart_rate", method: "observed_max", confidence: "medium" }),
+    ).confidence,
+    "It is the highest your heart rate held, so your max is at least this.",
+  );
 });
 
 test("an activity's missing thresholds pick the suggestions that fill them, for its sport or every sport", () => {
@@ -53,8 +59,18 @@ test("an activity's missing thresholds pick the suggestions that fill them, for 
     value: 170,
   });
   const all = [ftp, runningPace, cyclingHeartRate];
-  assert.deepEqual(suggestionsFor(all, ["ftp"], "cycling"), [ftp]);
-  assert.deepEqual(suggestionsFor(all, ["threshold_pace"], "running"), [runningPace]);
-  assert.deepEqual(suggestionsFor(all, ["lactate_threshold_heart_rate"], "running"), []);
-  assert.deepEqual(suggestionsFor(all, ["max_heart_rate"], "cycling"), []);
+  assert.deepEqual(suggestionsFor(all, ["ftp"], "cycling", []), [ftp]);
+  assert.deepEqual(suggestionsFor(all, ["threshold_pace"], "running", ["pace"]), [runningPace]);
+  assert.deepEqual(suggestionsFor(all, ["lactate_threshold_heart_rate"], "running", []), []);
+  assert.deepEqual(suggestionsFor(all, ["max_heart_rate"], "cycling", []), []);
+  assert.deepEqual(
+    suggestionsFor(all, ["lactate_threshold_heart_rate"], "cycling", ["heart_rate"]),
+    [cyclingHeartRate],
+  );
+});
+
+test("a default suggestion does not stand in for a sport with its own zones, which it would not fill", () => {
+  const ftp = suggestion({});
+  assert.deepEqual(suggestionsFor([ftp], ["ftp"], "cycling", ["power"]), []);
+  assert.deepEqual(suggestionsFor([ftp], ["ftp"], "cycling", ["heart_rate"]), [ftp]);
 });

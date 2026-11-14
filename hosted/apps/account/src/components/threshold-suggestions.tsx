@@ -3,9 +3,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { api, queryClient } from "../api";
-import { formatDay, localDay, settingsQueryKey } from "../lib/settings";
+import { formatDay, settingsQueryKey } from "../lib/settings";
 import { suggestionsQueryKey, suggestionWords } from "../lib/thresholds";
+import { todayIn } from "../lib/time-zone";
 import { refreshAnalysis } from "./settings-data";
+import { useAthleteSettings } from "./time-zone";
 
 export function useThresholdSuggestions() {
   return useQuery({
@@ -49,10 +51,11 @@ function SuggestionCard({ suggestion }: { suggestion: ThresholdSuggestion }) {
     mutationFn: () => api.thresholds.dismiss({ id: suggestion.id }),
     onSuccess: refreshAfterAnswer,
   });
+  const settings = useAthleteSettings();
   const words = suggestionWords(suggestion);
   const busy = accept.isPending || dismiss.isPending;
   const failed = accept.isError || dismiss.isError;
-  const backdated = suggestion.effortDay !== localDay(new Date());
+  const backdated = suggestion.effortDay !== todayIn(settings.data?.timeZone ?? null);
   return (
     <div className="zone-prompt threshold-suggestion">
       <p className="lede">

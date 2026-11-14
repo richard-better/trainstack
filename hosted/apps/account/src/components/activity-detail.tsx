@@ -285,9 +285,15 @@ function Effort({ activity, sport }: { activity: ActivityDetail; sport: string |
       ? thresholdPrompt(scored, settingsScopeOf(profile, sport))
       : null;
   const suggestions = useThresholdSuggestions();
-  const covering = prompt
-    ? suggestionsFor(suggestions.data?.suggestions ?? [], activity.missingThresholds, sport)
-    : [];
+  const covering =
+    prompt && profile
+      ? suggestionsFor(
+          suggestions.data?.suggestions ?? [],
+          activity.missingThresholds,
+          sport,
+          settingsScopeOf(profile, sport).own,
+        )
+      : [];
   const noun = sportName(sport).noun;
   if (state.kind === "no_file" && figures.length === 0) return null;
   return (

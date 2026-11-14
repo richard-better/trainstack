@@ -153,11 +153,20 @@ function Load({
         .find((p) => p !== null) ?? null)
     : null;
   const suggestions = useThresholdSuggestions();
-  const covering = prompt
-    ? (suggestions.data?.suggestions ?? []).filter((suggestion) =>
-        unscored.some((a) => suggestionsFor([suggestion], a.missingThresholds, a.sport).length > 0),
-      )
-    : [];
+  const covering =
+    prompt && profile
+      ? (suggestions.data?.suggestions ?? []).filter((suggestion) =>
+          unscored.some(
+            (a) =>
+              suggestionsFor(
+                [suggestion],
+                a.missingThresholds,
+                a.sport,
+                settingsScopeOf(profile, a.sport).own,
+              ).length > 0,
+          ),
+        )
+      : [];
 
   if (history.firstLoaded === null) {
     return <NoLoad recent={recent} prompt={prompt} suggestions={covering} />;
