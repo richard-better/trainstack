@@ -62,6 +62,21 @@ private final class HeldSessionStore: SessionStore {
 }
 
 struct TrainStackAccountTests {
+  @Test func tellsWhoListensWhichAccountWasDeletedAndThatSignInChanged() async throws {
+    let account = TrainStackAccount(
+      store: InMemorySessionStore(AccountSession(token: "t", name: "Ada", userID: "ada")),
+      transport: FakeTransport([reply()]))
+    var deleted: [String] = []
+    var signInChanges = 0
+    account.observeAccountDeletion { deleted.append($0) }
+    account.observeSignInChanges { signInChanges += 1 }
+    account.observeSignInChanges { signInChanges += 1 }
+    try await account.deleteAccount()
+    #expect(deleted == ["ada"])
+    #expect(signInChanges == 2)
+    #expect(!account.isSignedIn)
+  }
+
   @Test func picksUpASessionKeptFromAnEarlierLaunch() async {
     let account = TrainStackAccount(
       store: InMemorySessionStore(session), transport: FakeTransport([]))

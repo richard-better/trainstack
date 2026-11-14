@@ -282,9 +282,9 @@ struct ActivitySyncTests {
   }
 
   @Test func retriesSoonAfterAFailureAndBacksOffToHalfAnHour() {
-    #expect(ActivitySync.retryDelay(afterFailures: 1) == .seconds(30))
-    #expect(ActivitySync.retryDelay(afterFailures: 2) == .seconds(60))
-    #expect(ActivitySync.retryDelay(afterFailures: 20) == .seconds(30 * 60))
+    #expect(SyncPasses.retryDelay(afterFailures: 1) == .seconds(30))
+    #expect(SyncPasses.retryDelay(afterFailures: 2) == .seconds(60))
+    #expect(SyncPasses.retryDelay(afterFailures: 20) == .seconds(30 * 60))
   }
 
   @Test func describesARideRecordedByRideAsAnIndoorRide() throws {

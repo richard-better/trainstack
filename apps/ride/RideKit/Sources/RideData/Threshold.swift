@@ -7,6 +7,25 @@ public enum Threshold: String, CaseIterable, Codable, CodingKeyRepresentable, Se
   case aerobicThresholdPower
   case thresholdPace
 
+  public var wireName: String {
+    switch self {
+    case .lactateThresholdHeartRate: "lactate_threshold_heart_rate"
+    case .maxHeartRate: "max_heart_rate"
+    case .restingHeartRate: "resting_heart_rate"
+    case .aerobicThresholdHeartRate: "aerobic_threshold_heart_rate"
+    case .ftp: "ftp"
+    case .aerobicThresholdPower: "aerobic_threshold_power"
+    case .thresholdPace: "threshold_pace"
+    }
+  }
+
+  public init?(wireName: String) {
+    guard let threshold = Self.allCases.first(where: { $0.wireName == wireName }) else {
+      return nil
+    }
+    self = threshold
+  }
+
   public var name: String {
     switch self {
     case .lactateThresholdHeartRate: "lactate threshold heart rate"

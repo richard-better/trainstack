@@ -3,6 +3,7 @@ import Foundation
 public struct ZoneProfile: Equatable, Sendable {
   public internal(set) var defaults: [ZoneMetric: MetricZones]
   public internal(set) var sports: [Sport: [ZoneMetric: MetricZones]]
+  var unknownSports: [String: [String: UnknownSportZones]] = [:]
 
   public init() {
     defaults = [:]
@@ -58,6 +59,38 @@ public struct ZoneProfile: Equatable, Sendable {
         own[.pace] = MetricZones(choice: ZoneChoice(model: model))
       }
       sports[sport] = own
+    }
+  }
+
+  mutating func apply(unknownSport change: SettingChange) {
+    switch change {
+    case .sport(let sport, let listed):
+      if !listed {
+        unknownSports[sport] = nil
+      } else if unknownSports[sport] == nil {
+        unknownSports[sport] = [:]
+      }
+    case .ownZones(let sport, let metric, let own):
+      guard unknownSports[sport] != nil, metric != ZoneMetric.pace.wireName else { return }
+      guard own else {
+        unknownSports[sport]?[metric] = nil
+        return
+      }
+      guard unknownSports[sport]?[metric] == nil,
+        let defaults = ZoneMetric(wireName: metric).flatMap({ defaults[$0] })
+      else { return }
+      unknownSports[sport]?[metric] = UnknownSportZones(copying: defaults)
+    case .threshold(let sport?, let threshold, let value):
+      guard let metric = Threshold(wireName: threshold)?.metric.wireName,
+        unknownSports[sport]?[metric] != nil
+      else { return }
+      unknownSports[sport]?[metric]?.thresholds[threshold] = value
+    case .zones(let sport?, let metric, let model, let customLimits):
+      guard unknownSports[sport]?[metric] != nil else { return }
+      unknownSports[sport]?[metric]?.model = model
+      unknownSports[sport]?[metric]?.customLimits = customLimits
+    default:
+      return
     }
   }
 
