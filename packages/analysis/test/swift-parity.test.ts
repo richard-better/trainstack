@@ -21,7 +21,7 @@ import {
   workKilojoules,
 } from "../src/index.ts";
 import { reference, type ReferenceResults, syntheticRecords, zones } from "./ride-reference.ts";
-import { smartRecordedRide } from "./smart-recorded-ride.ts";
+import { restartedWithoutARecord, smartRecordedRide } from "./smart-recorded-ride.ts";
 
 const { ftp, maxHeartRate, thresholdPace } = reference.thresholds;
 
@@ -64,6 +64,10 @@ const goldens: Record<string, Uint8Array> = {
   "SampleRide.fit": sampleRide(),
   ...Object.fromEntries(traceNames.map((name) => [`${name}.fit`, trace(name)])),
   "smart-recorded-ride.fit": smartRecordedRide(),
+  "restarted-without-a-record.fit": restartedWithoutARecord({ recordWhileStopped: false }),
+  "restarted-with-a-record-while-stopped.fit": restartedWithoutARecord({
+    recordWhileStopped: true,
+  }),
 };
 
 describe("agrees with Ride's Swift analysis", () => {

@@ -34,10 +34,10 @@ extension RideRecording {
       let power = samples[sample].power ?? 0
       for second in first..<min(max(Int(end), first + 1), result.count) { result[second] = power }
     }
-    let held = Dictionary(grouping: heldIntervals, by: \.sample)
+    let held = Dictionary(uniqueKeysWithValues: heldIntervals.map { ($0.sample, $0) })
     for (index, sample) in samples.enumerated() {
-      if let intervals = held[index] {
-        for interval in intervals { fill(index, from: interval.start, to: interval.end) }
+      if let interval = held[index] {
+        fill(index, from: interval.start, to: interval.end)
       } else if !SamplingRule.isPaused(sample.elapsed, by: pauses) {
         fill(index, from: sample.elapsed, to: sample.elapsed)
       }

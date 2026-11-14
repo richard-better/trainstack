@@ -49,3 +49,29 @@ export function smartRecordedRide(): Uint8Array {
     .data(3, [zero + 665, zero, 2, 665_000, 545_000])
     .file();
 }
+
+export function restartedWithoutARecord({ recordWhileStopped }: { recordWhileStopped: boolean }) {
+  const zero = fitTime(start.toISOString());
+  const writer = new FitWriter()
+    .define(0, 0, fileIdFields)
+    .data(0, [4, zero])
+    .define(1, 21, eventFields)
+    .define(2, 20, recordFields);
+  const event = (seconds: number, type: number) => writer.data(1, [zero + seconds, 0, type]);
+  const records = (from: number, to: number, every: number, power: number, heartRate: number) => {
+    for (let seconds = from; seconds <= to; seconds += every) {
+      writer.data(2, [zero + seconds, power, heartRate]);
+    }
+  };
+  event(0, 0);
+  records(0, 100, 5, 200, 140);
+  event(102, 1);
+  if (recordWhileStopped) records(110, 110, 1, 400, 180);
+  event(120, 0);
+  records(125, 300, 5, 250, 150);
+  event(300, 4);
+  return writer
+    .define(3, 18, sessionFields)
+    .data(3, [zero + 300, zero, 2, 300_000, 282_000])
+    .file();
+}

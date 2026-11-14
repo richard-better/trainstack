@@ -70,48 +70,36 @@ export function overlapsPause(pauses: readonly Span[], from: number, to: number)
   return low < pauses.length && pauses[low]!.from < to;
 }
 
-function grown<Values extends Float64Array | Int32Array>(values: Values, into: Values): Values {
-  into.set(values);
-  return into;
-}
-
 export function heldSegments(
   elapsed: Float64Array,
   pauses: readonly Span[],
   rule: SamplingRule = samplingRule,
 ): HeldSegments {
-  let capacity = Math.max(elapsed.length - 1, 0) + pauses.length;
-  let start = new Float64Array(capacity);
-  let end = new Float64Array(capacity);
-  let record = new Int32Array(capacity);
+  const capacity = Math.max(elapsed.length - 1, 0);
+  const start = new Float64Array(capacity);
+  const end = new Float64Array(capacity);
+  const record = new Int32Array(capacity);
   let count = 0;
-  const hold = (index: number, from: number, to: number) => {
-    if (count === capacity) {
-      capacity = 2 * capacity + 1;
-      start = grown(start, new Float64Array(capacity));
-      end = grown(end, new Float64Array(capacity));
-      record = grown(record, new Int32Array(capacity));
-    }
-    start[count] = from;
-    end[count] = to;
-    record[count] = index;
-    count++;
-  };
   const paused = pausedRecords(elapsed, pauses);
   let pause = 0;
-  for (let index = 0; index + 1 < elapsed.length; index++) {
+  let next = 0;
+  for (let index = 0; index < elapsed.length; index++) {
     if (paused[index]) continue;
-    let from = elapsed[index]!;
-    const to = elapsed[index + 1]!;
+    next = Math.max(next, index + 1);
+    while (next < elapsed.length && paused[next]) next++;
+    if (next === elapsed.length) break;
+    const from = elapsed[index]!;
+    const to = elapsed[next]!;
     const gap = to - from;
     if (!(gap > 0 && gap <= rule.maxHeldGapSeconds)) continue;
     while (pause < pauses.length && pauses[pause]!.to <= from) pause++;
-    for (let next = pause; next < pauses.length && pauses[next]!.from < to; next++) {
-      const { from: stopped, to: started } = pauses[next]!;
-      if (stopped > from) hold(index, from, stopped);
-      from = Math.max(from, started);
+    const until = Math.min(to, pauses[pause]?.from ?? Infinity);
+    if (until > from) {
+      start[count] = from;
+      end[count] = until;
+      record[count] = index;
+      count++;
     }
-    if (to > from) hold(index, from, to);
   }
   return {
     count,

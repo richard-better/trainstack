@@ -151,6 +151,18 @@ struct RideAnalysisTests {
     #expect(ride.powerCurve().isEmpty)
   }
 
+  @Test(arguments: [[0.0, 10, 20], [0, 20]])
+  func holdsNoValueAcrossAPauseWhetherOrNotARecordWasWrittenWhileStopped(times: [TimeInterval]) {
+    var ride = recording(times.map { .init(elapsed: $0, power: 300) })
+    ride.pauses = [5..<15]
+    #expect(ride.heldIntervals == [HeldInterval(sample: 0, start: 0, end: 5)])
+    #expect(
+      ride.powerPerSecond() == Array(repeating: 300, count: 5) + Array(repeating: 0, count: 15) + [
+        300
+      ])
+    #expect(ride.workKilojoules() == 2)
+  }
+
   @Test func countsNoTimeInZonesWhileTheTimerIsStopped() {
     var ride = recording((0...10).map { .init(elapsed: Double($0), heartRate: 190) })
     ride.pauses = [3.5..<6.5]
