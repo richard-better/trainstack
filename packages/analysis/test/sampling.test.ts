@@ -87,6 +87,27 @@ describe("the sampling rule", () => {
     );
   });
 
+  test("holds no value across a pause, whether or not a record was written while stopped", () => {
+    for (const times of [
+      [0, 10, 20],
+      [0, 20],
+    ]) {
+      const pauses = [{ from: 5, to: 15 }];
+      const held = heldSegments(Float64Array.from(times), pauses);
+      assert.deepEqual(
+        [...held.record].map((record, index) => [record, held.start[index], held.end[index]]),
+        [[0, 0, 5]],
+      );
+      const records = times.map((elapsedSeconds) => ({ elapsedSeconds, power: 300 }));
+      const samples = samplesOf(records, "cycling", { pauses });
+      assert.deepEqual(
+        [...perSecond(samples, samples.power)],
+        [300, 300, 300, 300, 300, ...Array<number>(15).fill(0), 300],
+      );
+      assert.equal(workKilojoules(samples), 2);
+    }
+  });
+
   test("takes no speed from distance across a pause", () => {
     const run = samplesOf(
       [

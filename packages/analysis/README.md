@@ -127,11 +127,14 @@ each zone gets `time_in_<metric>_zone_<label>_s`, for example `time_in_power_zon
 - **Pauses.** When the file has timer events, its timer is stopped from each `stop`, `stopAll`,
   `stopDisable` or `stopDisableAll` until the next `start` (`timerPauses`). The decoders report
   a GPX segment or TCX track break as such a pair. Time while the timer is stopped counts for
-  nothing. A record written strictly inside a pause is ignored entirely: its values never hold
-  after the restart, and its distance and altitude are not used.
+  nothing. A record written strictly inside a pause is ignored entirely and changes nothing:
+  its values never hold, it never ends another record's hold, and its distance and altitude are
+  not used.
 - **Holding** (`samplingRule`, in `src/sampling.ts`). While the timer runs, a record's values
-  hold until the next record, if that record is at most 30 s later. A longer gap is missing data
-  and counts for nothing. A file without timer events is read the same way. Every quantity
+  hold until the next record, if that record is at most 30 s later, or until the timer stops,
+  whichever comes first. A value never holds across a pause: after a restart nothing holds until
+  the first record written while the timer runs. A longer gap is missing data and counts for
+  nothing. A file without timer events is read the same way. Every quantity
   holds rather than interpolates, for two reasons:
   - Smart recording writes a record when direction, speed or heart rate changes (Garmin's
     "Smart" data recording setting), so the last written value stands until the next one.
@@ -191,8 +194,9 @@ included. GPX and TCX files of 25 MB hold far fewer points and take about 0.5 s 
 ## Parity with Ride
 
 `test/fixtures/ride-reference.json` holds the values Ride's Swift code computes for the golden
-FIT files (`SampleRide.fit`, the three RideCore traces, and a smart-recorded ride with records
-5 to 8 s apart, a 45 s dropout and a 60 s timer pause, from `test/smart-recorded-ride.ts`), for
+FIT files (`SampleRide.fit`, the three RideCore traces, a smart-recorded ride with records
+5 to 8 s apart, a 45 s dropout and a 60 s timer pause, and two rides restarted without a record
+at the restart, with and without a record while stopped, from `test/smart-recorded-ride.ts`), for
 four synthetic rides (steady 1 Hz, irregular steps of up to 30 s with missing values,
 half-second steps, and one too short for normalized power), and for fitness and fatigue over
 126 days. `test/swift-parity.test.ts` requires the TypeScript to give exactly the same numbers.

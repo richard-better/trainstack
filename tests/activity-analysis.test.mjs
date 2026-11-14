@@ -53,7 +53,7 @@ async function runCron() {
 async function runCronUntilAnalysed() {
   for (let run = 0; run < 30; run++) {
     const due = await db
-      .prepare("SELECT count(*) AS n FROM activity_analysis WHERE due = 1 OR version < 1")
+      .prepare("SELECT count(*) AS n FROM activity_analysis WHERE due = 1 OR version < 2")
       .first();
     const unsummarised = await db
       .prepare(
@@ -213,7 +213,7 @@ test("a file with more records than the analysis reads says so and is not retrie
     .prepare("SELECT due, attempts, version FROM activity_analysis WHERE user_id = ?")
     .bind(user.id)
     .first();
-  assert.deepEqual(row, { due: 0, attempts: 0, version: 1 });
+  assert.deepEqual(row, { due: 0, attempts: 0, version: 2 });
 
   await bucket.delete(`activities/${user.id}/${id}`);
   await client.settings.write({ writes: [put("2026-01-01", threshold("ftp", 210))] });
@@ -224,7 +224,7 @@ test("a file with more records than the analysis reads says so and is not retrie
       .prepare("SELECT due, attempts, version FROM activity_analysis WHERE user_id = ?")
       .bind(user.id)
       .first(),
-    { due: 0, attempts: 0, version: 1 },
+    { due: 0, attempts: 0, version: 2 },
   );
 });
 

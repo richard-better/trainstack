@@ -189,6 +189,82 @@
         "workKilojoules": 135
       },
       "samples": 90
+    },
+    {
+      "file": "restarted-without-a-record.fit",
+      "results": {
+        "duration": 300,
+        "intensityFactor": 1.135,
+        "normalizedPower": 227,
+        "powerCurve": [
+          {
+            "duration": 5,
+            "power": 250
+          },
+          {
+            "duration": 15,
+            "power": 250
+          },
+          {
+            "duration": 30,
+            "power": 250
+          },
+          {
+            "duration": 60,
+            "power": 250
+          },
+          {
+            "duration": 300,
+            "power": 214
+          }
+        ],
+        "timeInZones": {
+          "heartRate": [0, 0, 277, 0, 0],
+          "pace": [],
+          "power": [0, 0, 0, 102, 0, 175]
+        },
+        "trainingStressScore": 11,
+        "workKilojoules": 64
+      },
+      "samples": 57
+    },
+    {
+      "file": "restarted-with-a-record-while-stopped.fit",
+      "results": {
+        "duration": 300,
+        "intensityFactor": 1.135,
+        "normalizedPower": 227,
+        "powerCurve": [
+          {
+            "duration": 5,
+            "power": 250
+          },
+          {
+            "duration": 15,
+            "power": 250
+          },
+          {
+            "duration": 30,
+            "power": 250
+          },
+          {
+            "duration": 60,
+            "power": 250
+          },
+          {
+            "duration": 300,
+            "power": 214
+          }
+        ],
+        "timeInZones": {
+          "heartRate": [0, 0, 277, 0, 0],
+          "pace": [],
+          "power": [0, 0, 0, 102, 0, 175]
+        },
+        "trainingStressScore": 11,
+        "workKilojoules": 64
+      },
+      "samples": 58
     }
   ],
   "synthetic": [
