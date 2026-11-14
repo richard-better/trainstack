@@ -98,7 +98,7 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
     entries[index] = Entry(
       day: day, changes: dayChanges, unknownSportChanges: entries[index].unknownSportChanges,
       calendar: calendar)
-    dropNoOpChanges(at: index)
+    dropNoOpChanges(at: index, among: Set(changes.map(\.key)))
   }
 
   public mutating func move(_ id: Entry.ID, to date: Date, calendar: Calendar = .current) {
@@ -111,7 +111,7 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
     entries.removeAll { $0.id == id }
   }
 
-  private mutating func dropNoOpChanges(at index: Int) {
+  private mutating func dropNoOpChanges(at index: Int, among recorded: Set<ZoneChange.Key>) {
     var profile = ZoneProfile()
     for entry in entries[..<index] {
       for change in entry.changes { profile.apply(change) }
@@ -119,7 +119,7 @@ public struct ZoneHistory: Codable, Equatable, Sendable {
     entries[index].changes = entries[index].changes.filter { change in
       let before = profile
       profile.apply(change)
-      return profile != before
+      return !recorded.contains(change.key) || profile != before
     }
     if entries[index].changes.isEmpty && entries[index].unknownSportChanges.isEmpty {
       entries.remove(at: index)

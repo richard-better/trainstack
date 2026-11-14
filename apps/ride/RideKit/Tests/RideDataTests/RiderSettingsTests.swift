@@ -271,4 +271,24 @@ struct RiderSettingsTests {
     #expect(settings.ledger.unsent.map(\.address) == [SettingAddress(ftpKey, on: settingDay(5, 1))])
     #expect(settings.history.current.value(of: .ftp, in: .all) == 260)
   }
+
+  @Test func anEditLeavesTheOtherSettingsOfItsDayAlone() {
+    var settings = RiderSettings(calendar: calendar)
+    settings.receive(
+      [
+        SettingWrite(
+          SettingAddress(ftpKey, on: settingDay(3, 1)),
+          .threshold(sport: nil, threshold: "ftp", value: 250), at: .init(day(3, 1))),
+        SettingWrite(
+          SettingAddress(ftpKey, on: settingDay(6, 1)),
+          .threshold(sport: nil, threshold: "ftp", value: 250), at: .init(day(6, 1))),
+      ], through: nil)
+    settings.record(
+      [.threshold(.maxHeartRate, scope: .all, value: 190)], on: day(6, 1), at: day(6, 2))
+    #expect(
+      settings.ledger.unsent.map(\.address.key) == [
+        .threshold(sport: nil, threshold: "max_heart_rate")
+      ])
+    #expect(settings.ledger.live.count == 3)
+  }
 }
