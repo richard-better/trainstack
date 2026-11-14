@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ac027a4a-0e7d-4c20-add3-31d1db892e4c",
+  "id": "4414fb68-21f7-4f45-abc3-7381b2b88dab",
   "prevIds": ["ace35694-71d3-48eb-8706-1086e80d3179"],
   "ddl": [
     {
@@ -2161,17 +2161,6 @@
       "name": "fk_workout_list_entry_user_id_list_id_workout_list_user_id_id_fk",
       "columns": ["user_id", "list_id"],
       "tableTo": "workout_list",
-      "columnsTo": ["user_id", "id"],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "entityType": "fks"
-    },
-    {
-      "table": "workout_list_entry",
-      "name": "fk_workout_list_entry_user_id_workout_id_workout_user_id_id_fk",
-      "columns": ["user_id", "workout_id"],
-      "tableTo": "workout",
       "columnsTo": ["user_id", "id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",

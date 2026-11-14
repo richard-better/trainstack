@@ -242,7 +242,19 @@ export const workoutListsRouter = {
       after: input.after,
       updatedAt: input.updatedAt,
     });
-    return listOf(db, userId, list);
+    const [listNow, workoutNow] = await Promise.all([
+      findList(db, userId, list.id),
+      findWorkout(db, userId, workout.id),
+    ]);
+    if (listNow?.deletedAt) {
+      throw errors.LIST_DELETED({ data: { id: listNow.id, deletedAt: listNow.deletedAt } });
+    }
+    if (workoutNow?.deletedAt) {
+      throw errors.WORKOUT_DELETED({
+        data: { id: workoutNow.id, deletedAt: workoutNow.deletedAt },
+      });
+    }
+    return listOf(db, userId, listNow!);
   }),
 
   remove: signedIn.workoutLists.remove.handler(async ({ context, input, errors }) => {
@@ -254,13 +266,11 @@ export const workoutListsRouter = {
     if (list.deletedAt) {
       throw errors.LIST_DELETED({ data: { id: list.id, deletedAt: list.deletedAt } });
     }
-    if (await findWorkout(db, userId, input.workoutId)) {
-      await removeFromList(db, userId, {
-        listId: list.id,
-        workoutId: input.workoutId,
-        updatedAt: input.updatedAt,
-      });
-    }
+    await removeFromList(db, userId, {
+      listId: list.id,
+      workoutId: input.workoutId,
+      updatedAt: input.updatedAt,
+    });
     return listOf(db, userId, list);
   }),
 

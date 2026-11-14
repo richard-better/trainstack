@@ -85,10 +85,6 @@ export const workoutListEntry = sqliteTable(
       columns: [table.userId, table.listId],
       foreignColumns: [workoutList.userId, workoutList.id],
     }).onDelete("cascade"),
-    foreignKey({
-      columns: [table.userId, table.workoutId],
-      foreignColumns: [workout.userId, workout.id],
-    }).onDelete("cascade"),
     index("workout_list_entry_user_workout_idx").on(table.userId, table.workoutId),
     index("workout_list_entry_user_revision_idx").on(table.userId, table.revision),
   ],

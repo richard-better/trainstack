@@ -2,7 +2,7 @@ import type { WorkoutList } from "@trainstack/contract";
 import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 
 import type { Database } from "../db";
-import { workoutList, workoutListEntry } from "../db/schema";
+import { workout, workoutList, workoutListEntry } from "../db/schema";
 
 type ListRow = typeof workoutList.$inferSelect;
 
@@ -137,6 +137,9 @@ const renumber = (db: Database, userId: string, listId: string) =>
     WHERE user_id = ${userId} AND list_id = ${listId} AND removed = 0
   `);
 
+const listIsLive = (userId: string, listId: string) =>
+  sql`EXISTS (SELECT 1 FROM ${workoutList} WHERE user_id = ${userId} AND id = ${listId} AND deleted_at IS NULL)`;
+
 export type EntryWrite = {
   listId: string;
   workoutId: string;
@@ -162,7 +165,9 @@ export async function placeInList(
     renumber(db, userId, listId),
     db.run(sql`
       INSERT INTO ${workoutListEntry} (user_id, list_id, workout_id, position, removed, updated_at, revision)
-      VALUES (${userId}, ${listId}, ${workoutId}, ${position}, 0, ${updatedAt.getTime()}, ${nextRevision(userId)})
+      SELECT ${userId}, ${listId}, ${workoutId}, ${position}, 0, ${updatedAt.getTime()}, ${nextRevision(userId)}
+      WHERE ${listIsLive(userId, listId)}
+        AND EXISTS (SELECT 1 FROM ${workout} WHERE user_id = ${userId} AND id = ${workoutId} AND deleted_at IS NULL)
       ON CONFLICT DO UPDATE SET
         position = excluded.position,
         removed = 0,
@@ -182,7 +187,8 @@ export async function removeFromList(
   await db.batch([
     db.run(sql`
       INSERT INTO ${workoutListEntry} (user_id, list_id, workout_id, position, removed, updated_at, revision)
-      VALUES (${userId}, ${listId}, ${workoutId}, 0, 1, ${updatedAt.getTime()}, ${nextRevision(userId)})
+      SELECT ${userId}, ${listId}, ${workoutId}, 0, 1, ${updatedAt.getTime()}, ${nextRevision(userId)}
+      WHERE ${listIsLive(userId, listId)}
       ON CONFLICT DO UPDATE SET
         removed = 1,
         updated_at = excluded.updated_at,

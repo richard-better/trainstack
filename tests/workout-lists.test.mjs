@@ -7,12 +7,14 @@ import { api, migrate, rpcClient, send, startWorker } from "./helpers/worker.mjs
 
 let worker;
 let runtime;
+let db;
 const apple = mockApple();
 
 before(
   async () => {
     worker = await startWorker({ outboundService: apple.fetch });
     runtime = worker.runtime;
+    db = await runtime.getD1Database("DB");
     await migrate(runtime);
   },
   { timeout: 60_000 },
@@ -224,6 +226,55 @@ test("an add and a removal on two devices settle on the later one, in either ord
       );
     }
   }
+});
+
+test("a removal that arrives before its workout still beats an older add", async () => {
+  const { client, ids } = await athleteWith("A");
+  const id = randomUUID();
+  await client.workoutLists.put({ id, name: "List", updatedAt: at(0) });
+  const late = randomUUID();
+  await client.workoutLists.remove({ id, workoutId: late, updatedAt: at(5) });
+  await client.workouts.put({
+    id: late,
+    workout: {
+      name: "Late",
+      sport: "cycling",
+      steps: [{ type: "step", duration: { type: "time", seconds: 60 } }],
+    },
+    updatedAt: at(0),
+  });
+  await client.workoutLists.place({ id, workoutId: ids.A, after: null, updatedAt: at(1) });
+  const placed = await client.workoutLists.place({
+    id,
+    workoutId: late,
+    after: ids.A,
+    updatedAt: at(1),
+  });
+  assert.deepEqual(placed.workoutIds, [ids.A]);
+});
+
+test("a placement racing the workout's deletion leaves no entry behind", async () => {
+  const { client, ids, user } = await athleteWith("A", "B");
+  const id = randomUUID();
+  await client.workoutLists.put({ id, name: "List", updatedAt: at(0) });
+  await client.workoutLists.place({ id, workoutId: ids.A, after: null, updatedAt: at(1) });
+  await db
+    .prepare(
+      `CREATE TRIGGER deleted_mid_placement AFTER UPDATE ON workout_list_entry WHEN NEW.user_id = '${user.id}'
+       BEGIN
+         UPDATE workout SET deleted_at = 1, body = NULL WHERE user_id = NEW.user_id AND id = '${ids.B}';
+       END`,
+    )
+    .run();
+  try {
+    await definedError(
+      client.workoutLists.place({ id, workoutId: ids.B, after: ids.A, updatedAt: at(2) }),
+      "WORKOUT_DELETED",
+    );
+  } finally {
+    await db.prepare("DROP TRIGGER deleted_mid_placement").run();
+  }
+  assert.deepEqual((await client.workoutLists.get({ id })).workoutIds, [ids.A]);
 });
 
 test("a renaming converges on the later name, and a replayed write changes nothing", async () => {

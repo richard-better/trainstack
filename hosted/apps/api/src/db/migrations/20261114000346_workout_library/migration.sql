@@ -43,8 +43,7 @@ CREATE TABLE `workout_list_entry` (
 	`revision` integer NOT NULL,
 	CONSTRAINT `workout_list_entry_pk` PRIMARY KEY(`user_id`, `list_id`, `workout_id`),
 	CONSTRAINT `fk_workout_list_entry_user_id_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
-	CONSTRAINT `fk_workout_list_entry_user_id_list_id_workout_list_user_id_id_fk` FOREIGN KEY (`user_id`,`list_id`) REFERENCES `workout_list`(`user_id`,`id`) ON DELETE CASCADE,
-	CONSTRAINT `fk_workout_list_entry_user_id_workout_id_workout_user_id_id_fk` FOREIGN KEY (`user_id`,`workout_id`) REFERENCES `workout`(`user_id`,`id`) ON DELETE CASCADE
+	CONSTRAINT `fk_workout_list_entry_user_id_list_id_workout_list_user_id_id_fk` FOREIGN KEY (`user_id`,`list_id`) REFERENCES `workout_list`(`user_id`,`id`) ON DELETE CASCADE
 );
 --> statement-breakpoint
 CREATE INDEX `workout_user_revision_idx` ON `workout` (`user_id`,`revision`);--> statement-breakpoint
