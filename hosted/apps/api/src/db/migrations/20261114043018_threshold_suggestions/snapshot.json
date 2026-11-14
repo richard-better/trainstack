@@ -1,8 +1,8 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "28e3c7b3-f429-4d87-9eb3-6f6826b68fb0",
-  "prevIds": ["e527b587-5bf9-43f5-bea7-b2fee51cc6e6"],
+  "id": "ab5d2833-c98d-4c03-9272-d9fd3c142f94",
+  "prevIds": ["fac6f6c5-c7f0-4a8e-bc76-7b2f329e70f9"],
   "ddl": [
     {
       "name": "app_handoff",
@@ -98,6 +98,10 @@
     },
     {
       "name": "apple_app_grant",
+      "entityType": "tables"
+    },
+    {
+      "name": "planned_interval_compliance",
       "entityType": "tables"
     },
     {
@@ -1774,6 +1778,16 @@
       "entityType": "columns"
     },
     {
+      "table": "activity_analysis",
+      "name": "planned_signature",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
       "table": "account_file_sweep",
       "name": "user_id",
       "type": "text",
@@ -1828,6 +1842,56 @@
       "name": "granted_at",
       "type": "integer",
       "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "planned_interval_compliance",
+      "name": "user_id",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "planned_interval_compliance",
+      "name": "activity_id",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "planned_interval_compliance",
+      "name": "planned_id",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "planned_interval_compliance",
+      "name": "content_hash",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "planned_interval_compliance",
+      "name": "result",
+      "type": "text",
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -3059,6 +3123,28 @@
       "entityType": "fks"
     },
     {
+      "table": "planned_interval_compliance",
+      "name": "fk_planned_interval_compliance_user_id_user_id_fk",
+      "columns": ["user_id"],
+      "tableTo": "user",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "entityType": "fks"
+    },
+    {
+      "table": "planned_interval_compliance",
+      "name": "fk_planned_interval_compliance_user_id_activity_id_activity_user_id_id_fk",
+      "columns": ["user_id", "activity_id"],
+      "tableTo": "activity",
+      "columnsTo": ["user_id", "id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "entityType": "fks"
+    },
+    {
       "table": "planned_pairing_choice",
       "name": "fk_planned_pairing_choice_user_id_user_id_fk",
       "columns": ["user_id"],
@@ -3209,6 +3295,13 @@
       "table": "activity_analysis",
       "name": "activity_analysis_pk",
       "columns": ["user_id", "activity_id"],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "table": "planned_interval_compliance",
+      "name": "planned_interval_compliance_pk",
+      "columns": ["user_id", "activity_id", "planned_id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
