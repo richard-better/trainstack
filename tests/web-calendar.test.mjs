@@ -909,3 +909,58 @@ test("intervals missing for a workout with targets ask for analysis or threshold
     /need the activity's analysis, and for targets set against a threshold/,
   );
 });
+
+test("a sprint's all-out efforts and a run's missing distance each say why they are not scored", () => {
+  const sprints = {
+    kind: "workout",
+    workout: {
+      name: "Sprints",
+      sport: "cycling",
+      steps: [
+        { type: "step", duration: { type: "time", seconds: 20 }, target: { type: "maxEffort" } },
+      ],
+    },
+    source: null,
+    notes: null,
+  };
+  const sprintWords = complianceWords(
+    pairedWith(
+      {
+        score: 100,
+        rating: "on_target",
+        parts: { duration: part(20, 21), distance: null, load: part(5, 5), intervals: null },
+        pending: false,
+      },
+      sprints,
+    ),
+  );
+  assert.deepEqual(sprintWords.unscored, [
+    "Intervals are not scored: an all-out effort has no target band to hold.",
+  ]);
+
+  const kilometres = {
+    kind: "workout",
+    workout: {
+      name: "5 × 1 km",
+      sport: "running",
+      steps: [{ type: "step", duration: { type: "distance", meters: 1000 } }],
+    },
+    source: null,
+    notes: null,
+  };
+  const runWords = complianceWords(
+    pairedWith(
+      {
+        score: 100,
+        rating: "on_target",
+        parts: { duration: part(300, 310), distance: null, load: part(10, 10), intervals: null },
+        pending: false,
+      },
+      kilometres,
+    ),
+  );
+  assert.equal(
+    runWords.unscored[0],
+    "Distance is not scored: the plan or the activity has no distance.",
+  );
+});

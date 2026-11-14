@@ -78,12 +78,26 @@ export const hasLapStep = (item: Pick<PlannedWorkout, "content">) =>
   item.content.kind === "workout" &&
   placedSteps(item.content.workout.steps).some(({ step }) => step.duration.type === "open");
 
+const stepsOf = (item: Pick<PlannedWorkout, "content">) =>
+  item.content.kind === "workout"
+    ? placedSteps(item.content.workout.steps).map(({ step }) => step)
+    : [];
+
 export const hasTargets = (item: Pick<PlannedWorkout, "content">) =>
-  item.content.kind === "workout" &&
-  placedSteps(item.content.workout.steps).some(({ step }) => step.target !== undefined);
+  stepsOf(item).some((step) => step.target !== undefined && step.target.type !== "maxEffort");
+
+const hasMaxEffort = (item: Pick<PlannedWorkout, "content">) =>
+  stepsOf(item).some((step) => step.target?.type === "maxEffort");
+
+const hasDistanceSteps = (item: Pick<PlannedWorkout, "content">) =>
+  stepsOf(item).some((step) => step.duration.type === "distance");
 
 function intervalsUnscored(intervals: Intervals | null, item: PlannedWorkout) {
-  if (!hasTargets(item)) return "Intervals are not scored: the workout has no targets to hold.";
+  if (!hasTargets(item)) {
+    return hasMaxEffort(item)
+      ? "Intervals are not scored: an all-out effort has no target band to hold."
+      : "Intervals are not scored: the workout has no targets to hold.";
+  }
   const steps = intervals?.steps;
   if (!intervals) {
     return "Intervals are not scored: they need the activity's analysis, and for targets set against a threshold, that threshold in Settings.";
@@ -112,6 +126,9 @@ export function complianceWords(item: PlannedWorkout): ComplianceWords | null {
     );
   } else {
     if (!duration) unscored.push("Time is not scored: the plan or the activity has no time.");
+    if (!distance && hasDistanceSteps(item)) {
+      unscored.push("Distance is not scored: the plan or the activity has no distance.");
+    }
     if (!load) {
       unscored.push(
         "Load is not scored: the plan or the activity has no load, which needs your thresholds.",
